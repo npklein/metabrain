@@ -4,20 +4,25 @@
 # This script clones the Molgenis Compute pipeline for alignin FastQ files and
 # modifies the protocols and parameter files for analysis of Brain eQTL data.
 # Makes samplesheet dependent parameter files.
-# Author: Niek de Klein
+
+# NOTE: This script changes paths in a parameters.csv that are specific to our clusters
+#       If you want to use this somewhere else you have to change that in the script"
+
 
 set -e
 set -u
 
 module load Python
+
 cohort=
 project_dir=
+script_dir=$(dirname "$0")
 
 main(){
     parse_commandline "$@"
     # move to project dir if it exists.
     # I prefer making the project dir outside of this script in case wrong directory is given
-    if [ -d "$DIRECTORY" ];
+    if [ -d "$project_dir" ];
     then
         echo "Changing directory to $project_dir"
         cd $project_dir
@@ -38,9 +43,6 @@ main(){
 usage(){
     # print the usage of the programme
     programname=$0
-    echo "Download and make qunatification pipeline."
-    echo "NOTE: This script changes paths in a parameters.csv that are specific to our clusters"
-    echo "      If you want to use this somewhere else you have to change that in the script"
     echo "usage: $programname -c cohort -p project_directory"
     echo "  -c      provide the cohort to prepare pipeline for (mandatory)"
     echo "  -p      Base of the project_dir where pipeline scripts will be put (mandatory)"
@@ -56,7 +58,6 @@ clone_pipelines(){
     rm -rf Public_RNA-seq_QC
     rm -rf Public_RNA-seq_quantification
     git clone https://github.com/npklein/molgenis-pipelines.git
-
     # Move the relevant pipeline directories to the main project_dir
     mv molgenis-pipelines/compute5/Public_RNA-seq_QC/ .
     mv molgenis-pipelines/compute5/Public_RNA-seq_quantification/ .
@@ -75,7 +76,6 @@ adjust_workflows(){
     # Remove all the steps we don't need from the workflow
     sed -i '/VerifyBamID/d' Public_RNA-seq_QC/workflows/workflowSTAR.csv
     sed -i '/VariantEval/d' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-    sed -i '/HtseqCount/d' Public_RNA-seq_quantification/workflows/workflow.csv
     sed -i '/GatkUnifiedGenotyper/d' Public_RNA-seq_QC/workflows/workflowSTAR.csv
     sed -i '/SortBam.sh/d' Public_RNA-seq_QC/workflows/workflowSTAR.csv
     sed -i '/AddOr/d' Public_RNA-seq_QC/workflows/workflowSTAR.csv
@@ -83,7 +83,6 @@ adjust_workflows(){
     # Change/add steps that are not in by default
     sed -i 's/SortBam/CreateCramFiles/' Public_RNA-seq_QC/workflows/workflowSTAR.csv
     sed -i 's;Kallisto,../protocols/Kallisto.sh,;Sailfish,../protocols/Sailfish.sh,;' Public_RNA-seq_quantification/workflows/workflow.csv
-    echo "FeatureCount,../protocols/FeatureCount.sh," >> Public_RNA-seq_quantification/workflows/workflow.csv
 }
 
 
@@ -109,12 +108,20 @@ change_protocols(){
     # Add the conversion to the STAR alignment script
     echo "echo \"convert SAM to BAM\"" >> Public_RNA-seq_QC/protocols/STARMapping.sh
     echo "module load SAMtools/1.5-foss-2015b" >> Public_RNA-seq_QC/protocols/STARMapping.sh
-    echo "mkdir -p /groups/umcg-biogen/tmp04/biogen/input/TargetALS/pipelines/results/\${unfilteredBamDir}/" >> Public_RNA-seq_QC/protocols/STARMapping.sh
+    echo "mkdir -p ${project_dir}/results/\${unfilteredBamDir}/" >> Public_RNA-seq_QC/protocols/STARMapping.sh
     echo "samtools view -h -b \${alignmentDir}/\${uniqueID}.sam > \${unfilteredBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/STARMapping.sh
     echo "rm \${alignmentDir}/\${uniqueID}.sam" >> Public_RNA-seq_QC/protocols/STARMapping.sh
 
     # Removed the filteredBam step, so change this in the SortBam protocol
     sed -i 's;filteredBam;unfilteredBam;' Public_RNA-seq_QC/protocols/SortBam.sh
+
+    # Since we already converted to cram, change the bam part in HTSeq to cram
+    sed -i 's;${bam};${cramFileDir}${uniqueID}.cram;' Public_RNA-seq_quantification/protocols/HtseqCount.sh
+    sed -i 's;#string bam;#string cramFileDir;' Public_RNA-seq_quantification/protocols/HtseqCount.sh
+
+    # Same for Sailfish, already converted to Cram so need to convert to fastq first
+    # Since it's lot of lines it it is put in modified protocol
+    rsync -vP $script_dir/modified_protocols/Sailfish.sh Public_RNA-seq_quantification/protocols/
 }
 
 change_parameter_files(){
@@ -126,9 +133,9 @@ change_parameter_files(){
     #       Either change below code or change the parameters.csv file
     sed -i 's;group,umcg-wijmenga;group,umcg-biogen;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;resDir,/groups/umcg-wijmenga/tmp04/resources/;resDir,/apps/data/;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;projects/umcg-ndeklein/${project};biogen/input/TargetALS/pipelines/results/;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i "s;projects/umcg-ndeklein/\${project};biogen/input/${cohort}/pipelines/results/;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;STARindex;STARindex,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/STAR/${starVersion}/;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;alignmentDir,${project_dir}/hisat/;alignmentDir,${project_dir}/star;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;alignmentDir,${projectDir}/hisat/;alignmentDir,${projectDir}/star;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;fastqExtension,.gz;fastqExtension,.fq.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;goolf-1.7.20;foss-2015b;g' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;fastqExtension,.fq.gz;fastqExtension,.fastq.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
@@ -136,12 +143,26 @@ change_parameter_files(){
     sed -i 's;onekgGenomeFasta,${resDir}/${genomeBuild}/indices/human_g1k_v${human_g1k_vers}.fasta;onekgGenomeFasta,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/GRCh38.p5.genome.fa;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;genesRefFlat,${resDir}/picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.refflat;genesRefFlat,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.refflat;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;rRnaIntervalList,${resDir}//picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.rrna.interval_list;rRnaIntervalList,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.rRNA.interval_list;' Public_RNA-seq_QC/parameter_files/parameters.csv
+
     bash Public_RNA-seq_QC/parameter_files/convert.sh Public_RNA-seq_QC/parameter_files/parameters.csv Public_RNA-seq_QC/parameter_files/parameters.converted.csv
+
 
     # Change the qunatification pipeline parameter file
     sed -i 's;group,umcg-wijmenga;group,umcg-biogen;' Public_RNA-seq_quantification/parameter_files/parameters.csv
     sed -i 's;tmp03;tmp04;' Public_RNA-seq_quantification/parameter_files/parameters.csv
-    sed -i 's;projects/umcg-ndeklein/${project};biogen/input/TargetALS/pipelines/results/;' Public_RNA-seq_quantification/parameter_files/parameters.csv
+    sed -i "s;projects/umcg-ndeklein/\${project};biogen/input/${cohort}/pipelines/results/;" Public_RNA-seq_quantification/parameter_files/parameters.csv
+    chr38gtf="/apps/data/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.gtf.gz"
+    sed -i "s;annotationGtf,/apps/data/ftp.ensembl.org/pub/release-75/gtf/homo_sapiens/Homo_sapiens.GRCh37.75.gtf;annotationGtf,${chr38gtf};" Public_RNA-seq_quantification/parameter_files/parameters.csv
+    echo "bedtoolsVersion,2.25.0-foss-2015b" >> Public_RNA-seq_quantification/parameter_files/parameters.csv
+    echo "picardVersion,2.10.0-foss-2015b-Java-1.8.0_74" >> Public_RNA-seq_quantification/parameter_files/parameters.csv
+    echo "iolibVersion,1.14.6-foss-2015b" >> Public_RNA-seq_quantification/parameter_files/parameters.csv
+    echo "resDir,/apps/data/" >> Public_RNA-seq_quantification/parameter_files/parameters.csv
+    echo 'onekgGenomeFasta,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/GRCh38.p5.genome.fa' >> Public_RNA-seq_quantification/parameter_files/parameters.csv
+    sed -i 's;htseqVersion,0.6.1p1-foss-2015b;htseqVersion,0.9.1-foss-2015b-Python-2.7.11;' Public_RNA-seq_quantification/parameter_files/parameters.csv
+    # most of the protocols are not stranded, so change here. If protocol is stranded for one of the
+    # cohorts it will be adjusted in cohort specific method below
+    sed -i 's;stranded,reverse;stranded,no;' Public_RNA-seq_quantification/parameter_files/parameters.csv
+
     bash Public_RNA-seq_QC/parameter_files/convert.sh Public_RNA-seq_quantification/parameter_files/parameters.csv Public_RNA-seq_quantification/parameter_files/parameters.converted.csv
 }
 
@@ -149,11 +170,17 @@ change_parameter_files(){
 make_samplesheets(){
     # Make the samplesheets. How the samplesheet is made is dependent om the cohort
     echo "Making samplesheets..."
-
     rm Public_RNA-seq_QC/samplesheet1.csv
     mkdir -p Public_RNA-seq_QC/samplesheets/
-    python make_samplesheet.py sample_annotation/UMG-Target_ALS_RNA_Clinical_Data_06122018.txt Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.
-    python make_samplesheet.py sample_annotation/RNA_Metadata_TALS_2_5July2018.txt Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.samplesheet5july2018_
+
+    samplesheet_script_dir=$script_dir/samplesheet_scripts/
+    if [[ "$cohort" == "TargetALS" ]];
+    then
+        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/sample_annotation/UMG-Target_ALS_RNA_Clinical_Data_06122018.txt Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.
+        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/sample_annotation/RNA_Metadata_TALS_2_5July2018.txt Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.samplesheet5july2018_
+    else
+        echo "No code written for corhort $cohort"
+    fi
 }
 
 change_prepare_scripts(){
@@ -163,14 +190,14 @@ change_prepare_scripts(){
     # Do general changes for the alignment pipeline
     sed -i 's;/path/to/molgenis-pipelines/compute5/Public_RNA-seq_QC/;;' Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
     sed -i 's;/groups/umcg-wijmenga/tmp04/umcg-ndeklein/molgenis-pipelines/compute5/Public_RNA-seq_QC/;;' Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
-    sed -i 's;parameters.converted.csv;/groups/umcg-biogen/tmp04/biogen/input/TargetALS/Public_RNA-seq_QC/parameter_files/parameters.converted.csv;' Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
-    sed -i 's;workflow.csv;/groups/umcg-biogen/tmp04/biogen/input/TargetALS/Public_RNA-seq_QC/workflows/workflowSTAR.csv;' Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
-    sed -i 's;-rundir /groups/umcg-wijmenga/tmp04/umcg-ndeklein/rundirs/QC/;-rundir /groups/umcg-biogen/tmp04/biogen/input/TargetALS/pipelines/alignment/alignmentDir;' Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
-    sed -i 's;/groups/umcg-wijmenga/tmp04/umcg-ndeklein/samplesheets/;/groups/umcg-biogen/tmp04/biogen/input/TargetALS/Public_RNA-seq_QC/samplesheets/;' Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
+    sed -i "s;parameters.converted.csv;${project_dir}/Public_RNA-seq_QC/parameter_files/parameters.converted.csv;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
+    sed -i "s;workflow.csv;${project_dir}/Public_RNA-seq_QC/workflows/workflowSTAR.csv;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
+    sed -i "s;-rundir /groups/umcg-wijmenga/tmp04/umcg-ndeklein/rundirs/QC/;-rundir ${project_dir}/pipelines/alignment/alignmentDir;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
+    sed -i "s;/groups/umcg-wijmenga/tmp04/umcg-ndeklein/samplesheets/;${project_dir}/Public_RNA-seq_QC/samplesheets/;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
 
     # Do general changes for the quantification pipeline
-    sed -i 's;workflows/workflow.csv;/groups/umcg-biogen/tmp04/biogen/input/TargetALS/Public_RNA-seq_quantification/workflows/workflow.csv;' Public_RNA-seq_quantification/prepare_quantification.sh
-    sed -i 's;parameter_files/;/groups/umcg-biogen/tmp04/biogen/input/TargetALS/Public_RNA-seq_quantification/parameter_files/;' Public_RNA-seq_quantification/prepare_quantification.sh
+    sed -i "s;workflows/workflow.csv;${project_dir}/Public_RNA-seq_quantification/workflows/workflow.csv;" Public_RNA-seq_quantification/prepare_quantification.sh
+    sed -i "s;parameter_files/;${project_dir}/Public_RNA-seq_quantification/parameter_files/;" Public_RNA-seq_quantification/prepare_quantification.sh
 
 
     # Do specific changes per samplesheet batch
@@ -188,9 +215,9 @@ change_prepare_scripts(){
 
         # Change it for the quantificaiton pipeline per batch
         rsync -vP Public_RNA-seq_quantification/prepare_quantification.sh Public_RNA-seq_quantification/prepare_scripts/prepare_quantification.$name.sh
-        sed -i "s;samplesheet.csv;/groups/umcg-biogen/tmp04/biogen/input/TargetALS/Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.$name.txt;" Public_RNA-seq_quantification/prepare_scripts/prepare_quantification.$name.sh
+        sed -i "s;samplesheet.csv;${project_dir}/Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.$name.txt;" Public_RNA-seq_quantification/prepare_scripts/prepare_quantification.$name.sh
         sed -i "s;alignmentDir;$name;" Public_RNA-seq_quantification/prepare_scripts/prepare_quantification.$name.sh
-        sed -i "s;-rundir results/;-rundir /groups/umcg-biogen/tmp04/biogen/input/TargetALS/pipelines/quantification/$name;" Public_RNA-seq_quantification/prepare_scripts/prepare_quantification.$name.sh
+        sed -i "s;-rundir results/;-rundir ${project_dir}/pipelines/quantification/$name;" Public_RNA-seq_quantification/prepare_scripts/prepare_quantification.$name.sh
     done
 }
 
@@ -198,7 +225,7 @@ change_prepare_scripts(){
 make_pipeline_scripts(){
     # Make the pipeline scripts using Molgenis Compute
     echo "Maing pipeline scripts..."
-
+    echo $PWD
     cd Public_RNA-seq_QC/prepare_scripts;
     for f in *sh;
     do
@@ -224,21 +251,31 @@ cohort_specific_steps(){
 
 }
 
-parse_commandLine(){
+parse_commandline(){
+    # Parse the command line arguments
     echo "Parsing commandline..."
 
-    while [ "$1" != "" ]; do
+    # Check to see if at least one argument is given
+    if [ $# -eq 0 ]
+    then
+        echo "ERROR: No arguments supplied"
+        usage
+        exit 1;
+    fi
+
+    while [[ $# -ge 1 ]]; do
         case $1 in
             -c | --cohort )         shift
                                     cohort=$1
                                     ;;
-            -p | --project_dir )     shift
+            -p | --project_dir )    shift
                                     project_dir=$1
                                     ;;
             -h | --help )           usage
                                     exit
                                     ;;
-            * )                     usage
+            * )                     echo "ERROR: Undexpected argument: $1"
+                                    usage
                                     exit 1
         esac
         shift
@@ -263,5 +300,7 @@ parse_commandLine(){
     echo "Making pipeline..."
 }
 
-
-main "$@"
+# [[ ${BASH_SOURCE[0]} = "$0" ]] -> main does not run when this script is sourced
+# main "$@" -> Send the arguments to the main function (this way project flow can be at top)
+# exit -> safeguard against the file being modified while it is interpreted
+[[ ${BASH_SOURCE[0]} = "$0" ]] && main "$@"; exit;
