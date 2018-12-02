@@ -76,10 +76,10 @@ else
 fi
 
 # get the filenames from the full path
-fq1NameGz=$(basename $reads1FqGz)
-fq1Name=${fq1NameGz%.gz}
-fq2NameGz=$(basename $reads2FqGz)
-fq2Name=${fq2NameGz%.gz}
+fq1NameGz=$uniqueID.R1.fq.gz
+fq1Name=$uniqueID.R1.fq
+fq2NameGz=$uniqueID.R2.fq.gz
+fq2Name=$uniqueID.R2.fq
 
 
 echo "Starting BAM to FASTQ conversion: convert sorted BAM file to fastq"
@@ -114,7 +114,7 @@ if [ ${#reads2FqGz} -eq 0 ]; then
   if sailfish quant \
         -i ${sailfishIndex} \
         -l ${libType} \
-        -r <(gunzip -c $TMPDIR/$fq1Name) \
+        -r $TMPDIR/$fq1Name \
         -o $outDir} \
         --numBootstraps ${numBootstraps} \
         ${flags}
@@ -129,7 +129,7 @@ else
   if sailfish quant \
         -i ${sailfishIndex} \
         -l ${libType} \
-        -1 <(gunzip -c $TMPDIR/$fq1Name) -2 <(gunzip -c $TMPDIR/$fq2Name) \
+        -1 $TMPDIR/$fq1Name -2 $TMPDIR/$fq2Name \
         -o $outDir \
         --numBootstraps ${numBootstraps} \
         ${flags}
