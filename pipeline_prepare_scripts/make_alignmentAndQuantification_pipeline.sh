@@ -36,6 +36,7 @@ main(){
     change_parameter_files
     make_samplesheets
     change_prepare_scripts
+    cohort_specific_steps
     make_pipeline_scripts
     cd -
 }
@@ -248,7 +249,12 @@ cohort_specific_steps(){
 
 #    rsync -vP STARMappingTwoPass.sh Public_RNA-seq_QC/protocols/
 #   echo "STARMappingTwoPass,../protocols/STARMappingTwoPass.sh,CreateCramFiles" >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
-
+    if [[ "$cohort" == "TargetALS" ]];
+    then
+        echo "TargetALS specific methods..."
+        echo "HtseqCountTwoPass,../protocols/HtseqCountTwoPass.sh," >> Public_RNA-seq_quantification/workflows/workflow.csv
+        rsync -vP $script_dir/modified_protocols/HtseqCountTwoPass.sh Public_RNA-seq_quantification/protocols/
+    fi
 }
 
 parse_commandline(){
