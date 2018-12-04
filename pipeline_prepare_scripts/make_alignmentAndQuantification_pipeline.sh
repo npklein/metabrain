@@ -16,6 +16,7 @@ module load Python
 
 cohort=
 project_dir=
+tmpdir=
 script_dir=$(dirname "$0")
 
 main(){
@@ -49,9 +50,10 @@ main(){
 usage(){
     # print the usage of the programme
     programname=$0
-    echo "usage: $programname -c cohort -p project_directory"
+    echo "usage: $programname -c cohort -p project_directory -t tmp04"
     echo "  -c      provide the cohort to prepare pipeline for (mandatory)"
     echo "  -p      Base of the project_dir where pipeline scripts will be put (mandatory)"
+    echo "  -t      tmpdir of the cluster (e.g. tmp03 for boxy, tmp04 for calculon). Will use /groups/$TMPDIR/.../"
     echo "  -h      display help"
     exit 1
 }
@@ -138,8 +140,8 @@ change_parameter_files(){
     # NOTE: The replacemets are cluster specific, but don't want to make this command line options because that would make too many of them
     #       Either change below code or change the parameters.csv file
     sed -i 's;group,umcg-wijmenga;group,umcg-biogen;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;resDir,/groups/umcg-wijmenga/tmp04/resources/;resDir,/apps/data/;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i "s;projects/umcg-ndeklein/\${project};biogen/input/${cohort}/results/;" Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i "s;resDir,/groups/umcg-wijmenga/$tmpdir/resources/;resDir,/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i "s;projectDir,\${root}/\${group}/\${tmp}/projects/umcg-ndeklein/\${project}/;projectDir,${project_dir}/results/;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;STARindex;STARindex,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/STAR/${starVersion}/;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;alignmentDir,${projectDir}/hisat/;alignmentDir,${projectDir}/star;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;fastqExtension,.gz;fastqExtension,.fq.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
@@ -155,7 +157,8 @@ change_parameter_files(){
 
     # Change the qunatification pipeline parameter file
     sed -i 's;group,umcg-wijmenga;group,umcg-biogen;' Public_RNA-seq_quantification/parameter_files/parameters.csv
-    sed -i 's;tmp03;tmp04;' Public_RNA-seq_quantification/parameter_files/parameters.csv
+    sed -i "s;tmp03;$tmpdir;" Public_RNA-seq_quantification/parameter_files/parameters.csv
+    sed -i "s;projectDir,\${root}/\${group}/\${tmp}/projects/umcg-ndeklein/\${project}/;projectDir,${project_dir}/results/;" Public_RNA-seq_quantification/parameter_files/parameters.csv
     sed -i "s;projects/umcg-ndeklein/\${project};biogen/input/${cohort}/results/;" Public_RNA-seq_quantification/parameter_files/parameters.csv
     chr38gtf="/apps/data/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.gtf.gz"
     sed -i "s;annotationGtf,/apps/data/ftp.ensembl.org/pub/release-75/gtf/homo_sapiens/Homo_sapiens.GRCh37.75.gtf;annotationGtf,${chr38gtf};" Public_RNA-seq_quantification/parameter_files/parameters.csv
@@ -202,7 +205,7 @@ change_prepare_scripts(){
 
     # Do general changes for the alignment pipeline
     sed -i 's;/path/to/molgenis-pipelines/compute5/Public_RNA-seq_QC/;;' Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
-    sed -i 's;/groups/umcg-wijmenga/tmp04/umcg-ndeklein/molgenis-pipelines/compute5/Public_RNA-seq_QC/;;' Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
+    sed -i "s;/groups/umcg-wijmenga/tmp04/umcg-ndeklein/molgenis-pipelines/compute5/Public_RNA-seq_QC/;;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
     sed -i "s;parameters.converted.csv;${project_dir}/Public_RNA-seq_QC/parameter_files/parameters.converted.csv;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
     sed -i "s;workflow.csv;${project_dir}/Public_RNA-seq_QC/workflows/workflowSTAR.csv;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
     sed -i "s;-rundir /groups/umcg-wijmenga/tmp04/umcg-ndeklein/rundirs/QC/;-rundir ${project_dir}/alignment/alignmentDir;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
@@ -284,6 +287,9 @@ parse_commandline(){
             -p | --project_dir )    shift
                                     project_dir=$1
                                     ;;
+            -t | --tmpdir )         shift
+                                    tmpdir=$1
+                                    ;;
             -h | --help )           usage
                                     exit
                                     ;;
@@ -309,7 +315,12 @@ parse_commandline(){
         usagae
         exit 1;
     fi
-
+    if [ -z "$tmpdir" ];
+    then
+        echo "ERROR: -t/--tmpdir not set!"
+        usagae
+        exit 1;
+    fi
     echo "Making pipeline..."
 }
 
