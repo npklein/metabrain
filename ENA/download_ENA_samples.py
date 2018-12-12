@@ -17,6 +17,8 @@ parser.add_argument('--download_speed', help='Aspera download speed in MB/s (def
 parser.add_argument('--sample', help='Single sample to download. Overwrites inclusion and exclusion list')
 parser.add_argument('--inclusion_list_file', help='Newline separated file with list of samples to include')
 parser.add_argument('--exclusion_list_file', help='Newline separated file with list of samples to exclude')
+parser.add_argument('-i','--include_all_samples', action='store_true', help='Raise error if sample is not found in samplesheet. If not set, give warning')
+
 
 args = parser.parse_args()
 
@@ -30,8 +32,8 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO,
 class Download_ENA_samples:
     def __init__(self, samplesheet, download_location, aspera_binary='ascp', 
                  aspera_openssh='~/.aspera/connect/etc/asperaweb_id_dsa.openssh',
-                 download_speed=2000,
-                 inclusion_list = [], exclusion_list = []):
+                 download_speed=2000,inclusion_list = [], exclusion_list = [],
+                 include_all_samples = False):
         '''Initiate download_ENA_samples class
         
         samplesheet(str)    Samplesheet downloaded from http://www.ebi.ac.uk/ena/data/warehouse/search
@@ -41,6 +43,7 @@ class Download_ENA_samples:
         aspera_openssh(str)  Location of the Aspera openssh (default: ~/.aspera/connect/etc/asperaweb_id_dsa.openssh) 
         inclusion_list(list)    Samples to download (def: [] -> no samples get excluded)
         exclusion_list(list)    Samples to exclude from download (def: None -> all samples get included)
+        include_all_samples(Boolean) Check that all samples are in the samplesheet and downloaded, or throw error (default: False)
         '''
         # os.path.expanduser changes ~ into homedir
         self.aspera_binary = os.path.expanduser(aspera_binary)
@@ -54,7 +57,8 @@ class Download_ENA_samples:
         self.exclusion_list = exclusion_list
         self.aspera_download_speed = download_speed
         self.previous_percent = -1
-        
+        self.include_all_samples = include_all_samples        
+
     def __check_if_aspera_exists(self, aspera_binary):
         '''Check if aspera location given in aspera_binary exists or is in PATH
         
@@ -167,7 +171,7 @@ class Download_ENA_samples:
             logging.error('Expected 1-3 fastq files, got'+str(number_of_fastq_download_links)+'. Check your ena samplesheet')
             logging.error('Unexpected number of fastq files. Expected 1-3 fastq files, got'+str(number_of_fastq_download_links))    
         
-    def __def get_all_indices(list_to_index):
+    def __get_all_indices(self, list_to_index):
         '''Get the indexes of all the items in a list and put them in a dict with key: element, value: index
         
            list_to_index(list)    List to get index from all elements from
@@ -197,7 +201,7 @@ class Download_ENA_samples:
         print('Downloading samples to '+self.download_location)
         with open(self.samplesheet,'r', encoding='utf-8') as samplesheet_handle:
             samplesheet_header = samplesheet_handle.readline().split('\t')
-            header_index = get_all_indices(samplesheet_header)
+            header_index = self.__get_all_indices(samplesheet_header)
             for line in samplesheet_handle:
                 line = line.strip().split('\t')
                 run_accession = line[header_index['run_accession']]
@@ -240,7 +244,10 @@ class Download_ENA_samples:
                             raise RuntimeError('download protocol was not ftp or aspera')
         not_included_samples = [x for x in self.inclusion_list if x not in included_samples]
         if len(not_included_samples):
-            logging.warn('Not all samples from include list were present in the samplesheet. Missing: '+'\t'.join(not_included_samples))
+            if self.include_all_samples:
+                raise RuntimeError('Not all samples from include list were present in the samplesheet. Missing: '+'\t'.join(not_included_samples))
+            else:
+                logging.warn('Not all samples from include list were present in the samplesheet self.samplesheet.\nMissing: '+'\t'.join(not_included_samples))
 
 
 
@@ -261,5 +268,7 @@ if __name__ == "__main__":
         else:
             exclusion_list == []
     download = Download_ENA_samples(args.samplesheet, args.download_location, args.aspera_binary, 
-                                    args.aspera_openssh, args.download_speed, inclusion_list, exclusion_list)
+                                    args.aspera_openssh, args.download_speed, inclusion_list, exclusion_list,
+                                    args.include_all_samples)
 
+    download.start()

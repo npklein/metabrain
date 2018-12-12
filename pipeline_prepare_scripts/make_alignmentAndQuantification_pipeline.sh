@@ -124,7 +124,7 @@ change_protocols(){
 
     # Same for Sailfish, already converted to Cram so need to convert to fastq first
     # Since it's lot of lines it it is put in modified protocol
-    rsync -vP $script_dir/modified_protocols/Sailfish.sh Public_RNA-seq_quantification/protocols/
+    rsync -P $script_dir/modified_protocols/Sailfish.sh Public_RNA-seq_quantification/protocols/
 }
 
 change_parameter_files(){
@@ -229,12 +229,12 @@ change_prepare_scripts(){
 
         # Change it for the alignment pipeline per batch
         echo "making prepare script using $samplesheet: Public_RNA-seq_QC/prepare_scripts/prepare_Public_RNA-seq_QC.$name.sh"
-        rsync -vP Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh Public_RNA-seq_QC/prepare_scripts/prepare_Public_RNA-seq_QC.$name.sh
+        rsync -P Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh Public_RNA-seq_QC/prepare_scripts/prepare_Public_RNA-seq_QC.$name.sh
         sed -i "s;samplesheet.csv;samplesheet_${cohort}_RNA.$name.txt;" Public_RNA-seq_QC/prepare_scripts/prepare_Public_RNA-seq_QC.$name.sh
         sed -i "s;alignmentDir;$name;" Public_RNA-seq_QC/prepare_scripts/prepare_Public_RNA-seq_QC.$name.sh
 
         # Change it for the quantificaiton pipeline per batch
-        rsync -vP Public_RNA-seq_quantification/prepare_quantification.sh Public_RNA-seq_quantification/prepare_scripts/prepare_quantification.$name.sh
+        rsync -P Public_RNA-seq_quantification/prepare_quantification.sh Public_RNA-seq_quantification/prepare_scripts/prepare_quantification.$name.sh
         sed -i "s;samplesheet.csv;${project_dir}/Public_RNA-seq_QC/samplesheets/samplesheet_${cohort}_RNA.$name.txt;" Public_RNA-seq_quantification/prepare_scripts/prepare_quantification.$name.sh
         sed -i "s;alignmentDir;$name;" Public_RNA-seq_quantification/prepare_scripts/prepare_quantification.$name.sh
         sed -i "s;-rundir results/;-rundir ${project_dir}/quantification/$name;" Public_RNA-seq_quantification/prepare_scripts/prepare_quantification.$name.sh
@@ -272,12 +272,12 @@ cohort_specific_steps(){
 
     if [[ "$cohort" == "TargetALS" ]];
     then
-#    rsync -vP STARMappingTwoPass.sh Public_RNA-seq_QC/protocols/
+#    rsync -P STARMappingTwoPass.sh Public_RNA-seq_QC/protocols/
 #   echo "STARMappingTwoPass,../protocols/STARMappingTwoPass.sh,CreateCramFiles" >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
         echo "TargetALS specific methods..."
         echo "HtseqCountTwoPass,../protocols/HtseqCountTwoPass.sh," >> Public_RNA-seq_quantification/workflows/workflow.csv
-        rsync -vP $script_dir/modified_protocols/HtseqCountTwoPass.sh Public_RNA-seq_quantification/protocols/
-        rsync -vP $script_dir/modified_protocols/HtseqCountOneSampleTwoPass.sh Public_RNA-seq_quantification/protocols/HtseqCount.sh
+        rsync -P $script_dir/modified_protocols/HtseqCountTwoPass.sh Public_RNA-seq_quantification/protocols/
+        rsync -P $script_dir/modified_protocols/HtseqCountOneSampleTwoPass.sh Public_RNA-seq_quantification/protocols/HtseqCount.sh
 
         # the project structure is different for TargetALS, so change (after changing directory, see project structure)
         for prepare_script in Public_RNA-seq_QC/prepare_scripts/* Public_RNA-seq_quantification/prepare_scripts/*;
@@ -291,15 +291,17 @@ cohort_specific_steps(){
         echo "unfilteredTwoPassBamDir,/groups/umcg-biogen/tmp04/biogen/input/TargetALS/pipelines/results/DEXSEQ_test/unfilteredTwoPassBam/" >> Public_RNA-seq_quantification/parameter_files/parameters.csv
     elif [[ "$cohort" == "ENA" ]];
     then
+        echo "ENA specific methods..."
         # Need to know where to find download_ENA_samples.py, this is in the brain_eQTL github directory. Since this script is also in this directory, find the directory like so (and add it to parameters file):
         brain_eQTL_dir="$( cd "$( dirname $( dirname "${BASH_SOURCE[0]}" ) )" >/dev/null && pwd )"
         echo "brainDir,$brain_eQTL_dir" >> Public_RNA-seq_QC/parameter_files/parameters.csv
-        echo "enaSamplesheet,ENA/ENA_samplesheets/samplesheet_ENA_20181212.txt" >> Public_RNA-seq_QC/parameter_files/parameters.csv
+        echo "enaSamplesheet,$brain_eQTL_dir/ENA/ENA_samplesheets/samplesheet_ENA_20181212.txt" >> Public_RNA-seq_QC/parameter_files/parameters.csv
         # Because we only need to download from ENA if the cohort is ENA, copy over
-        rsync -vP $script_dir/modified_protocols/DownloadFromENA.sh Public_RNA-seq_QC/protocols/
+        rsync -P $script_dir/modified_protocols/DownloadFromENA.sh Public_RNA-seq_QC/protocols/
         # Have to add the download part before the start of the pipeline (2i inserts the text at 2nd line)
         sed -i '2iDownloadFromENA,../protocols/DownloadFromENA.sh,' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-        sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,DownloadFromENA' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+        sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,DownloadFromENA;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+        sed -i 's;FastQC,../protocols/FastQC.sh,;FastQC,../protocols/FastQC.sh,DownloadFromENA;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
         # Different molgenis compute script is installed on Peregrine where the public data is run, so change
         for prepare_script in Public_RNA-seq*/prepare_scripts/*sh;
         do

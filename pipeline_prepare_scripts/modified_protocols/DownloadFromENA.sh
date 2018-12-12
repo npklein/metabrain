@@ -11,6 +11,7 @@
 #string brainDir
 #string enaSamplesheet
 #string reads1FqGz
+#string pythonVersion
 
 #Load modules
 ${stage} Python/${pythonVersion}
@@ -21,10 +22,11 @@ ${checkStage}
 echo "## "$(date)" Start $0"
 echo "ID (internalId-project-sampleName): ${internalId}-${project}-${sampleName}"
 
-
+mkdir -p $(dirname ${reads1FqGz})
 python $brainDir/ENA/download_ENA_samples.py ${enaSamplesheet} \
                                              $(dirname ${reads1FqGz}) \
-                                             --sample ${sampleName}
+                                             --sample ${sampleName}} \
+                                            -i
 
 returnCode=$?
 echo "returncode: $returnCode";

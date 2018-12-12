@@ -58,6 +58,7 @@ for sample in samples_to_add:
     if number_of_samples % 25 == 0:
         if out:
             out.close()
+            exit()
         batch = 'batch'+str(int(number_of_samples/25))
         R1 = fastq_dir+'/'+batch+'/'+fq_files[sample][0].split('/')[-1]
         R2 = ''
@@ -66,7 +67,7 @@ for sample in samples_to_add:
         out = open('Public_RNA-seq_QC/samplesheets/samplesheet_ENA_RNA.'+batch+'.txt','w')
         out.write('internalId,project,sampleName,reads1FqGz,reads2FqGz\n')
            
-    out.write(sample_name+',ENA,'+individual_id+','+R1+','+R2+'\n')
+    out.write(individual_id+',ENA,'+sample_name+','+R1+','+R2+'\n')
     number_of_samples += 1
 
 out.close()
