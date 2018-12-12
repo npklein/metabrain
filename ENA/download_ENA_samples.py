@@ -8,6 +8,8 @@ import subprocess
 import hashlib
 from .Utils import Utils
 
+# Original version from https://github.com/npklein/publicRNAseq
+
 format = '%(asctime)s - %(levelname)s - %(funcName)s - %(message)s'
 logging.basicConfig(stream=sys.stdout, level=logging.INFO,
                     format=format)
@@ -19,7 +21,6 @@ class Download_ENA_samples:
         
         samplesheet(str)    Samplesheet downloaded from http://www.ebi.ac.uk/ena/data/warehouse/search
                             Reports tab, with all columns selected.
-                            Can also be downloaded by running Download_ENA_samplesheet (see genotypePublicData README)
         download_location(str):   Location to store the downloaded fastq files at
         aspera_binary(str)  Location of the Aspera binary (default: use from PATH) 
         aspera_openssh(str)  Location of the Aspera openssh (default: ~/.aspera/connect/etc/asperaweb_id_dsa.openssh) 
