@@ -1,0 +1,9 @@
+Download ENA samplesheets from https://www.ebi.ac.uk/ena/data/warehouse/search:
+    - Select domain: Read
+    - Taxon name: Homo sapiens
+    - Library strategy: RNA-Seq
+Then on left side click on Run -> Reports -> select columns -> select all the columns
+Then click TEXT. File is downloaded as ena.txt
+
+To keep file size small for github, the samlesheet is filtered on only samples that will be processed with
+    python filter_ENA_samplesheet.py
