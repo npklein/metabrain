@@ -59,7 +59,7 @@ for sample in samples_to_add:
         if out:
             out.close()
         batch = 'batch'+str(int(number_of_samples/25))
-        R1 = fastq_dir+'/'batch+'/+fq_files[sample][0].split('/')[-1]
+        R1 = fastq_dir+'/'+batch+'/'+fq_files[sample][0].split('/')[-1]
         R2 = ''
         if len(fq_files[sample]) > 1:
             R2 = fastq_dir+'/'+batch+'/'+fq_files[sample][1].split('/')[-1]
