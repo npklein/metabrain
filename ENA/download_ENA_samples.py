@@ -166,6 +166,18 @@ class Download_ENA_samples:
             logging.error('Expected 1-3 fastq files, got'+str(number_of_fastq_download_links)+'. Check your ena samplesheet')
             logging.error('Unexpected number of fastq files. Expected 1-3 fastq files, got'+str(number_of_fastq_download_links))    
         
+    def __def get_all_indices(list_to_index):
+        '''Get the indexes of all the items in a list and put them in a dict with key: element, value: index
+        
+           list_to_index(list)    List to get index from all elements from
+        '''
+        list_indexes = {}
+        i = 0
+        for element in list_to_index:
+            list_indexes[element] = i
+            i += 1
+        return list_indexes
+
     def start(self, download_protocol='aspera'):
         '''Download the samples using either aspera or ftp
         
@@ -184,7 +196,7 @@ class Download_ENA_samples:
         print('Downloading samples to '+self.download_location)
         with open(self.samplesheet,'r', encoding='utf-8') as samplesheet_handle:
             samplesheet_header = samplesheet_handle.readline().split('\t')
-            header_index = Utils.get_all_indices(samplesheet_header)
+            header_index = get_all_indices(samplesheet_header)
             for line in samplesheet_handle:
                 line = line.strip().split('\t')
                 run_accession = line[header_index['run_accession']]
