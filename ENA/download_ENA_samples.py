@@ -13,6 +13,7 @@ from .Utils import Utils
 format = '%(asctime)s - %(levelname)s - %(funcName)s - %(message)s'
 logging.basicConfig(stream=sys.stdout, level=logging.INFO,
                     format=format)
+
 class Download_ENA_samples:
     def __init__(self, samplesheet, download_location, aspera_binary='ascp', 
                  aspera_openssh='~/.aspera/connect/etc/asperaweb_id_dsa.openssh',
