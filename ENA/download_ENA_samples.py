@@ -6,7 +6,18 @@ import os
 import urllib.request 
 import subprocess
 import hashlib
-from .Utils import Utils
+import argparse
+
+parser = argparse.ArgumentParser(description='Download a list of samples from ENA')
+parser.add_argument('samplesheet', help='ENA sampelsheet containing accession ID, md5sums and download location.')
+parser.add_argument('download_location', help='Location to store the downloaded fastq files at')
+parser.add_argument('--aspera_binary', help='Location of the Aspera binary (default: use from PATH)', default='ascp')
+parser.add_argument('--aspera_openssh', help='Location of the Aspera openssh (default: %(default)s)', default='~/.aspera/connect/etc/asperaweb_id_dsa.openssh')
+parser.add_argument('--download_speed', help='Aspera download speed in MB/s (default: %(default)sMB/s)', default=2000)
+parser.add_argument('--inclusion_list_file', help='Newline separated file with list of samples to include')
+parser.add_argument('--exclusion_list_file', help='Newline separated file with list of samples to exclude')
+
+args = parser.parse_args()
 
 # Original version from https://github.com/npklein/publicRNAseq
 
@@ -14,9 +25,11 @@ format = '%(asctime)s - %(levelname)s - %(funcName)s - %(message)s'
 logging.basicConfig(stream=sys.stdout, level=logging.INFO,
                     format=format)
 
+
 class Download_ENA_samples:
     def __init__(self, samplesheet, download_location, aspera_binary='ascp', 
                  aspera_openssh='~/.aspera/connect/etc/asperaweb_id_dsa.openssh',
+                 download_speed=2000,
                  inclusion_list = [], exclusion_list = []):
         '''Initiate download_ENA_samples class
         
@@ -38,7 +51,7 @@ class Download_ENA_samples:
         self.samplesheet = samplesheet
         self.inclusion_list = inclusion_list
         self.exclusion_list = exclusion_list
-        self.aspera_download_speed = 2000
+        self.aspera_download_speed = download_speed
         self.previous_percent = -1
         
     def __check_if_aspera_exists(self, aspera_binary):
@@ -49,7 +62,7 @@ class Download_ENA_samples:
         '''
         def is_exe(fpath):
             return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
-
+    
         fpath, fname = os.path.split(aspera_binary)
         if fpath:
             if is_exe(aspera_binary):
@@ -87,10 +100,8 @@ class Download_ENA_samples:
         '''
         self.aspera_download_speed = speed
     
-
-    
     def __reporthook(self,blocknum, blocksize, totalsize):
-        ''' Report hook for urlretrieve
+        ''' Report hook for urlretrieve, will print progress of download
         Copied from: http://stackoverflow.com/a/13895723/651779
         '''
         readsofar = blocknum * blocksize
@@ -114,13 +125,18 @@ class Download_ENA_samples:
            fastq_aspera_link(str)   Aspera link to download
            download_location(str)   Location to save downloaded file at
         '''
-        command = [self.aspera_binary,'-QT', '-l '+str(self.aspera_download_speed)+'m', '-i', self.aspera_openssh,fastq_aspera_link,download_location]
+        # --policy: transfer policy (see https://download.asperasoft.com/download/docs/ascp/3.5.2/html/general_external/dita/fasp_transfer_policies.html)
+        # -T: disable encryption for maximum throughput
+        # -l: max_rate (in this case in MB)
+        # -i: private key file
+        # End with download location
+        command = [self.aspera_binary,'-T','--policy ','fair', '-l '+str(self.aspera_download_speed)+'m', '-i', self.aspera_openssh,fastq_aspera_link,download_location]
         logging.info('Downloading with the terminal command:\n'+' '.join(command))
         subprocess.call(command)
         
     def __check_md5(self, fastq_file, md5):
         '''Check if the md5sum of downloaded fastq file is correct
-
+    
            fastq_file(str):   Location of fastq file to check md5 of
            md5(str):   md5sum to check if it is same as md5sum of fastq_file
         '''
@@ -137,7 +153,7 @@ class Download_ENA_samples:
         else:
             logging.info('md5 sums are not the same')
         return md5_returned == md5
-
+    
     def __report_number_of_fastq_files(self, run_accession, number_of_fastq_download_links):
         '''Simple print function that is used for aspera and ftp downloads'''
         if number_of_fastq_download_links == 1:
@@ -212,4 +228,21 @@ class Download_ENA_samples:
         not_included_samples = [x for x in self.inclusion_list if x not in included_samples]
         if len(not_included_samples):
             logging.warn('Not all samples from include list were present in the samplesheet. Missing: '+'\t'.join(not_included_samples))
-    
+
+
+
+if __name__ == "__main__":
+    if args.inclusion_list_file:
+        with open(args.inclusion_list_file) as input_file:
+            inclusion_list = input_file.read().split('\n')
+    else:
+        inclusion_list == []
+        
+    if args.exclusion_list_file:
+        with open(args.exclusion_list_file) as input_file:
+            exclusion_list = input_file.read().split('\n')
+    else:
+        exclusion_list == []
+    download = Download_ENA_samples(args.samplesheet, args.download_location, args.aspera_binary, 
+                                    args.aspera_openssh, args.download_speed, inclusion_list, exclusion_list)
+
