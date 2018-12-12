@@ -14,6 +14,7 @@ parser.add_argument('download_location', help='Location to store the downloaded 
 parser.add_argument('--aspera_binary', help='Location of the Aspera binary (default: use from PATH)', default='ascp')
 parser.add_argument('--aspera_openssh', help='Location of the Aspera openssh (default: %(default)s)', default='~/.aspera/connect/etc/asperaweb_id_dsa.openssh')
 parser.add_argument('--download_speed', help='Aspera download speed in MB/s (default: %(default)sMB/s)', default=2000)
+parser.add_argument('--sample', help='Single sample to download. Overwrites inclusion and exclusion list')
 parser.add_argument('--inclusion_list_file', help='Newline separated file with list of samples to include')
 parser.add_argument('--exclusion_list_file', help='Newline separated file with list of samples to exclude')
 
@@ -244,17 +245,21 @@ class Download_ENA_samples:
 
 
 if __name__ == "__main__":
-    if args.inclusion_list_file:
-        with open(args.inclusion_list_file) as input_file:
-            inclusion_list = input_file.read().split('\n')
+    if args.sample:
+        inclusion_list = [args.sample]
+        exclusion_list = []
     else:
-        inclusion_list == []
+        if args.inclusion_list_file:
+            with open(args.inclusion_list_file) as input_file:
+                inclusion_list = input_file.read().split('\n')
+        else:
+            inclusion_list == []
         
-    if args.exclusion_list_file:
-        with open(args.exclusion_list_file) as input_file:
-            exclusion_list = input_file.read().split('\n')
-    else:
-        exclusion_list == []
+        if args.exclusion_list_file:
+            with open(args.exclusion_list_file) as input_file:
+                exclusion_list = input_file.read().split('\n')
+        else:
+            exclusion_list == []
     download = Download_ENA_samples(args.samplesheet, args.download_location, args.aspera_binary, 
                                     args.aspera_openssh, args.download_speed, inclusion_list, exclusion_list)
 
