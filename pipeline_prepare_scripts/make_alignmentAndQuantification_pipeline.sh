@@ -30,12 +30,6 @@ main(){
         echo "ERROR: $project_dir does not exist"
         exit 1;
     fi
-    if [[ "$cohort" == "TargetALS" ]];
-    then
-        # the project structure is different for TargetALS, so change (after changing directory, see project structure)
-        project_dir=${project_dir}/pipelines/
-    fi
-
     clone_pipelines
     adjust_workflows
     change_protocols
@@ -151,9 +145,6 @@ change_parameter_files(){
     sed -i 's;genesRefFlat,${resDir}/picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.refflat;genesRefFlat,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.refflat;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;rRnaIntervalList,${resDir}//picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.rrna.interval_list;rRnaIntervalList,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.rRNA.interval_list;' Public_RNA-seq_QC/parameter_files/parameters.csv
 
-    bash Public_RNA-seq_QC/parameter_files/convert.sh Public_RNA-seq_QC/parameter_files/parameters.csv Public_RNA-seq_QC/parameter_files/parameters.converted.csv
-
-
     # Change the qunatification pipeline parameter file
     sed -i 's;group,umcg-wijmenga;group,umcg-biogen;' Public_RNA-seq_quantification/parameter_files/parameters.csv
     sed -i 's;tmp03;tmp04;' Public_RNA-seq_quantification/parameter_files/parameters.csv
@@ -169,8 +160,6 @@ change_parameter_files(){
     # most of the protocols are not stranded, so change here. If protocol is stranded for one of the
     # cohorts it will be adjusted in cohort specific method below
     sed -i 's;stranded,reverse;stranded,no;' Public_RNA-seq_quantification/parameter_files/parameters.csv
-
-    bash Public_RNA-seq_QC/parameter_files/convert.sh Public_RNA-seq_quantification/parameter_files/parameters.csv Public_RNA-seq_quantification/parameter_files/parameters.converted.csv
 }
 
 
@@ -240,6 +229,10 @@ make_pipeline_scripts(){
     # Make the pipeline scripts using Molgenis Compute
     echo "Maing pipeline scripts..."
     echo $PWD
+
+    # convert the parameter files to wide format now instead of in the change_parameters function because the cohort_specific_steps function might have changed some of them
+    bash Public_RNA-seq_QC/parameter_files/convert.sh Public_RNA-seq_QC/parameter_files/parameters.csv Public_RNA-seq_QC/parameter_files/parameters.converted.csv
+    bash Public_RNA-seq_QC/parameter_files/convert.sh Public_RNA-seq_quantification/parameter_files/parameters.csv Public_RNA-seq_quantification/parameter_files/parameters.converted.csv
     cd Public_RNA-seq_QC/prepare_scripts;
     for f in *sh;
     do
@@ -267,7 +260,20 @@ cohort_specific_steps(){
         echo "TargetALS specific methods..."
         echo "HtseqCountTwoPass,../protocols/HtseqCountTwoPass.sh," >> Public_RNA-seq_quantification/workflows/workflow.csv
         rsync -vP $script_dir/modified_protocols/HtseqCountTwoPass.sh Public_RNA-seq_quantification/protocols/
+        rsync -vP $script_dir/modified_protocols/HtseqCountOneSampleTwoPass.sh Public_RNA-seq_quantification/protocols/HtseqCount.sh
+
+        # the project structure is different for TargetALS, so change (after changing directory, see project structure)
+        for prepare_script in Public_RNA-seq_QC/prepare_scripts/* Public_RNA-seq_quantification/prepare_scripts/*;
+        do
+            sed -i 's;-rundir /groups/umcg-biogen/tmp04/biogen/input/TargetALS/;-rundir /groups/umcg-biogen/tmp04/biogen/input/TargetALS/pipelines/DEXSEQ_test;' $prepare_script
+        done
+        # same also for resultsdir
+        sed -i 's;projectDir,${root}/${group}/${tmp}/biogen/input/TargetALS/results/;projectDir,${root}/${group}/${tmp}/biogen/input/TargetALS/pipelines/results/DEXSEQ_test;' Public_RNA-seq_quantification/parameter_files/parameters.csv
+        sed -i 's;projectDir,${root}/${group}/${tmp}/biogen/input/TargetALS/results/;projectDir,${root}/${group}/${tmp}/biogen/input/TargetALS/pipelines/results/DEXSEQ_test;' Public_RNA-seq_QC/parameter_files/parameters.csv
+
+        echo "unfilteredTwoPassBamDir,/groups/umcg-biogen/tmp04/biogen/input/TargetALS/pipelines/results/DEXSEQ_test/unfilteredTwoPassBam/" >> Public_RNA-seq_quantification/parameter_files/parameters.csv
     fi
+
 }
 
 parse_commandline(){
