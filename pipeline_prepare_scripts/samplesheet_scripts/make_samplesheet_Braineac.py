@@ -1,4 +1,3 @@
-# loop through all subdirs to find all fastq files
 import sys
 import os.path
 import glob
@@ -6,12 +5,14 @@ import os
 import glob
 import re
 
+# TODO: remove hard coded path
 fastq_dir = '/groups/umcg-biogen/tmp03/input/ucl-upload-biogen/data/fastq/'
 samples = set([])
 all_fastq_files = set([])
 with open('data/original_fastq_files.txt') as input_file:
     for line in input_file:
         sample = '_'.join(line.split('/')[-1].split('_')[:2])
+        # sample name is different between file and samplesheet, so adjust
         if sample == 'A653-1341':
             sample = 'A653_1341'
         samples.add(sample)
@@ -20,6 +21,7 @@ with open('data/original_fastq_files.txt') as input_file:
 samples_per_biobank = {}
 number_of_samples_per_biobank = {}
 rin = {}
+# SampleInfoBiogen is the samplesheet as provided to us, get information on individuals and fastq files from there
 with open('SampleInfoBiogen.csv') as input_file:
     header = input_file.readline().split(',')
     for line in input_file:
@@ -30,6 +32,7 @@ with open('SampleInfoBiogen.csv') as input_file:
         if biobank not in samples_per_biobank:
             samples_per_biobank[biobank] = []
             number_of_samples_per_biobank[biobank] = 0
+        # <<<>>> is just something that can split on later
         samples_per_biobank[biobank].append(sample+'<<<>>>'+individual_id)         
         rin[sample] = line[-1]
 
@@ -44,6 +47,7 @@ for biobank in samples_per_biobank:
         R2 = fastq_dir+sample_name+'.R2.fastq.gz'
         if sample_name not in samples:
             continue
+        # make batches of size 25
         if number_of_samples_per_biobank[biobank] % 25 == 0:
             if out:
                 out.close()

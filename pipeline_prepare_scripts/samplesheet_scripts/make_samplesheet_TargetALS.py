@@ -25,7 +25,9 @@ with open(sys.argv[1]) as input_file:
         fastq1 += '.R1.fastq.gz'
 
         # search using wildcards because sample info does not include everything to build the full path
-        # (for example the date can not know)
+        # (for example the date can not be known from just the samplesheet)
+        # Since fastq files get deleted, the number of the protocols in compute can change if samples not added
+        # when the fastq file does not exist. Therefore, instead set fastq to NOT_FOUND if the fastq file can not be found
         try:
             fastq1 = glob.glob(fastq1)[0]
         except IndexError:

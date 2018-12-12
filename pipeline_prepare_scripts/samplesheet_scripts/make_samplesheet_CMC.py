@@ -14,7 +14,6 @@ individual_per_sample = {}
 samples_per_batch = {}
 batch_count = {}
 
-# TODO: change hard path
 with open(sys.argv[1]) as input_file:
     header = input_file.readline().split('\t')
     for line in input_file:
@@ -28,6 +27,8 @@ with open(sys.argv[1]) as input_file:
             raise RuntimeError('Sample ID in multiple times')
         individual_per_sample[sample_id] = individual_id
 
+        # The reads are downloaded as BAM files, one with aligned reads, one with the unaligned reads. These will be
+        # merged together later, so need to have both of the file names
         unaligned_bam = aligned_bam.replace('BamAlignedReadData','BamUnmappedReadData').replace('accepted_hits.sort.coord.bam','unmapped.bam')
 
         fastq_path = '/groups/umcg-biogen/tmp03/input/CMC/pipelines/results/fastq/'+sample_id+'_R1.fq.gz'
@@ -35,6 +36,7 @@ with open(sys.argv[1]) as input_file:
         if batch not in batch_count:
             batch_count[batch] = 0
         batch_count[batch] += 1
+        # Make max 5 batches, where the first 4 have 25 samples and the 5th has al other sampls
         if batch_count[batch] > 25 and batch_count[batch] < 50:
             batch = batch+'_batch2'
         elif batch_count[batch] >= 50 and batch_count[batch] < 75:
