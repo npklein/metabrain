@@ -20,6 +20,7 @@
 #string unfilteredTwoPassBamDir
 #string projectDir
 #string iolibVersion
+#string uniqueID
 
 echo "## "$(date)" Start $0"
 echo "ID (internalId-project-sampleName): ${internalId}-${project}-${sampleName}"
