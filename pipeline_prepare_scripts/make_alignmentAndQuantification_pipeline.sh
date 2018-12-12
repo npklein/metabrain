@@ -294,6 +294,7 @@ cohort_specific_steps(){
         # Need to know where to find download_ENA_samples.py, this is in the brain_eQTL github directory. Since this script is also in this directory, find the directory like so (and add it to parameters file):
         brain_eQTL_dir="$( cd "$( dirname $( dirname "${BASH_SOURCE[0]}" ) )" >/dev/null && pwd )"
         echo "brainDir,$brain_eQTL_dir" >> Public_RNA-seq_QC/parameter_files/parameters.csv
+        echo "enaSamplesheet,ENA/ENA_samplesheets/samplesheet_ENA_20181212.txt" >> Public_RNA-seq_QC/parameter_files/parameters.csv
         # Because we only need to download from ENA if the cohort is ENA, copy over
         rsync -vP $script_dir/modified_protocols/DownloadFromENA.sh Public_RNA-seq_QC/protocols/
         # Have to add the download part before the start of the pipeline (2i inserts the text at 2nd line)

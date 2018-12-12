@@ -53,16 +53,16 @@ for sample in samples_to_add:
     individual_id = sample.split('<<<>>>')[1]
 
     
-    R1 = fastq_dir+'/'+fq_files[sample][0].split('/')[-1]
-    R2 = ''
-    if len(fq_files[sample]) > 1:
-        R2 = fastq_dir+'/'+fq_files[sample][1].split('/')[-1]
 
     # make batches of size 25
     if number_of_samples % 25 == 0:
         if out:
             out.close()
         batch = 'batch'+str(int(number_of_samples/25))
+        R1 = fastq_dir+'/'batch+'/+fq_files[sample][0].split('/')[-1]
+        R2 = ''
+        if len(fq_files[sample]) > 1:
+            R2 = fastq_dir+'/'+batch+'/'+fq_files[sample][1].split('/')[-1]
         out = open('Public_RNA-seq_QC/samplesheets/samplesheet_ENA_RNA.'+batch+'.txt','w')
         out.write('internalId,project,sampleName,reads1FqGz,reads2FqGz\n')
            
