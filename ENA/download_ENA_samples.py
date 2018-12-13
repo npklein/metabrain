@@ -130,12 +130,11 @@ class Download_ENA_samples:
            fastq_aspera_link(str)   Aspera link to download
            download_location(str)   Location to save downloaded file at
         '''
-        # --policy: transfer policy (see https://download.asperasoft.com/download/docs/ascp/3.5.2/html/general_external/dita/fasp_transfer_policies.html)
         # -T: disable encryption for maximum throughput
         # -l: max_rate (in this case in MB)
         # -i: private key file
         # End with download location
-        command = [self.aspera_binary,'-T','--policy ','fair', '-l '+str(self.aspera_download_speed)+'m', '-i', self.aspera_openssh,fastq_aspera_link,download_location]
+        command = [self.aspera_binary,'-QT','-P ','33001', '-l '+str(self.aspera_download_speed)+'m', '-i', self.aspera_openssh,fastq_aspera_link,download_location]
         logging.info('Downloading with the terminal command:\n'+' '.join(command))
         subprocess.call(command)
         
@@ -245,9 +244,9 @@ class Download_ENA_samples:
         not_included_samples = [x for x in self.inclusion_list if x not in included_samples]
         if len(not_included_samples):
             if self.include_all_samples:
-                raise RuntimeError('Not all samples from include list were present in the samplesheet. Missing: '+'\t'.join(not_included_samples))
+                raise RuntimeError('Not all samples from include list were present in the samplesheet '+self.samplesheet+'.\nMissing: '+'\t'.join(not_included_samples))
             else:
-                logging.warn('Not all samples from include list were present in the samplesheet self.samplesheet.\nMissing: '+'\t'.join(not_included_samples))
+                logging.warn('Not all samples from include list were present in the samplesheet '+self.samplesheet+'.\nMissing: '+'\t'.join(not_included_samples))
 
 
 
