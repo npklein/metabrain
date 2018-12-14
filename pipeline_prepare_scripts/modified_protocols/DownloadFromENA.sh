@@ -32,7 +32,7 @@ returnCode=$?
 echo "returncode: $returnCode";
 if [ $returnCode -eq 0 ]
 then
-  echo "Downloading fastq file successful"
+  echo "Downloading fastq files successful"
 else
   echo "ERROR: Could not download fastq file"
   exit 1;

@@ -301,7 +301,7 @@ cohort_specific_steps(){
         # Have to add the download part before the start of the pipeline (2i inserts the text at 2nd line)
         sed -i '2iDownloadFromENA,../protocols/DownloadFromENA.sh,' Public_RNA-seq_QC/workflows/workflowSTAR.csv
         sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,DownloadFromENA;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-        sed -i 's;FastQC,../protocols/FastQC.sh,;FastQC,../protocols/FastQC.sh,DownloadFromENA;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+        sed -i 's;FastQC,../protocols/Fastqc.sh,;FastQC,../protocols/Fastqc.sh,DownloadFromENA;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
         # Different molgenis compute script is installed on Peregrine where the public data is run, so change
         for prepare_script in Public_RNA-seq*/prepare_scripts/*sh;
         do
