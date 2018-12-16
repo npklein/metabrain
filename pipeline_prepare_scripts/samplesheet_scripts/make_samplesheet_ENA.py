@@ -43,6 +43,7 @@ with open(sys.argv[1]) as input_file:
         # individual can have multiple samples, need to know for merging bams later
         sample = line[header_by_index['run_accession']]
         individual = line[header_by_index['sample_accession']]
+        individuals.add(individual)
         # need the links to see if it is single or paired end sequencing
         fastq_aspera_links = line[header_by_index['fastq_aspera']].rstrip(';').split(';')
         study = line[0]
@@ -70,8 +71,8 @@ for study in study_individuals:
     batch_number = 0
     batch = ''
     prev_individual = None
-    for individual in study_individuals[study]:
-
+    individuals = sorted(study_individuals[study])
+    for individual in individuals:
         # check if number_of_samples is equal to batch size
         # or that if the total number of samples for next batch plus current number in batch > batch_size (so no batch gets larger than batch_size)
         # This to keep number of jobs low enough for aspera

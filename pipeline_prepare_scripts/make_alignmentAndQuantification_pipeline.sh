@@ -302,6 +302,14 @@ cohort_specific_steps(){
         sed -i '2iDownloadFromENA,../protocols/DownloadFromENA.sh,' Public_RNA-seq_QC/workflows/workflowSTAR.csv
         sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,DownloadFromENA;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
         sed -i 's;FastQC,../protocols/Fastqc.sh,;FastQC,../protocols/Fastqc.sh,DownloadFromENA;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+
+        # for testing only do first 3 jobs
+        echo "step,protocol,dependencies" > Public_RNA-seq_QC/workflows/workflowSTAR.csv
+        echo "DownloadFromENA,../protocols/DownloadFromENA.sh," >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
+        echo "STARMapping,../protocols/STARMapping.sh,DownloadFromENA" >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
+        echo "CreateCramFiles,../protocols/CreateCramFiles.sh,STARMapping" >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
+        echo "FastQC,../protocols/Fastqc.sh,DownloadFromENA" >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
+
         # Different molgenis compute script is installed on Peregrine where the public data is run, so change
         for prepare_script in Public_RNA-seq*/prepare_scripts/*sh;
         do
@@ -311,7 +319,7 @@ cohort_specific_steps(){
         # have to change a lot of parameters because the script locations are all different
         sed -i 's;WORKDIR,/groups/;WORKDIR,/scratch/;' Public_RNA-seq*/parameter_files/parameters.csv
         sed -i 's;group,umcg-biogen;group,umcg-ndeklein;' Public_RNA-seq*/parameter_files/parameters.csv
-        sed -i "s;resDir,/apps/data/;resDir,/groups/umcg-ndeklein/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
+        sed -i "s;resDir,/apps/data/;resDir,/scratch/umcg-ndeklein/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
         sed -i 's;picardVersion,2.10.0-foss-2015b-Java-1.8.0_74;picardVersion,2.18.5-Java-1.8.0_162;' Public_RNA-seq*/parameter_files/parameters.csv
         sed -i 's;gatkVersion,3.4-0-Java-1.7.0_80;gatkVersion,4.0.5.1-foss-2018a-Python-3.6.4;' Public_RNA-seq*/parameter_files/parameters.csv
         sed -i 's;2.5.1b-foss-2015b;2.6.0c-foss-2018a;' Public_RNA-seq*/parameter_files/parameters.csv
