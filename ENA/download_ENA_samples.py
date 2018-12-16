@@ -216,6 +216,7 @@ class Download_ENA_samples:
                     if run_accession not in self.exclusion_list:
                         logging.info('Found '+run_accession+' to process')
                         if download_protocol == 'ftp':
+                            raise RuntimeError('ftp not implemented yet')
                             fastq_ftp_links = line[header_index['fastq_ftp']].rstrip(';').split(';')
                             self.__report_number_of_fastq_files(run_accession, len(fastq_ftp_links))
                             # paired end data will have multiple download links
@@ -235,7 +236,7 @@ class Download_ENA_samples:
                             logging.info('Download from:'+'\n\t'.join(fastq_aspera_links))
 
                             self.__report_number_of_fastq_files(run_accession,len(fastq_aspera_links))
-                            for fastq_aspera_link in fastq_aspera_links:
+                            for index, fastq_aspera_link in enumerate(fastq_aspera_links):
                                 download_file_location = self.download_location+'/'+fastq_aspera_link.split('/')[-1]
                                 x = 0
 #                                while not self.__check_md5(download_file_location, line[header_index['fastq_md5']], self.include_all_samples):
@@ -250,10 +251,11 @@ class Download_ENA_samples:
                                     if x == 10:
                                         self.logging.warning('Tried 10 times to download '+run_accession+' but never connected.')
                                         raise RuntimeError('Tried 10 times to download '+run_accession+' but never connected.')
-                                    print('Download failed, sleeping 60 seconds then try again')
-                                    time.sleep(60)
+                                    sleep_time = 600
+                                    print('Download failed, sleeping '+str(sleep_time)+' seconds then try again')
+                                    time.sleep(sleep_time)
                                     
-                                self.__check_md5(download_file_location, line[header_index['fastq_md5']], self.include_all_samples)
+                                self.__check_md5(download_file_location, line[header_index['fastq_md5']].split(';')[index], self.include_all_samples)
                         else:
                             logging.error('Download protocol was not ftp or aspera')
                             raise RuntimeError('download protocol was not ftp or aspera')
