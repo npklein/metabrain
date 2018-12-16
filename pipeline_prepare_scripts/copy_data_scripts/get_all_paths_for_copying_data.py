@@ -1,8 +1,20 @@
 import glob
 
-for f in glob.glob('*/parameter_files/parameters.csv'):
-    with open(f) as input_file:
-        header = inut_file.readline()
-        for line in input_file:
-            print(line)
-            exit()
+with open('copy_resources.sh','w') as out:
+    for f in glob.glob('/groups/umcg-biogen/tmp03/input/rawdata/ucl-upload-biogen//Public_RNA-seq_*/parameter_files/parameters.csv'):
+        with open(f) as input_file:
+            header = input_file.readline()
+            res_dir = ''
+            for line in input_file:
+                line = line.strip().split(',')
+                if 'resDir' in line:
+                    if line[0] == 'resDir':
+                        res_dir = line[1]
+                    else:
+                        line[1] = line[1].replace('${resDir}',res_dir)
+                        # make the target directory
+                        out.write('rsync -vP –rsync-path=”mkdir -p /scratch/umcg-ndeklein/'+line[1].lstrip('/')+' && rsync” '+line[1])
+                        out.write('umcg-ndeklein@peregrine.hpc.rug.nl:/scratch/umcg-ndeklein/'+line[1].lstrip('/')+'\n')
+                elif '/apps/data' in ' '.join(line):
+                    out.write('rsync -vPR –rsync-path=”mkdir -p /scratch/umcg-ndeklein/'+line[1].lstrip('/')+' && rsync” '+line[1])
+                    out.write(line[1]+' umcg-ndeklein@peregrine.hpc.rug.nl:/scratch/umcg-ndeklein/'+line[1].lstrip('/')+'\n')
