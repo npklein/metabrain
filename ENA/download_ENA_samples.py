@@ -26,7 +26,7 @@ args = parser.parse_args()
 
 format = '%(asctime)s - %(levelname)s - %(funcName)s - %(message)s'
 logging.basicConfig(stream=sys.stdout, level=logging.INFO,
-                    format=format)
+                    format=format, datefmt="%Y-%m-%d %H:%M:%S")
 
 
 class Download_ENA_samples:
@@ -243,10 +243,12 @@ class Download_ENA_samples:
                                 # Sometimes the download fails, so check if the fastq file is there. But remove it first in case this job has already run
                                 if os.path.exists(download_file_location):
                                     os.remove(download_file_location)
-                                while not os.path.exists(download_file_location):
+                                while True:
                                     fastq_aspera_link = 'era-fasp@'+fastq_aspera_link
-                                    logging.info('Downloading '+fastq_aspera_link+' using aspera...')
+                                    logging.info('Downloading '+fastq_aspera_link+' to '+download_file_location+' using aspera...')
                                     self.__download_sample_with_aspera(fastq_aspera_link, download_file_location)
+                                    if os.path.exists(download_file_location):
+                                        break
                                     x += 1
                                     if x == 10:
                                         self.logging.warning('Tried 10 times to download '+run_accession+' but never connected.')
