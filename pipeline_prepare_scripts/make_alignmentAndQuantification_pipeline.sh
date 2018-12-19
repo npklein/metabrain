@@ -193,10 +193,7 @@ make_samplesheets(){
         python $samplesheet_script_dir/make_samplesheet_Braineac.py
     elif [[ "$cohort" == "ENA" ]];
     then
-        # Need to know where to find samplesheet_ENA_20181212.tx, this is in the brain_eQTL github directory. Since this script is also in this directory, find the directory like so (and add it to parameters file):
-        brain_eQTL_dir="$( cd "$( dirname $( dirname "${BASH_SOURCE[0]}" ) )" >/dev/null && pwd )"
-        python $samplesheet_script_dir/make_samplesheet_ENA.py $brain_eQTL_dir/ENA/ENA_samplesheets/samplesheet_ENA_20181212.txt \
-                                                               /scratch/umcg-ndeklein/tmp03/ENA/pipelines/results/fastq/
+        echo "ERROR: need to get genotypes as well for the ENA samples. Because the pipeline needs to be set up quite differently, use make_alignmentQuantificationAndGenotype_pipeline.sh instead"
     else
         echo "No code written for cohort $cohort"
         exit 1;
@@ -289,43 +286,6 @@ cohort_specific_steps(){
         sed -i 's;projectDir,${root}/${group}/${tmp}/biogen/input/TargetALS/results/;projectDir,${root}/${group}/${tmp}/biogen/input/TargetALS/pipelines/results/DEXSEQ_test;' Public_RNA-seq_QC/parameter_files/parameters.csv
 
         echo "unfilteredTwoPassBamDir,/groups/umcg-biogen/tmp04/biogen/input/TargetALS/pipelines/results/DEXSEQ_test/unfilteredTwoPassBam/" >> Public_RNA-seq_quantification/parameter_files/parameters.csv
-    elif [[ "$cohort" == "ENA" ]];
-    then
-        echo "ENA specific methods..."
-        # Need to know where to find download_ENA_samples.py, this is in the brain_eQTL github directory. Since this script is also in this directory, find the directory like so (and add it to parameters file):
-        brain_eQTL_dir="$( cd "$( dirname $( dirname "${BASH_SOURCE[0]}" ) )" >/dev/null && pwd )"
-        echo "brainDir,$brain_eQTL_dir" >> Public_RNA-seq_QC/parameter_files/parameters.csv
-        echo "enaSamplesheet,$brain_eQTL_dir/ENA/ENA_samplesheets/samplesheet_ENA_20181212.txt" >> Public_RNA-seq_QC/parameter_files/parameters.csv
-        # Because we only need to download from ENA if the cohort is ENA, copy over
-        rsync -P $script_dir/modified_protocols/DownloadFromENA.sh Public_RNA-seq_QC/protocols/
-        # Have to add the download part before the start of the pipeline (2i inserts the text at 2nd line)
-        sed -i '2iDownloadFromENA,../protocols/DownloadFromENA.sh,' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-        sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,DownloadFromENA;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-        sed -i 's;FastQC,../protocols/Fastqc.sh,;FastQC,../protocols/Fastqc.sh,DownloadFromENA;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-
-        # for testing only do first 3 jobs
-        echo "step,protocol,dependencies" > Public_RNA-seq_QC/workflows/workflowSTAR.csv
-        echo "DownloadFromENA,../protocols/DownloadFromENA.sh," >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
-        echo "STARMapping,../protocols/STARMapping.sh,DownloadFromENA" >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
-        echo "CreateCramFiles,../protocols/CreateCramFiles.sh,STARMapping" >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
-        echo "FastQC,../protocols/Fastqc.sh,DownloadFromENA" >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
-
-        # Different molgenis compute script is installed on Peregrine where the public data is run, so change
-        for prepare_script in Public_RNA-seq*/prepare_scripts/*sh;
-        do
-            sed -i 's;v16.05.1-Java-1.8.0_45;v16.11.1-Java-1.8.0_74;' $prepare_script
-        done
-
-        # have to change a lot of parameters because the script locations are all different
-        sed -i 's;WORKDIR,/groups/;WORKDIR,/scratch/;' Public_RNA-seq*/parameter_files/parameters.csv
-        sed -i 's;group,umcg-biogen;group,umcg-ndeklein;' Public_RNA-seq*/parameter_files/parameters.csv
-        sed -i "s;resDir,/apps/data/;resDir,/scratch/umcg-ndeklein/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
-        sed -i 's;picardVersion,2.10.0-foss-2015b-Java-1.8.0_74;picardVersion,2.18.5-Java-1.8.0_162;' Public_RNA-seq*/parameter_files/parameters.csv
-        sed -i 's;gatkVersion,3.4-0-Java-1.7.0_80;gatkVersion,4.0.5.1-foss-2018a-Python-3.6.4;' Public_RNA-seq*/parameter_files/parameters.csv
-        sed -i 's;2.5.1b-foss-2015b;2.6.0c-foss-2018a;' Public_RNA-seq*/parameter_files/parameters.csv
-        sed -i 's;samtoolsVersion,1.5-foss-2015b;samtoolsVersion,1.9-GCC-6.4.0-2.28;' Public_RNA-seq*/parameter_files/parameters.csv
-        sed -i 's;RVersion,3.2.1-foss-2015b;RVersion,3.5.0-foss-2018a-X11-20180131;' Public_RNA-seq*/parameter_files/parameters.csv
-        sed -i 's;fastqcVersion,0.11.3-Java-1.7.0_80;fastqcVersion,0.11.7-Java-1.8.0_162;' Public_RNA-seq*/parameter_files/parameters.csv
     fi
 }
 
