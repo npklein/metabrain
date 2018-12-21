@@ -3,8 +3,6 @@ import synapseclient
 import synapseutils
 import argparse
 
-print(synapseclient.__file__)
-
 parser = argparse.ArgumentParser(description='Download RNAseq and genotypes of CMC.')
 parser.add_argument('RNAseq_directory', help='Directory to download RNAseq data to')
 parser.add_argument('Genotype_directory', help='Directory to download genotypes to')
