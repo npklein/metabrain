@@ -64,25 +64,27 @@ seen = set([])
 # Divide the jobs up per study, easier to keep track later (although some studies have only 1 sample)
 # Since some studies are very large, make batches per <batch_size> samples, but make sure that samples from same individual are in the same batch
 for study in study_individuals:
-    number_of_samples = 0
+    total_number_of_samples = 0
+    current_number_of_samples = 0
     out = None
     individuals_in_current_batch = set([])
     batch_number = 0
     batch = ''
     prev_individual = None
-    for individual in study_individuals[study]:
-
+    individuals = sorted(study_individuals[study])
+    for individual in individuals:
         # check if number_of_samples is equal to batch size
         # or that if the total number of samples for next batch plus current number in batch > batch_size (so no batch gets larger than batch_size)
         # This to keep number of jobs low enough for aspera
-        if number_of_samples % batch_size == 0 or number_of_samples + len(samples_per_individual[individual]) > 10:
+        if total_number_of_samples % batch_size == 0 or current_number_of_samples + len(samples_per_individual[individual]) > 10:
             if out:
                 out.close()
-
-            batch_number = int(number_of_samples / batch_size)
+            
+            batch_number = int(total_number_of_samples / batch_size)
             batch = 'batch'+str(batch_number)
             out = open('Public_RNA-seq_QC/samplesheets/samplesheet_ENA_RNA.'+study+'_'+batch+'.txt','w')
             out.write('internalId,project,sampleName,reads1FqGz,reads2FqGz\n')
+            current_number_of_samples = 0
 
         # Because some of the samples from an indivudal might not have been added to this batch, do it now before closing the file
         # samples_per_individual <- all samples of individual
@@ -98,5 +100,7 @@ for study in study_individuals:
             if len(fastq_files) > 1:
                 R2 = fastq_dir+'/'+study+'/'+fastq_files[1].split('/')[-1]
             out.write(individual+',ENA,'+sample+','+R1+','+R2+'\n')
-        number_of_samples += len(samples_per_individual[individual])
+        total_number_of_samples += len(samples_per_individual[individual])
+        current_number_of_samples += len(samples_per_individual[individual])
+
     out.close()

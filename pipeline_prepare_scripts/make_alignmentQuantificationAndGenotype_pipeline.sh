@@ -77,14 +77,9 @@ adjust_workflows(){
     mv /tmp/workflowSTAR.csv Public_RNA-seq_QC/workflows/
 
     # Remove all the steps we don't need from the workflow
-    sed -i '/VerifyBamID/d' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-    sed -i '/VariantEval/d' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-    sed -i '/GatkUnifiedGenotyper/d' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-    sed -i '/SortBam.sh/d' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-    sed -i '/AddOr/d' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+    # At the moment there are none to remove
 
     # Change/add steps that are not in by default
-    sed -i 's/SortBam/CreateCramFiles/' Public_RNA-seq_QC/workflows/workflowSTAR.csv
     sed -i 's;Kallisto,../protocols/Kallisto.sh,;Sailfish,../protocols/Sailfish.sh,;' Public_RNA-seq_quantification/workflows/workflow.csv
 }
 
@@ -98,33 +93,10 @@ change_protocols(){
     echo "echo \"remove \${unfilteredBamDir}/\${uniqueID}.bam\"" >> Public_RNA-seq_QC/protocols/CreateCramFiles.sh
     echo "rm \${unfilteredBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/CreateCramFiles.sh
 
-    # Because we first convert to cram before running the collectMetrics jobs, change this for all Collect*sh scripts
-    sed -i 's;#string sortedBam;#string cramFileDir;' Public_RNA-seq_QC/protocols/Collect*sh
-    sed -i 's;#string sortedBai;#string uniqueID;' Public_RNA-seq_QC/protocols/Collect*sh
-    sed -i 's;${sortedBam};${cramFileDir}${uniqueID}.cram;' Public_RNA-seq_QC/protocols/Collect*sh
-
-    # Did not add readgroup information at this point, so remove line METRIC_ACCUMULATION_LEVEL
+    # Although for ENA we do add in readgroup information as the new version of GATK needs it,
+    # this was not done for the other cohorts. Therefore, remove  METRIC_ACCUMULATION_LEVEL here as well
     # Otherwise, tries to do it per readgroud. Now does it per file
     sed -i '/METRIC_ACCUMULATION_LEVEL/d' Public_RNA-seq_QC/protocols/CollectRnaSeqMetrics.sh
-
-    # Original SAM to BAM conversion is done in seperate step, but this step is removed from the workflow
-    # Add the conversion to the STAR alignment script
-    echo "echo \"convert SAM to BAM\"" >> Public_RNA-seq_QC/protocols/STARMapping.sh
-    echo "module load SAMtools/1.5-foss-2015b" >> Public_RNA-seq_QC/protocols/STARMapping.sh
-    echo "mkdir -p ${project_dir}/results/\${unfilteredBamDir}/" >> Public_RNA-seq_QC/protocols/STARMapping.sh
-    echo "samtools view -h -b \${alignmentDir}/\${uniqueID}.sam > \${unfilteredBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/STARMapping.sh
-    echo "rm \${alignmentDir}/\${uniqueID}.sam" >> Public_RNA-seq_QC/protocols/STARMapping.sh
-
-    # Removed the filteredBam step, so change this in the SortBam protocol
-    sed -i 's;filteredBam;unfilteredBam;' Public_RNA-seq_QC/protocols/SortBam.sh
-
-    # Since we already converted to cram, change the bam part in HTSeq to cram
-    sed -i 's;${bam};${cramFileDir}${uniqueID}.cram;' Public_RNA-seq_quantification/protocols/HtseqCount.sh
-    sed -i 's;#string bam;#string cramFileDir;' Public_RNA-seq_quantification/protocols/HtseqCount.sh
-
-    # Same for Sailfish, already converted to Cram so need to convert to fastq first
-    # Since it's lot of lines it it is put in modified protocol
-    rsync -P $script_dir/modified_protocols/Sailfish.sh Public_RNA-seq_quantification/protocols/
 }
 
 change_parameter_files(){
@@ -183,17 +155,19 @@ make_samplesheets(){
     samplesheet_script_dir=$script_dir/samplesheet_scripts/
     if [[ "$cohort" == "TargetALS" ]];
     then
-        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/sample_annotation/UMG-Target_ALS_RNA_Clinical_Data_06122018.txt Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.
-        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/sample_annotation/RNA_Metadata_TALS_2_5July2018.txt Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.samplesheet5july2018_
+        echo "ERROR: Don't need to get genotypes for the TargetALS samples. Because the pipeline needs to be set up quite differently, use make_alignmentAndQuantification_pipeline.sh instead"
     elif [[ "$cohort" == "CMC" ]];
     then
-        python $samplesheet_script_dir/make_samplesheet_CMC.py /groups/umcg-biogen/tmp03/input/CMC/CMC_RNAseq_samplesheet.txt
+        echo "ERROR: Don't need to get genotypes for the CMC samples. Because the pipeline needs to be set up quite differently, use make_alignmentAndQuantification_pipeline.sh instead"
     elif [[ "$cohort" == "Braineac" ]];
     then
-        python $samplesheet_script_dir/make_samplesheet_Braineac.py
+        echo "ERROR: Don't need to get genotypes for the Braineac samples. Because the pipeline needs to be set up quite differently, use make_alignmentAndQuantification_pipeline.sh instead"
     elif [[ "$cohort" == "ENA" ]];
     then
-        echo "ERROR: need to get genotypes as well for the ENA samples. Because the pipeline needs to be set up quite differently, use make_alignmentQuantificationAndGenotype_pipeline.sh instead"
+        # Need to know where to find samplesheet_ENA_20181212.tx, this is in the brain_eQTL github directory. Since this script is also in this directory, find the directory like so (and add it to parameters file):
+        brain_eQTL_dir="$( cd "$( dirname $( dirname "${BASH_SOURCE[0]}" ) )" >/dev/null && pwd )"
+        python $samplesheet_script_dir/make_samplesheet_ENA.py $brain_eQTL_dir/ENA/ENA_samplesheets/samplesheet_ENA_20181212.txt \
+                                                               /scratch/umcg-ndeklein/tmp03/ENA/pipelines/results/fastq/
     else
         echo "No code written for cohort $cohort"
         exit 1;
@@ -267,25 +241,37 @@ cohort_specific_steps(){
     # Collection of cohort specific steps
     echo "Running cohort specific steps..."
 
-    if [[ "$cohort" == "TargetALS" ]];
+    if [[ "$cohort" == "ENA" ]];
     then
-#    rsync -P STARMappingTwoPass.sh Public_RNA-seq_QC/protocols/
-#   echo "STARMappingTwoPass,../protocols/STARMappingTwoPass.sh,CreateCramFiles" >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
-        echo "TargetALS specific methods..."
-        echo "HtseqCountTwoPass,../protocols/HtseqCountTwoPass.sh," >> Public_RNA-seq_quantification/workflows/workflow.csv
-        rsync -P $script_dir/modified_protocols/HtseqCountTwoPass.sh Public_RNA-seq_quantification/protocols/
-        rsync -P $script_dir/modified_protocols/HtseqCountOneSampleTwoPass.sh Public_RNA-seq_quantification/protocols/HtseqCount.sh
+        echo "ENA specific methods..."
+        # Need to know where to find download_ENA_samples.py, this is in the brain_eQTL github directory. Since this script is also in this directory, find the directory like so (and add it to parameters file):
+        brain_eQTL_dir="$( cd "$( dirname $( dirname "${BASH_SOURCE[0]}" ) )" >/dev/null && pwd )"
+        echo "brainDir,$brain_eQTL_dir" >> Public_RNA-seq_QC/parameter_files/parameters.csv
+        echo "enaSamplesheet,$brain_eQTL_dir/ENA/ENA_samplesheets/samplesheet_ENA_20181212.txt" >> Public_RNA-seq_QC/parameter_files/parameters.csv
+        # Because we only need to download from ENA if the cohort is ENA, copy over
+        rsync -P $script_dir/modified_protocols/DownloadFromENA.sh Public_RNA-seq_QC/protocols/
+        # Have to add the download part before the start of the pipeline (2i inserts the text at 2nd line)
+        sed -i '2iDownloadFromENA,../protocols/DownloadFromENA.sh,' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+        sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,DownloadFromENA;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+        sed -i 's;FastQC,../protocols/Fastqc.sh,;FastQC,../protocols/Fastqc.sh,DownloadFromENA;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
 
-        # the project structure is different for TargetALS, so change (after changing directory, see project structure)
-        for prepare_script in Public_RNA-seq_QC/prepare_scripts/* Public_RNA-seq_quantification/prepare_scripts/*;
+        # for testing only do first 3 jobs
+#        echo "step,protocol,dependencies" > Public_RNA-seq_QC/workflows/workflowSTAR.csv
+#        echo "DownloadFromENA,../protocols/DownloadFromENA.sh," >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
+#        echo "STARMapping,../protocols/STARMapping.sh,DownloadFromENA" >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
+#        echo "CreateCramFiles,../protocols/CreateCramFiles.sh,STARMapping" >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
+#        echo "FastQC,../protocols/Fastqc.sh,DownloadFromENA" >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
+
+        # Different molgenis compute script is installed on Peregrine where the public data is run, so change
+        for prepare_script in Public_RNA-seq*/prepare_scripts/*sh;
         do
-            sed -i 's;-rundir /groups/umcg-biogen/tmp04/biogen/input/TargetALS/;-rundir /groups/umcg-biogen/tmp04/biogen/input/TargetALS/pipelines/DEXSEQ_test;' $prepare_script
+            sed -i 's;v16.05.1-Java-1.8.0_45;v16.11.1-Java-1.8.0_74;' $prepare_script
         done
-        # same also for resultsdir
-        sed -i 's;projectDir,${root}/${group}/${tmp}/biogen/input/TargetALS/results/;projectDir,${root}/${group}/${tmp}/biogen/input/TargetALS/pipelines/results/DEXSEQ_test;' Public_RNA-seq_quantification/parameter_files/parameters.csv
-        sed -i 's;projectDir,${root}/${group}/${tmp}/biogen/input/TargetALS/results/;projectDir,${root}/${group}/${tmp}/biogen/input/TargetALS/pipelines/results/DEXSEQ_test;' Public_RNA-seq_QC/parameter_files/parameters.csv
 
-        echo "unfilteredTwoPassBamDir,/groups/umcg-biogen/tmp04/biogen/input/TargetALS/pipelines/results/DEXSEQ_test/unfilteredTwoPassBam/" >> Public_RNA-seq_quantification/parameter_files/parameters.csv
+        # have to change a lot of parameters because the script locations are all different
+        sed -i 's;WORKDIR,/groups/;WORKDIR,/scratch/;' Public_RNA-seq*/parameter_files/parameters.csv
+        sed -i 's;group,umcg-biogen;group,umcg-ndeklein;' Public_RNA-seq*/parameter_files/parameters.csv
+        sed -i "s;resDir,/apps/data/;resDir,/data/umcg-ndeklein/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
     fi
 }
 
