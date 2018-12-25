@@ -2,6 +2,7 @@ import os
 import synapseclient
 import synapseutils
 import argparse
+import getpass
 
 parser = argparse.ArgumentParser(description='Download RNAseq and genotypes of CMC.')
 parser.add_argument('RNAseq_directory', help='Directory to download RNAseq data to')
@@ -10,7 +11,7 @@ parser.add_argument('Genotype_directory', help='Directory to download genotypes 
 args = parser.parse_args()
 
 
-user = raw_input("Synapse username:")
+user = input("Synapse username:")
 password = getpass.getpass('Synapse password:')
 
 syn = synapseclient.Synapse()
