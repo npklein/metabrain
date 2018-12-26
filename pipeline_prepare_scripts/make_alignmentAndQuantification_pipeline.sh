@@ -191,6 +191,9 @@ make_samplesheets(){
     elif [[ "$cohort" == "Braineac" ]];
     then
         python $samplesheet_script_dir/make_samplesheet_Braineac.py
+    elif [[ "$cohort" == "Brainseq" ]];
+    then
+        python $samplesheet_script_dir/make_samplesheet_Brainseq.py
     elif [[ "$cohort" == "ENA" ]];
     then
         echo "ERROR: need to get genotypes as well for the ENA samples. Because the pipeline needs to be set up quite differently, use make_alignmentQuantificationAndGenotype_pipeline.sh instead"
