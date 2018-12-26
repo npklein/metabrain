@@ -80,11 +80,11 @@ adjust_workflows(){
     sed -i '/VerifyBamID/d' Public_RNA-seq_QC/workflows/workflowSTAR.csv
     sed -i '/VariantEval/d' Public_RNA-seq_QC/workflows/workflowSTAR.csv
     sed -i '/GatkUnifiedGenotyper/d' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-    sed -i '/SortBam.sh/d' Public_RNA-seq_QC/workflows/workflowSTAR.csv
     sed -i '/AddOr/d' Public_RNA-seq_QC/workflows/workflowSTAR.csv
 
     # Change/add steps that are not in by default
-    sed -i 's/SortBam/CreateCramFiles/' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+    # Have the collect metrics depend on STARMapping. Leave in dependence on CreateCramFiles in for a bit, will be removed later
+#    sed -i 's/SortBam/CreateCramFiles/' Public_RNA-seq_QC/workflows/workflowSTAR.csv
     sed -i 's;Kallisto,../protocols/Kallisto.sh,;Sailfish,../protocols/Sailfish.sh,;' Public_RNA-seq_quantification/workflows/workflow.csv
 }
 
@@ -94,14 +94,19 @@ change_protocols(){
     # Adjust the molgenis compute protocols based on needs of the brain eQTL project
     echo "Changing protocols..."
 
-    # add a line to delete the unfiltered BAM after cramming
+    # remove unfilteredBam after sorting
+    echo "rm \${unfilteredBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/SortBam.sh
+
+    # add a line to delete the unfiltered BAM and sorted BAM after cramming
     echo "echo \"remove \${unfilteredBamDir}/\${uniqueID}.bam\"" >> Public_RNA-seq_QC/protocols/CreateCramFiles.sh
-    echo "rm \${unfilteredBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/CreateCramFiles.sh
+    echo "rm \${sortedBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/CreateCramFiles.sh
+    sed -i 's;### variables to help adding to database (have to use weave);#string sortedBamDir;' Public_RNA-seq_QC/protocols/CreateCramFiles.sh
 
     # Because we first convert to cram before running the collectMetrics jobs, change this for all Collect*sh scripts
-    sed -i 's;#string sortedBam;#string cramFileDir;' Public_RNA-seq_QC/protocols/Collect*sh
-    sed -i 's;#string sortedBai;#string uniqueID;' Public_RNA-seq_QC/protocols/Collect*sh
-    sed -i 's;${sortedBam};${cramFileDir}${uniqueID}.cram;' Public_RNA-seq_QC/protocols/Collect*sh
+    # This has changed for the new cohorts like Brainseq, keeping this in temporarily but will be removed later
+#    sed -i 's;#string sortedBam;#string cramFileDir;' Public_RNA-seq_QC/protocols/Collect*sh
+#    sed -i 's;#string sortedBai;#string uniqueID;' Public_RNA-seq_QC/protocols/Collect*sh
+#    sed -i 's;${sortedBam};${cramFileDir}${uniqueID}.cram;' Public_RNA-seq_QC/protocols/Collect*sh
 
     # Did not add readgroup information at this point, so remove line METRIC_ACCUMULATION_LEVEL
     # Otherwise, tries to do it per readgroud. Now does it per file
