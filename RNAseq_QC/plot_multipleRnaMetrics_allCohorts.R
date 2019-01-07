@@ -27,7 +27,7 @@ if(!is.null(opt$pcaOutliers)){
 print(paste('Writing output files to: ',opt$output))
 
 ##### read in samples that are filtered out during PC #####
-pca_filtered_samples <- fread(opt$output,header=F)
+pca_filtered_samples <- fread(opt$pcaOutliers,header=F)
 #####
 
 ##### Read RnaMetrics alignment QC #######
