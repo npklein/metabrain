@@ -8,25 +8,35 @@ option_list = list(
   make_option(c("-t", "--transQTLs"), type="character",
               help="eQTLProbesFDR0.05-ProbeLevel.txt.gz of trans-eQTLs", metavar="character"),
   make_option(c("-e", "--expression"), type="character",
-              help="File with mean expression per gene", metavar="character")
+              help="File with mean expression per gene", metavar="character"),
+  make_option(c("-p", "--proteinCodingGenes"), type="character",
+              help="File with protein coding genes", metavar="character")
+  
 ); 
 
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
-opt$cisQTLs <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/eQTLProbesFDR0.05-ProbeLevel.CIS.txt.gz"
-opt$transQTLs <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/eQTLProbesFDR0.05-ProbeLevel.TRANS.txt.gz"
-opt$expression <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/MERGED_RNA_MATRIX.SampleSelection.ProbesWithZeroVarianceRemoved.QuantileNormalized.Log2Transformed.MEAN_AND_SD.txt"
-
 ##### read in data ####
 cis_qtl <- read.table(gzfile(opt$cisQTLs), header=T, sep='\t')
 trans_qtl <- read.table(gzfile(opt$transQTLs), header=T, sep='\t')
+protein_coding_genes <- read.table(opt$proteinCodingGenes, sep='\t', header=T)
 
 # make sure all are FDR < 0.05
 cis_qtl <- cis_qtl[cis_qtl$FDR < 0.05,]
 trans_qtl <- trans_qtl[trans_qtl$FDR < 0.05,]
 
 expression <- read.table(opt$expression, header=T, sep='\t', row.names=1)
+
+# genes still have version numbers, remove
+rownames(expression) <- sapply(strsplit(rownames(expression),"\\."), `[`, 1)
+cis_qtl$ProbeName <- sapply(strsplit(as.character(cis_qtl$ProbeName),"\\."), `[`, 1)
+trans_qtl$ProbeName <- sapply(strsplit(as.character(trans_qtl$ProbeName),"\\."), `[`, 1)
+
+# select only protein coding genes
+expression <- expression[rownames(expression) %in% protein_coding_genes$Ensembl.Gene.ID,]
+cis_qtl <- cis_qtl[cis_qtl$ProbeName %in% protein_coding_genes$Ensembl.Gene.ID,]
+trans_qtl <- trans_qtl[trans_qtl$ProbeName %in% protein_coding_genes$Ensembl.Gene.ID,]
 #####
 
 ##### per expression bin calculate the proportion of cis/trans eQTLs #####
@@ -70,9 +80,6 @@ ggplot(gene_per_bin, aes(bin, n_genes, fill=genes_are_QTL))+
   scale_x_discrete(breaks = c('[0.00777,0.0355]','(9.43,19.3]'),
                      labels=c('low','high'))+
   theme(axis.text= element_text(colour='grey70'))
-ggsave('figures/proortion_of_QTL_per_bin.pdf',width=8, height=5)  
+ggsave('figures/proortion_of_QTL_per_bin_proteinCoding_only.pdf',width=8, height=5)  
 ####
 
-#### make cummulative proportion plot ####
-
-####
