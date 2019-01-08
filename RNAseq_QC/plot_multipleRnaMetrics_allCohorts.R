@@ -6,6 +6,7 @@ library(plyr)
 library("dplyr")
 library(stringr)
 library("optparse")
+library(RColorBrewer)
 
 # Get command line arguments 
 option_list = list(
@@ -22,7 +23,7 @@ opt = parse_args(opt_parser);
 
 print(paste('Searching for input files in: ', opt$input))
 if(!is.null(opt$pcaOutliers)){
-  print(paste('Reading pca outlier file from: ',opt$pcaOutlier))
+  print(paste('Reading pca outlier file from: ',opt$pcaOutliers))
 }
 print(paste('Writing output files to: ',opt$output))
 
@@ -30,15 +31,27 @@ print(paste('Writing output files to: ',opt$output))
 pca_filtered_samples <- fread(opt$pcaOutliers,header=F)
 #####
 
+##### get cohort from path function that's being used a couple of times ####
+get_cohort_from_path <- function(path){
+  # Below only works because all files are in same directory structure:
+  # /path/to/<cohort_name>/QC/multiqc_data/file.txt
+  # This extracts <cohort_name>
+  cohort <- basename(dirname(dirname(dirname(f))))
+  return(cohort)
+}
+#####
+
+
 ##### Read RnaMetrics alignment QC #######
-RnaMetrics_multiQC_files <- list.files(path=opt$input,pattern = "multiqc_picard_RnaSeqMetrics.txt$", recursive = TRUE)
+RnaMetrics_multiQC_files <- list.files(path=opt$input, 
+                                       pattern = "multiqc_picard_RnaSeqMetrics.txt$", 
+                                       recursive = TRUE,
+                                       full.names = T)
 RnaMetrics_multiQC_files <- RnaMetrics_multiQC_files[!grepl("BPD", RnaMetrics_multiQC_files)]
 RnaMetric_qc_all <- data.frame()
 for(f in RnaMetrics_multiQC_files){
-  
   RnaMetrics_qc <- fread(f)
-  cohort <- dirname(dirname(dirname(f)))
-  RnaMetrics_qc$cohort <- cohort
+  RnaMetrics_qc$cohort <- get_cohort_from_path(f)
   RnaMetrics_qc$SAMPLE <- NULL
   RnaMetric_qc_all <- rbind(RnaMetric_qc_all, RnaMetrics_qc)
 }
@@ -48,14 +61,16 @@ RnaMetric_qc_all$Sample <- gsub('-','_',RnaMetric_qc_all$Sample)
 ######
 
 ###### Read MultiMetrics QC #####
-MultipleMetrics_multiQC_files <- list.files(pattern = "multiqc_picard_AlignmentSummaryMetrics.txt$", recursive = TRUE)
+MultipleMetrics_multiQC_files <- list.files(path=opt$input, 
+                                            pattern = "multiqc_picard_AlignmentSummaryMetrics.txt$", 
+                                            recursive = TRUE,
+                                            full.names = T)
 MultipleMetrics_multiQC_files <- MultipleMetrics_multiQC_files[!grepl("BPD", MultipleMetrics_multiQC_files)]
 
 MultipleMetric_qc_all <- data.frame()
 for(f in MultipleMetrics_multiQC_files){
   MultipleMetrics_qc <- fread(f)
-  cohort <- dirname(dirname(dirname(f)))
-  MultipleMetrics_qc$cohort <- cohort
+  MultipleMetrics_qc$cohort <- get_cohort_from_path(f)
   MultipleMetrics_qc$SAMPLE <- NULL
   MultipleMetric_qc_all <- rbind(MultipleMetric_qc_all, MultipleMetrics_qc)
 }
@@ -65,14 +80,16 @@ MultipleMetric_qc_all$Sample <- gsub('-','_',MultipleMetric_qc_all$Sample)
 ####### 
 
 ###### Read star QC #####
-STAR_multiQC_files <- list.files(pattern = "multiqc_star.txt$", recursive = TRUE)
+STAR_multiQC_files <- list.files(path=opt$input, 
+                                 pattern = "multiqc_star.txt$", 
+                                 recursive = TRUE,
+                                 full.names = T)
 STAR_multiQC_files <- STAR_multiQC_files[!grepl("BPD", STAR_multiQC_files)]
 
 STAR_qc_all <- data.frame()
 for(f in STAR_multiQC_files){
   STAR_qc <- fread(f)
-  cohort <- dirname(dirname(dirname(f)))
-  STAR_qc$cohort <- cohort
+  STAR_qc$cohort <- get_cohort_from_path(f)
   STAR_qc_all <- rbind(STAR_qc_all, STAR_qc)
 }
 STAR_qc_all <- data.frame(STAR_qc_all)
@@ -81,14 +98,16 @@ STAR_qc_all$Sample <- gsub('-','_',STAR_qc_all$Sample)
 ####### 
 
 ###### Read fastqc QC #####
-FastQC_multiQC_files <- list.files(pattern = "multiqc_fastqc.txt$", recursive = TRUE)
+FastQC_multiQC_files <- list.files(path=opt$input, 
+                                   pattern = "multiqc_fastqc.txt$", 
+                                   recursive = TRUE,
+                                   full.names=T)
 FastQC_multiQC_files <- FastQC_multiQC_files[!grepl("BPD", FastQC_multiQC_files)]
 
 FastQC_qc_all <- data.frame()
 for(f in FastQC_multiQC_files){
   FastQC_qc <- fread(f)
-  cohort <- dirname(dirname(dirname(f)))
-  FastQC_qc$cohort <- cohort
+  FastQC_qc$cohort <- get_cohort_from_path(f)
   FastQC_qc_all <- rbind(FastQC_qc_all, FastQC_qc, fill=T)
 }
 
@@ -102,11 +121,22 @@ FastQC_qc_all_R2 <- FastQC_qc_all[grepl('*\\.R2|*_2', FastQC_qc_all$Sample),]
 FastQC_qc_all_R2$Sample <- gsub('.R2','',FastQC_qc_all_R2$Sample)
 FastQC_qc_all_R2[FastQC_qc_all_R2$cohort=="GTEx",]$Sample <- gsub('_2','',FastQC_qc_all_R2[FastQC_qc_all_R2$cohort=="GTEx",]$Sample)
 FastQC_qc_all_merged <- merge(FastQC_qc_all_R1, FastQC_qc_all_R2, by=c('Sample','cohort'), suffix = c("_R1", "_R2"))
+FastQC_qc_all_merged$FastQC_original_sample <- FastQC_qc_all_merged$Sample
+
 
 # TargetALS sample naming is different between FastQC and picard results, change them here to make them match later
 FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- str_match(FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample , ".*(HRA.*?)_.*")[, 2]
 FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- gsub('-b38','',FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample)
 FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- gsub('-','_',FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample )
+
+# Same for Brainseq
+Brainseq_full_sample <- MultipleMetric_qc_all[MultipleMetric_qc_all$cohort=="Brainseq",]$Sample
+Brainseq_fastqc_sample <- FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="Brainseq",]$Sample
+
+FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="Brainseq",]$Sample  <- unlist(
+                                                                            lapply(Brainseq_fastqc_sample, function(x) {
+                                                                                Brainseq_full_sample[grepl(x, Brainseq_full_sample)]
+                                                                            }))
 ####### 
 
 
@@ -129,12 +159,14 @@ CombinedMetrics <- merge(CombinedMetrics, FastQC_qc_all_merged, by=c('Sample','c
 
 
 ##### read in AMP-D ######
-AMP_AD_multiMetrics_files <- list.files(pattern = "CombinedMetrics.csv$", recursive = T)
+AMP_AD_multiMetrics_files <- list.files(path=opt$input,
+                                        pattern = "CombinedMetrics.csv$", 
+                                        recursive = T,
+                                        full.names = T)
 AMP_AD_multimetrics_qc_all <- data.frame()
 for(f in AMP_AD_multiMetrics_files){
   multimetrics_qc <- fread(f)
-  cohort <- sapply(strsplit(basename(f), "_CombinedMetrics"), "[[", 1)
-  multimetrics_qc$cohort <- cohort
+  multimetrics_qc$cohort <- sapply(strsplit(basename(f), "_CombinedMetrics"), "[[", 1)
   AMP_AD_multimetrics_qc_all <- rbind(AMP_AD_multimetrics_qc_all, multimetrics_qc)
 }
 AMP_AD_multimetrics_qc_all <- data.frame(AMP_AD_multimetrics_qc_all)
@@ -155,7 +187,9 @@ all_cohorts[!is.na(all_cohorts$PCT_PF_READS_ALIGNED) & all_cohorts$PCT_PF_READS_
 all_cohorts[!is.na(all_cohorts$uniquely_mapped_percent) & all_cohorts$uniquely_mapped_percent <= 60,]$FILTER <- "YES"
 
 all_cohorts[is.na(all_cohorts$SampleFull),]$SampleFull <- all_cohorts[is.na(all_cohorts$SampleFull),]$Sample
-write.table(all_cohorts, "all_cohort_STAR_RNAseqMetrics_MultipleMetrics_FastQC.txt", quote=F, sep="\t", row.names=F)
+merged_metrics_files <- paste0(opt$output,"/all_cohort_STAR_RNAseqMetrics_MultipleMetrics_FastQC.txt")
+write.table(all_cohorts, merged_metrics_files, quote=F, sep="\t", row.names=F)
+print(paste0("Written merged metrics to ",merged_metrics_files))
 
 nSamples <- all_cohorts %>% group_by(cohort) %>% dplyr::summarize(no = sum(FILTER=="NO"),yes = sum(FILTER=="YES"))
 nSamples$total <- nSamples$no + nSamples$yes
@@ -167,71 +201,37 @@ all_cohorts$SampleFull <- gsub('specimenID.','', all_cohorts$SampleFull)
 all_cohorts$pcaFiltered <- 'NO'
 all_cohorts[all_cohorts$SampleFull %in% pca_filtered_samples$V1,]$pcaFiltered <- 'YES'
 #####
+print(table(all_cohorts$FILTER))
+print(table(all_cohorts[all_cohorts$cohort=="Brainseq",]$FILTER))
 
-
-##### plot STAR + multimetrics together #####
-pdf(paste0(opt$output,'/figures/all_MultiMetrics_QC_plots.pdf'), width=8, height=8)
-for(column in colnames(select_if(all_cohorts, is.numeric))){
-  if(column == "sampleID"){
-    next
-  }
-  print(column)
+##### plot function so that it can be more easily repeated
+QC_plotter <- function(all_cohorts, column, plot_pca_outliers){
   # add the super small nuber in case y-axis needs to be log scaled, but only for those columns where the max value > 100000 (so that columns with e.g. percentages don't get log scaled)
   if(max(all_cohorts[!is.na(all_cohorts[column]),][column])> 10000){
     all_cohorts[!is.na(all_cohorts[column]),][column] <-all_cohorts[!is.na(all_cohorts[column]),][column] +0.00000000000000000000001
   }
-  p <- ggplot(all_cohorts, aes_string('sampleID', column, colour='cohort', shape='FILTER'))+
-    geom_point()+ 
-    theme_bw(base_size=18)+
+  
+  # Because we have more than 8 colours, have to extend the Dark2 colour palette
+  colourCount = length(unique(all_cohorts$cohort))
+  getPalette = colorRampPalette(brewer.pal(8, "Dark2"))
+  dark2ExtendedPallete <- getPalette(colourCount)
+  
+  p <- ggplot(all_cohorts, aes_string('sampleID', column, colour='cohort', shape='FILTER'))
+  
+  # if PCA outliers are plotted, make all others have lower alpha settings
+  if(plot_pca_outliers){
+    p <- p + geom_point(alpha=0.1)+ 
+             geom_point(data=all_cohorts[all_cohorts$pcaFiltered=='YES',],  aes_string('sampleID', column, colour='cohort', shape='FILTER'))
+  }else{
+    p <- p + geom_point()
+  }
+  
+  p <- p + theme_bw(base_size=18)+
     theme(axis.text.x = element_blank(),
           axis.ticks = element_blank())+  
     xlab('Samples')+
-    scale_color_brewer(palette="Dark2")
-  
-  # Add the log scaling for columns with high values
-  if(max(all_cohorts[!is.na(all_cohorts[column]),][column])> 10000){
-    p <- p + scale_y_continuous(trans='log10') +
-        ylab(paste0('log10( ',column, ' )'))
-  }
-  
-  # Plot a line where we put the threshold
-  if(column == "PCT_CODING_BASES"){
-    p <- p + geom_hline(yintercept=0.1, colour="red",  linetype="dashed")
-  }
-  if(column == "PCT_PF_READS_ALIGNED"){
-    p <- p + geom_hline(yintercept=0.6, colour="red",  linetype="dashed")
-  }
-  if(column == "uniquely_mapped_percent"){
-    p <- p + geom_hline(yintercept=60, colour="red",  linetype="dashed")
-  }
-  
-  ggsave(paste0(opt$output,'/figures/QC_figures_separate/',column,'.png'), width=12, height = 8)
-  print(p)
-}
-dev.off()
-#####
+    scale_colour_manual(values=dark2ExtendedPallete)
 
-
-##### plot STAR + multimetrics again, but highlight PCA filtered samples #####
-pdf(paste0(opt$output,'/figures/all_MultiMetrics_QC_plots.highlightPcaFilteredSamples.pdf'), width=8, height=8)
-for(column in colnames(select_if(all_cohorts, is.numeric))){
-  if(column == "sampleID"){
-    next
-  }
-  print(column)
-  # add the super small nuber in case y-axis needs to be log scaled, but only for those columns where the max value > 100000 (so that columns with e.g. percentages don't get log scaled)
-  if(max(all_cohorts[!is.na(all_cohorts[column]),][column])> 10000){
-    all_cohorts[!is.na(all_cohorts[column]),][column] <-all_cohorts[!is.na(all_cohorts[column]),][column] +0.00000000000000000000001
-  }
-  p <- ggplot(all_cohorts, aes_string('sampleID', column, colour='cohort', shape='FILTER'))+
-    geom_point(alpha=0.1)+ 
-    geom_point(data=all_cohorts[all_cohorts$pcaFiltered=='YES',],  aes_string('sampleID', column, colour='cohort', shape='FILTER'))+ 
-    theme_bw(base_size=18)+
-    theme(axis.text.x = element_blank(),
-          axis.ticks = element_blank())+  
-    xlab('Samples')+
-    scale_color_brewer(palette="Dark2")
-  
   # Add the log scaling for columns with high values
   if(max(all_cohorts[!is.na(all_cohorts[column]),][column])> 10000){
     p <- p + scale_y_continuous(trans='log10') +
@@ -248,8 +248,41 @@ for(column in colnames(select_if(all_cohorts, is.numeric))){
   if(column == "uniquely_mapped_percent"){
     p <- p + geom_hline(yintercept=60, colour="red",  linetype="dashed")
   }
-  
-  ggsave(paste0(opt$output,'/figures/QC_figures_separate/',column,'.highlightPcaFilteredSamples.png'), width=12, height = 8)
+  return(p)
+}
+#####
+
+##### plot STAR + multimetrics together #####
+
+# make sure that the columns used for filtering are plotted first so that they are easy to find
+columns_to_plot <- colnames(select_if(all_cohorts, is.numeric))
+filter_columns <-  c("PCT_CODING_BASES","PCT_PF_READS_ALIGNED","uniquely_mapped_percent")
+columns_to_plot <- columns_to_plot[!columns_to_plot %in% filter_columns]
+columns_to_plot <- c(filter_columns, columns_to_plot)
+
+pdf(paste0(opt$output,'/figures/all_MultiMetrics_QC_plots.pdf'), width=8, height=8)
+for(column in columns_to_plot){
+  if(column == "sampleID"){
+    next
+  }
+  print(column)
+  p <- QC_plotter(all_cohorts, column, FALSE)
+  ggsave(paste0(opt$output,'/figures/QC_figures_separate/',column,'.png'), width=12, height = 8, plot=p)
+  print(p)
+}
+dev.off()
+#####
+
+
+##### plot STAR + multimetrics again, but highlight PCA filtered samples #####
+pdf(paste0(opt$output,'/figures/all_MultiMetrics_QC_plots.highlightPcaFilteredSamples.pdf'), width=8, height=8)
+for(column in columns_to_plot){
+  if(column == "sampleID"){
+    next
+  }
+  print(column)
+  p <- QC_plotter(all_cohorts, column, TRUE)
+  ggsave(paste0(opt$output,'/figures/QC_figures_separate/',column,'.highlightPcaFilteredSamples.png'), width=12, height = 8, plot=p)
   print(p)
 }
 dev.off()
