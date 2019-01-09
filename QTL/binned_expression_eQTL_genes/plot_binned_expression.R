@@ -1,6 +1,7 @@
 library("optparse")
 library(ggplot2)
 library(ggpubr)
+library(gridExtra)
 # Get command line arguments 
 option_list = list(
   make_option(c("-c", "--cisQTLs"), type="character",
@@ -43,11 +44,25 @@ trans_qtl <- trans_qtl[trans_qtl$ProbeName %in% protein_coding_genes$Ensembl.Gen
 expression$expression_bin <- cut_number(expression$mean_expression, 10)
 
 gene_per_bin <- data.frame()
+gene_lengths_per_bin <- data.frame()
 for(bin in sort(unique(expression$expression_bin))){
-  genes_current_bin <- rownames(expression[expression$expression_bin==bin,])
+  expression_current_bin <- expression[expression$expression_bin==bin,]
+  genes_current_bin <- rownames(expression_current_bin)
   n_genes <- length(genes_current_bin)
   n_cis_QTL <- sum(genes_current_bin %in% cis_qtl$ProbeName)
   n_trans_QTL <- sum(genes_current_bin %in% trans_qtl$ProbeName)
+  
+  
+  mean_sd_cis <- round(mean(expression_current_bin[rownames(expression_current_bin) %in% cis_qtl$ProbeName,]$SD),2)
+  mean_sd_not_cis <- round(mean(expression_current_bin[!rownames(expression_current_bin) %in% cis_qtl$ProbeName,]$SD),2)
+  
+  gene_lengths <- protein_coding_genes[match(rownames(expression_current_bin), protein_coding_genes$Ensembl.Gene.ID),]
+  is_cis_qtl <- gene_lengths$Ensembl.Gene.ID %in% cis_qtl$ProbeName
+  is_trans_qtl <- gene_lengths$Ensembl.Gene.ID %in% trans_qtl$ProbeName
+  
+  df <- data.frame('bin'=bin, 'length'=gene_lengths$Transcript.length..including.UTRs.and.CDS.,
+                   'is_cis_qtl'=is_cis_qtl,'is_trans_qtl'=is_trans_qtl)
+  gene_lengths_per_bin <- rbind(gene_lengths_per_bin, df)
   
   df <- data.frame('n_genes'=c((n_cis_QTL/n_genes)*100, 
                                (n_trans_QTL/n_genes)*100, 
@@ -62,10 +77,6 @@ for(bin in sort(unique(expression$expression_bin))){
 #####
  
 
-#   n_genes              bin qtl_type genes_are_QTL
-#1      126 [0.00777,0.0355]      cis           yes
-#2       55 [0.00777,0.0355]    trans           yes
-
 #### make the histogram ####
 ggplot(gene_per_bin, aes(bin, n_genes, fill=genes_are_QTL))+
   geom_bar(stat='identity')+
@@ -77,9 +88,33 @@ ggplot(gene_per_bin, aes(bin, n_genes, fill=genes_are_QTL))+
   ylab('Proprotion QTLs')+
   scale_y_continuous(breaks=c(0,10,20,30,40,50,60,70,80,90,100),
                      labels=c('0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'))+
-  scale_x_discrete(breaks = c('[0.00777,0.0355]','(9.43,19.3]'),
-                     labels=c('low','high'))+
-  theme(axis.text= element_text(colour='grey70'))
-ggsave('figures/proortion_of_QTL_per_bin_proteinCoding_only.pdf',width=8, height=5)  
+  theme(axis.text= element_text(colour='grey70'))+
+  scale_x_discrete(breaks = c('[0.00778,0.774]','(10.9,19.3]'),
+                 labels=c('low','high'))
+ggsave('figures/proortion_of_QTL_per_bin_proteinCoding_only.png',width=8, height=5)  
 ####
 
+
+
+#### per bin plot the length of the genes for the QTL genes and non-QTL genes ####
+p1 <- ggplot(gene_lengths_per_bin, aes(log(length), fill=is_cis_qtl))+
+  geom_histogram(position="identity", alpha=0.5)+
+  facet_wrap(~bin, ncol=2)+
+  theme_pubr(base_size=18)+
+  scale_fill_manual(values=c('grey70','blue'))+
+  labs(fill="is cis QTL")
+ggsave('figures/length_per_expression_bin_cis.pdf',width=8, height=12)  
+
+
+p2 <- ggplot(gene_lengths_per_bin, aes(log(length), fill=is_trans_qtl))+
+  geom_histogram(position="identity", alpha=0.5)+
+  facet_wrap(~bin, ncol=2)+
+  theme_pubr(base_size=18)+
+  scale_fill_manual(values=c('grey70','blue'))+
+  labs(fill="is trans QTL")
+ggsave('figures/length_per_expression_bin_trans.pdf',width=8, height=12)  
+
+pdf('figures/length_per_expression_bin.pdf',width=12, height=12)  
+grid.arrange(p1, p2, nrow = 1)
+dev.off()
+####
