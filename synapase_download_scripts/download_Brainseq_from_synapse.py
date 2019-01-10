@@ -17,7 +17,7 @@ syn.login(user,password)
 
 print('Sync Brainseq')
 # RNAseq
-#files = synapseutils.syncFromSynapse(syn, 'syn8227833', path = 'RNAseq/')
+files = synapseutils.syncFromSynapse(syn, 'syn8227833', path = 'RNAseq/')
 
 # Phenotype file
 files = synapseutils.syncFromSynapse(syn, 'syn12299752', path='phenotype_data/')
