@@ -17,6 +17,7 @@ module load Python
 cohort=
 project_dir=
 tmpdir=
+results_dir=
 script_dir=$(dirname "$0")
 
 main(){
@@ -47,8 +48,9 @@ usage(){
     programname=$0
     echo "usage: $programname -c cohort -p project_directory -t tmp04"
     echo "  -c      provide the cohort to prepare pipeline for (mandatory)"
-    echo "  -p      Base of the project_dir where pipeline scripts will be put (mandatory)"
-    echo "  -t      tmpdir of the cluster (e.g. tmp03 for boxy, tmp04 for calculon). Will use /groups/$TMPDIR/.../"
+    echo "  -p      Base of the project_dir where jobs will be put and pipeline will be built (mandatory)"
+    echo "  -r      Dir where results will be put (mandatory)"
+    echo "  -t      tmpdir of the cluster (e.g. tmp03 for boxy, tmp04 for calculon). Will use /groups/$tmpdir/.../ (mandatory)"
     echo "  -h      display help"
     exit 1
 }
@@ -89,14 +91,33 @@ change_protocols(){
     # Adjust the molgenis compute protocols based on needs of the brain eQTL project
     echo "Changing protocols..."
 
-    # add a line to delete the unfiltered BAM after cramming
-    echo "echo \"remove \${unfilteredBamDir}/\${uniqueID}.bam\"" >> Public_RNA-seq_QC/protocols/CreateCramFiles.sh
-    echo "rm \${unfilteredBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/CreateCramFiles.sh
+    # Since we don't filter BAMs, change the input file in sortbam
+    # has to be done before adding the removal of unfilteredbam to end of file so it doesnt replace
+    sed -i 's;filteredBam;unfilteredBam;' Public_RNA-seq_QC/protocols/SortBam.sh
+
+    # remove unfilteredBam after sorting
+    echo "echo \"remove \${unfilteredBamDir}/\${uniqueID}.bam\"" >> Public_RNA-seq_QC/protocols/SortBam.sh
+    echo "rm \${unfilteredBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/SortBam.sh
+
+    # don't delete sorted bam, need it for genotype calling
+#    echo "echo \"remove \${unfilteredBamDir}/\${uniqueID}.bam\"" >> Public_RNA-seq_QC/protocols/CreateCramFiles.sh
+#    echo "rm \${sortedBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/CreateCramFiles.sh
 
     # Although for ENA we do add in readgroup information as the new version of GATK needs it,
     # this was not done for the other cohorts. Therefore, remove  METRIC_ACCUMULATION_LEVEL here as well
     # Otherwise, tries to do it per readgroud. Now does it per file
     sed -i '/METRIC_ACCUMULATION_LEVEL/d' Public_RNA-seq_QC/protocols/CollectRnaSeqMetrics.sh
+
+    # Original SAM to BAM conversion is done in seperate step, but this step is removed from the workflow
+    # Add the conversion to the STAR alignment script
+    echo "echo \"convert SAM to BAM\"" >> Public_RNA-seq_QC/protocols/STARMapping.sh
+    echo "module load SAMtools/1.5-foss-2015b" >> Public_RNA-seq_QC/protocols/STARMapping.sh
+    echo "mkdir -p ${results_dir}/results/\${unfilteredBamDir}/" >> Public_RNA-seq_QC/protocols/STARMapping.sh
+    echo "samtools view -h -b \${alignmentDir}/\${uniqueID}.sam > \${unfilteredBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/STARMapping.sh
+    echo "rm \${alignmentDir}/\${uniqueID}.sam" >> Public_RNA-seq_QC/protocols/STARMapping.sh
+
+    # All the tools using GATK are using GATK3, copy over protocol that uses GATK4
+    rsync -P $script_dir/modified_protocols/GatkUnifiedGenotyper.sh Public_RNA-seq_QC/protocols/
 }
 
 change_parameter_files(){
@@ -109,7 +130,7 @@ change_parameter_files(){
     sed -i 's;group,umcg-wijmenga;group,umcg-biogen;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i "s;resDir,/groups/umcg-wijmenga/tmp04/resources/;resDir,/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i "s;resDir,/groups/umcg-wijmenga/tmp03/resources/;resDir,/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i "s;projectDir,\${root}/\${group}/\${tmp}/projects/umcg-ndeklein/\${project}/;projectDir,${project_dir}/results/;" Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i "s;projectDir,\${root}/\${group}/\${tmp}/projects/umcg-ndeklein/\${project}/;projectDir,${results_dir}/results/;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;STARindex;STARindex,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/STAR/${starVersion}/;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;alignmentDir,${projectDir}/hisat/;alignmentDir,${projectDir}/star;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;fastqExtension,.gz;fastqExtension,.fq.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
@@ -119,11 +140,12 @@ change_parameter_files(){
     sed -i 's;onekgGenomeFasta,${resDir}/${genomeBuild}/indices/human_g1k_v${human_g1k_vers}.fasta;onekgGenomeFasta,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/GRCh38.p5.genome.fa;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;genesRefFlat,${resDir}/picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.refflat;genesRefFlat,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.refflat;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;rRnaIntervalList,${resDir}//picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.rrna.interval_list;rRnaIntervalList,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.rRNA.interval_list;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;gatkVersion,3.4-0-Java-1.7.0_80;gatkVersion,4.0.5.1-foss-2018a-Python-3.6.4;' Public_RNA-seq_QC/parameter_files/parameters.csv
 
     # Change the qunatification pipeline parameter file
     sed -i 's;group,umcg-wijmenga;group,umcg-biogen;' Public_RNA-seq_quantification/parameter_files/parameters.csv
     sed -i "s;tmp03;$tmpdir;" Public_RNA-seq_quantification/parameter_files/parameters.csv
-    sed -i "s;projectDir,\${root}/\${group}/\${tmp}/projects/umcg-ndeklein/\${project}/;projectDir,${project_dir}/results/;" Public_RNA-seq_quantification/parameter_files/parameters.csv
+    sed -i "s;projectDir,\${root}/\${group}/\${tmp}/projects/umcg-ndeklein/\${project}/;projectDir,${results_dir}/results/;" Public_RNA-seq_quantification/parameter_files/parameters.csv
     sed -i "s;projects/umcg-ndeklein/\${project};biogen/input/${cohort}/results/;" Public_RNA-seq_quantification/parameter_files/parameters.csv
     chr38gtf="/apps/data/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.gtf.gz"
     sed -i "s;annotationGtf,/apps/data/ftp.ensembl.org/pub/release-75/gtf/homo_sapiens/Homo_sapiens.GRCh37.75.gtf;annotationGtf,${chr38gtf};" Public_RNA-seq_quantification/parameter_files/parameters.csv
@@ -156,12 +178,15 @@ make_samplesheets(){
     if [[ "$cohort" == "TargetALS" ]];
     then
         echo "ERROR: Don't need to get genotypes for the TargetALS samples. Because the pipeline needs to be set up quite differently, use make_alignmentAndQuantification_pipeline.sh instead"
+        exit 1;
     elif [[ "$cohort" == "CMC" ]];
     then
         echo "ERROR: Don't need to get genotypes for the CMC samples. Because the pipeline needs to be set up quite differently, use make_alignmentAndQuantification_pipeline.sh instead"
+        exit 1;
     elif [[ "$cohort" == "Braineac" ]];
     then
         echo "ERROR: Don't need to get genotypes for the Braineac samples. Because the pipeline needs to be set up quite differently, use make_alignmentAndQuantification_pipeline.sh instead"
+        exit 1;
     elif [[ "$cohort" == "ENA" ]];
     then
         # Need to know where to find samplesheet_ENA_20181212.tx, this is in the brain_eQTL github directory. Since this script is also in this directory, find the directory like so (and add it to parameters file):
@@ -250,6 +275,7 @@ cohort_specific_steps(){
         echo "enaSamplesheet,$brain_eQTL_dir/ENA/ENA_samplesheets/samplesheet_ENA_20181212.txt" >> Public_RNA-seq_QC/parameter_files/parameters.csv
         # Because we only need to download from ENA if the cohort is ENA, copy over
         rsync -P $script_dir/modified_protocols/DownloadFromENA.sh Public_RNA-seq_QC/protocols/
+
         # Have to add the download part before the start of the pipeline (2i inserts the text at 2nd line)
         sed -i '2iDownloadFromENA,../protocols/DownloadFromENA.sh,' Public_RNA-seq_QC/workflows/workflowSTAR.csv
         sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,DownloadFromENA;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
@@ -292,8 +318,11 @@ parse_commandline(){
             -c | --cohort )         shift
                                     cohort=$1
                                     ;;
-            -p | --project_dir )    shift
+            -p | --project_dir )        shift
                                     project_dir=$1
+                                    ;;
+            -r | --results_dir )    shift
+                                    results_dir=$1
                                     ;;
             -t | --tmpdir )         shift
                                     tmpdir=$1
@@ -326,6 +355,12 @@ parse_commandline(){
     if [ -z "$tmpdir" ];
     then
         echo "ERROR: -t/--tmpdir not set!"
+        usagae
+        exit 1;
+    fi
+    if [ -z "$results_dir" ];
+    then
+        echo "ERROR: -r/--results_dir not set!"
         usagae
         exit 1;
     fi

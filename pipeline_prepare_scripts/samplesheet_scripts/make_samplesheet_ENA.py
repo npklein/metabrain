@@ -90,7 +90,7 @@ for study in study_individuals:
         # samples_per_individual <- all samples of individual
         # samples_included_per_individual <- samples includeded per individual in this batch
         # The difference is the samples that have not yet been included
-        for sample in samples_per_individual[individual]:
+        for sample in sorted(samples_per_individual[individual]):
             if sample in seen:
                 raise RuntimeError(sample+' seen for 2nd time')
             seen.add(sample)

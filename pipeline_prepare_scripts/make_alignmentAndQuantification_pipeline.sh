@@ -100,7 +100,6 @@ change_protocols(){
     # add a line to delete the unfiltered BAM and sorted BAM after cramming
     echo "echo \"remove \${unfilteredBamDir}/\${uniqueID}.bam\"" >> Public_RNA-seq_QC/protocols/CreateCramFiles.sh
     echo "rm \${sortedBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/CreateCramFiles.sh
-    sed -i 's;### variables to help adding to database (have to use weave);#string sortedBamDir;' Public_RNA-seq_QC/protocols/CreateCramFiles.sh
 
     # Because we first convert to cram before running the collectMetrics jobs, change this for all Collect*sh scripts
     # This has changed for the new cohorts like Brainseq, keeping this in temporarily but will be removed later
@@ -202,6 +201,7 @@ make_samplesheets(){
     elif [[ "$cohort" == "ENA" ]];
     then
         echo "ERROR: need to get genotypes as well for the ENA samples. Because the pipeline needs to be set up quite differently, use make_alignmentQuantificationAndGenotype_pipeline.sh instead"
+        exit 1;
     else
         echo "No code written for cohort $cohort"
         exit 1;
