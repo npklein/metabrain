@@ -27,6 +27,10 @@ if(!is.null(opt$pcaOutliers)){
 }
 print(paste('Writing output files to: ',opt$output))
 
+#opt$input <- "/Users/NPK/UMCG/projects/biogen/cohorts/"
+#opt$output <- "/Users/NPK/UMCG/projects/biogen/cohorts/"
+#opt$pcaOutliers <- "/Users/NPK/UMCG/projects/biogen/cohorts/rna-pcaoutliers.txt"
+
 ##### read in samples that are filtered out during PC #####
 pca_filtered_samples <- fread(opt$pcaOutliers,header=F)
 #####
@@ -205,7 +209,7 @@ print(table(all_cohorts$FILTER))
 print(table(all_cohorts[all_cohorts$cohort=="Brainseq",]$FILTER))
 
 ##### plot function so that it can be more easily repeated
-QC_plotter <- function(all_cohorts, column, plot_pca_outliers){
+QC_plotter <- function(all_cohorts, column, plot_pca_outliers, single_cohort =F){
   # add the super small nuber in case y-axis needs to be log scaled, but only for those columns where the max value > 100000 (so that columns with e.g. percentages don't get log scaled)
   if(max(all_cohorts[!is.na(all_cohorts[column]),][column])> 10000){
     all_cohorts[!is.na(all_cohorts[column]),][column] <-all_cohorts[!is.na(all_cohorts[column]),][column] +0.00000000000000000000001
@@ -216,21 +220,29 @@ QC_plotter <- function(all_cohorts, column, plot_pca_outliers){
   getPalette = colorRampPalette(brewer.pal(8, "Dark2"))
   dark2ExtendedPallete <- getPalette(colourCount)
   
-  p <- ggplot(all_cohorts, aes_string('sampleID', column, colour='cohort', shape='FILTER'))
+  p <- ggplot()
   
   # if PCA outliers are plotted, make all others have lower alpha settings
-  if(plot_pca_outliers){
-    p <- p + geom_point(alpha=0.1)+ 
-             geom_point(data=all_cohorts[all_cohorts$pcaFiltered=='YES',],  aes_string('sampleID', column, colour='cohort', shape='FILTER'))
+  if(single_cohort){
+    p <- p + geom_point(data=all_cohorts, aes_string('sampleID', column, colour='FILTER'))
   }else{
-    p <- p + geom_point()
+    if(plot_pca_outliers){
+      p <- p + geom_point(alpha=0.1)+ 
+             geom_point(data=all_cohorts[all_cohorts$pcaFiltered=='YES',],  aes_string('sampleID', column, colour='cohort', shape='FILTER'))
+    }else{
+      p <- p + geom_point(data=all_cohorts, aes_string('sampleID', column, colour='cohort', shape='FILTER'))
+    }
   }
-  
   p <- p + theme_bw(base_size=18)+
     theme(axis.text.x = element_blank(),
           axis.ticks = element_blank())+  
-    xlab('Samples')+
-    scale_colour_manual(values=dark2ExtendedPallete)
+    xlab('Samples')
+  
+  if(single_cohort){
+    p <- p+scale_colour_brewer(palette="Dark2")
+  }else{
+    p <- p+scale_colour_manual(values=dark2ExtendedPallete)
+  }
 
   # Add the log scaling for columns with high values
   if(max(all_cohorts[!is.na(all_cohorts[column]),][column])> 10000){
@@ -268,6 +280,15 @@ for(column in columns_to_plot){
   print(column)
   p <- QC_plotter(all_cohorts, column, FALSE)
   ggsave(paste0(opt$output,'/figures/QC_figures_separate/',column,'.png'), width=12, height = 8, plot=p)
+  
+  if(column == 'PF_READS_ALIGNED' || column == 'PCT_PF_READS_ALIGNED'){
+    t <- all_cohorts[all_cohorts$cohort=="Brainseq",]
+    t <- t[order(t$PCT_PF_READS_ALIGNED),]
+    t$sampleID <- 1:nrow(t)
+    p <- QC_plotter(t, column, FALS,TRUE)
+    ggsave(paste0(opt$output,'/figures/QC_figures_separate/',column,'.Brainseq.png'), width=6, height=4)
+    
+  }
   print(p)
 }
 dev.off()

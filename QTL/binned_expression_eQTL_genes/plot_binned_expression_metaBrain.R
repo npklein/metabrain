@@ -2,6 +2,8 @@ library("optparse")
 library(ggplot2)
 library(ggpubr)
 library(gridExtra)
+library(topGO)
+library(ALL)
 # Get command line arguments 
 option_list = list(
   make_option(c("-c", "--cisQTLs"), type="character",
@@ -17,6 +19,12 @@ option_list = list(
 
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
+
+#opt$cisQTLs <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/eQTLProbesFDR0.05-ProbeLevel.CIS.txt.gz"
+#opt$transQTLs <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/eQTLProbesFDR0.05-ProbeLevel.TRANS.txt.gz"
+#opt$expression <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/MERGED_RNA_MATRIX.SampleSelection.ProbesWithZeroVarianceRemoved.QuantileNormalized.Log2Transformed.MEAN_AND_SD.txt"
+#opt$proteinCodingGenes <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/protein_coding_genes_ensembl84.txt"
+
 
 ##### read in data ####
 cis_qtl <- read.table(gzfile(opt$cisQTLs), header=T, sep='\t')
@@ -61,7 +69,9 @@ for(bin in sort(unique(expression$expression_bin))){
   is_trans_qtl <- gene_lengths$Ensembl.Gene.ID %in% trans_qtl$ProbeName
   
   df <- data.frame('bin'=bin, 'length'=gene_lengths$Transcript.length..including.UTRs.and.CDS.,
-                   'is_cis_qtl'=is_cis_qtl,'is_trans_qtl'=is_trans_qtl)
+                   'is_cis_qtl'=is_cis_qtl,'is_trans_qtl'=is_trans_qtl,'gene'=gene_lengths$Ensembl.Gene.ID,
+                   'expression'=expression_current_bin[gene_lengths$Ensembl.Gene.ID,]$mean_expression,
+                   'sd'=expression_current_bin[gene_lengths$Ensembl.Gene.ID,]$mean_expression)
   gene_lengths_per_bin <- rbind(gene_lengths_per_bin, df)
   
   df <- data.frame('n_genes'=c((n_cis_QTL/n_genes)*100, 
@@ -73,7 +83,6 @@ for(bin in sort(unique(expression$expression_bin))){
                    'genes_are_QTL'=c('yes','yes','no','no'))
   gene_per_bin <- rbind(gene_per_bin, df)
 }
-
 #####
  
 
@@ -115,6 +124,32 @@ p2 <- ggplot(gene_lengths_per_bin, aes(log(length), fill=is_trans_qtl))+
 ggsave('figures/length_per_expression_bin_trans.pdf',width=8, height=12)  
 
 pdf('figures/length_per_expression_bin.pdf',width=12, height=12)  
+grid.arrange(p1, p2, nrow = 1)
+dev.off()
+####
+
+
+#### writing genes from highest bin for GO analysis ####
+highest_bin <- gene_lengths_per_bin[gene_lengths_per_bin$bin == "(10.9,19.3]",]
+write.table(as.character(highest_bin[highest_bin$is_cis_qtl,]$gene), 'cis_qtl_genes_highest_bin.txt',
+            quote=F, row.names=F)
+write.table(as.character(highest_bin[!highest_bin$is_cis_qtl,]$gene), 'not_cis_qtl_genes_highest_bin.txt',
+            quote=F, row.names=F)
+####
+
+#### plot sd per bin for cis vs non cis ####
+p1 <- ggplot(gene_lengths_per_bin, aes(sd, fill=is_cis_qtl))+
+  geom_histogram(position='identity')+
+  theme_pubr(base_size=18)+ 
+  scale_fill_manual(values=c('grey95','lightblue'))+
+  facet_wrap(~bin, ncol=2,scale='free_x')
+
+p2 <- ggplot(gene_lengths_per_bin, aes(sd, fill=is_trans_qtl))+
+  geom_histogram(position='identity')+
+  theme_pubr(base_size=18)+ 
+  scale_fill_manual(values=c('grey95','lightblue'))+
+  facet_wrap(~bin, ncol=2,scale='free_x')
+pdf('figures/sd_per_expression_bin.pdf',width=12, height=12)  
 grid.arrange(p1, p2, nrow = 1)
 dev.off()
 ####
