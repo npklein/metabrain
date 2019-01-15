@@ -105,7 +105,7 @@ change_protocols(){
 
     # Did not add readgroup information at this point, so remove line METRIC_ACCUMULATION_LEVEL
     # Otherwise, tries to do it per readgroud. Now does it per file
-    sed -i '/METRIC_ACCUMULATION_LEVEL/d' Public_RNA-seq_QC/protocols/CollectRnaSeqMetrics.sh
+    sed -i '/METRIC_ACCUMULATION_LEVEL/d' Public_RNA-seq_QC/protocols/CollectRnaSeqQcMetrics.sh
 
     # Original SAM to BAM conversion is done in seperate step, but this step is removed from the workflow
     # Add the conversion to the STAR alignment script
