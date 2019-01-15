@@ -94,11 +94,7 @@ change_protocols(){
     # Adjust the molgenis compute protocols based on needs of the brain eQTL project
     echo "Changing protocols..."
 
-    # remove unfilteredBam after sorting
-    echo "rm \${unfilteredBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/SortBam.sh
-
     # add a line to delete the unfiltered BAM and sorted BAM after cramming
-    echo "echo \"remove \${unfilteredBamDir}/\${uniqueID}.bam\"" >> Public_RNA-seq_QC/protocols/CreateCramFiles.sh
     echo "rm \${sortedBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/CreateCramFiles.sh
     sed -i 's;### variables to help adding to database (have to use weave);#string sortedBamDir;' Public_RNA-seq_QC/protocols/CreateCramFiles.sh
 
@@ -122,6 +118,10 @@ change_protocols(){
 
     # Removed the filteredBam step, so change this in the SortBam protocol
     sed -i 's;filteredBam;unfilteredBam;' Public_RNA-seq_QC/protocols/SortBam.sh
+
+    # remove unfilteredBam after sorting
+    echo "rm \${unfilteredBam}" >> Public_RNA-seq_QC/protocols/SortBam.sh
+
 
     # Since we already converted to cram, change the bam part in HTSeq to cram
     sed -i 's;${bam};${cramFileDir}${uniqueID}.cram;' Public_RNA-seq_quantification/protocols/HtseqCount.sh
