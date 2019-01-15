@@ -99,7 +99,7 @@ for study in study_individuals:
             R2 = ''
             if len(fastq_files) > 1:
                 R2 = fastq_dir+'/'+study+'/'+fastq_files[1].split('/')[-1]
-            out.write(individual+',ENA,'+sample+','+R1+','+R2+',${sortedBam}\n')
+            out.write(sample+',ENA,'+individual+','+R1+','+R2+',${sortedBam}\n')
         total_number_of_samples += len(samples_per_individual[individual])
         current_number_of_samples += len(samples_per_individual[individual])
 

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-# Download and make quantification pipeline
 # This script clones the Molgenis Compute pipeline for alignin FastQ files and
 # modifies the protocols and parameter files for analysis of Brain eQTL data.
 # Makes samplesheet dependent parameter files.
@@ -62,10 +61,16 @@ clone_pipelines(){
     # In case the program has already run in current direcotry
     rm -rf Public_RNA-seq_QC
     rm -rf Public_RNA-seq_quantification
+    rm -rf Public_RNA-seq_genotypeCalling
     git clone https://github.com/npklein/molgenis-pipelines.git
     # Move the relevant pipeline directories to the main project_dir
     mv molgenis-pipelines/compute5/Public_RNA-seq_QC/ .
     mv molgenis-pipelines/compute5/Public_RNA-seq_quantification/ .
+    mv molgenis-pipelines/compute5/Public_RNA-seq_genotypeCalling/protocols/* Public_RNA-seq_QC/protocols/
+    sort -u Public_RNA-seq_QC/parameter_files/parameters.csv molgenis-pipelines/compute5/Public_RNA-seq_genotypeCalling/parameter_files/parameters.csv > Public_RNA-seq_QC/parameter_files/parameters.csv.tmp
+    mv Public_RNA-seq_QC/parameter_files/parameters.csv.tmp Public_RNA-seq_QC/parameter_files/parameters.csv
+    mv molgenis-pipelines/compute5/Public_RNA-seq_genotypeCalling/chromosomes.csv Public_RNA-seq_QC/
+    rsync -vP brain_eQTL/pipeline_prepare_scripts/modified_workflows/workflow_brain_eQTL.csv /tmp/workflow_brain_eQTL.csv
     rm -rf molgenis-pipelines
 }
 
@@ -74,9 +79,8 @@ adjust_workflows(){
     echo "Adjusting workflows..."
 
     # Remove unused workflows to make workflow directory less messy
-    mv Public_RNA-seq_QC/workflows/workflowSTAR.csv /tmp/workflowSTAR.csv
     rm Public_RNA-seq_QC/workflows/*
-    mv /tmp/workflowSTAR.csv Public_RNA-seq_QC/workflows/
+    mv /tmp/workflow_brain_eQTL.csv Public_RNA-seq_QC/workflows/
 
     # Remove all the steps we don't need from the workflow
     # At the moment there are none to remove
@@ -116,8 +120,9 @@ change_protocols(){
     echo "samtools view -h -b \${alignmentDir}/\${uniqueID}.sam > \${unfilteredBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/STARMapping.sh
     echo "rm \${alignmentDir}/\${uniqueID}.sam" >> Public_RNA-seq_QC/protocols/STARMapping.sh
 
-    # All the tools using GATK are using GATK3, copy over protocol that uses GATK4
-    rsync -P $script_dir/modified_protocols/GatkUnifiedGenotyper.sh Public_RNA-seq_QC/protocols/
+    # For quick genotyping to test relatedness we use GATK3, while later we want to use GATK4. So change in UnifiedGenotyper
+    sed -i 's;GATK/${gatkVersion};GATK/3.8-0-Java-1.8.0_121;' Public_RNA-seq_QC/protocols/GatkUnifiedGenotyper.sh
+    sed -i 's;GATK/${gatkVersion};GATK/3.8-0-Java-1.8.0_121;' Public_RNA-seq_QC/protocols/VariantEval.sh
 }
 
 change_parameter_files(){
@@ -141,6 +146,7 @@ change_parameter_files(){
     sed -i 's;genesRefFlat,${resDir}/picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.refflat;genesRefFlat,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.refflat;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;rRnaIntervalList,${resDir}//picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.rrna.interval_list;rRnaIntervalList,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.rRNA.interval_list;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;gatkVersion,3.4-0-Java-1.7.0_80;gatkVersion,4.0.5.1-foss-2018a-Python-3.6.4;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;dbSNP/dbsnp_138.b37.vcf;ftp.ncbi.nlm.nih.gov/snp/organisms/archive/human_9606_b144_GRCh38p2/VCF/All_20150603.with_chr.vcf.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
 
     # Change the qunatification pipeline parameter file
     sed -i 's;group,umcg-wijmenga;group,umcg-biogen;' Public_RNA-seq_quantification/parameter_files/parameters.csv
@@ -165,6 +171,7 @@ change_parameter_files(){
     sed -i 's;genomeGrchBuild,GRCh37;genomeGrchBuild,GRCh38;' Public_RNA-seq*/parameter_files/parameters.csv
     sed -i 's;human_g1k_vers,37;human_g1k_vers,38;' Public_RNA-seq*/parameter_files/parameters.csv
     sed -i 's;ensemblVersion,75;ensemblVersion,?;' Public_RNA-seq*/parameter_files/parameters.csv
+    sed -i 's;${resDir}/UMCG/1000G_interval_list//ALL.wgs.phase3_shapeit2_mvncall_integrated_v5.20130502.sites.MAF_0.05.SNPs_only.recode.annotated.EXON_only.interval_list;${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.exon.interval_list;' Public_RNA-seq*/parameter_files/parameters.csv
 }
 
 
@@ -200,20 +207,27 @@ make_samplesheets(){
 }
 
 change_prepare_scripts(){
-    # Change the molgenis compute prepare scirpts
-    echo "Chaning prepare scripts..."
+    echo "Changing prepare scripts..."
 
-    # Do general changes for the alignment pipeline
+    # Do general changes for the alignment and haplotyping pipeline
     sed -i 's;/path/to/molgenis-pipelines/compute5/Public_RNA-seq_QC/;;' Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
     sed -i "s;/groups/umcg-wijmenga/tmp04/umcg-ndeklein/molgenis-pipelines/compute5/Public_RNA-seq_QC/;;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
     sed -i "s;parameters.converted.csv;${project_dir}/Public_RNA-seq_QC/parameter_files/parameters.converted.csv;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
-    sed -i "s;workflow.csv;${project_dir}/Public_RNA-seq_QC/workflows/workflowSTAR.csv;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
-    sed -i "s;-rundir /groups/umcg-wijmenga/tmp04/umcg-ndeklein/rundirs/QC/;-rundir ${project_dir}/alignment/alignmentDir;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
+    sed -i "s;workflow.csv;${project_dir}/Public_RNA-seq_QC/workflows//workflow_brain_eQTL.csv;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
+    sed -i "s;-rundir /groups/umcg-wijmenga/tmp04/umcg-ndeklein/rundirs/QC/;-rundir ${project_dir}/jobs/alignmentAndHaplotyping/alignmentDir;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
     sed -i "s;/groups/umcg-wijmenga/tmp04/umcg-ndeklein/samplesheets/;${project_dir}/Public_RNA-seq_QC/samplesheets/;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
+
+
+    sed -i "s;--generate \\\;--generate -p ${project_dir}/Public_RNA-seq_QC/chromosomes.csv \\\;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
+    # add chr in front of the chromosomes.csv file to follow b38 rules
+    awk '{print "chr" $0;}' /data/umcg-ndeklein/ENA/pipelines/Public_RNA-seq_QC/chromosomes.csv > /data/umcg-ndeklein/ENA/pipelines/Public_RNA-seq_QC/chromosomes.csv.tmp
+    sed 's;chrchromosome;chromosome;' /data/umcg-ndeklein/ENA/pipelines/Public_RNA-seq_QC/chromosomes.csv.tmp > /data/umcg-ndeklein/ENA/pipelines/Public_RNA-seq_QC/chromosomes.csv
+    rm /data/umcg-ndeklein/ENA/pipelines/Public_RNA-seq_QC/chromosomes.csv.tmp
 
     # Do general changes for the quantification pipeline
     sed -i "s;workflows/workflow.csv;${project_dir}/Public_RNA-seq_quantification/workflows/workflow.csv;" Public_RNA-seq_quantification/prepare_quantification.sh
     sed -i "s;parameter_files/;${project_dir}/Public_RNA-seq_quantification/parameter_files/;" Public_RNA-seq_quantification/prepare_quantification.sh
+    sed -i "s;-rundir ${project_dir}/jobs/alignment/alignmentDir;-rundir ${project_dir}/jobs/quantification/alignmentDir;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
 
 
     # Do specific changes per samplesheet batch
@@ -233,7 +247,7 @@ change_prepare_scripts(){
         rsync -P Public_RNA-seq_quantification/prepare_quantification.sh Public_RNA-seq_quantification/prepare_scripts/prepare_quantification.$name.sh
         sed -i "s;samplesheet.csv;${project_dir}/Public_RNA-seq_QC/samplesheets/samplesheet_${cohort}_RNA.$name.txt;" Public_RNA-seq_quantification/prepare_scripts/prepare_quantification.$name.sh
         sed -i "s;alignmentDir;$name;" Public_RNA-seq_quantification/prepare_scripts/prepare_quantification.$name.sh
-        sed -i "s;-rundir results/;-rundir ${project_dir}/quantification/$name;" Public_RNA-seq_quantification/prepare_scripts/prepare_quantification.$name.sh
+        break
     done
 }
 
@@ -253,12 +267,13 @@ make_pipeline_scripts(){
     done
     cd -
 
-    cd Public_RNA-seq_quantification/prepare_scripts
-    for f in *sh;
-    do
-        bash $f;
-    done
-    cd -
+
+#    cd Public_RNA-seq_quantification/prepare_scripts
+#    for f in *sh;
+#    do
+#        bash $f;
+#    done
+#    cd -
 }
 
 
@@ -277,16 +292,9 @@ cohort_specific_steps(){
         rsync -P $script_dir/modified_protocols/DownloadFromENA.sh Public_RNA-seq_QC/protocols/
 
         # Have to add the download part before the start of the pipeline (2i inserts the text at 2nd line)
-        sed -i '2iDownloadFromENA,../protocols/DownloadFromENA.sh,' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-        sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,DownloadFromENA;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-        sed -i 's;FastQC,../protocols/Fastqc.sh,;FastQC,../protocols/Fastqc.sh,DownloadFromENA;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-
-        # for testing only do first 3 jobs
-#        echo "step,protocol,dependencies" > Public_RNA-seq_QC/workflows/workflowSTAR.csv
-#        echo "DownloadFromENA,../protocols/DownloadFromENA.sh," >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
-#        echo "STARMapping,../protocols/STARMapping.sh,DownloadFromENA" >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
-#        echo "CreateCramFiles,../protocols/CreateCramFiles.sh,STARMapping" >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
-#        echo "FastQC,../protocols/Fastqc.sh,DownloadFromENA" >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
+        sed -i '2iDownloadFromENA,../protocols/DownloadFromENA.sh,' Public_RNA-seq_QC/workflows/workflow_brain_eQTL.csv
+        sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,DownloadFromENA;' Public_RNA-seq_QC/workflows/workflow_brain_eQTL.csv
+        sed -i 's;FastQC,../protocols/Fastqc.sh,;FastQC,../protocols/Fastqc.sh,DownloadFromENA;' Public_RNA-seq_QC/workflows/workflow_brain_eQTL.csv
 
         # Different molgenis compute script is installed on Peregrine where the public data is run, so change
         for prepare_script in Public_RNA-seq*/prepare_scripts/*sh;
