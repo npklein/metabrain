@@ -96,7 +96,6 @@ change_protocols(){
 
     # add a line to delete the unfiltered BAM and sorted BAM after cramming
     echo "rm \${sortedBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/CreateCramFiles.sh
-    sed -i 's;### variables to help adding to database (have to use weave);#string sortedBamDir;' Public_RNA-seq_QC/protocols/CreateCramFiles.sh
 
     # Because we first convert to cram before running the collectMetrics jobs, change this for all Collect*sh scripts
     # This has changed for the new cohorts like Brainseq, keeping this in temporarily but will be removed later
@@ -143,7 +142,6 @@ change_parameter_files(){
     sed -i "s;resDir,/groups/umcg-wijmenga/tmp04/resources/;resDir,/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i "s;resDir,/groups/umcg-wijmenga/tmp03/resources/;resDir,/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i "s;projectDir,\${root}/\${group}/\${tmp}/projects/umcg-ndeklein/\${project}/;projectDir,${project_dir}/results/;" Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;STARindex;STARindex,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/STAR/${starVersion}/;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;alignmentDir,${projectDir}/hisat/;alignmentDir,${projectDir}/star;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;fastqExtension,.gz;fastqExtension,.fq.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;goolf-1.7.20;foss-2015b;g' Public_RNA-seq_QC/parameter_files/parameters.csv
@@ -202,6 +200,7 @@ make_samplesheets(){
     elif [[ "$cohort" == "ENA" ]];
     then
         echo "ERROR: need to get genotypes as well for the ENA samples. Because the pipeline needs to be set up quite differently, use make_alignmentQuantificationAndGenotype_pipeline.sh instead"
+        exit 1;
     else
         echo "No code written for cohort $cohort"
         exit 1;
@@ -217,7 +216,7 @@ change_prepare_scripts(){
     sed -i "s;/groups/umcg-wijmenga/tmp04/umcg-ndeklein/molgenis-pipelines/compute5/Public_RNA-seq_QC/;;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
     sed -i "s;parameters.converted.csv;${project_dir}/Public_RNA-seq_QC/parameter_files/parameters.converted.csv;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
     sed -i "s;workflow.csv;${project_dir}/Public_RNA-seq_QC/workflows/workflowSTAR.csv;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
-    sed -i "s;-rundir /groups/umcg-wijmenga/tmp04/umcg-ndeklein/rundirs/QC/;-rundir ${project_dir}/alignment/alignmentDir;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
+    sed -i "s;-rundir /groups/umcg-wijmenga/tmp04/umcg-ndeklein/rundirs/QC/;-rundir ${project_dir}/alignment//alignmentDir;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
     sed -i "s;/groups/umcg-wijmenga/tmp04/umcg-ndeklein/samplesheets/;${project_dir}/Public_RNA-seq_QC/samplesheets/;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
 
     # Do general changes for the quantification pipeline
