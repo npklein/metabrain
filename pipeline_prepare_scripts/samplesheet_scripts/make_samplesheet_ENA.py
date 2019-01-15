@@ -83,7 +83,7 @@ for study in study_individuals:
             batch_number = int(total_number_of_samples / batch_size)
             batch = 'batch'+str(batch_number)
             out = open('Public_RNA-seq_QC/samplesheets/samplesheet_ENA_RNA.'+study+'_'+batch+'.txt','w')
-            out.write('internalId,project,sampleName,reads1FqGz,reads2FqGz\n')
+            out.write('internalId,project,sampleName,reads1FqGz,reads2FqGz,sortedBamFile\n')
             current_number_of_samples = 0
 
         # Because some of the samples from an indivudal might not have been added to this batch, do it now before closing the file
@@ -99,7 +99,7 @@ for study in study_individuals:
             R2 = ''
             if len(fastq_files) > 1:
                 R2 = fastq_dir+'/'+study+'/'+fastq_files[1].split('/')[-1]
-            out.write(individual+',ENA,'+sample+','+R1+','+R2+'\n')
+            out.write(individual+',ENA,'+sample+','+R1+','+R2+',${sortedBam}\n')
         total_number_of_samples += len(samples_per_individual[individual])
         current_number_of_samples += len(samples_per_individual[individual])
 
