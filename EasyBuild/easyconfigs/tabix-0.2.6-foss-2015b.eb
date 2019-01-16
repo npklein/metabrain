@@ -1,0 +1,25 @@
+easyblock = 'MakeCp'
+
+name = 'tabix'
+version = '0.2.6'
+
+homepage = 'http://sourceforge.net/projects/samtools/files/tabix/'
+description = """Tabix indexes a TAB-delimited genome position file in.tab.bgz and creates an index file in.tab.bgz.tbi."""
+
+toolchain = {'name': 'foss', 'version': '2015b'}
+
+#
+# Example URL: 
+# https://sourceforge.net/projects/samtools/files/tabix/tabix-0.2.6.tar.bz2/download
+#
+source_urls = [('http://sourceforge.net/projects/samtools/files/tabix/', 'download')]
+sources = ['%(name)s-%(version)s.tar.bz2']
+
+files_to_copy = ['TabixReader.java', (['tabix', 'bgzip'], 'bin/'), (['tabix.1'], 'share/man/man1/')]
+
+sanity_check_paths = {
+    'files': ['TabixReader.java', 'bin/tabix', 'bin/bgzip', 'share/man/man1/tabix.1'],
+    'dirs': ['bin', 'share'],
+}
+
+moduleclass = 'tools'
