@@ -17,7 +17,6 @@ CollectRnaSeqMetrics,../protocols/CollectRnaSeqMetrics.sh,MarkDuplicates
 CollectMultipleMetrics,../protocols/CollectMultipleMetrics.sh,MarkDuplicates
 Flagstat,../protocols/Flagstat.sh,MarkDuplicates
 GatkSplitAndTrim,../protocols/GatkSplitAndTrim.sh,MarkDuplicates
-IndelRealignmentKnown,../protocols/GatkIndelRealignmentKnown.sh,GatkSplitAndTrim
-BQSR,../protocols/GatkBQSR.sh,IndelRealignmentKnown
+BQSR,../protocols/GatkBQSR.sh,GatkSplitAndTrim
 AnalyseCovariates,../protocols/GatkAnalyseCovariates.sh,BQSR
 HaplotypeCallerGvcf,../protocols/GatkHaplotypeCallerGvcf.sh,BQSR
