@@ -123,6 +123,15 @@ change_protocols(){
     # For quick genotyping to test relatedness we use GATK3, while later we want to use GATK4. So change in UnifiedGenotyper
     sed -i 's;GATK/${gatkVersion};GATK/3.8-0-Java-1.8.0_121;' Public_RNA-seq_QC/protocols/GatkUnifiedGenotyper.sh
     sed -i 's;GATK/${gatkVersion};GATK/3.8-0-Java-1.8.0_121;' Public_RNA-seq_QC/protocols/VariantEval.sh
+
+    # MergeBam takes sortedBam instead of AddOrReplace Bams
+    sed -i 's;addOrReplaceGroupsBam;sortedBam;' Public_RNA-seq_QC/protocols/MergeBamFiles.sh
+
+    # All the GATK tools have been modified from the original to use GATK4, copy them over
+    rsync -P $script_dir/modified_protocols/GatkAnalyseCovariates.sh Public_RNA-seq_QC/protocols/
+    rsync -P $script_dir/modified_protocols/GatkBQSR.sh Public_RNA-seq_QC/protocols/
+    rsync -P $script_dir/modified_protocols/GatkHaplotypeCallerGvcf.sh Public_RNA-seq_QC/protocols/
+    rsync -P $script_dir/modified_protocols/GatkSplitAndTrim.sh Public_RNA-seq_QC/protocols/
 }
 
 change_parameter_files(){
@@ -143,9 +152,9 @@ change_parameter_files(){
     sed -i 's;fastqExtension,.fq.gz;fastqExtension,.fastq.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;1.102-Java-1.7.0_80;1.119-Java-1.7.0_80;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;onekgGenomeFasta,${resDir}/${genomeBuild}/indices/human_g1k_v${human_g1k_vers}.fasta;onekgGenomeFasta,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/GRCh38.p5.genome.fa;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;genesRefFlat,${resDir}/picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.refflat;genesRefFlat,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.refflat;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;genesRefFlat,${resDir}/Ensembl/release-${ensemblVersion}/gtf/homo_sapiens/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.refflat;genesRefFlat,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.refflat;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;rRnaIntervalList,${resDir}//picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.rrna.interval_list;rRnaIntervalList,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.rRNA.interval_list;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;gatkVersion,3.4-0-Java-1.7.0_80;gatkVersion,4.0.5.1-foss-2018a-Python-3.6.4;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;gatkVersion,3.4-0-Java-1.7.0_80;gatkVersion,4.0.8.1-foss-2015b-Python-3.6.3;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;dbSNP/dbsnp_138.b37.vcf;ftp.ncbi.nlm.nih.gov/snp/organisms/archive/human_9606_b144_GRCh38p2/VCF/All_20150603.with_chr.vcf.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
 
     # Change the qunatification pipeline parameter file
@@ -290,11 +299,6 @@ cohort_specific_steps(){
         echo "enaSamplesheet,$brain_eQTL_dir/ENA/ENA_samplesheets/samplesheet_ENA_20181212.txt" >> Public_RNA-seq_QC/parameter_files/parameters.csv
         # Because we only need to download from ENA if the cohort is ENA, copy over
         rsync -P $script_dir/modified_protocols/DownloadFromENA.sh Public_RNA-seq_QC/protocols/
-
-        # Have to add the download part before the start of the pipeline (2i inserts the text at 2nd line)
-        sed -i '2iDownloadFromENA,../protocols/DownloadFromENA.sh,' Public_RNA-seq_QC/workflows/workflow_brain_eQTL.csv
-        sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,DownloadFromENA;' Public_RNA-seq_QC/workflows/workflow_brain_eQTL.csv
-        sed -i 's;FastQC,../protocols/Fastqc.sh,;FastQC,../protocols/Fastqc.sh,DownloadFromENA;' Public_RNA-seq_QC/workflows/workflow_brain_eQTL.csv
 
         # Different molgenis compute script is installed on Peregrine where the public data is run, so change
         for prepare_script in Public_RNA-seq*/prepare_scripts/*sh;
