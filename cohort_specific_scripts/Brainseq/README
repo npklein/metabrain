@@ -1,0 +1,2 @@
+Because samples from Brainseq have been analysed over multiple lanes, FastQ files have to be merged before alignment
+(or can align first, then merge. We chose the latter).
