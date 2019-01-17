@@ -41,7 +41,7 @@ mkdir -p ${analyseCovarsDir}
 $EBROOTGATK/gatk BaseRecalibrator\
  -R ${onekgGenomeFasta} \
  -I ${bqsrBam} \
- -o ${bqsrAfterGrp} \
+ -O ${bqsrAfterGrp} \
  -knownSites ${dbsnpVcf} \
  -knownSites ${goldStandardVcf} \
  -knownSites ${oneKgPhase1IndelsVcf} \
