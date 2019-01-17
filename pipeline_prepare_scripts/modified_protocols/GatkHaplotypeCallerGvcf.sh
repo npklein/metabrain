@@ -48,7 +48,7 @@ do
        -dontUseSoftClippedBases \
        -stand_call_conf 10.0 \
        -stand_emit_conf 20.0 \
-       -o ${haplotyperDir}${sampleName}.chr$CHR.g.vcf.gz \
+       -O ${haplotyperDir}${sampleName}.chr$CHR.g.vcf.gz \
        -variant_index_type LINEAR \
        -variant_index_parameter 128000 \
        -L ${haplotyperTargetsPrefix}$CHR${haplotyperTargetsPostfix} \

@@ -42,7 +42,7 @@ mkdir -p ${bqsrDir}
 $EBROOTGATK/gatk BaseRecalibrator\
  -R ${onekgGenomeFasta} \
  -I ${indelRealignmentBam} \
- -o ${bqsrBeforeGrp} \
+ -O ${bqsrBeforeGrp} \
  -knownSites ${dbsnpVcf} \
  -knownSites ${goldStandardVcf}\
  -knownSites ${oneKgPhase1IndelsVcf}\

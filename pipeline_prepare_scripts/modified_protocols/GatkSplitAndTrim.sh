@@ -1,4 +1,4 @@
-#MOLGENIS nodes=1 ppn=1 mem=10gb walltime=23:59:00
+#MOLGENIS nodes=1 ppn=1 mem=16gb walltime=23:59:00
 
 ### variables to help adding to database (have to use weave)
 #string sampleName
@@ -61,8 +61,7 @@ echo
 $EBROOTGATK/gatk SplitNCigarReads \
  -R ${onekgGenomeFasta} \
  -I ${markDuplicatesBam} \
- -o ${splitAndTrimBam} \
- -U ALLOW_N_CIGAR_READS \
+ -O ${splitAndTrimBam} \
  $qualAction \
  --TMP_DIR=$TMPDIR
 
