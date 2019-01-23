@@ -11,6 +11,7 @@
 #string markDuplicatesBam
 #string markDuplicatesBai
 #string onekgGenomeFasta
+#string chromosome
 
 #string splitAndTrimBam
 #string splitAndTrimBai
@@ -63,7 +64,8 @@ $EBROOTGATK/gatk SplitNCigarReads \
  -I ${markDuplicatesBam} \
  -O ${splitAndTrimBam} \
  $qualAction \
- --TMP_DIR=$TMPDIR
+ --TMP_DIR=$TMPDIR \
+ -L ${chromosome}
 
 returnCode=$?
 echo "returncode: $returnCode";

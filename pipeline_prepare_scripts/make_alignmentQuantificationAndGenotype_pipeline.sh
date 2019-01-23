@@ -85,8 +85,16 @@ adjust_workflows(){
     # Remove all the steps we don't need from the workflow
     # At the moment there are none to remove
 
+    # change some dependencies
+    sed -i 's@HaplotypeCallerGvcf,../protocols/GatkHaplotypeCallerGvcf.sh,BQSR@HaplotypeCallerGvcf,../protocols/GatkHaplotypeCallerGvcf.sh,BQSR;AnalyseCovariates@' Public_RNA-seq_QC/workflows/workflow_brain_eQTL.csv
+    sed -i 's@GatkSplitAndTrim,../protocols/GatkSplitAndTrim.sh,MarkDuplicates@GatkSplitAndTrim,../protocols/GatkSplitAndTrim.sh,MarkDuplicates;Flagstat;CollectMultipleMetrics;CollectRnaSeqMetrics@' Public_RNA-seq_QC/workflows/workflow_brain_eQTL.csv
+    sed -i 's@MergeBamFiles,../protocols/MergeBamFiles.sh,AddReadGroup@MergeBamFiles,../protocols/MergeBamFiles.sh,AddReadGroup;CollectRnaSeqQcMetrics;CollectMultipleQcMetrics;GatkUnifiedGenotyper@' Public_RNA-seq_QC/workflows/workflow_brain_eQTL.csv
+
     # Change/add steps that are not in by default
     sed -i 's;Kallisto,../protocols/Kallisto.sh,;Sailfish,../protocols/Sailfish.sh,;' Public_RNA-seq_quantification/workflows/workflow.csv
+
+    # add last step to remove bams
+    echo "RemoveBamFiles,../protocols/RemoveBamFiles.sh,HaplotypeCallerGvcf" >> Public_RNA-seq_QC/workflows/workflow_brain_eQTL.csv
 }
 
 
@@ -98,14 +106,6 @@ change_protocols(){
     # Since we don't filter BAMs, change the input file in sortbam
     # has to be done before adding the removal of unfilteredbam to end of file so it doesnt replace
     sed -i 's;filteredBam;unfilteredBam;' Public_RNA-seq_QC/protocols/SortBam.sh
-
-    # remove unfilteredBam after sorting
-    echo "echo \"remove \${unfilteredBamDir}/\${uniqueID}.bam\"" >> Public_RNA-seq_QC/protocols/SortBam.sh
-    echo "rm \${unfilteredBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/SortBam.sh
-
-    # don't delete sorted bam, need it for genotype calling
-#    echo "echo \"remove \${unfilteredBamDir}/\${uniqueID}.bam\"" >> Public_RNA-seq_QC/protocols/CreateCramFiles.sh
-#    echo "rm \${sortedBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/CreateCramFiles.sh
 
     # Although for ENA we do add in readgroup information as the new version of GATK needs it,
     # this was not done for the other cohorts. Therefore, remove  METRIC_ACCUMULATION_LEVEL here as well
@@ -126,6 +126,9 @@ change_protocols(){
 
     # MergeBam takes sortedBam instead of AddOrReplace Bams
     sed -i 's;addOrReplaceGroupsBam;sortedBam;' Public_RNA-seq_QC/protocols/MergeBamFiles.sh
+
+    # add the removeBamFile protocol
+    rsync -vP $script_dir/modified_protocols/RemoveBamFiles.sh Public_RNA-seq_QC/protocols/
 
     # All the GATK tools have been modified from the original to use GATK4, copy them over
     rsync -P $script_dir/modified_protocols/GatkAnalyseCovariates.sh Public_RNA-seq_QC/protocols/
@@ -156,6 +159,13 @@ change_parameter_files(){
     sed -i 's;rRnaIntervalList,${resDir}//picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.rrna.interval_list;rRnaIntervalList,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.rRNA.interval_list;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;gatkVersion,3.4-0-Java-1.7.0_80;gatkVersion,4.0.8.1-foss-2015b-Python-3.6.3;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;dbSNP/dbsnp_138.b37.vcf;ftp.ncbi.nlm.nih.gov/snp/organisms/archive/human_9606_b144_GRCh38p2/VCF/All_20150603.with_chr.vcf.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    # Change in genotyping parameter file, but tht has been merged with the QC parameter file
+    sed -i 's;splitAndTrimBam,${splitAndTrimDir}${sampleName}.bam;splitAndTrimBam,${splitAndTrimDir}${sampleName}.${chromosome}.bam;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;bqsrAfterGrp,${bqsrDir}${sampleName}.after.grp;bqsrAfterGrp,${bqsrDir}${sampleName}.${chromosome}.after.grp;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;bqsrBeforeGrp,${bqsrDir}${sampleName}.before.grp;bqsrBeforeGrp,${bqsrDir}${sampleName}.${chromosome}.before.grp;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;bqsrBam,${bqsrDir}${sampleName}.bam;bqsrBam,${bqsrDir}${sampleName}.${chromosome}.bam;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;${genomeBuild}/sv/1000G/Mills_and_1000G_gold_standard.indels.b37.vcf;storage.cloud.google.com/genomics-public-data/resources/broard/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;${genomeBuild}/sv/1000G/1000G_phase1.indels.b37.vcf;storage.cloud.google.com/genomics-public-data/resources/broard/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
 
     # Change the qunatification pipeline parameter file
     sed -i 's;group,umcg-wijmenga;group,umcg-biogen;' Public_RNA-seq_quantification/parameter_files/parameters.csv
@@ -229,9 +239,13 @@ change_prepare_scripts(){
 
     sed -i "s;--generate \\\;--generate -p ${project_dir}/Public_RNA-seq_QC/chromosomes.csv \\\;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
     # add chr in front of the chromosomes.csv file to follow b38 rules
-    awk '{print "chr" $0;}' /data/umcg-ndeklein/ENA/pipelines/Public_RNA-seq_QC/chromosomes.csv > /data/umcg-ndeklein/ENA/pipelines/Public_RNA-seq_QC/chromosomes.csv.tmp
-    sed 's;chrchromosome;chromosome;' /data/umcg-ndeklein/ENA/pipelines/Public_RNA-seq_QC/chromosomes.csv.tmp > /data/umcg-ndeklein/ENA/pipelines/Public_RNA-seq_QC/chromosomes.csv
-    rm /data/umcg-ndeklein/ENA/pipelines/Public_RNA-seq_QC/chromosomes.csv.tmp
+    awk '{print "chr" $0;}' Public_RNA-seq_QC/chromosomes.csv > Public_RNA-seq_QC/chromosomes.csv.tmp
+    sed 's;chrchromosome;chromosome;' Public_RNA-seq_QC/chromosomes.csv.tmp > Public_RNA-seq_QC/chromosomes.csv
+    rm Public_RNA-seq_QC/chromosomes.csv.tmp
+    # replace the chr23, 24 and 25 for chrX, chrY, and chrM
+    sed -i 's;chr23;chrX;' Public_RNA-seq_QC/chromosomes.csv
+    sed -i 's;chr24;chrY;' Public_RNA-seq_QC/chromosomes.csv
+    sed -i 's;chr25;chrM;' Public_RNA-seq_QC/chromosomes.csv
 
     # Do general changes for the quantification pipeline
     sed -i "s;workflows/workflow.csv;${project_dir}/Public_RNA-seq_quantification/workflows/workflow.csv;" Public_RNA-seq_quantification/prepare_quantification.sh
