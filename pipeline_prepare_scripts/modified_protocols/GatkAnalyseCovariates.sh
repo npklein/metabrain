@@ -42,9 +42,9 @@ $EBROOTGATK/gatk BaseRecalibrator\
  -R ${onekgGenomeFasta} \
  -I ${bqsrBam} \
  -O ${bqsrAfterGrp} \
- -knownSites ${dbsnpVcf} \
- -knownSites ${goldStandardVcf} \
- -knownSites ${oneKgPhase1IndelsVcf} \
+ --known-sites ${dbsnpVcf} \
+ --known-sites ${goldStandardVcf} \
+ --known-sites ${oneKgPhase1IndelsVcf} \
  --TMP_DIR=$TMPDIR
 
 returnCode=$?
@@ -57,15 +57,13 @@ else
   exit 1;
 fi
 
-$EBROOTGATK/gatk \
- -T AnalyzeCovariates \
- -R ${onekgGenomeFasta} \
- -ignoreLMT \
- -before ${bqsrBeforeGrp} \
- -after ${bqsrAfterGrp} \
- -l DEBUG \
- -csv ${analyseCovariatesIntermediateCsv} \
- -plots ${analyseCovariatesPdf} \
+$EBROOTGATK/gatk  AnalyzeCovariates \
+ --ignore-last-modification-times \
+ --before-report-file ${bqsrBeforeGrp} \
+ --after-report-file ${bqsrAfterGrp} \
+ --verbosity DEBUG \
+ --intermediate-csv-file ${analyseCovariatesIntermediateCsv} \
+ --plots-report-file ${analyseCovariatesPdf} \
  --TMP_DIR=$TMPDIR
 
 returnCode=$?

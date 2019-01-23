@@ -1,4 +1,4 @@
-#MOLGENIS nodes=1 ppn=2 mem=14gb walltime=23:59:00
+#MOLGENIS nodes=1 ppn=1 mem=14gb walltime=23:59:00
 
 ### variables to help adding to database (have to use weave)
 #string sampleName
@@ -15,8 +15,8 @@
 #string oneKgPhase1IndelsVcfIdx
 #string dbsnpVcf
 #string dbsnpVcfIdx
-#string indelRealignmentBam
-#string indelRealignmentBai
+#string splitAndTrimBam
+#string splitAndTrimBai
 #string bqsrDir
 #string bqsrBam
 #string bqsrBai
@@ -41,12 +41,10 @@ mkdir -p ${bqsrDir}
 
 $EBROOTGATK/gatk BaseRecalibrator\
  -R ${onekgGenomeFasta} \
- -I ${indelRealignmentBam} \
+ -I ${splitAndTrimBam} \
  -O ${bqsrBeforeGrp} \
- -knownSites ${dbsnpVcf} \
- -knownSites ${goldStandardVcf}\
- -knownSites ${oneKgPhase1IndelsVcf}\
- -nct 2 \
+ --known-sites ${goldStandardVcf}\
+ --known-sites ${oneKgPhase1IndelsVcf}\
  --TMP_DIR=$TMPDIR
 
 returnCode=$?
@@ -60,13 +58,11 @@ else
 fi
 
 
-$EBROOTGATK/gatk \
- -T PrintReads \
+$EBROOTGATK/gatk ApplyBQSR \
  -R ${onekgGenomeFasta} \
- -I ${indelRealignmentBam} \
- -o ${bqsrBam} \
- -BQSR ${bqsrBeforeGrp} \
- -nct 2 \
+ -I ${splitAndTrimBam} \
+ -O ${bqsrBam} \
+ --bqsr-recal-file ${bqsrBeforeGrp} \
  --TMP_DIR=$TMPDIR
 
 returnCode=$?
