@@ -279,7 +279,7 @@ if __name__ == "__main__":
             with open(args.inclusion_list_file) as input_file:
                 inclusion_list = input_file.read().split('\n')
         else:
-            inclusion_list == []
+            inclusion_list = []
         
         if args.exclusion_list_file:
             with open(args.exclusion_list_file) as input_file:
