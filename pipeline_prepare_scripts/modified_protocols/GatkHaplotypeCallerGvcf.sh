@@ -59,7 +59,7 @@ echo "returncode: $?";
 #haplotyperGvcf is split into seperate variables now
 
 cd ${haplotyperDir}
-sum $(basename ${haplotyperDir}${sampleName}.${chromosome}.g.vcf.gz)> $(basename ${haplotyperDir}${sampleName}.${chromosome}.g.vcf.gz).md5sum
+md5sum $(basename ${haplotyperDir}${sampleName}.${chromosome}.g.vcf.gz)> $(basename ${haplotyperDir}${sampleName}.${chromosome}.g.vcf.gz).md5sum
 cd -
 
 
