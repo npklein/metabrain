@@ -1,28 +1,57 @@
 #MOLGENIS nodes=1 ppn=1 mem=16gb walltime=23:59:00
 
 ### variables to help adding to database (have to use weave)
-#string sampleName
 #string project
 ###
-#list unfilteredBam
-#list mergeBamFilesBam
-#list sortedBam
-#list markDuplicatesBam
-#list splitAndTrimBam
-#list bqsrBam
+#string unfilteredBamDir
+#string mergeBamFilesDir
+#string sortedBamDir
+#string markDuplicatesDir
+#string splitAndTrimDir
+#string bqsrDir
 echo "## "$(date)" Start $0"
 
-for bam in \${unfilteredBam[@]};do echo "rm ${bam}"; rm ${bam};done
+if [ -z "$unfilteredBamDir" ];
+then
+    >&2 echo "ERROR: $unfilteredBamDir is empty!"
+    exit 1;
+fi
+rm ${unfilteredBamDir}/*bam
 
-for bam in \${mergeBamFilesBam[@]};do echo "rm ${bam}"; rm ${bam};done
+if [ -z "$mergeBamFilesDir" ];
+then
+    >&2 echo "ERROR: $mergeBamFilesDir is empty!"
+    exit 1;
+fi
+rm ${mergeBamFilesDir}/*bam
 
-for bam in \${sortedBam[@]};do echo "rm ${bam}"; rm ${bam};done
+if [ -z "$sortedBamDir" ];
+then
+    >&2 echo "ERROR: $sortedBamDir is empty!"
+    exit 1;
+fi
+rm ${sortedBamDir}/*bam
 
-for bam in \${markDuplicatesBam[@]};do echo "rm ${bam}"; rm ${bam};done
+if [ -z "$markDuplicatesDir" ];
+then
+    >&2 echo "ERROR: $markDuplicatesDir is empty!"
+    exit 1;
+fi
+rm ${markDuplicatesDir}/*bam
 
-for bam in \${splitAndTrimBam[@]};do echo "rm ${bam}"; rm ${bam};done
+if [ -z "$splitAndTrimDir" ];
+then
+    >&2 echo "ERROR: $splitAndTrimDir is empty!"
+    exit 1;
+fi
+rm ${splitAndTrimDir}/*bam
 
-for bam in \${bqsrBam[@]};do echo "rm ${bam}"; rm ${bam};done
+if [ -z "$bqsrDir" ];
+then
+    >&2 echo "ERROR: $bqsrDir is empty!"
+    exit 1;
+fi
+rm ${bqsrDir}/*bam
 
 returnCode=$?
 echo "returncode: $returnCode";
