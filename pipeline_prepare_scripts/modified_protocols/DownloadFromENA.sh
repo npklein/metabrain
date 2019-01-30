@@ -24,9 +24,10 @@ echo "ID (internalId-project-sampleName): ${internalId}-${project}-${sampleName}
 
 mkdir -p $(dirname ${reads1FqGz})
 python $brainDir/ENA/download_ENA_samples.py ${enaSamplesheet} \
-                                             $(dirname ${reads1FqGz}) \
+                                            $TMPDIR/$(basename ${reads1FqGz}) \
                                              --sample ${internalId} \
                                             -i
+rsync -vP $TMPDIR/$(basename ${reads1FqGz}) ${reads1FqGz}
 
 returnCode=$?
 echo "returncode: $returnCode";
