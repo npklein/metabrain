@@ -79,9 +79,4 @@ fi
 
 echo "returncode: $?";
 
-cd ${bqsrDir}
-md5sum $(basename ${bqsrBam})> $(basename ${bqsrBam}).md5sum
-md5sum $(basename ${bqsrBam%bam}bai)> $(basename ${bqsrBam%bam}bai).md5sum
-cd -
-
 echo "## "$(date)" ##  $0 Done "

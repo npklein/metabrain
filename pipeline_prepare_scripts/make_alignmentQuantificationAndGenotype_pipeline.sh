@@ -85,16 +85,11 @@ adjust_workflows(){
     # Remove all the steps we don't need from the workflow
     # At the moment there are none to remove
 
-    # change some dependencies
-    sed -i 's@HaplotypeCallerGvcf,../protocols/GatkHaplotypeCallerGvcf.sh,BQSR@HaplotypeCallerGvcf,../protocols/GatkHaplotypeCallerGvcf.sh,BQSR;AnalyseCovariates@' Public_RNA-seq_QC/workflows/workflow_brain_eQTL.csv
-    sed -i 's@GatkSplitAndTrim,../protocols/GatkSplitAndTrim.sh,MarkDuplicates@GatkSplitAndTrim,../protocols/GatkSplitAndTrim.sh,MarkDuplicates;Flagstat;CollectMultipleMetrics;CollectRnaSeqMetrics@' Public_RNA-seq_QC/workflows/workflow_brain_eQTL.csv
-    sed -i 's@MergeBamFiles,../protocols/MergeBamFiles.sh,AddReadGroup@MergeBamFiles,../protocols/MergeBamFiles.sh,AddReadGroup;CollectRnaSeqQcMetrics;CollectMultipleQcMetrics;GatkUnifiedGenotyper@' Public_RNA-seq_QC/workflows/workflow_brain_eQTL.csv
-
     # Change/add steps that are not in by default
     sed -i 's;Kallisto,../protocols/Kallisto.sh,;Sailfish,../protocols/Sailfish.sh,;' Public_RNA-seq_quantification/workflows/workflow.csv
 
     # add last step to remove bams
-    echo "RemoveBamFiles,../protocols/RemoveBamFiles.sh,HaplotypeCallerGvcf" >> Public_RNA-seq_QC/workflows/workflow_brain_eQTL.csv
+    echo "RemoveBamFiles,../protocols/RemoveBamFiles.sh,VerifyBamID;VariantEval;Flagstat;CollectMultipleMetrics;CollectRnaSeqMetrics;AnalyseCovariates;HaplotypeCallerGvcf" >> Public_RNA-seq_QC/workflows/workflow_brain_eQTL.csv
 }
 
 
@@ -110,7 +105,7 @@ change_protocols(){
     # Although for ENA we do add in readgroup information as the new version of GATK needs it,
     # this was not done for the other cohorts. Therefore, remove  METRIC_ACCUMULATION_LEVEL here as well
     # Otherwise, tries to do it per readgroud. Now does it per file
-    sed -i '/METRIC_ACCUMULATION_LEVEL/d' Public_RNA-seq_QC/protocols/CollectRnaSeqMetrics.sh
+    sed -i '/METRIC_ACCUMULATION_LEVEL/d' Public_RNA-seq_QC/protocols/CollectRnaSeqQcMetrics.sh
 
     # Original SAM to BAM conversion is done in seperate step, but this step is removed from the workflow
     # Add the conversion to the STAR alignment script
@@ -147,7 +142,7 @@ change_parameter_files(){
     sed -i 's;group,umcg-wijmenga;group,umcg-biogen;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i "s;resDir,/groups/umcg-wijmenga/tmp04/resources/;resDir,/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i "s;resDir,/groups/umcg-wijmenga/tmp03/resources/;resDir,/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i "s;projectDir,\${root}/\${group}/\${tmp}/projects/umcg-ndeklein/\${project}/;projectDir,${results_dir}/results/;" Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i "s;projectDir,\${root}/\${group}/\${tmp}/projects/umcg-ndeklein/\${project}/;projectDir,${results_dir}/results/\${batch};" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;STARindex;STARindex,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/STAR/${starVersion}/;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;alignmentDir,${projectDir}/hisat/;alignmentDir,${projectDir}/star;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;fastqExtension,.gz;fastqExtension,.fq.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
@@ -270,7 +265,6 @@ change_prepare_scripts(){
         rsync -P Public_RNA-seq_quantification/prepare_quantification.sh Public_RNA-seq_quantification/prepare_scripts/prepare_quantification.$name.sh
         sed -i "s;samplesheet.csv;${project_dir}/Public_RNA-seq_QC/samplesheets/samplesheet_${cohort}_RNA.$name.txt;" Public_RNA-seq_quantification/prepare_scripts/prepare_quantification.$name.sh
         sed -i "s;alignmentDir;$name;" Public_RNA-seq_quantification/prepare_scripts/prepare_quantification.$name.sh
-        break
     done
 }
 
