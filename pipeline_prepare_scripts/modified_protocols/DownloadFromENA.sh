@@ -24,10 +24,9 @@ echo "ID (internalId-project-sampleName): ${internalId}-${project}-${sampleName}
 
 mkdir -p $(dirname ${reads1FqGz})
 python $brainDir/ENA/download_ENA_samples.py ${enaSamplesheet} \
-                                            $TMPDIR/$(basename ${reads1FqGz}) \
+                                            $(dirname ${reads1FqGz}) \
                                              --sample ${internalId} \
                                             -i
-rsync -vP $TMPDIR/$(basename ${reads1FqGz}) ${reads1FqGz}
 
 returnCode=$?
 echo "returncode: $returnCode";
@@ -39,6 +38,12 @@ else
   exit 1;
 fi
 
+# make sure that the file got downloaded to the correct name
+#   (use ${reads1FqGz} because both single and paired end will have this)
+if [ ! -f ${reads1FqGz} ];
+then
+    echo "Downloaded file does not have expected file name"
+fi
 
 
 echo "## "$(date)" ##  $0 Done "
