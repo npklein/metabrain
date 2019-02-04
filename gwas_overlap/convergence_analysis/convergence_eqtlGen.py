@@ -7,7 +7,7 @@ def main():
         # filename has to be in format *-<trait>.txt
         trait = f.split('-')[-1].split('.txt')[0]
         cis_f = f.replace('_trans-','_cis-')
-        out_file = '/groups/umcg-biogen/tmp03/umcg-ndeklein/gwas_overlap/biogen-cisandtrans-4neurodiseases/eqtlgen_disease_overlap/convergent_genes_'+trait+'.txt'
+        out_file = '/groups/umcg-biogen/tmp03/umcg-ndeklein/gwas_overlap/biogen-cisandtrans-4neurodiseases/eqtlGen_convergent_genes/convergent_genes_'+trait+'.txt'
         get_convergent_genes(cis_f, f, out_file)
 
     for f in glob.glob('/groups/umcg-biogen/tmp03/umcg-ndeklein/gwas_overlap/biogen-cisandtrans-4neurodiseases/10pcs-trans/*txt.gz'):
@@ -22,14 +22,31 @@ def main():
 def parse_eqtl_file(f):
     '''Get genes + their SNPs from eQTL file'''
     gene_snps = {}
+    snp_location_per_chr = {}
     with gzip.open(f) as input_file:
+        snp_include = set([])
         header = input_file.readline()
         for line in input_file:
             line = line.decode('utf-8').split('\t')
             gene = line[4]
+            chr = line[2]
+
+            if chr not in snp_location_per_chr:
+                snp_location_per_chr[chr] = []
+            pos = int(line[3])
+
             if gene not in gene_snps:
                 gene_snps[gene] = set([])
             snp = line[1]
+            
+            # check that there is not other SNP from same loci (5Mb window)
+            if snp not in snp_include:
+                for other_pos in snp_location_per_chr[chr]:
+                    if abs(other_pos-pos) < 5000000:
+                        snp_location_per_chr[chr].append(pos)
+                        continue
+            snp_include.add(snp)
+            snp_location_per_chr[chr].append(pos)
             gene_snps[gene].add(snp)
     return(gene_snps)
 
