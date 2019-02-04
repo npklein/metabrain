@@ -250,10 +250,10 @@ class Download_ENA_samples:
                                     if os.path.exists(download_file_location):
                                         break
                                     x += 1
-                                    if x == 10:
-                                        self.logging.warning('Tried 10 times to download '+run_accession+' but never connected.')
-                                        raise RuntimeError('Tried 10 times to download '+run_accession+' but never connected.')
-                                    sleep_time = 600
+                                    if x == 3:
+                                        self.logging.warning('Tried 3 times to download '+run_accession+' but never connected.')
+                                        raise RuntimeError('Tried 3 times to download '+run_accession+' but never connected.')
+                                    sleep_time = 60
                                     print('Download failed, sleeping '+str(sleep_time)+' seconds then try again')
                                     time.sleep(sleep_time)
                                     
@@ -279,7 +279,7 @@ if __name__ == "__main__":
             with open(args.inclusion_list_file) as input_file:
                 inclusion_list = input_file.read().split('\n')
         else:
-            inclusion_list == []
+            inclusion_list = []
         
         if args.exclusion_list_file:
             with open(args.exclusion_list_file) as input_file:
