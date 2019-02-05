@@ -2,8 +2,7 @@ library("optparse")
 library(ggplot2)
 library(ggpubr)
 library(gridExtra)
-library(topGO)
-library(ALL)
+
 # Get command line arguments 
 option_list = list(
   make_option(c("-c", "--cisQTLs"), type="character",
@@ -20,11 +19,11 @@ option_list = list(
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
+opt <- list()
 #opt$cisQTLs <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/eQTLProbesFDR0.05-ProbeLevel.CIS.txt.gz"
 #opt$transQTLs <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/eQTLProbesFDR0.05-ProbeLevel.TRANS.txt.gz"
 #opt$expression <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/MERGED_RNA_MATRIX.SampleSelection.ProbesWithZeroVarianceRemoved.QuantileNormalized.Log2Transformed.MEAN_AND_SD.txt"
 #opt$proteinCodingGenes <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/protein_coding_genes_ensembl84.txt"
-
 
 ##### read in data ####
 cis_qtl <- read.table(gzfile(opt$cisQTLs), header=T, sep='\t')
@@ -101,6 +100,22 @@ ggplot(gene_per_bin, aes(bin, n_genes, fill=genes_are_QTL))+
   scale_x_discrete(breaks = c('[0.00778,0.774]','(10.9,19.3]'),
                  labels=c('low','high'))
 ggsave('figures/proortion_of_QTL_per_bin_proteinCoding_only.png',width=8, height=5)  
+
+
+ggplot(gene_per_bin[gene_per_bin$qtl_type=='cis',], aes(bin, n_genes, fill=genes_are_QTL))+
+  geom_bar(stat='identity')+
+  scale_fill_manual(values=c('grey95','lightblue'))+
+  theme_pubr(base_size=18)+ 
+  guides(fill=FALSE)+
+  xlab('Average brain gene expression')+
+  ylab('Proportion of genes showing cis-eQTL effect')+
+  scale_y_continuous(breaks=c(0,10,20,30,40,50,60,70,80,90,100),
+                     labels=c('0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'))+
+  theme(axis.text= element_text(colour='grey70'))+
+  scale_x_discrete(breaks = c('[0.00778,0.774]','(10.9,19.3]'),
+                   labels=c('low','high'))
+ggsave('figures/proportion_of_QTL_per_bin_proteinCoding_only_cis.png',width=8, height=5)  
+
 ####
 
 
