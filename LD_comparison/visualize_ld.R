@@ -1,5 +1,5 @@
 #!/usr/bin/Rscript
-
+library(optparse)
 library(ggplot2)
 library(data.table)
 library(reshape2)
@@ -7,14 +7,27 @@ library(grid)
 library(gtable)
 library(ggpubr)
 library('scales')
-#### Set the data: file to read ####
 
+
+option_list = list(
+  make_option(c("-e", "--eqtlGenReplication"), type="character",
+              help="File containing the replication of MetaBrain in eQTLgen at different PC cut-offs", metavar="character"),
+  make_option(c("-b", "--ld_scores"), type="character",
+              help="File containing the LD scores between the top SNPs for each gene of metaBrain that is also found in eqtlGen (fdr < 0.05)", metavar="character"),
+);
+
+opt_parser = OptionParser(option_list=option_list);
+opt = parse_args(opt_parser);
+
+#opt$fdrQTLs <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/DER-08a_hg38_eQTL.significant.txt"
+#opt$bonferonniQTLs <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/DER-08b_hg38_eQTL.bonferroni.txt.gz"
+
+#### Set the data: file to read ####
 # This contains the replication of MetaBrain in eQTLgen at different PC cut-offs
-#eqtlGen_replication <- '/groups/umcg-biogen/tmp03/output/2018-12-03-FreezeOne/analysis/output/random/z-scores/eqtlgen-FDR0.05-brain-0pcs-10pcs-20pcs-30pcs-40pcs.txt'
-eqtlGen_replication <- '/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/replications/data/eqtlgen-FDR0.05-brain-0pcs-10pcs-20pcs-30pcs-40pcs.txt'
+eqtlGen_replication <- opt$eqtlGenReplication
 
 # This contains the LD scores between the top SNPs for each gene of metaBrain that is also found in eqtlGen (fdr < 0.05)
-ld_scores_file <- 'metaBrain_eqtlGen_topSNP_LD.txt'
+ld_scores_file <- opt$ld_scores
 #####
 
 # Set the fdr threshold to filter both the meta analysis data and the replication data on
