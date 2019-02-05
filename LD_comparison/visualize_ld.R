@@ -5,17 +5,24 @@ library(data.table)
 library(reshape2)
 library(grid)
 library(gtable)
+library(ggpubr)
+library('scales')
+#### Set the data: file to read ####
 
-#### Set the data: file to read. This contains the replication of MetaBrain in eQTLgen at different PC cut-offs
-eqtlGen_replication <- '/groups/umcg-biogen/tmp03/output/2018-12-03-FreezeOne/analysis/output/random/z-scores/eqtlgen-FDR0.05-brain-0pcs-10pcs-20pcs-30pcs-40pcs.txt'
-#
+# This contains the replication of MetaBrain in eQTLgen at different PC cut-offs
+#eqtlGen_replication <- '/groups/umcg-biogen/tmp03/output/2018-12-03-FreezeOne/analysis/output/random/z-scores/eqtlgen-FDR0.05-brain-0pcs-10pcs-20pcs-30pcs-40pcs.txt'
+eqtlGen_replication <- '/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/replications/data/eqtlgen-FDR0.05-brain-0pcs-10pcs-20pcs-30pcs-40pcs.txt'
+
+# This contains the LD scores between the top SNPs for each gene of metaBrain that is also found in eqtlGen (fdr < 0.05)
+ld_scores_file <- 'metaBrain_eqtlGen_topSNP_LD.txt'
+#####
 
 # Set the fdr threshold to filter both the meta analysis data and the replication data on
-input_fdr_threshold = 0.05
+fdr_threshold = 0.05
 #####
 
 
-main <- function(eqtlGen_replication, fdr_threshold){
+main <- function(eqtlGen_replication, ld_scores_file, fdr_threshold){
   # Main function for program flow
   # eqtlGen_replication: The file containing replication of MetaBrain in eqtlGen
   # fdr_threshold: fdr threshold to filter both the meta analysis data and the replication data on
@@ -28,27 +35,28 @@ main <- function(eqtlGen_replication, fdr_threshold){
 
   zscore_df <- fread(eqtlGen_replication)
 
+  # get the zscore selection and replication for the difference PC corrected data, can select PC10 later
+  zscore_selection_and_replication <- get_zscores_do_replication(zscore_df, fdr_threshold)
     
-    zscore_selection_and_replication <- get_zscores_do_replication(zscore_df, study, fdr_threshold)
-    
-    zscore <- zscore_selection_and_replication[[1]]
-    zscore$tissue <- dataset[[3]]
-    merged_zscore_df <- rbind(merged_zscore_df, zscore)
-    
-    replication <- zscore_selection_and_replication[[2]]
-    merged_replication_df <- rbind(merged_replication_df, replication)
-  }
+  zscores <- zscore_selection_and_replication[[1]]
+  # select disconcordant/concordant effects
+  zscores$concordant <- sign(zscores$OverallZScore_x) == sign(zscores$OverallZScore_y)
   
-  # Make a dataframe that has the replication information (spearman correlation, replication rate, etc)
-  # per study and per PC removal. This can be added to every facet in the plot
-  studies <- unique(merged_zscore_df$study)
-  datasets_text <- make_dataset_text(studies, merged_replication_df)
+  replication <- zscore_selection_and_replication[[2]]
+
+  plot_replication(zscores, replication)
   
-  print('Start plotting')
-  plot_replication(merged_zscore_df, datasets_text, studies)
+  
+  # Read the LD data
+  ld_scores <- fread(ld_scores_file)
+  # Some of the comparisons could not be made and have error instead of value, remove these
+  ld_scores <- ld_scores[!grepl('error', ld_scores$`D'`),]
+  
+  # For the concordant and disconcordant eQTLs, plot the D' and R2 for the top SNPs of metabrain vs eQTLgen
+  plot_ld(zscores, ld_scores)
 }
 
-get_zscores_do_replication <- function(study_df, study, fdr_threshold=0.05){
+get_zscores_do_replication <- function(study_df, fdr_threshold=0.05){
   # Select columns + change to long format, add study as column, then merge. Also since we are looping already, do the correlation calculations etc
   # study_df: table with z-scores for 1 cohort at different PC removal steps
   # study: Name of the study, e.g. Brainseq
@@ -85,10 +93,9 @@ get_zscores_do_replication <- function(study_df, study, fdr_threshold=0.05){
     replication_rate <- round(1-opposite_effects_rate,3)
     
     # Calculate the dissimilarity score
-    z_score_dissimilarity_score <- (sum(r(opposite_effects$OverallZScore_x-opposite_effects$OverallZScore_y)^2,na.rm=T)) / (sum((df_zscore_subset_fdr$OverallZScore_x-df_zscore_subset_fdr$OverallZScore_y)^2,na.rm=T))
+    z_score_dissimilarity_score <- (sum((opposite_effects$OverallZScore_x-opposite_effects$OverallZScore_y)^2,na.rm=T)) / (sum((df_zscore_subset_fdr$OverallZScore_x-df_zscore_subset_fdr$OverallZScore_y)^2,na.rm=T))
     z_score_similarity_score <- round(1- z_score_dissimilarity_score,3)
-    replication_scores <- rbind(replication_scores, data.frame('study'=study,
-                                           'PC'=unique(df_zscore_subset_fdr$PC),
+    replication_scores <- rbind(replication_scores, data.frame('PC'=unique(df_zscore_subset_fdr$PC),
                                            'corr_coeff'=corr_coeff,
                                            'replication_rate'=replication_rate,
                                            'z_score_similarity_score'=z_score_similarity_score,
@@ -97,128 +104,77 @@ get_zscores_do_replication <- function(study_df, study, fdr_threshold=0.05){
   }
   df_zscore$PC <- (as.numeric(df_zscore$PC)-1)*10
   replication_scores$PC <- (as.numeric(replication_scores$PC)-1)*10
-  df_zscore$study <- study
   return(list(df_zscore,replication_scores))
 }
 
-make_dataset_text <- function( studies, replicate_data){
-  # Make a dataframe that has the replication information 
-  # Studies: List of studies that is included
-  # replicate_data: Datframe with the information to print (spearman correlation, z-score similarity, etc)
-  
-  PCs <- c(0,10,20,30,40)
-  # Need to get all combinations, e.g. 10+CMC, 10+eqtlgen, 10+brainseq, 20+CMC, 20+eqtlgen etc
-  combinatins_of_PCs <-  rep(PCs, length(studies))
-  combination_of_studies <- rep(studies, each=length(PCs))
-  # Then add these to the dataframe
-  datasets_text <- data.frame(PC = combinatins_of_PCs,
-                              study = combination_of_studies)
-  # Now add the labels (the replication values) from the replication data.frames we made before
-  # Can do this by first merging the dataframes on study and PC
-  datasets_text <- merge(datasets_text, replicate_data, by=c('study','PC'))
-  
-  datasets_text$label <- paste0('Spearman Correlation: ', datasets_text$corr_coeff,'\n',
-                                'Z-score similarity measure: ', datasets_text$z_score_similarity_score,'\n',
-                                'Replication Rate: ', datasets_text$replication_rate,'\n',
-                                '# shared eQTLs: ',datasets_text$n,'\n',
-                                'Opposite effects:',datasets_text$opposite)
-  return(datasets_text)
-}
-
-plot_replication <- function(plotting_data, replication_text, studies){
+plot_replication <- function(zscores, replication, PCs=10){
+  print('Start plotting')
   # Plot, using facet_grid. Make sure eQTLGen is grouped separatly as it is a blood dataset
-  # plotting_data: Contains the z-scores of the different cohorts at different PC removal
-  # replication_text: Contains the values that have to be printed in the plot
+  # zscores: Contains the z-scores of the different cohorts at different PC removal
+  # replication: Contains the values that have to be printed in the plot
   
-  # Scatterplot
-  # make sure eQTLGen is always the last column in the plot
-  studies_reordered <- c(studies[studies != 'eQTLGen'], 'eQTLGen')
-  plotting_data$study <- factor(plotting_data$study, levels = studies_reordered)
-  p <- ggplot(plotting_data, aes(OverallZScore_x, OverallZScore_y))+
-        geom_point(alpha=0.2)+
-        facet_grid(PC~study,scale='free_x')+
-        theme_bw(base_size=18)+
-        geom_hline(yintercept=0, lty=3, colour='red')+
-        geom_vline(xintercept=0, lty=3, colour='red')+
-        ylab('Meta Z-score')+
-        xlab('Replication Z-score')+
-        geom_text(size    = 2,
-                  data    = replication_text,
-                  mapping = aes(x = Inf, y = -18, label = label),
-                  hjust   = 1.05,
-                  vjust   = 1.5)
-  outfile <- 'figures/replication_rates.png'
-  ggsave(outfile, width=12, height=15)
-  print(paste('Saved plot to',outfile))
-  
-  # Same plot but density (hex bins)
-  p <- ggplot(plotting_data, aes(OverallZScore_x, OverallZScore_y))+
-        geom_hex()+
-        facet_grid(PC~study,scale='free_x')+
-        theme_bw(base_size=18)+
-        geom_hline(yintercept=0, lty=3, colour='red')+
-        geom_vline(xintercept=0, lty=3, colour='red')+
-        ylab('Meta Z-score')+
-        xlab('Replication Z-score')+
-        geom_text(size    = 2,
-                  data    = replication_text,
-                  mapping = aes(x = Inf, y = -18, label = label),
-                  hjust   = 1.05,
-                  vjust   = 1.5)+ 
-        scale_fill_viridis_c(trans = "log",name = "log(#points in hex)")
-  
-  outfile <- 'figures/replication_rates_hexbin.png'
-  ggsave(outfile, width=12, height=15)
-  print(paste('Saved plot to',outfile))
-  
-  
-  # Same but only for 10PC removal
-  studies_reordered <- c(studies[studies != 'eQTLGen'], 'eQTLGen')
-  plotting_data$study <- factor(plotting_data$study, levels = studies_reordered)
-  p <- ggplot(plotting_data[plotting_data$PC==10,], aes(OverallZScore_x, OverallZScore_y))+
+  replication <- replication[replication$PC==PCs,]
+  replication$label <- paste0('Replication Rate: ', replication$replication_rate,'\n',
+                   '# shared eQTLs: ',replication$n,'\n',
+                   'Opposite effects:',replication$opposite)
+  # Scatterplot eqtlgen vs metabrain
+  p <- ggplot(zscores[zscores$PC==PCs,], aes(OverallZScore_x, OverallZScore_y, colour=concordant))+
     geom_point(alpha=0.2)+
-    theme_bw(base_size=50)+
-    facet_grid(~study,scale='free_x')+
+    theme_bw(base_size=18)+
     geom_hline(yintercept=0, lty=3, colour='red')+
     geom_vline(xintercept=0, lty=3, colour='red')+
     ylab('Meta Z-score')+
     xlab('Replication Z-score')+
-    theme(strip.text.x = element_text(size = 50))
-    geom_text(size    = 6,
-              data    = replication_text,
-              mapping = aes(x = Inf, y = -18, label = label),
-              hjust   = 1.05,
-              vjust   = 1.5)
+    theme(strip.text.x = element_text(size = 50))+
+    annotate("text",
+             size    = 3,
+             x = max(zscores[zscores$PC==PCs,]$OverallZScore_x), 
+             y = min(zscores[zscores$PC==PCs,]$OverallZScore_y), 
+             label = replication$label,
+              hjust   = 0.95,
+              vjust   = 0.1)+ 
+    scale_colour_brewer(palette='Set1')+
+    guides(colour=F)
   outfile <- 'figures/replication_rates_PC10.png'
-  ggsave(outfile, width=20, height=12)
+  ggsave(outfile, width=6, height=6)
   print(paste('Saved plot to',outfile))
   
-  # Same plot but density (hex bins)
-  p <- ggplot(plotting_data[plotting_data$PC==10,], aes(OverallZScore_x, OverallZScore_y))+
-    geom_hex(aes(fill=stat(log10(count))))+
-    facet_grid(~study,scale='free_x')+
-    theme_pubr(base_size=50)+
-    geom_hline(yintercept=0, lty=3, colour='red',size=4)+
-    geom_vline(xintercept=0, lty=3, colour='red',size=4)+
-    ylab('Meta Z-score')+
-    xlab('Replication Z-score')+
-#    geom_text(size    = 6,
-#              data    = replication_text,
-#              mapping = aes(x = Inf, y = -18, label = label),
-#              hjust   = 1.05,
-#              vjust   = 1.5)+ 
-    scale_fill_viridis_c()+
-    labs(fill="log10(# points in hex)")+ 
-    theme(strip.text.x = element_text(size = 50))#+
-    #theme(panel.background = element_rect(fill = 'black', colour = 'black'))
+}
+
+plot_ld <- function(zscores, ld_scores, PCs = 10){
+  zscores <- zscores[zscores$PC==PCs,]
+  # remove the version number of gene because ld data does not have it
+  zscores$ProbeName_0 <- gsub('\\.[0-9]+','',zscores$ProbeName_0)
+  # For the genes in ld_scores, add column if they were concordant or disconcordant direction
+  ld_scores$concordant <- zscores[match(ld_scores$gene, zscores$ProbeName_0),]$concordant
   
-  outfile <- 'figures/replication_rates_hexbin_PC10.png'
-  ggsave(outfile, width=30, height=12)
-  print(paste('Saved plot to',outfile))
+  # for som genes there is no concorandt info because they are > 0.05 in metabrain, remove these
+  ld_scores <- ld_scores[!is.na(ld_scores$concordant),]
+  
+  # because error messages were in the column they were considered characters, convert to numeric
+  ld_scores$`D'` <- as.numeric(ld_scores$`D'`)
+  ld_scores$R2 <- as.numeric(ld_scores$R2)
+  
+  # make the plot
+  p <- ggplot(ld_scores, aes(x=`D'`, y=R2, colour=concordant))+
+    geom_point(alpha=0.5)+
+    xlab("D'")+
+    theme_pubr(base_size=18)+
+    scale_colour_brewer(palette='Set1')
+  
+  
+  pdf('figures/ld_comparison_density.pdf',width=12, height=8)
+  ggExtra::ggMarginal(p, type = "density",  groupFill = TRUE)
+  dev.off()
+  
+  pdf('figures/ld_comparison_histogran.pdf',width=12, height=8)
+  ggExtra::ggMarginal(p, type = "density",  groupFill = TRUE)
+  dev.off()
+  
 }
 
 # runs only when script is run by itself, similar to Python's if __name__ == __main__
 if (sys.nframe() == 0){
-  main(eqtlGen_replication, input_fdr_threshold)
+  main(eqtlGen_replication, ld_scores_file, fdr_threshold)
 }
 
