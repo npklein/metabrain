@@ -76,7 +76,7 @@ for study in study_individuals:
         # check if number_of_samples is equal to batch size
         # or that if the total number of samples for next batch plus current number in batch > batch_size (so no batch gets larger than batch_size)
         # This to keep number of jobs low enough for aspera
-        if total_number_of_samples % batch_size == 0 or current_number_of_samples + len(samples_per_individual[individual]) > 10:
+        if total_number_of_samples % batch_size == 0 or current_number_of_samples + len(samples_per_individual[individual]) > batch_size:
             if out:
                 out.close()
             

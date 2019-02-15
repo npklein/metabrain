@@ -27,9 +27,9 @@ if(!is.null(opt$pcaOutliers)){
 }
 print(paste('Writing output files to: ',opt$output))
 
-#opt$input <- "/Users/NPK/UMCG/projects/biogen/cohorts/"
-#opt$output <- "/Users/NPK/UMCG/projects/biogen/cohorts/"
-#opt$pcaOutliers <- "/Users/NPK/UMCG/projects/biogen/cohorts/rna-pcaoutliers.txt"
+#opt$input <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/QC"
+#opt$output <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/QC"
+#opt$pcaOutliers <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/QC/rna-pcaoutliers.txt"
 
 ##### read in samples that are filtered out during PC #####
 pca_filtered_samples <- fread(opt$pcaOutliers,header=F)
@@ -118,6 +118,7 @@ for(f in FastQC_multiQC_files){
 # Because FastQC gives results per fastq file instead of per sample, adjust the names and merge them together
 FastQC_qc_all <- data.frame(FastQC_qc_all)
 FastQC_qc_all$Sample <- gsub('.cram','',FastQC_qc_all$Sample)
+
 FastQC_qc_all_R1 <- FastQC_qc_all[grepl('*\\.R1|*_1', FastQC_qc_all$Sample),]
 FastQC_qc_all_R1$Sample <- gsub('.R1','',FastQC_qc_all_R1$Sample)
 FastQC_qc_all_R1[FastQC_qc_all_R1$cohort=="GTEx",]$Sample <- gsub('_1','',FastQC_qc_all_R1[FastQC_qc_all_R1$cohort=="GTEx",]$Sample)
@@ -137,7 +138,9 @@ FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- gsub('
 Brainseq_full_sample <- MultipleMetric_qc_all[MultipleMetric_qc_all$cohort=="Brainseq",]$Sample
 Brainseq_fastqc_sample <- FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="Brainseq",]$Sample
 
-FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="Brainseq",]$Sample  <- unlist(
+#FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="Brainseq",]$Sample  <- 
+  
+  t <- unlist(
                                                                             lapply(Brainseq_fastqc_sample, function(x) {
                                                                                 Brainseq_full_sample[grepl(x, Brainseq_full_sample)]
                                                                             }))
