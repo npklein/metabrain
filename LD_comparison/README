@@ -1,0 +1,12 @@
+Replicating MetaBrain in eQTLgen gives lower than expected replication rates (~88%). 
+Calculate the LD and D' between the concordant and disconcordant top SNPs.
+
+Do it in 3 steps:
+1. get_top_snps.py
+    Get the genes that are eQTLs in metaBrain and save the top SNP, then find the same gene in eQTLgen and also select the top SNP (if significant)
+
+2. calculate_ld.py
+    Calculate the LD for the metabrain top snp and eqtlgen top snp
+
+3. visualize_ld.R
+    Visualize the results
