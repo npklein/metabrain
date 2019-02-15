@@ -1,4 +1,4 @@
-#MOLGENIS nodes=1 ppn=1 mem=16gb walltime=23:59:00
+#MOLGENIS nodes=1 ppn=1 mem=16gb walltime=5:59:00
 
 ### variables to help adding to database (have to use weave)
 #string sampleName
@@ -27,10 +27,6 @@ ${stage} GATK/${gatkVersion}
 ${checkStage}
 
 mkdir -p ${splitAndTrimDir}
-
-echo
-echo "## Action to perform in quals: "$qualAction" ##"
-echo
 
 $EBROOTGATK/gatk SplitNCigarReads \
  -R ${onekgGenomeFasta} \
