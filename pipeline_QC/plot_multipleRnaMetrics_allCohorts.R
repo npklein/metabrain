@@ -132,20 +132,21 @@ FastQC_qc_all_merged$FastQC_original_sample <- FastQC_qc_all_merged$Sample
 
 
 # TargetALS sample naming is different between FastQC and picard results, change them here to make them match later
-FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- str_match(FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample , ".*(HRA.*?)_.*")[, 2]
-FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- gsub('-b38','',FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample)
-FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- gsub('-','_',FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample )
-
+if('TargetALS' %in% FastQC_qc_all_merged$cohort){
+    FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- str_match(FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample , ".*(HRA.*?)_.*")[, 2]
+    FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- gsub('-b38','',FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample)
+    FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- gsub('-','_',FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample )
+}
 # Same for Brainseq
-Brainseq_full_sample <- MultipleMetric_qc_all[MultipleMetric_qc_all$cohort=="Brainseq",]$Sample
-Brainseq_fastqc_sample <- FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="Brainseq",]$Sample
+if('Brainseq' %in% FastQC_qc_all_merged$cohort){
+    Brainseq_full_sample <- MultipleMetric_qc_all[MultipleMetric_qc_all$cohort=="Brainseq",]$Sample
+    Brainseq_fastqc_sample <- FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="Brainseq",]$Sample
 
-#FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="Brainseq",]$Sample  <- 
-  
-  t <- unlist(
+    FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="Brainseq",]$Sample <- unlist(
                                                                             lapply(Brainseq_fastqc_sample, function(x) {
                                                                                 Brainseq_full_sample[grepl(x, Brainseq_full_sample)]
                                                                             }))
+}
 ####### 
 
 
@@ -158,10 +159,17 @@ CombinedMetrics <- merge(RnaMetric_qc_all, MultipleMetric_qc_all, by=c('Sample',
                                                                        'READ_GROUP','PF_ALIGNED_BASES'),fill=T)
 CombinedMetrics <- merge(CombinedMetrics, STAR_qc_all, by=c('Sample','cohort'), all = TRUE)
 CombinedMetrics$SampleFull <- CombinedMetrics$Sample
-CombinedMetrics[CombinedMetrics$cohort=="Braineac",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="Braineac",]$Sample, ".*(A653.*)")[, 2]
-CombinedMetrics[CombinedMetrics$cohort=="GTEx",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="GTEx",]$Sample, "(.*)_.*")[, 2]
-CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample, ".*(HRA.*)")[, 2]
-CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample <- gsub('-2','',CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample)
+
+if('Braineac' %in% FastQC_qc_all_merged$cohort){
+    CombinedMetrics[CombinedMetrics$cohort=="Braineac",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="Braineac",]$Sample, ".*(A653.*)")[, 2]
+}
+if('GTEx' %in% FastQC_qc_all_merged$cohort){
+    CombinedMetrics[CombinedMetrics$cohort=="GTEx",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="GTEx",]$Sample, "(.*)_.*")[, 2]
+}
+if('TargetALS' %in% FastQC_qc_all_merged$cohort){
+    CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample, ".*(HRA.*)")[, 2]
+    CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample <- gsub('-2','',CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample)
+}
 
 CombinedMetrics <- merge(CombinedMetrics, FastQC_qc_all_merged, by=c('Sample','cohort'), all = TRUE)
 ######
@@ -213,8 +221,6 @@ if(!is.null(opt$pcaOutliers)){
     all_cohorts[all_cohorts$SampleFull %in% pca_filtered_samples$V1,]$pcaFiltered <- 'YES'
 }
 #####
-print(table(all_cohorts$FILTER))
-print(table(all_cohorts[all_cohorts$cohort=="Brainseq",]$FILTER))
 
 ##### plot function so that it can be more easily repeated
 QC_plotter <- function(all_cohorts, column, plot_pca_outliers, single_cohort =F){
