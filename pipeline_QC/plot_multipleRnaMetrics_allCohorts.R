@@ -32,7 +32,9 @@ print(paste('Writing output files to: ',opt$output))
 #opt$pcaOutliers <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/QC/rna-pcaoutliers.txt"
 
 ##### read in samples that are filtered out during PC #####
-pca_filtered_samples <- fread(opt$pcaOutliers,header=F)
+if(!is.null(opt$pcaOutliers)){
+    pca_filtered_samples <- fread(opt$pcaOutliers,header=F)
+}
 #####
 
 ##### get cohort from path function that's being used a couple of times ####
@@ -201,12 +203,15 @@ print(paste0("Written merged metrics to ",merged_metrics_files))
 nSamples <- all_cohorts %>% group_by(cohort) %>% dplyr::summarize(no = sum(FILTER=="NO"),yes = sum(FILTER=="YES"))
 nSamples$total <- nSamples$no + nSamples$yes
 
-# Add a separate column for those that got filtered with PCA
 all_cohorts$SampleFull <- gsub('individualID.','', all_cohorts$SampleFull)
 all_cohorts$SampleFull <- gsub('specimenID.','', all_cohorts$SampleFull)
 
 all_cohorts$pcaFiltered <- 'NO'
-all_cohorts[all_cohorts$SampleFull %in% pca_filtered_samples$V1,]$pcaFiltered <- 'YES'
+
+if(!is.null(opt$pcaOutliers)){
+    # Add a separate column for those that got filtered with PCA
+    all_cohorts[all_cohorts$SampleFull %in% pca_filtered_samples$V1,]$pcaFiltered <- 'YES'
+}
 #####
 print(table(all_cohorts$FILTER))
 print(table(all_cohorts[all_cohorts$cohort=="Brainseq",]$FILTER))
@@ -225,10 +230,10 @@ QC_plotter <- function(all_cohorts, column, plot_pca_outliers, single_cohort =F)
   
   p <- ggplot()
   
-  # if PCA outliers are plotted, make all others have lower alpha settings
   if(single_cohort){
     p <- p + geom_point(data=all_cohorts, aes_string('sampleID', column, colour='FILTER'))
   }else{
+    # if PCA outliers are plotted, make all others have lower alpha settings
     if(plot_pca_outliers){
       p <- p + geom_point(alpha=0.1)+ 
              geom_point(data=all_cohorts[all_cohorts$pcaFiltered=='YES',],  aes_string('sampleID', column, colour='cohort', shape='FILTER'))
@@ -299,15 +304,17 @@ dev.off()
 
 
 ##### plot STAR + multimetrics again, but highlight PCA filtered samples #####
-pdf(paste0(opt$output,'/figures/all_MultiMetrics_QC_plots.highlightPcaFilteredSamples.pdf'), width=8, height=8)
-for(column in columns_to_plot){
-  if(column == "sampleID"){
-    next
-  }
-  print(column)
-  p <- QC_plotter(all_cohorts, column, TRUE)
-  ggsave(paste0(opt$output,'/figures/QC_figures_separate/',column,'.highlightPcaFilteredSamples.png'), width=12, height = 8, plot=p)
-  print(p)
+if(!is.null(opt$pcaOutliers)){
+    pdf(paste0(opt$output,'/figures/all_MultiMetrics_QC_plots.highlightPcaFilteredSamples.pdf'), width=8, height=8)
+    for(column in columns_to_plot){
+      if(column == "sampleID"){
+        next
+      }
+      print(column)
+      p <- QC_plotter(all_cohorts, column, TRUE)
+      ggsave(paste0(opt$output,'/figures/QC_figures_separate/',column,'.highlightPcaFilteredSamples.png'), width=12, height = 8, plot=p)
+      print(p)
+    }
+    dev.off()
 }
-dev.off()
 #####
