@@ -12,7 +12,8 @@ library('scales')
 option_list = list(
   make_option(c("-e", "--eqtlGenReplication"), type="character",
               help="File containing the replication of MetaBrain in eQTLgen at different PC cut-offs", metavar="character"),
-  make_option(c("-b", "--ld_scores"), type="character",
+
+  make_option(c("-l", "--ld_scores"), type="character",
               help="File containing the LD scores between the top SNPs for each gene of metaBrain that is also found in eqtlGen (fdr < 0.05)", metavar="character")
 );
 

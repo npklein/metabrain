@@ -15,7 +15,10 @@ option_list = list(
   make_option(c("-o", "--output"), type="character", default=getwd(),
                 help="path to output dir", metavar="character"),
   make_option(c("-p", "--pcaOutliers"), type="character", default=NULL,
-              help="path to file with PCA outliers", metavar="character")
+              help="path to file with PCA outliers", metavar="character"),
+  make_option(c("-n", "--NABEC_pheno"), type="character", default=NULL,
+              help="phenotype data for NABEC", metavar="character")
+  
 ); 
 
 opt_parser = OptionParser(option_list=option_list);
@@ -27,13 +30,24 @@ if(!is.null(opt$pcaOutliers)){
 }
 print(paste('Writing output files to: ',opt$output))
 
-#opt$input <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/QC"
-#opt$output <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/QC"
-#opt$pcaOutliers <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/QC/rna-pcaoutliers.txt"
+test <- function(){
+  opt <- list()
+  opt$input <- "/Users/NPK/UMCG/projects/biogen/cohorts/"
+  opt$output <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/QC"
+  opt$pcaOutliers <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/QC/rna-pcaoutliers.txt"
+  opt$NABEC_pheno <- "/Users/NPK/UMCG/projects/biogen/cohorts/NABEC/phenotypes/NABEC_phenotypes.txt"
+  return(opt)
+}
+# comment out when not testing
+#opt <- test()
 
 ##### read in samples that are filtered out during PC #####
 pca_filtered_samples <- fread(opt$pcaOutliers,header=F)
 #####
+
+#### Read in NABEC phenotype data ####
+nabec_phenotypes <- fread(opt$NABEC_pheno)
+####
 
 ##### get cohort from path function that's being used a couple of times ####
 get_cohort_from_path <- function(path){
@@ -138,9 +152,7 @@ FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- gsub('
 Brainseq_full_sample <- MultipleMetric_qc_all[MultipleMetric_qc_all$cohort=="Brainseq",]$Sample
 Brainseq_fastqc_sample <- FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="Brainseq",]$Sample
 
-#FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="Brainseq",]$Sample  <- 
-  
-  t <- unlist(
+FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="Brainseq",]$Sample  <- unlist(
                                                                             lapply(Brainseq_fastqc_sample, function(x) {
                                                                                 Brainseq_full_sample[grepl(x, Brainseq_full_sample)]
                                                                             }))
@@ -160,6 +172,7 @@ CombinedMetrics[CombinedMetrics$cohort=="Braineac",]$Sample <- str_match(Combine
 CombinedMetrics[CombinedMetrics$cohort=="GTEx",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="GTEx",]$Sample, "(.*)_.*")[, 2]
 CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample, ".*(HRA.*)")[, 2]
 CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample <- gsub('-2','',CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample)
+
 
 CombinedMetrics <- merge(CombinedMetrics, FastQC_qc_all_merged, by=c('Sample','cohort'), all = TRUE)
 ######
@@ -208,11 +221,18 @@ all_cohorts$SampleFull <- gsub('specimenID.','', all_cohorts$SampleFull)
 all_cohorts$pcaFiltered <- 'NO'
 all_cohorts[all_cohorts$SampleFull %in% pca_filtered_samples$V1,]$pcaFiltered <- 'YES'
 #####
-print(table(all_cohorts$FILTER))
-print(table(all_cohorts[all_cohorts$cohort=="Brainseq",]$FILTER))
+
+##### Merge NABEC phenotype into all_cohorts
+all_cohorts$lib_selection <- 'unknown'
+nabec_phenotypes$Sample <- paste0(nabec_phenotypes$BioSample, '_', nabec_phenotypes$Run)
+all_cohorts[all_cohorts$cohort=="NABEC",]$lib_selection <- nabec_phenotypes[match(all_cohorts[all_cohorts$cohort=="NABEC",]$Sample,
+                                                                             nabec_phenotypes$Sample),]$LibrarySelection
+
+#####
+
 
 ##### plot function so that it can be more easily repeated
-QC_plotter <- function(all_cohorts, column, plot_pca_outliers, single_cohort =F){
+QC_plotter <- function(all_cohorts, column, plot_pca_outliers, single_cohort =F, lib_selection=F){
   # add the super small nuber in case y-axis needs to be log scaled, but only for those columns where the max value > 100000 (so that columns with e.g. percentages don't get log scaled)
   if(max(all_cohorts[!is.na(all_cohorts[column]),][column])> 10000){
     all_cohorts[!is.na(all_cohorts[column]),][column] <-all_cohorts[!is.na(all_cohorts[column]),][column] +0.00000000000000000000001
@@ -230,16 +250,26 @@ QC_plotter <- function(all_cohorts, column, plot_pca_outliers, single_cohort =F)
     p <- p + geom_point(data=all_cohorts, aes_string('sampleID', column, colour='FILTER'))
   }else{
     if(plot_pca_outliers){
-      p <- p + geom_point(alpha=0.1)+ 
+      if(lib_selection){
+        p <- p + geom_point(alpha=0.1)+ 
+          geom_point(data=all_cohorts[all_cohorts$pcaFiltered=='YES',],  aes_string('sampleID', column, colour='cohort', shape='lib_selection'))
+      }else{
+        p <- p + geom_point(alpha=0.1)+ 
              geom_point(data=all_cohorts[all_cohorts$pcaFiltered=='YES',],  aes_string('sampleID', column, colour='cohort', shape='FILTER'))
+      }
     }else{
-      p <- p + geom_point(data=all_cohorts, aes_string('sampleID', column, colour='cohort', shape='FILTER'))
+      if(lib_selection){
+        p <- p + geom_point(data=all_cohorts, aes_string('sampleID', column, colour='cohort', shape='lib_selection'))
+      }else{
+        p <- p + geom_point(data=all_cohorts, aes_string('sampleID', column, colour='cohort', shape='FILTER'))
+      }
     }
   }
   p <- p + theme_bw(base_size=18)+
     theme(axis.text.x = element_blank(),
           axis.ticks = element_blank())+  
-    xlab('Samples')
+    xlab('Samples')#+
+    #facet_wrap(~cohort, scale='free_x')
   
   if(single_cohort){
     p <- p+scale_colour_brewer(palette="Dark2")
@@ -275,6 +305,7 @@ filter_columns <-  c("PCT_CODING_BASES","PCT_PF_READS_ALIGNED","uniquely_mapped_
 columns_to_plot <- columns_to_plot[!columns_to_plot %in% filter_columns]
 columns_to_plot <- c(filter_columns, columns_to_plot)
 
+print('start plotting')
 pdf(paste0(opt$output,'/figures/all_MultiMetrics_QC_plots.pdf'), width=8, height=8)
 for(column in columns_to_plot){
   if(column == "sampleID"){
@@ -284,21 +315,26 @@ for(column in columns_to_plot){
   p <- QC_plotter(all_cohorts, column, FALSE)
   ggsave(paste0(opt$output,'/figures/QC_figures_separate/',column,'.png'), width=12, height = 8, plot=p)
   
-  if(column == 'PF_READS_ALIGNED' || column == 'PCT_PF_READS_ALIGNED'){
-    t <- all_cohorts[all_cohorts$cohort=="Brainseq",]
-    t <- t[order(t$PCT_PF_READS_ALIGNED),]
-    t$sampleID <- 1:nrow(t)
-    p <- QC_plotter(t, column, FALS,TRUE)
-    ggsave(paste0(opt$output,'/figures/QC_figures_separate/',column,'.Brainseq.png'), width=6, height=4)
-    
-  }
   print(p)
 }
 dev.off()
 #####
 
+print('plot library selection')
+pdf(paste0(opt$output,'/figures/all_MultiMetrics_QC_plots_library_selection.pdf'), width=8, height=8)
+for(column in columns_to_plot){
+  if(column == "sampleID"){
+    next
+  }
+  print(column)
+  p <- QC_plotter(all_cohorts, column, FALSE, lib_selection=T)
+  print(p)
+}
+dev.off()
+
 
 ##### plot STAR + multimetrics again, but highlight PCA filtered samples #####
+print('plotting with pca outliers')
 pdf(paste0(opt$output,'/figures/all_MultiMetrics_QC_plots.highlightPcaFilteredSamples.pdf'), width=8, height=8)
 for(column in columns_to_plot){
   if(column == "sampleID"){
