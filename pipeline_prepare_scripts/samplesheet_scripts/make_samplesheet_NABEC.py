@@ -73,17 +73,13 @@ for study in study_individuals:
             if sample in seen:
                 raise RuntimeError(sample+' seen for 2nd time')
             seen.add(sample)
-
+            R1 = ''
+            R2 = ''
             if assay_and_library_type[sample][1] == 'PAIRED':
                 R1 = fastq_dir+'/'+sample+'_1.fastq.gz'
                 R2 = fastq_dir+'/'+sample+'_2.fastq.gz'
-                if not os.path.exists(R2):
-                    raise RuntimeError(R2+' does not exist')
             elif assay_and_library_type[sample][1] == 'SINGLE':
                 R1 = fastq_dir+'/'+sample+'.fastq.gz'
-
-            if not os.path.exists(R1):
-                raise RuntimeError(R1+' does not exist')
 
             out.write(sample+',NABEC,'+individual+','+R1+','+R2+'\n')
         total_number_of_samples += len(samples_per_individual[individual])

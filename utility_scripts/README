@@ -1,0 +1,7 @@
+General utility scripts used to process data that do not fit in other directories
+
+merge_star_counts.py
+    Merge counts from multiple STAR outputs into a matrix
+
+calculate_TMM.R
+    TMM normalize output matrix from merge_star_counts.py
