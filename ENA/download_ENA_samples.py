@@ -170,7 +170,7 @@ class Download_ENA_samples:
         elif number_of_fastq_download_links == 2:
             logging.info(run_accession+' seems to be paired end, downloading 2 fastq file')
         elif number_of_fastq_download_links == 3:
-            logging.warn(run_accession+' seems to be paired end, but has 3 download 2 files. Downloading all 3')
+            logging.warn(run_accession+' seems to be paired end, but has 3 download 2 files. Downloading only the paired end files because rest is likely orphans. See e.g. https://groups.google.com/forum/#!topic/rna-star/93lkDbTl1CM')
         else:
             logging.error('Expected 1-3 fastq files, got'+str(number_of_fastq_download_links)+'. Check your ena samplesheet')
             logging.error('Unexpected number of fastq files. Expected 1-3 fastq files, got'+str(number_of_fastq_download_links))    
@@ -221,6 +221,12 @@ class Download_ENA_samples:
                             self.__report_number_of_fastq_files(run_accession, len(fastq_ftp_links))
                             # paired end data will have multiple download links
                             for fastq_ftp_link in fastq_ftp_links:
+                                # if there are 3 files, the file is paired end. 3rd fastq file is orphans. Do not download these
+                                if len(fastq_ftp_links) == 3:
+                                    if not fastq_ftp_link.endswith('_1.fastq.gz') and not fastq_ftp_link.endswith('_2.fastq.gz'):
+                                        logging.info('Not downloading '+fastq_ftp_link+' because:')
+                                        logging.info('  single end file of a 3 file paired end sample. Likely are orphan reads.')
+                                        continue
                                 download_file_location = self.download_location+'/'+fastq_ftp_link.split('/')[-1]
                                 x = 0
                                 while not self.__check_md5(download_file_location, line[header_index['fastq_md5']], self.include_all_samples):
@@ -237,6 +243,12 @@ class Download_ENA_samples:
 
                             self.__report_number_of_fastq_files(run_accession,len(fastq_aspera_links))
                             for index, fastq_aspera_link in enumerate(fastq_aspera_links):
+                                # if there are 3 files, the file is paired end. 3rd fastq file is orphans. Do not download these
+                                if len(fastq_aspera_link) == 3:
+                                    if not fastq_ftp_link.endswith('_1.fastq.gz') and not fastq_ftp_link.endswith('_2.fastq.gz'):
+                                        logging.info('Not downloading '+fastq_ftp_link+' because:')
+                                        logging.info('  single end file of a 3 file paired end sample. Likely are orphan reads.')
+                                        continue
                                 download_file_location = self.download_location+'/'+fastq_aspera_link.split('/')[-1]
                                 x = 0
 #                                while not self.__check_md5(download_file_location, line[header_index['fastq_md5']], self.include_all_samples):
