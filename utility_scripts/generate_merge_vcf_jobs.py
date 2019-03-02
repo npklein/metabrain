@@ -4,7 +4,7 @@ import glob
 import argparse
 
 parser = argparse.ArgumentParser(description='Create slurm jobs to merge gVCFs together in batches of 200')
-parser.add_argument('list_of_vcfs', help='.txt file with list of path of VCFs to merge')
+parser.add_argument('list_of_vcfs', help='.txt file with list of path of VCFs to merge (only for chr15, this will be replaced for other chr numbers)')
 parser.add_argument('jobs_dir', help='directory to write jobs to')
 parser.add_argument('ref_genome', help='path to reference genome')
 parser.add_argument('outdir', help='directory to write merged gVCFs to')
@@ -37,10 +37,10 @@ module list
 mkdir -p REPLACEOUTDIR
 
 
-$EBROOTGATK/gatk CombineGVCFs \
-    -R REPLACEREFGENOME \
-    -o REPLACEOUTDIR/REPLACEPROJECT.batchREPLACEBATCH_chrREPLACECHROMOSOME.g.vcf.gz \
-    -L chrREPLACECHROMOSOME \
+$EBROOTGATK/gatk CombineGVCFs \\
+    --reference REPLACEREFGENOME \\
+    --output REPLACEOUTDIR/REPLACEPROJECT.batchREPLACEBATCH_chrREPLACECHROMOSOME.g.vcf.gz \\
+    -L chrREPLACECHROMOSOME \\
     REPLACEINPUT
 
 then
@@ -85,7 +85,7 @@ batch = 0
 input = {'1':{},'2':{},'3':{},'4':{},'5':{},'6':{},'7':{},
          '8':{},'9':{},'10':{},'11':{},'12':{},'13':{},'14':{},
          '15':{},'16':{},'17':{},'18':{},'19':{},'20':{},
-         '21':{},'22':{},'23':{},'24':{},'25':{}}
+         '21':{},'22':{},'X':{},'Y':{},'M':{}}
 
 
 lines = sorted(lines)
@@ -93,6 +93,12 @@ for line in lines:
     if len(line.strip()) == 0:
         continue
     for chr in range(1, 26, 1):
+        if chr == 23:
+            chr = 'X'
+        elif chr == 24:
+            chr = 'Y'
+        elif chr == 25:
+            chr = 'M'
         if str(batch) in input[str(chr)]:
             input[str(chr)][str(batch)] += ' --variant '+line.strip().replace('chr15','chr'+str(chr))
         else:
@@ -103,7 +109,7 @@ for line in lines:
 
 for chr in input:
     for batch in input[chr]:
-        outfile = jobs_dir+'MergeGvcfs_batch'+batch+'_chr'+chr+'.sh'
+        outfile = args.jobs_dir+'MergeGvcfs_batch'+batch+'_chr'+chr+'.sh'
         with open(outfile,'w') as out:
             new_template = template.replace('REPLACEBATCH',batch)
             new_template = new_template.replace('REPLACECHROMOSOME',chr)
