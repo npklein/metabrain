@@ -234,8 +234,8 @@ class Download_ENA_samples:
                                     logging.info('Downloading '+fastq_ftp_link+' using ftp to '+download_file_location+'...')
                                     urllib.request.urlretrieve(fastq_ftp_link, download_file_location, self.__reporthook)
                                     x += 1
-                                    if x == 10:
-                                        self.logging.warning('Tried 10 times to download '+run_accession+' but md5sum never correct. Skipping')
+                                    if x == 3:
+                                        logging.warning('Tried 3 times to download '+run_accession+' but md5sum never correct. Skipping')
                                     break
                         elif download_protocol == 'aspera':
                             fastq_aspera_links = line[header_index['fastq_aspera']].rstrip(';').split(';')
@@ -244,9 +244,9 @@ class Download_ENA_samples:
                             self.__report_number_of_fastq_files(run_accession,len(fastq_aspera_links))
                             for index, fastq_aspera_link in enumerate(fastq_aspera_links):
                                 # if there are 3 files, the file is paired end. 3rd fastq file is orphans. Do not download these
-                                if len(fastq_aspera_link) == 3:
-                                    if not fastq_ftp_link.endswith('_1.fastq.gz') and not fastq_ftp_link.endswith('_2.fastq.gz'):
-                                        logging.info('Not downloading '+fastq_ftp_link+' because:')
+                                if len(fastq_aspera_links) == 3:
+                                    if not fastq_aspera_link.endswith('_1.fastq.gz') and not fastq_aspera_link.endswith('_2.fastq.gz'):
+                                        logging.info('Not downloading '+fastq_aspera_link+' because:')
                                         logging.info('  single end file of a 3 file paired end sample. Likely are orphan reads.')
                                         continue
                                 download_file_location = self.download_location+'/'+fastq_aspera_link.split('/')[-1]
@@ -263,7 +263,7 @@ class Download_ENA_samples:
                                         break
                                     x += 1
                                     if x == 3:
-                                        self.logging.warning('Tried 3 times to download '+run_accession+' but never connected.')
+                                        logging.warning('Tried 3 times to download '+run_accession+' but never connected.')
                                         raise RuntimeError('Tried 3 times to download '+run_accession+' but never connected.')
                                     sleep_time = 60
                                     print('Download failed, sleeping '+str(sleep_time)+' seconds then try again')

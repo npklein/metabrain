@@ -280,7 +280,13 @@ make_pipeline_scripts(){
     cd Public_RNA-seq_QC/prepare_scripts;
     for f in *sh;
     do
-        bash $f;
+        tarfile=$(grep 'rundir' $f | awk '{print $2 ".tar.gz"}')
+        if [ ! -f $tarfile ];
+        then
+            bash $f;
+        else
+            echo "$tarfile already exists, skipping"
+        fi
     done
     cd -
 

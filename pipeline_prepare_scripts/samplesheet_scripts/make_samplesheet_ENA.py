@@ -95,10 +95,19 @@ for study in study_individuals:
                 raise RuntimeError(sample+' seen for 2nd time')
             seen.add(sample)
             fastq_files = fq_files_per_sample[sample]
+            if len(fastq_files) == 3:
+                # sometimes paired samples have 3 files, 1 with orphans. Make sure only the non-orphans are used
+                new_fastq_files = []
+                for fastq_file in fastq_files:
+                    if fastq_file.endswith('_1.fastq.gz') or fastq_file.endswith('_2.fastq.gz'):
+                        new_fastq_files.append(fastq_file)
+                fastq_files = new_fastq_files
             R1 = fastq_dir+'/'+study+'/'+fastq_files[0].split('/')[-1]
             R2 = ''
             if len(fastq_files) > 1:
                 R2 = fastq_dir+'/'+study+'/'+fastq_files[1].split('/')[-1]
+            elif len(fastq_files) > 2:
+                raise RuntimeError('Should only have 2 fastq files')
             out.write(sample+',ENA,'+individual+','+R1+','+R2+',${sortedBam},'+study+'_'+batch+'\n')
         total_number_of_samples += len(samples_per_individual[individual])
         current_number_of_samples += len(samples_per_individual[individual])
