@@ -8,6 +8,7 @@ parser.add_argument('list_of_vcfs', help='.txt file with list of path of VCFs to
 parser.add_argument('jobs_dir', help='directory to write jobs to')
 parser.add_argument('ref_genome', help='path to reference genome')
 parser.add_argument('outdir', help='directory to write merged gVCFs to')
+parser.add_argument('project', help='Name of the project (will be prepended to the output file)')
 
 args = parser.parse_args()
 
@@ -43,17 +44,17 @@ $EBROOTGATK/gatk CombineGVCFs \\
     -L chrREPLACECHROMOSOME \\
     REPLACEINPUT
 
-then
- echo "returncode: $?"; 
-
 if [ ! -f REPLACEOUTDIR/REPLACEPROJECT.batchREPLACEBATCH_chrREPLACECHROMOSOME.g.vcf.gz ]; then
     echo "REPLACEOUTDIR/REPLACEPROJECT.batchREPLACEBATCH_chrREPLACECHROMOSOME.g.vcf.gz"
     exit 1
 fi
-cd REPLACEOUTDIR/
-md5sum REPLACEPROJECT.batchREPLACEBATCH_chrREPLACECHROMOSOME.g.vcf.gz > REPLACEPROJECT.batchREPLACEBATCH_chrREPLACECHROMOSOME.g.vcf.gz.md5
- cd -
- echo "succes moving files";
+
+if [ "$?" -eq 0 ];
+then
+  cd REPLACEOUTDIR/
+  md5sum REPLACEPROJECT.batchREPLACEBATCH_chrREPLACECHROMOSOME.g.vcf.gz > REPLACEPROJECT.batchREPLACEBATCH_chrREPLACECHROMOSOME.g.vcf.gz.md5
+  cd -
+  echo "succes moving files";
 else
  echo "returncode: $?";
  echo "fail";
@@ -115,7 +116,7 @@ for chr in input:
             new_template = new_template.replace('REPLACECHROMOSOME',chr)
             new_template = new_template.replace('REPLACEOUTDIR',args.outdir)
             new_template = new_template.replace('REPLACEINPUT', input[chr][batch])
-            new_template = new_template.replace('REPLACEPROJECT','BIOS')
+            new_template = new_template.replace('REPLACEPROJECT',args.project)
             new_template = new_template.replace('REPLACEREFGENOME',args.ref_genome)
             new_template = new_template.replace('REPLACEFINISHED','MergeGvcfs_batch'+batch+'_chr'+chr+'.sh.finished')
             out.write(new_template)

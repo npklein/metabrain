@@ -16,9 +16,9 @@ template = """#!/bin/bash
 #SBATCH --job-name=genomicDB_chrREPLACECHROMOSOME
 #SBATCH --output=genomicDB_chrREPLACECHROMOSOME.out
 #SBATCH --error=genomicDB_chrREPLACECHROMOSOME.err
-#SBATCH --time=23:59:59
+#SBATCH --time=2-23:59:59
 #SBATCH --cpus-per-task 1
-#SBATCH --mem 18gb
+#SBATCH --mem 60gb
 #SBATCH --nodes 1
 #SBATCH --export=NONE
 #SBATCH --get-user-env=L
@@ -35,10 +35,11 @@ module list
 
 mkdir -p REPLACEOUTDIR
 
-
+echo "NOTE: it crashes if the genomicDB already exists, so deleting it now first"
+rm -rf REPLACEOUTDIR/REPLACEPROJECT.chrREPLACECHROMOSOME
 $EBROOTGATK/gatk GenomicsDBImport \\
-    --genomicsDBWorkspace REPLACEOUTDIR/REPLACEPROJECT.chrREPLACECHROMOSOME \\
-    --intervals chrREPLACECHROMOSOME \\
+    --genomicsdb-workspace-path REPLACEOUTDIR/REPLACEPROJECT.chrREPLACECHROMOSOME \\
+    --intervals /data/umcg-ndeklein/apps/data/storage.googleapis.com/gatk-test-data/intervals/hg38.even.handcurated.20k.chrREPLACECHROMOSOME.intervals \\
     REPLACEINPUT
 
 if [ "$?" -eq 0 ];
@@ -46,7 +47,10 @@ then
   cd REPLACEOUTDIR/REPLACEPROJECT.chrREPLACECHROMOSOME
   for f in *;
   do
-      md5sum $f > ${f}.md5
+      [[ -e $f ]] || continue
+      if [ -f "$f" ]; then
+          md5sum $f > ${f}.md5
+      fi
   done
   cd -
   echo "succes moving files";
@@ -96,7 +100,7 @@ for line in lines:
 for chr in input:
     outfile = args.jobs_dir+'genomicDB_chr'+chr+'.sh'
     with open(outfile,'w') as out:
-        new_template = new_template.replace('REPLACECHROMOSOME',chr)
+        new_template = template.replace('REPLACECHROMOSOME',chr)
         new_template = new_template.replace('REPLACEOUTDIR',args.outdir)
         new_template = new_template.replace('REPLACEINPUT', input[chr])
         new_template = new_template.replace('REPLACEPROJECT',args.project)
