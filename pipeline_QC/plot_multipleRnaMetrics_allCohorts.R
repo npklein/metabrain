@@ -199,9 +199,12 @@ all_cohorts$sampleID <- 1:nrow(all_cohorts)
 
 ###### set filter based on 3 measurements ######
 all_cohorts$FILTER <- "NO"
+print('set filter')
+print(head(all_cohorts))
 all_cohorts[!is.na(all_cohorts$PCT_CODING_BASES) & all_cohorts$PCT_CODING_BASES <= 0.1,]$FILTER <- "YES"
 all_cohorts[!is.na(all_cohorts$PCT_PF_READS_ALIGNED) & all_cohorts$PCT_PF_READS_ALIGNED <= 0.6,]$FILTER <- "YES"
 all_cohorts[!is.na(all_cohorts$uniquely_mapped_percent) & all_cohorts$uniquely_mapped_percent <= 60,]$FILTER <- "YES"
+print('done')
 
 all_cohorts[is.na(all_cohorts$SampleFull),]$SampleFull <- all_cohorts[is.na(all_cohorts$SampleFull),]$Sample
 merged_metrics_files <- paste0(opt$output,"/all_cohort_STAR_RNAseqMetrics_MultipleMetrics_FastQC.txt")
