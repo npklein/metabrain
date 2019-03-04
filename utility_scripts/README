@@ -6,6 +6,10 @@ merge_star_counts.py
 calculate_TMM.R
     TMM normalize output matrix from merge_star_counts.py
 
+generate_genomicDB_jobs.py
+    Since GATK4 GenotypeGVCF needs a genomicDB instead of multiple VCF files
+    Use this script to make slurm jobs to create the genomicDB
+
 generate_genoypeGvcf_jobs.py (GATK4)
     Generate slurm job scripts to call genotypes on the merged gVCFs from generate_merge_vcf_jobs.py
 
@@ -15,3 +19,4 @@ generate_merge_vcf_jobs.py (Necesarry for GATK3)
 generate_genoypeGvcf_GATK3_jobs.py
     For testing reasons call genotypes on the merged gVCFs from generate_merge_vcf_jobs.py
     This generates the slurm jobs
+
