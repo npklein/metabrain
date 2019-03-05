@@ -20,7 +20,7 @@ set_of_features = set([])
 set_of_samples = set([])
 
 # loop over all the STAR expression files
-for f in glob.iglob(args.path+'/**/star/*ReadsPerGene.out.tab', recursive=True):
+for f in glob.iglob(args.star_base_path+'/**/star/*ReadsPerGene.out.tab', recursive=True):
     print(f)
     # sample_name of the sample is everything before .ReadsPerGene
     sample_name = f.split('/')[-1].split('.ReadsPerGene')[0]
