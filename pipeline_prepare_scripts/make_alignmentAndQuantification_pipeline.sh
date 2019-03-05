@@ -200,6 +200,11 @@ make_samplesheets(){
     elif [[ "$cohort" == "NABEC" ]];
     then
         python $samplesheet_script_dir/make_samplesheet_NABEC.py /groups/umcg-biogen/tmp03/input/rawdata/NABEC/phenotypes/NABEC_phenotypes.txt /groups/umcg-biogen/tmp03/input/rawdata/NABEC/fastq/
+    elif [[ "$cohort" == "BipSeq" ]];
+    then
+        # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
+        python $samplesheet_script_dir/make_samplesheet_BipSeq.py /groups/umcg-biogen/tmp03/input/rawdata/psychEncode/metadata/BipSeq/LIBD-JHU_BipSeq_R01MH105898_Metadata_RNAseq_DLPFC_Limbic.csv \
+                                                                       /groups/umcg-biogen/tmp03/input/rawdata/psychEncode/RNAseq/BipSeq/DLPFC_merged/
     elif [[ "$cohort" == "ENA" ]];
     then
         echo "ERROR: need to get genotypes as well for the ENA samples. Because the pipeline needs to be set up quite differently, use make_alignmentQuantificationAndGenotype_pipeline.sh instead"
@@ -233,7 +238,6 @@ change_prepare_scripts(){
     for samplesheet in `ls Public_RNA-seq_QC/samplesheets/samplesheet*txt`;
     do
         name=$(echo ${samplesheet} | awk -F"." '{print $2}')
-
         # Change it for the alignment pipeline per batch
         echo "making prepare script using $samplesheet: Public_RNA-seq_QC/prepare_scripts/prepare_Public_RNA-seq_QC.$name.sh"
         rsync -P Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh Public_RNA-seq_QC/prepare_scripts/prepare_Public_RNA-seq_QC.$name.sh
