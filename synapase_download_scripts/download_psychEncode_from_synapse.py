@@ -20,9 +20,9 @@ print('Sync psychEncode')
 files = synapseutils.syncFromSynapse(syn, 'syn8403872', path = 'RNAseq/BipSeq/')
 files = synapseutils.syncFromSynapse(syn, 'syn5845180', path = 'metadata/BipSeq/')
 # BrainGVEX
-files = synapseutils.syncFromSynapse(syn, 'syn3270015', path = 'RNAseq/BrainGVEX/')
-files = synapseutils.syncFromSynapse(syn, 'syn3270014', path = 'metadata/BrainGVEX/')
+#files = synapseutils.syncFromSynapse(syn, 'syn3270015', path = 'RNAseq/BrainGVEX/')
+#files = synapseutils.syncFromSynapse(syn, 'syn3270014', path = 'metadata/BrainGVEX/')
 # EpiGABA
-files = synapseutils.syncFromSynapse(syn, 'syn4588490', path = 'RNAseq/EpiGABA/')
-files = synapseutils.syncFromSynapse(syn, 'syn4588489', path = 'metadata/EpiGABA/')
+#files = synapseutils.syncFromSynapse(syn, 'syn4588490', path = 'RNAseq/EpiGABA/')
+#files = synapseutils.syncFromSynapse(syn, 'syn4588489', path = 'metadata/EpiGABA/')
 
