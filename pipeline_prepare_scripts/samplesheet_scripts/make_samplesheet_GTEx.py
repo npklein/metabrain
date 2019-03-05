@@ -3,7 +3,6 @@ import sys
 import os.path
 import glob
 
-
 # This simply uses all the fq files, not a smaplesheet. Better to rewrite to use a samplesheet
 print('Not implemeted yet')
 exit()
