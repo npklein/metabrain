@@ -12,7 +12,7 @@ option_list = list(
   make_option(c("-t", "--tmmOut"), type="character", default=getwd(),
                 help="outfile with TMM normalized counts matrix", metavar="character"),
   make_option(c("-o", "--cpmOut"), type="character", default=NULL,
-              help="Outfile with CPM normalized count matrix", metavar="character"),
+              help="Outfile with CPM normalized count matrix", metavar="character")
   
 ); 
 

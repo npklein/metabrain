@@ -16,10 +16,10 @@ template = """#!/bin/bash
 #SBATCH --job-name=GenotypeGvcf_chrREPLACECHROMOSOME
 #SBATCH --output=GenotypeGvcf_chrREPLACECHROMOSOME.out
 #SBATCH --error=GenotypeGvcf_chrREPLACECHROMOSOME.err
-#SBATCH --time=23:59:59
+#SBATCH --time=5:59:59
 #SBATCH --cpus-per-task 1
-#SBATCH --mem 60gb
-#SBATCH --nodes 1
+#SBATCH --mem 80gb
+#SBATCH --nodes 16
 #SBATCH --export=NONE
 #SBATCH --get-user-env=L
 
@@ -33,6 +33,7 @@ echo "## "$(date)" Start $0"
 
 
 #Load gatk module
+module load Spark/2.3.0-Hadoop-2.7-Java-1.8.0_162
 module load GATK/4.0.8.1-foss-2015b-Python-3.6.3
 module list
 
@@ -45,13 +46,14 @@ $EBROOTGATK/gatk GenotypeGVCFs \\
     --variant gendb://REPLACEINPREFIX.chrREPLACECHROMOSOME \\
     --stand-call-conf 10.0 \\
     -L chrREPLACECHROMOSOME \\
-    -G StandardAnnotation
+    -G StandardAnnotation \\
+    --spark-master local[16]
 
 if [ "$?" -eq 0 ];
 then
  echo "returncode: $?"; 
  
- cd 
+ cd REPLACEOUTDIR
  md5sum REPLACEOUTPUT > REPLACEOUTPUT.md5
  cd -
  echo "succes moving files";
