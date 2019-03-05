@@ -1,13 +1,16 @@
 # Parse TargetALS samplesheet to make molgenis-compute samplesheet
-import sys
 import os.path
 import glob
 
-if len(sys.argv) != 3:
-    raise RuntimeError('Not correct number of arguments')
+parser = argparse.ArgumentParser(description='Make Molgenis Compute samplesheet for Braineac.')
+parser.add_argument('samplesheet', help='TargetALS samplesheet')
+parser.add_argument('fastq_base_dir', help='path of base dir where subdirs with fastq files are in (will be recursively searched')
+parser.add_argument('output_prefix',help='Prefix of output file')
+
+args = parser.parse_args()
 
 info_per_quote = {}
-with open(sys.argv[1]) as input_file:
+with open(args.samplesheet) as input_file:
     header = input_file.readline()
     for line in input_file:
         line = line.strip().split('\t')
@@ -18,8 +21,7 @@ with open(sys.argv[1]) as input_file:
 
         # have to add a lot of wildcards because the naming is not uniform and there are
         # variable parts in the name that can not be known before hand
-        baseDir = '/groups/umcg-biogen/tmp04/biogen/input/TargetALS/'
-        fastq1 = baseDir+quote+'/Project_*/Sample_'+external_sample_id.replace('_HRA_','-HRA-')
+        fastq1 = args.fastq_base_dir+'/'+quote+'/Project_*/Sample_'+external_sample_id.replace('_HRA_','-HRA-')
         fastq1 += '*/fastq/'+external_sample_id.replace('_HRA_','-HRA-')+'*'
         fastq2 = fastq1 + '.R2.fastq.gz'
         fastq1 += '.R1.fastq.gz'
@@ -45,8 +47,9 @@ with open(sys.argv[1]) as input_file:
         external_subject_id = external_subject_id.replace(' ','_')
         info_per_quote[quote].append(external_sample_id+',TargetALS,'+external_subject_id+','+fastq1+','+fastq2+','+'${cramFileDir}/${uniqueID}.cram\n')
 
-for quote in info_per_quote:
-    with open(sys.argv[2]+quote+'.txt', 'w') as out:
+for quote in info_per_quote
+    # don't add / after output_prefix because is part of name, not dir:
+    with open(output_prefix+quote+'.txt', 'w') as out:
         out.write('internalId,project,sampleName,reads1FqGz,reads2FqGz,cram\n')
         for info in info_per_quote[quote]:
             out.write(info)

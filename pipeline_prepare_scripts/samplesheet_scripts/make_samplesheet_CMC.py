@@ -1,20 +1,22 @@
 
 # loop through all subdirs to find all fastq files
-import sys
 import os.path
 import glob
 import os
 import re
 
+parser = argparse.ArgumentParser(description='Make Molgenis Compute samplesheet for Braineac.')
+parser.add_argument('samplesheet', help='CMC samplesheet from synapse')
+parser.add_argument('fastq_dir', help='path to fastq file dir')
+parser.add_argument('outdir',help='Directory where output is written',default = 'Public_RNA-seq_QC/samplesheets/')
 
-if len(sys.argv) != 2:
-    raise RuntimeError('Not correct number of arguments')
+args = parser.parse_args()
 
 individual_per_sample = {}
 samples_per_batch = {}
 batch_count = {}
 
-with open(sys.argv[1]) as input_file:
+with open(args.samplesheet) as input_file:
     header = input_file.readline().split('\t')
     for line in input_file:
         line = line.strip().replace('"','').split('\t')
@@ -31,7 +33,7 @@ with open(sys.argv[1]) as input_file:
         # merged together later, so need to have both of the file names
         unaligned_bam = aligned_bam.replace('BamAlignedReadData','BamUnmappedReadData').replace('accepted_hits.sort.coord.bam','unmapped.bam')
 
-        fastq_path = '/groups/umcg-biogen/tmp03/input/CMC/pipelines/results/fastq/'+sample_id+'_R1.fq.gz'
+        fastq_path = args.fastq_dir+'/'+sample_id+'_R1.fq.gz'
         batch = re.search('(.*?)_\d+', sample_id).group(1)
         if batch not in batch_count:
             batch_count[batch] = 0
@@ -52,7 +54,7 @@ with open(sys.argv[1]) as input_file:
 
 for batch in samples_per_batch:
     print(batch)
-    with open('Public_RNA-seq_QC/samplesheets/samplesheet_CMC_RNA.'+batch+'.txt','w') as out:
+    with open(args.outdir+'samplesheet_CMC_RNA.'+batch+'.txt','w') as out:
         out.write('internalId,project,sampleName,reads1FqGz,reads2FqGz,alignedBam,unalignedBam\n')
         for data in samples_per_batch[batch]:
             print(data[1], individual_per_sample[data[1]])
