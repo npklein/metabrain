@@ -12,6 +12,7 @@ library('scales')
 option_list = list(
   make_option(c("-e", "--eqtlGenReplication"), type="character",
               help="File containing the replication of MetaBrain in eQTLgen at different PC cut-offs", metavar="character"),
+
   make_option(c("-l", "--ld_scores"), type="character",
               help="File containing the LD scores between the top SNPs for each gene of metaBrain that is also found in eqtlGen (fdr < 0.05)", metavar="character")
 );
@@ -19,15 +20,15 @@ option_list = list(
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
-#opt$fdrQTLs <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/DER-08a_hg38_eQTL.significant.txt"
-#opt$bonferonniQTLs <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/DER-08b_hg38_eQTL.bonferroni.txt.gz"
-
 #### Set the data: file to read ####
 # This contains the replication of MetaBrain in eQTLgen at different PC cut-offs
 eqtlGen_replication <- opt$eqtlGenReplication
+eqtlGen_replication <- '/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/replications/data/eqtlgen-FDR0.05-brain-0pcs-10pcs-20pcs-30pcs-40pcs.txt'
 
 # This contains the LD scores between the top SNPs for each gene of metaBrain that is also found in eqtlGen (fdr < 0.05)
 ld_scores_file <- opt$ld_scores
+ld_scores_file <- 'metaBrain_eqtlGen_topSNP_LD.txt'
+
 #####
 
 # Set the fdr threshold to filter both the meta analysis data and the replication data on
@@ -152,6 +153,10 @@ plot_replication <- function(zscores, replication, PCs=10){
   ggsave(outfile, width=6, height=6)
   print(paste('Saved plot to',outfile))
   
+  
+  zscores_subset <- zscores[zscores$ProbeName_0=='ENSG00000065621' | zscores$ProbeName_0=='ENSG00000134061',]
+
+  
 }
 
 plot_ld <- function(zscores, ld_scores, PCs = 10){
@@ -181,9 +186,43 @@ plot_ld <- function(zscores, ld_scores, PCs = 10){
   dev.off()
   
   pdf('figures/ld_comparison_histogran.pdf',width=12, height=8)
+  ggExtra::ggMarginal(p, type = "histogram",  groupFill = TRUE)
+  dev.off()
+  
+  write.table(ld_scores, file='LD_scores_topSNP_metaBrain_eqtlGen.txt',sep='\t','quote'=F, row.names = F)
+  
+  # merge zscores and ld
+  ld_zscore <- merge(zscores, ld_scores, by.x='ProbeName_0', by.y='gene')
+  
+  # Look at the zscore
+  p <- ggplot(ld_zscore, aes(x=abs(OverallZScore_x), y=R2, colour=concordant.x))+
+    geom_point()+
+    xlab('metabrain_zscore')+
+    theme_bw(base_size=18)
+  pdf('figures/ld_metbrain_zscore.pdf',width=12, height=8)
   ggExtra::ggMarginal(p, type = "density",  groupFill = TRUE)
   dev.off()
   
+  
+  # also look at tss distance
+  eqtlGen_distance <- fread('/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/TSS_distance/tssdist-eqtlgen.txt')
+  colnames(distance) <- c('pval','gene','snp','eqtlgen_snp_distance')
+  ld_zscore <- merge(ld_zscore, distance, by.x='ProbeName_0',by.y='gene')
+  
+  metaBrain_distance <- fread('/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/TSS_distance/eQTLsFDR0.05-TSS-10pcs.topfxpergene.txt')
+  colnames(metaBrain_distance)[4] <- 'metaBrain_snp_distance'
+  metaBrain_distance$ProbeName <- gsub('\\.[0-9]+','', metaBrain_distance$ProbeName)
+  ld_zscore <- merge(ld_zscore, metaBrain_distance, by.x='ProbeName_0', by.y='ProbeName')
+  
+  ld_zscore$dist_diff <- abs(abs(ld_zscore$eqtlgen_snp_distance)-abs(ld_zscore$metaBrain_snp_distance))
+  
+  p <- ggplot(ld_zscore, aes(x=dist_diff, y=R2,colour=concordant.x))+
+    geom_point(alpha=0.2)+
+    theme_bw(base_size=18)+
+    xlab('absolute difference in distance snp-gene between eqtlGen and metaBrain')
+  pdf('figures/ld_metbrain_dist_diff.pdf',width=12, height=8)
+  ggExtra::ggMarginal(p, type = "density",  groupFill = TRUE)
+  dev.off()
 }
 
 # runs only when script is run by itself, similar to Python's if __name__ == __main__
