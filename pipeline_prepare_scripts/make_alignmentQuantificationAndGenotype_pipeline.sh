@@ -89,7 +89,7 @@ adjust_workflows(){
     sed -i 's;Kallisto,../protocols/Kallisto.sh,;Sailfish,../protocols/Sailfish.sh,;' Public_RNA-seq_quantification/workflows/workflow.csv
 
     # add last step to remove bams
-    echo "RemoveBamFiles,../protocols/RemoveBamFiles.sh,VerifyBamID;VariantEval;Flagstat;CollectMultipleMetrics;CollectRnaSeqMetrics;AnalyseCovariates;HaplotypeCallerGvcf" >> Public_RNA-seq_QC/workflows/workflow_brain_eQTL.csv
+    echo "RemoveBamFiles,../protocols/RemoveBamFiles.sh,CreateCramFiles;VerifyBamID;VariantEval;Flagstat;CollectMultipleMetrics;CollectRnaSeqMetrics;AnalyseCovariates;HaplotypeCallerGvcf" >> Public_RNA-seq_QC/workflows/workflow_brain_eQTL.csv
 }
 
 
