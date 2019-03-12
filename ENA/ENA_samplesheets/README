@@ -7,3 +7,9 @@ Then click TEXT. File is downloaded as ena.txt
 
 To keep file size small for github, the samlesheet is filtered on only samples that will be processed with
     python filter_ENA_samplesheet.py
+
+Output is written to samplesheet_ENA_<date>.txt. These are all the brain samples that are found in ../brain_samples/.
+
+Since the data in ../brain_samples/ is run separatly, there can be some samples included that since then have been removed from ENA
+These are written to
+    missing_samples_<date>.txt
