@@ -186,17 +186,26 @@ make_samplesheets(){
     samplesheet_script_dir=$script_dir/samplesheet_scripts/
     if [[ "$cohort" == "TargetALS" ]];
     then
-        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/sample_annotation/UMG-Target_ALS_RNA_Clinical_Data_06122018.txt Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.
-        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/sample_annotation/RNA_Metadata_TALS_2_5July2018.txt Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.samplesheet5july2018_
+        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/sample_annotation/UMG-Target_ALS_RNA_Clinical_Data_06122018.txt \
+                                                                     /groups/umcg-biogen/tmp04/biogen/input/TargetALS/ \
+                                                                     Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.
+
+        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/sample_annotation/RNA_Metadata_TALS_2_5July2018.txt \
+                                                                     /groups/umcg-biogen/tmp04/biogen/input/TargetALS/ \
+                                                                     Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.samplesheet5july2018_
     elif [[ "$cohort" == "CMC" ]];
     then
-        python $samplesheet_script_dir/make_samplesheet_CMC.py /groups/umcg-biogen/tmp03/input/CMC/CMC_RNAseq_samplesheet.txt
+        python $samplesheet_script_dir/make_samplesheet_CMC.py /groups/umcg-biogen/tmp03/input/CMC/CMC_RNAseq_samplesheet.txt \
+                                                                /groups/umcg-biogen/tmp03/input/CMC/pipelines/results/fastq/
     elif [[ "$cohort" == "Braineac" ]];
     then
-        python $samplesheet_script_dir/make_samplesheet_Braineac.py
+        python $samplesheet_script_dir/make_samplesheet_Braineac.py /groups/umcg-biogen/tmp03/input/ucl-upload-biogen/data/fastq/ \
+                                                                    data/original_fastq_files.txt \
+                                                                    SampleInfoBiogen.csv
     elif [[ "$cohort" == "Brainseq" ]];
     then
-        python $samplesheet_script_dir/make_samplesheet_Brainseq.py
+        python $samplesheet_script_dir/make_samplesheet_Brainseq.py /groups/umcg-biogen/tmp03/input/rawdata/Brainseq/RNAseq_merged/ \
+                                                                    /groups/umcg-biogen/tmp03/input/rawdata/Brainseq/phenotype_data/phenotypeFile_LIBD_szControl.csv
     elif [[ "$cohort" == "NABEC" ]];
     then
         python $samplesheet_script_dir/make_samplesheet_NABEC.py /groups/umcg-biogen/tmp03/input/rawdata/NABEC/phenotypes/NABEC_phenotypes.txt /groups/umcg-biogen/tmp03/input/rawdata/NABEC/fastq/
