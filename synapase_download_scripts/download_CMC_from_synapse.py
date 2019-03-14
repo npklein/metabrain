@@ -20,11 +20,13 @@ syn.login(user,password)
 print('Sync CMC')
 
 # RNAseq
-if not os.path.exists(args.RNAseq_directory):
-    os.makedirs(args.RNAseq_directory)
-files = synapseutils.syncFromSynapse(syn, 'syn3280440', path = args.RNAseq_directory)
+#files = synapseutils.syncFromSynapse(syn, 'syn3280440', path = args.RNAseq_directory)
 # Genotypes
-if not os.path.exists(args.Genotype_directory):
-    os.makedirs(args.Genotype_directory)
-files = synapseutils.syncFromSynapse(syn, 'syn3275211', path = args.Genotype_directory)
-
+#files = synapseutils.syncFromSynapse(syn, 'syn3275211', path = args.Genotype_directory)
+# Metadata
+files = synapseutils.syncFromSynapse(syn, 'syn3354385', path = 'metadata/')
+files = synapseutils.syncFromSynapse(syn, 'syn3346807', path = 'metadata/')
+files = synapseutils.syncFromSynapse(syn, 'syn18358379', path = 'metadata/')
+files = synapseutils.syncFromSynapse(syn, 'syn18403963', path = 'metadata/')
+files = synapseutils.syncFromSynapse(syn, 'syn3346441', path = 'metadata/')
+files = synapseutils.syncFromSynapse(syn, 'syn18358480', path = 'metadata/')
