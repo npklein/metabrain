@@ -24,12 +24,6 @@ option_list = list(
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
-print(paste('Searching for input files in: ', opt$input))
-if(!is.null(opt$pcaOutliers)){
-  print(paste('Reading pca outlier file from: ',opt$pcaOutliers))
-}
-print(paste('Writing output files to: ',opt$output))
-
 test <- function(){
   opt <- list()
   opt$input <- "/Users/NPK/UMCG/projects/biogen/cohorts/"
@@ -41,23 +35,36 @@ test <- function(){
 # comment out when not testing
 #opt <- test()
 
+
+print(paste('Searching for input files in: ', opt$input))
+if(!is.null(opt$pcaOutliers)){
+  print(paste('Reading pca outlier file from: ',opt$pcaOutliers))
+}
+print(paste('Writing output files to: ',opt$output))
+
+
 ##### read in samples that are filtered out during PC #####
 if(!is.null(opt$pcaOutliers)){
     pca_filtered_samples <- fread(opt$pcaOutliers,header=F)
 }
 #####
-
+nabec_phenotypes <- NULL
 #### Read in NABEC phenotype data ####
-nabec_phenotypes <- fread(opt$NABEC_pheno)
+if(!is.null(opt$nabec_phenotypes)){
+  nabec_phenotypes <- fread(opt$NABEC_pheno)
+}
 ####
 
 ##### get cohort from path function that's being used a couple of times ####
 get_cohort_from_path <- function(path){
   if(grepl('ENA',path)) { return('ENA') }
-  if(grepl('NABEC',path)) { return('ENA') }
-  if(grepl('GTEx',path)) { return('ENA') }
-  if(grepl('TargetALS',path)) { return('ENA') }
-  stop('unknwon cohort')
+  if(grepl('NABEC',path)) { return('NABEC') }
+  if(grepl('GTEx',path)) { return('GTEx') }
+  if(grepl('TargetALS',path)) { return('TargetALS') }
+  if(grepl('Braineac',path)) { return('Braineac') }
+  if(grepl('Brainseq',path)) { return('Brainseq') }
+  if(grepl('CMC',path)) { return('CMC') }
+  stop(paste('unknown cohort:',path))
 }
 #####
 
@@ -71,15 +78,27 @@ RnaMetrics_multiQC_files <- list.files(path=opt$input,
 RnaMetrics_multiQC_files <- RnaMetrics_multiQC_files[!grepl("BPD", RnaMetrics_multiQC_files)]
 RnaMetric_qc_all <- data.frame()
 for(f in RnaMetrics_multiQC_files){
-  if(!grepl('multiQC_alignment',  f)) { next }
+  cohort <- get_cohort_from_path(f)
+  if(cohort == 'ENA'){
+    if(!grepl('multiQC_alignment',  f)) { next }
+  }
   RnaMetrics_qc <- fread(f)
-  RnaMetrics_qc$cohort <- get_cohort_from_path(f)
+  RnaMetrics_qc$cohort <- cohort
   RnaMetrics_qc$SAMPLE <- NULL
+  RnaMetrics_qc$study <- NA
+  if(cohort == 'ENA'){
+    pattern <- ".*/data/(.*)_batch[0-9]+.*"
+    RnaMetrics_qc$study <- sub(pattern, "\\1", f)
+  }
   RnaMetric_qc_all <- rbind(RnaMetric_qc_all, RnaMetrics_qc)
 }
 RnaMetric_qc_all <- data.frame(RnaMetric_qc_all)
 RnaMetric_qc_all$Sample <- gsub('.cram','',RnaMetric_qc_all$Sample)
 RnaMetric_qc_all$Sample <- gsub('-','_',RnaMetric_qc_all$Sample)
+
+if('TargetALS' %in% RnaMetric_qc_all$cohort){
+  RnaMetric_qc_all[RnaMetric_qc_all$cohort=="TargetALS",]$Sample <- str_match(RnaMetric_qc_all[RnaMetric_qc_all$cohort=="TargetALS",]$Sample , ".*(HRA_[0-9]+)")[, 2]
+}
 ######
 
 ###### Read MultiMetrics QC #####
@@ -93,15 +112,22 @@ MultipleMetrics_multiQC_files <- MultipleMetrics_multiQC_files[!grepl("BPD", Mul
 
 MultipleMetric_qc_all <- data.frame()
 for(f in MultipleMetrics_multiQC_files){
-  if(!grepl('multiQC_alignment',  f)) { next }
+  cohort <- get_cohort_from_path(f)
+  if(cohort == 'ENA'){
+    if(!grepl('multiQC_alignment',  f)) { next }
+  }
   MultipleMetrics_qc <- fread(f)
-  MultipleMetrics_qc$cohort <- get_cohort_from_path(f)
+  MultipleMetrics_qc$cohort <- cohort
   MultipleMetrics_qc$SAMPLE <- NULL
   MultipleMetric_qc_all <- rbind(MultipleMetric_qc_all, MultipleMetrics_qc)
 }
 MultipleMetric_qc_all <- data.frame(MultipleMetric_qc_all)
 MultipleMetric_qc_all$Sample <- gsub('.cram','',MultipleMetric_qc_all$Sample)
 MultipleMetric_qc_all$Sample <- gsub('-','_',MultipleMetric_qc_all$Sample)
+
+if('TargetALS' %in% MultipleMetric_qc_all$cohort){
+  MultipleMetric_qc_all[MultipleMetric_qc_all$cohort=="TargetALS",]$Sample <- str_match(MultipleMetric_qc_all[MultipleMetric_qc_all$cohort=="TargetALS",]$Sample , ".*(HRA_[0-9]+)")[, 2]
+}
 ####### 
 
 ###### Read star QC #####
@@ -121,6 +147,10 @@ for(f in STAR_multiQC_files){
 STAR_qc_all <- data.frame(STAR_qc_all)
 STAR_qc_all$Sample <- gsub('.cram','',STAR_qc_all$Sample)
 STAR_qc_all$Sample <- gsub('-','_',STAR_qc_all$Sample)
+
+if('TargetALS' %in% STAR_qc_all$cohort){
+  STAR_qc_all[STAR_qc_all$cohort=="TargetALS",]$Sample <- str_match(STAR_qc_all[STAR_qc_all$cohort=="TargetALS",]$Sample , ".*(HRA_[0-9]+)")[, 2]
+}
 ####### 
 
 ###### Read fastqc QC #####
@@ -165,9 +195,9 @@ FastQC_qc_all_merged$FastQC_original_sample <- FastQC_qc_all_merged$Sample
 
 # TargetALS sample naming is different between FastQC and picard results, change them here to make them match later
 if('TargetALS' %in% FastQC_qc_all_merged$cohort){
-    FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- str_match(FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample , ".*(HRA.*?)_.*")[, 2]
-    FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- gsub('-b38','',FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample)
     FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- gsub('-','_',FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample )
+    FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- str_match(FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample , ".*(HRA_[0-9]+)")[, 2]
+    FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- gsub('-b38','',FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample)
 }
 # Same for Brainseq
 if('Brainseq' %in% FastQC_qc_all_merged$cohort){
@@ -206,7 +236,6 @@ if('ENA' %in% CombinedMetrics$cohort){
                                                                                                          ".*_(.*)")[, 2]
 }
 
-
 if('TargetALS' %in% FastQC_qc_all_merged$cohort){
     CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample, ".*(HRA.*)")[, 2]
     CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample <- gsub('-2','',CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample)
@@ -240,6 +269,7 @@ if(length(AMP_AD_multiMetrics_files) > 0){
 }else{
     all_cohorts <- CombinedMetrics
 }
+all_cohorts <- all_cohorts[order(all_cohorts$cohort),]
 all_cohorts$sampleID <- 1:nrow(all_cohorts)
 #######
 
@@ -284,14 +314,18 @@ if(!is.null(opt$pcaOutliers)){
 
 ##### Merge NABEC phenotype into all_cohorts
 all_cohorts$lib_selection <- 'unknown'
-nabec_phenotypes$Sample <- paste0(nabec_phenotypes$BioSample, '_', nabec_phenotypes$Run)
-all_cohorts[all_cohorts$cohort=="NABEC",]$lib_selection <- nabec_phenotypes[match(all_cohorts[all_cohorts$cohort=="NABEC",]$Sample,
+if(!is.null(nabec_phenotypes)){
+  if('NABEC' %in% all_cohorts$cohort){
+    nabec_phenotypes$Sample <- paste0(nabec_phenotypes$BioSample, '_', nabec_phenotypes$Run)
+    all_cohorts[all_cohorts$cohort=="NABEC",]$lib_selection <- nabec_phenotypes[match(all_cohorts[all_cohorts$cohort=="NABEC",]$Sample,
                                                                              nabec_phenotypes$Sample),]$LibrarySelection
+  }
+}
 
 #####
 
 ##### plot function so that it can be more easily repeated
-QC_plotter <- function(all_cohorts, column, plot_pca_outliers, single_cohort =F, lib_selection=F){
+QC_plotter <- function(all_cohorts, column, plot_pca_outliers = F, single_cohort =F, lib_selection=F){
   # add the super small nuber in case y-axis needs to be log scaled, but only for those columns where the max value > 100000 (so that columns with e.g. percentages don't get log scaled)
   if(max(all_cohorts[!is.na(all_cohorts[column]),][column])> 10000){
     all_cohorts[!is.na(all_cohorts[column]),][column] <-all_cohorts[!is.na(all_cohorts[column]),][column] +0.00000000000000000000001
@@ -376,34 +410,57 @@ for(column in columns_to_plot){
   print(p)
 }
 dev.off()
+
+colourCount = length(unique(all_cohorts$cohort))
+getPalette = colorRampPalette(brewer.pal(8, "Dark2"))
+dark2ExtendedPallete <- getPalette(colourCount)
+ggplot(all_cohorts, aes(cohort,fill=cohort,colour='yes'))+
+  geom_bar()+ 
+  theme_bw(base_size=18)+
+  xlab('')+
+  ylab('Number of RNAseq samples')+
+  scale_fill_manual(values=dark2ExtendedPallete)+
+  scale_colour_manual(values='black')+
+  guides(colour=F)+ 
+  coord_flip()+
+  guides(fill=guide_legend(ncol=2))
+ggsave(paste0(opt$output,'/figures/n_RNAseq_samples.png'),width=12, height=8)
 #####
 
-print('plot library selection')
-pdf(paste0(opt$output,'/figures/all_MultiMetrics_QC_plots_library_selection.pdf'), width=8, height=8)
-for(column in columns_to_plot){
-  if(column == "sampleID"){
-    next
+##### plot lib select #####
+plot_with_lib_selection <- function(){
+  # used for debugging nabec, not necesarry to run
+  print('plot library selection')
+  pdf(paste0(opt$output,'/figures/all_MultiMetrics_QC_plots_library_selection.pdf'), width=8, height=8)
+  for(column in columns_to_plot){
+    if(column == "sampleID"){
+      next
+    }
+    print(column)
+    p <- QC_plotter(all_cohorts, column, FALSE, lib_selection=T)
+    print(p)
   }
-  print(column)
-  p <- QC_plotter(all_cohorts, column, FALSE, lib_selection=T)
-  print(p)
+  dev.off()
 }
-dev.off()
-
+# plot_with_lib_selection()
+#####
 
 ##### plot STAR + multimetrics again, but highlight PCA filtered samples #####
-if(!is.null(opt$pcaOutliers)){
-    print('plotting with pca outliers')
-    pdf(paste0(opt$output,'/figures/all_MultiMetrics_QC_plots.highlightPcaFilteredSamples.pdf'), width=8, height=8)
-    for(column in columns_to_plot){
-      if(column == "sampleID"){
-        next
+plot_with_pca_outliers <- function(){
+  if(!is.null(opt$pcaOutliers)){
+      print('plotting with pca outliers')
+      pdf(paste0(opt$output,'/figures/all_MultiMetrics_QC_plots.highlightPcaFilteredSamples.pdf'), width=8, height=8)
+      for(column in columns_to_plot){
+        if(column == "sampleID"){
+          next
+        }
+        print(column)
+        p <- QC_plotter(all_cohorts, column, TRUE)
+        ggsave(paste0(opt$output,'/figures/QC_figures_separate/',column,'.highlightPcaFilteredSamples.png'), width=12, height = 8, plot=p)
+        print(p)
       }
-      print(column)
-      p <- QC_plotter(all_cohorts, column, TRUE)
-      ggsave(paste0(opt$output,'/figures/QC_figures_separate/',column,'.highlightPcaFilteredSamples.png'), width=12, height = 8, plot=p)
-      print(p)
-    }
-    dev.off()
+      dev.off()
+  }
 }
+#plot_with_pca_outliers()
 #####
