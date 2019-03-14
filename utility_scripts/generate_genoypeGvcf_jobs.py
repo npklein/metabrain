@@ -16,9 +16,9 @@ template = """#!/bin/bash
 #SBATCH --job-name=GenotypeGvcf_chrREPLACECHROMOSOME
 #SBATCH --output=GenotypeGvcf_chrREPLACECHROMOSOME.out
 #SBATCH --error=GenotypeGvcf_chrREPLACECHROMOSOME.err
-#SBATCH --time=5:59:59
+#SBATCH --time=2-23:59:59
 #SBATCH --cpus-per-task 1
-#SBATCH --mem 80gb
+#SBATCH --mem 60gb
 #SBATCH --nodes 16
 #SBATCH --export=NONE
 #SBATCH --get-user-env=L
@@ -39,16 +39,15 @@ module list
 
 mkdir -p REPLACEOUTDIR
 
-$EBROOTGATK/gatk GenotypeGVCFs \\
+$EBROOTGATK/gatk --java-options "-Xmx50G" GenotypeGVCFs \\
     --reference REPLACEREFGENOME \\
     --dbsnp REPLACEDBSNP \\
     --output REPLACEOUTDIR/REPLACEOUTPUT \\
     --variant gendb://REPLACEINPREFIX.chrREPLACECHROMOSOME \\
     --stand-call-conf 10.0 \\
     -L chrREPLACECHROMOSOME \\
-    -G StandardAnnotation \\
-    --spark-master local[16]
-
+    -G StandardAnnotation
+    
 if [ "$?" -eq 0 ];
 then
  echo "returncode: $?"; 
