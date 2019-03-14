@@ -2,7 +2,7 @@
 import os.path
 import glob
 
-parser = argparse.ArgumentParser(description='Make Molgenis Compute samplesheet for Braineac.')
+parser = argparse.ArgumentParser(description='Make Molgenis Compute samplesheet for TargetALS.')
 parser.add_argument('samplesheet', help='TargetALS samplesheet')
 parser.add_argument('fastq_base_dir', help='path of base dir where subdirs with fastq files are in (will be recursively searched')
 parser.add_argument('output_prefix',help='Prefix of output file')

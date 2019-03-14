@@ -4,7 +4,7 @@ import glob
 import re
 import argparse
 
-parser = argparse.ArgumentParser(description='Make Molgenis Compute samplesheet for Braineac.')
+parser = argparse.ArgumentParser(description='Make Molgenis Compute samplesheet for Brainseq.')
 parser.add_argument('fastq_dir', help='directory containing fastq files')
 parser.add_argument('phenotype_file', help='file with sample info')
 parser.add_argument('outdir',help='Directory where output is written', default = 'Public_RNA-seq_QC/samplesheets/')
