@@ -186,13 +186,19 @@ make_samplesheets(){
     samplesheet_script_dir=$script_dir/samplesheet_scripts/
     if [[ "$cohort" == "TargetALS" ]];
     then
-        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/sample_annotation/UMG-Target_ALS_RNA_Clinical_Data_06122018.txt \
-                                                                     /groups/umcg-biogen/tmp04/biogen/input/TargetALS/ \
+        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/../sample_annotation/UMG-Target_ALS_RNA_Clinical_Data_06122018.txt \
+                                                                    $project_dir/../data/ \
                                                                      Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.
 
-        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/sample_annotation/RNA_Metadata_TALS_2_5July2018.txt \
-                                                                     /groups/umcg-biogen/tmp04/biogen/input/TargetALS/ \
+        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/../sample_annotation/RNA_Metadata_TALS_2_5July2018.txt \
+                                                                     $project_dir/../data/ \
                                                                      Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.samplesheet5july2018_
+
+        # give this an extra prefix because tehre is double data in this file and the Clinical_Data file. Since jobs have already been run for the
+        # Clinical_Data file, I don't want those to be overwritten by jobs based on RNA_Metadata. Have to check afterwards by hand which are double
+        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/../sample_annotation/Target_ALS_RNA_Metadata_03062019.txt \
+                                                                     $project_dir/../data/ \
+                                                                     Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.03062019_
     elif [[ "$cohort" == "CMC" ]];
     then
         python $samplesheet_script_dir/make_samplesheet_CMC.py /groups/umcg-biogen/tmp03/input/CMC/CMC_RNAseq_samplesheet.txt \
@@ -212,8 +218,21 @@ make_samplesheets(){
     elif [[ "$cohort" == "BipSeq" ]];
     then
         # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
-        python $samplesheet_script_dir/make_samplesheet_BipSeq.py /groups/umcg-biogen/tmp03/input/rawdata/psychEncode/metadata/BipSeq/LIBD-JHU_BipSeq_R01MH105898_Metadata_RNAseq_DLPFC_Limbic.csv \
-                                                                       /groups/umcg-biogen/tmp03/input/rawdata/psychEncode/RNAseq/BipSeq/DLPFC_merged/
+        # samplesheet can be downloaded from Synapse
+        python $samplesheet_script_dir/make_samplesheet_BipSeq.py /groups/umcg-biogen/tmp04/input/rawdata/psychEncode/metadata/BipSeq/LIBD-JHU_BipSeq_R01MH105898_Metadata_RNAseq_DLPFC_Limbic.csv \
+                                                                  /groups/umcg-biogen/tmp04/input/rawdata/psychEncode/RNAseq/BipSeq/DLPFC_merged/
+    elif [[ "$cohort" == "BrainGVEx" ]];
+    then
+        # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
+        # samplesheet can be downloaded from Synapse
+        python $samplesheet_script_dir/make_samplesheet_BrainGVEx.py /groups/umcg-biogen/tmp04/input/rawdata/psychEncode/metadata/BrainGVEX/UIC-UChicago-U01MH103340_BrainGVEX_RNAseqMetadata_August2016Release.csv \
+                                                                     /groups/umcg-biogen/tmp04/input/rawdata/psychEncode/RNAseq/BrainGVEX/merged
+    elif [[ "$cohort" == "EpiGABA" ]];
+    then
+        # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
+        # samplesheet can be downloaded from Synapse
+        python $samplesheet_script_dir/make_samplesheet_BrainGVEx.py /groups/umcg-biogen/tmp04/input/rawdata/psychEncode/metadata/BrainGVEX/UIC-UChicago-U01MH103340_BrainGVEX_RNAseqMetadata_August2016Release.csv \
+                                                                     /groups/umcg-biogen/tmp04/input/rawdata/psychEncode/RNAseq/BrainGVEX/merged
     elif [[ "$cohort" == "ENA" ]];
     then
         echo "ERROR: need to get genotypes as well for the ENA samples. Because the pipeline needs to be set up quite differently, use make_alignmentQuantificationAndGenotype_pipeline.sh instead"
