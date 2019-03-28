@@ -16,9 +16,9 @@ template = """#!/bin/bash
 #SBATCH --job-name=genomicDB_chrREPLACECHROMOSOME
 #SBATCH --output=genomicDB_chrREPLACECHROMOSOME.out
 #SBATCH --error=genomicDB_chrREPLACECHROMOSOME.err
-#SBATCH --time=2-23:59:59
+#SBATCH --time=1-23:59:59
 #SBATCH --cpus-per-task 1
-#SBATCH --mem 60gb
+#SBATCH --mem 20gb
 #SBATCH --nodes 1
 #SBATCH --export=NONE
 #SBATCH --get-user-env=L
