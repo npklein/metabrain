@@ -18,9 +18,9 @@ template = """#!/bin/bash
 #SBATCH --job-name=GenotypeGvcf_REPLACEINTERVALNAME
 #SBATCH --output=GenotypeGvcf_REPLACEINTERVALNAME.out
 #SBATCH --error=GenotypeGvcf_REPLACEINTERVALNAME.err
-#SBATCH --time=4:59:59
+#SBATCH --time=23:59:59
 #SBATCH --cpus-per-task 8
-#SBATCH --mem 20gb
+#SBATCH --mem 10gb
 #SBATCH --nodes 1
 #SBATCH --export=NONE
 #SBATCH --get-user-env=L
@@ -41,7 +41,7 @@ module list
 mkdir -p REPLACEOUTDIR
 
 
-$EBROOTGATK/gatk --java-options "-Xmx20G -XX:ParallelGCThreads=8" GenotypeGVCFs \\
+$EBROOTGATK/gatk --java-options "-Xmx10G -XX:ParallelGCThreads=8" GenotypeGVCFs \\
     --reference REPLACEREFGENOME \\
     --dbsnp REPLACEDBSNP \\
     --output $TMPDIR/REPLACEOUTPUT \\
