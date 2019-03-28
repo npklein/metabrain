@@ -2,12 +2,12 @@ import os.path
 import os
 import glob
 import re
+import argparse
 
 parser = argparse.ArgumentParser(description='Make Molgenis Compute samplesheet for ENA.')
 parser.add_argument('samplesheet', help='ENA samplesheet')
 parser.add_argument('fastq_dir', help='path of dir to download fastq files to')
-parser.add_argument('outdir',help='Directory where output is written',default = 'Public_RNA-seq_QC/samplesheets/')
-
+parser.add_argument('outdir',help='Directory where output is written')
 args = parser.parse_args()
 
 
@@ -34,6 +34,7 @@ seen = set([])
 study_individuals = {}
 samples_per_individual = {}
 fq_files_per_sample = {}
+print('Parsing '+args.samplesheet)
 with open(args.samplesheet) as input_file:
     header = input_file.readline().strip().split('\t')
     # Because the samplesheet has many headers that might change, get the index of each of hte headers
@@ -82,6 +83,7 @@ for study in study_individuals:
             
             batch_number = int(total_number_of_samples / batch_size)
             batch = 'batch'+str(batch_number)
+            print('writing to '+args.outdir+'/samplesheet_ENA_RNA.'+study+'_'+batch+'.txt')
             out = open(args.outdir+'/samplesheet_ENA_RNA.'+study+'_'+batch+'.txt','w')
             out.write('internalId,project,sampleName,reads1FqGz,reads2FqGz,sortedBamFile,batch\n')
             current_number_of_samples = 0
