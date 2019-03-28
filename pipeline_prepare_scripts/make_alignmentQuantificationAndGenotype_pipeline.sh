@@ -159,6 +159,9 @@ change_parameter_files(){
     sed -i 's;bqsrAfterGrp,${bqsrDir}${sampleName}.after.grp;bqsrAfterGrp,${bqsrDir}${sampleName}.${chromosome}.after.grp;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;bqsrBeforeGrp,${bqsrDir}${sampleName}.before.grp;bqsrBeforeGrp,${bqsrDir}${sampleName}.${chromosome}.before.grp;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;bqsrBam,${bqsrDir}${sampleName}.bam;bqsrBam,${bqsrDir}${sampleName}.${chromosome}.bam;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;bqsrBam,${bqsrDir}${sampleName}.bam;bqsrBam,${bqsrDir}${sampleName}.${chromosome}.bam;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;analyseCovariatesIntermediateCsv,${analyseCovarsDir}/${sampleName}.intermediate.csv;analyseCovariatesIntermediateCsv,${analyseCovarsDir}/${sampleName}.intermediate.${chromosome}.csv;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;analyseCovariatesPdf,${analyseCovarsDir}/${sampleName}.analysecovariates.pdf;analyseCovariatesPdf,${analyseCovarsDir}/${sampleName}.analysecovariates.${chromosome}.pdf;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;${genomeBuild}/sv/1000G/Mills_and_1000G_gold_standard.indels.b37.vcf;storage.cloud.google.com/genomics-public-data/resources/broard/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;${genomeBuild}/sv/1000G/1000G_phase1.indels.b37.vcf;storage.cloud.google.com/genomics-public-data/resources/broard/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
 
@@ -213,7 +216,8 @@ make_samplesheets(){
         # Need to know where to find samplesheet_ENA_20181212.tx, this is in the brain_eQTL github directory. Since this script is also in this directory, find the directory like so (and add it to parameters file):
         brain_eQTL_dir="$( cd "$( dirname $( dirname "${BASH_SOURCE[0]}" ) )" >/dev/null && pwd )"
         python $samplesheet_script_dir/make_samplesheet_ENA.py $brain_eQTL_dir/ENA/ENA_samplesheets/samplesheet_ENA_20181212.txt \
-                                                               /scratch/umcg-ndeklein/tmp03/ENA/pipelines/results/fastq/
+                                                               /scratch/umcg-ndeklein/tmp03/ENA/pipelines/results/fastq/ \
+                                                               $project_dir/Public_RNA-seq_QC/samplesheets//
     else
         echo "No code written for cohort $cohort"
         exit 1;
