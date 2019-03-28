@@ -1,6 +1,7 @@
 # Parse TargetALS samplesheet to make molgenis-compute samplesheet
 import os.path
 import glob
+import argparse
 
 parser = argparse.ArgumentParser(description='Make Molgenis Compute samplesheet for TargetALS.')
 parser.add_argument('samplesheet', help='TargetALS samplesheet')
@@ -47,9 +48,9 @@ with open(args.samplesheet) as input_file:
         external_subject_id = external_subject_id.replace(' ','_')
         info_per_quote[quote].append(external_sample_id+',TargetALS,'+external_subject_id+','+fastq1+','+fastq2+','+'${cramFileDir}/${uniqueID}.cram\n')
 
-for quote in info_per_quote
+for quote in info_per_quote:
     # don't add / after output_prefix because is part of name, not dir:
-    with open(output_prefix+quote+'.txt', 'w') as out:
+    with open(args.output_prefix+quote+'.txt', 'w') as out:
         out.write('internalId,project,sampleName,reads1FqGz,reads2FqGz,cram\n')
         for info in info_per_quote[quote]:
             out.write(info)
