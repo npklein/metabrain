@@ -50,7 +50,7 @@ $EBROOTGATK/gatk --java-options "-Xmx10G -XX:ParallelGCThreads=8" GenotypeGVCFs 
     -L REPLACEINTERVAL \\
     -G StandardAnnotation 
 
-rsync -rvP $TMPDIR/REPLACEOUTPUT* REPLACEOUTDIR/REPLACEOUTPUT
+rsync -rvP $TMPDIR/REPLACEOUTPUT* REPLACEOUTDIR/
 if [ "$?" -eq 0 ];
 then
  echo "returncode: $?"; 
