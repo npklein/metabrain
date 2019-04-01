@@ -23,6 +23,12 @@ print('Sync psychEncode')
 #files = synapseutils.syncFromSynapse(syn, 'syn7062404', path = 'RNAseq/BrainGVEX/')
 #files = synapseutils.syncFromSynapse(syn, 'syn3270014', path = 'metadata/BrainGVEX/')
 # EpiGABA
-files = synapseutils.syncFromSynapse(syn, 'syn4588490', path = 'RNAseq/EpiGABA/')
-files = synapseutils.syncFromSynapse(syn, 'syn4588489', path = 'metadata/EpiGABA/')
+#files = synapseutils.syncFromSynapse(syn, 'syn4588490', path = 'RNAseq/EpiGABA/')
+#files = synapseutils.syncFromSynapse(syn, 'syn4588489', path = 'metadata/EpiGABA/')
+# UCLA-ASD
+files = synapseutils.syncFromSynapse(syn, 'syn4587614', path = 'metadata/UCLA_ASD/')
+files = synapseutils.syncFromSynapse(syn, 'syn4587615', path = 'RNAseq/UCLA_ASD/')
+
+# LIBD_szControl
+# NOTE: This is Brainseq, we already have these samples
 
