@@ -17,7 +17,6 @@ individual_per_sample = {}
 samples_per_batch = {}
 batch_count = {}
 
-# BrianGVEx is small enough to not need batches
 batch_size = 25
 batch_number = 0
 out = None

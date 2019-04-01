@@ -16,7 +16,6 @@ individual_per_sample = {}
 samples_per_batch = {}
 batch_count = {}
 
-# BrianGVEx is small enough to not need batches
 batch_size = 25
 batch_number = 0
 out = None
@@ -33,7 +32,7 @@ with open(args.samplesheet) as input_file:
             batch_number += 1
         line = line.strip().split(',')
         individual = line[1]
-        sample = line[1]
+        sample = line[2].replace('Sample_','').replace('_1st','').replace('_2nd','').replace('_3rd','')
         R1 = args.fastq_dir+'/'+sample+'.R1.fastq.gz'
         R2 = args.fastq_dir+'/'+sample+'.R2.fastq.gz'
 
