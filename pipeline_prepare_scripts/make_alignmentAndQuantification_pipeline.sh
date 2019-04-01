@@ -17,6 +17,8 @@ module load Python
 cohort=
 project_dir=
 tmpdir=
+samplesheet=
+RNAseqDir=
 script_dir=$(dirname "$0")
 
 main(){
@@ -49,6 +51,8 @@ usage(){
     echo "  -c      provide the cohort to prepare pipeline for (mandatory)"
     echo "  -p      Base of the project_dir where pipeline scripts will be put (mandatory)"
     echo "  -t      tmpdir of the cluster (e.g. tmp03 for boxy, tmp04 for calculon). Will use /groups/$TMPDIR/.../"
+    echo "  -s      Samplesheet to use to get sample info from (optional)"
+    echo "  -r      Location of directory that contains RNAseq files, usually either fastq or bam files (optional)"
     echo "  -h      display help"
     exit 1
 }
@@ -178,6 +182,9 @@ change_parameter_files(){
 
 
 make_samplesheets(){
+    # TODO: added -s option for giving samplesheet as input, but currently most cohorts still have hardcoded paths.
+    #       same for newly added option -r
+    # Have to update this
     # Make the samplesheets. How the samplesheet is made is dependent om the cohort
     echo "Making samplesheets..."
     rm Public_RNA-seq_QC/samplesheet1.csv
@@ -231,8 +238,15 @@ make_samplesheets(){
     then
         # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
         # samplesheet can be downloaded from Synapse
-        python $samplesheet_script_dir/make_samplesheet_BrainGVEx.py /groups/umcg-biogen/tmp04/input/rawdata/psychEncode/metadata/BrainGVEX/UIC-UChicago-U01MH103340_BrainGVEX_RNAseqMetadata_August2016Release.csv \
-                                                                     /groups/umcg-biogen/tmp04/input/rawdata/psychEncode/RNAseq/BrainGVEX/merged
+        echo 'ERROR: Not implemented yet'
+        exit 1
+        python $samplesheet_script_dir/make_samplesheet_EpiGABA.py
+    elif [[ "$cohort" == "UCLA_ASD" ]];
+    then
+        # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
+        # samplesheet can be downloaded from Synapse
+        python $samplesheet_script_dir/make_samplesheet_UCLA_ASD.py $samplesheet $RNAseqDir
+
     elif [[ "$cohort" == "ENA" ]];
     then
         echo "ERROR: need to get genotypes as well for the ENA samples. Because the pipeline needs to be set up quite differently, use make_alignmentQuantificationAndGenotype_pipeline.sh instead"
@@ -353,6 +367,12 @@ parse_commandline(){
                                     ;;
             -t | --tmpdir )         shift
                                     tmpdir=$1
+                                    ;;
+            -s | --samplesheet )    shift
+                                    samplesheet=$1
+                                    ;;
+            -r | --RNAseqDir )      shift
+                                    RNAseqDir=$1
                                     ;;
             -h | --help )           usage
                                     exit
