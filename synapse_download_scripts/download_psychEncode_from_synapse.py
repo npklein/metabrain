@@ -29,7 +29,7 @@ print('Sync psychEncode')
 #files = synapseutils.syncFromSynapse(syn, 'syn4587614', path = 'metadata/UCLA_ASD/')
 #files = synapseutils.syncFromSynapse(syn, 'syn4587615', path = 'RNAseq/UCLA_ASD/')
 # CMC HBCC
-files = synapseutils.syncFromSynapse(syn, 'syn10254168', path = 'RNAseq/CMC_HBCC/bam/')
+#files = synapseutils.syncFromSynapse(syn, 'syn10254168', path = 'RNAseq/CMC_HBCC/bam/')
 
 
 # Download metadata for Brainseq(LIBD_szControl), CMC, and CMC_HBCC to check if we already have all those samples
