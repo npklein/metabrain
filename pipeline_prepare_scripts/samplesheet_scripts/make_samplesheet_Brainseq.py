@@ -36,7 +36,7 @@ for sample in samples:
         out = open(args.outdir+'/samplesheet_Brainseq_RNA.'+batch+'.txt','w')
         out.write('internalId,project,sampleName,reads1FqGz,reads2FqGz\n')
            
-    out.write(sample_name+',Braineac,'+individual_id+','+R1+','+R2+'\n')
+    out.write(sample_name+',Brainseq,'+individual_id+','+R1+','+R2+'\n')
     number_of_samples += 1
 
 out.close()

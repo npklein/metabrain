@@ -97,6 +97,6 @@ for chr in chromosomes:
                 new_template = new_template.replace('REPLACEDBSNP', args.dbsnp)
                 new_template = new_template.replace('REPLACEINTERVALNAME', interval_name)
                 new_template = new_template.replace('REPLACEINTERVAL', interval)
-                new_template = new_template.replace('REPLACESHSCRIPT', args.jobs_dir+'/'+chr+'/GenotypeGvcf_'+interval+'.sh')
+                new_template = new_template.replace('REPLACESHSCRIPT', args.jobs_dir+'/'+chr+'/GenotypeGvcf_'+interval_name+'.sh')
                 out.write(new_template)
 
