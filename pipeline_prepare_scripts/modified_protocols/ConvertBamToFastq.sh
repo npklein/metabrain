@@ -15,7 +15,7 @@
 #string alignedBam
 
 # Get input file
-
+mkdir -p $(dirname reads1FqGz)
 #Load modules
 ${stage} picard/${picardVersion}
 ${stage} io_lib/${iolibVersion}
