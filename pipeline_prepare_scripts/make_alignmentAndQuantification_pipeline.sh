@@ -348,6 +348,12 @@ cohort_specific_steps(){
 
         echo "unfilteredTwoPassBamDir,/groups/umcg-biogen/tmp04/biogen/input/TargetALS/pipelines/results/DEXSEQ_test/unfilteredTwoPassBam/" >> Public_RNA-seq_quantification/parameter_files/parameters.csv
     fi
+    if [[ "$cohort" == "CMC_HBCC" ]];
+    then
+        rsync -P $script_dir/modified_protocols/ConvertBamToFastq.sh Public_RNA-seq_QC/protocols/
+        sed -i '2i2 ConvertBamToFastq,../protocols/ConvertBamToFastq.sh,' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+        sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,ConvertBamToFastq' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+    fi
 }
 
 parse_commandline(){
