@@ -1,4 +1,3 @@
-#TODO: this samplesheet maker is very similar to BipSeq, can probably make one script otu of these
 # loop through all subdirs to find all fastq files
 import os.path
 import glob
@@ -28,19 +27,14 @@ with open(args.samplesheet) as input_file:
         if index % 25 == 0:
             if out:
                 out.close()
-            out = open(args.outdir+'samplesheet_BrainGVEx_RNA.batch'+str(batch_number)+'.txt','w')
+            out = open(args.outdir+'samplesheet_UCLA_ASD_RNA.batch'+str(batch_number)+'.txt','w')
             out.write('internalId,project,sampleName,reads1FqGz,reads2FqGz\n')
             batch_number += 1
         line = line.strip().split(',')
         individual = line[1]
-        sample = line[1]
+        sample = line[2].replace('Sample_','').replace('_1st','').replace('_2nd','').replace('_3rd','')
         R1 = args.fastq_dir+'/'+sample+'.R1.fastq.gz'
         R2 = args.fastq_dir+'/'+sample+'.R2.fastq.gz'
-        if not os.path.exists(R1):
-            print(R1,'not found')
-            R1 = 'NOT_FOUND'
-        if not os.path.exists(R2):
-            R2 = 'NOT_FOUND'
 
-        out.write(sample+',BrianGVEx,'+individual+','+R1+','+R2+'\n')
+        out.write(sample+',UCLA_ASD,'+individual+','+R1+','+R2+'\n')
 out.close()
