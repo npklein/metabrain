@@ -210,6 +210,11 @@ make_samplesheets(){
     then
         python $samplesheet_script_dir/make_samplesheet_CMC.py /groups/umcg-biogen/tmp03/input/CMC/CMC_RNAseq_samplesheet.txt \
                                                                 /groups/umcg-biogen/tmp03/input/CMC/pipelines/results/fastq/
+    elif [[ "$cohort" == "CMC_HBCC" ]];
+    then
+        # here RNAseqDir is the directory containing the BAM files, did not want to make an extra variable fo rit
+        echo "python $samplesheet_script_dir/make_samplesheet_CMC_HBCC.py $samplesheet $RNAseqDir $project_dir/results/fastq/ $project_dir"
+        python $samplesheet_script_dir/make_samplesheet_CMC_HBCC.py $samplesheet $RNAseqDir $project_dir/results/fastq/
     elif [[ "$cohort" == "Braineac" ]];
     then
         python $samplesheet_script_dir/make_samplesheet_Braineac.py /groups/umcg-biogen/tmp03/input/ucl-upload-biogen/data/fastq/ \
