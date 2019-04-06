@@ -210,6 +210,11 @@ make_samplesheets(){
     then
         python $samplesheet_script_dir/make_samplesheet_CMC.py /groups/umcg-biogen/tmp03/input/CMC/CMC_RNAseq_samplesheet.txt \
                                                                 /groups/umcg-biogen/tmp03/input/CMC/pipelines/results/fastq/
+    elif [[ "$cohort" == "CMC_HBCC" ]];
+    then
+        # here RNAseqDir is the directory containing the BAM files, did not want to make an extra variable fo rit
+        echo "python $samplesheet_script_dir/make_samplesheet_CMC_HBCC.py $samplesheet $RNAseqDir $project_dir/results/fastq/ $project_dir"
+        python $samplesheet_script_dir/make_samplesheet_CMC_HBCC.py $samplesheet $RNAseqDir $project_dir/results/fastq/
     elif [[ "$cohort" == "Braineac" ]];
     then
         python $samplesheet_script_dir/make_samplesheet_Braineac.py /groups/umcg-biogen/tmp03/input/ucl-upload-biogen/data/fastq/ \
@@ -342,6 +347,12 @@ cohort_specific_steps(){
         sed -i 's;projectDir,${root}/${group}/${tmp}/biogen/input/TargetALS/results/;projectDir,${root}/${group}/${tmp}/biogen/input/TargetALS/pipelines/results/DEXSEQ_test;' Public_RNA-seq_QC/parameter_files/parameters.csv
 
         echo "unfilteredTwoPassBamDir,/groups/umcg-biogen/tmp04/biogen/input/TargetALS/pipelines/results/DEXSEQ_test/unfilteredTwoPassBam/" >> Public_RNA-seq_quantification/parameter_files/parameters.csv
+    fi
+    if [[ "$cohort" == "CMC_HBCC" ]];
+    then
+        rsync -P $script_dir/modified_protocols/ConvertBamToFastq.sh Public_RNA-seq_QC/protocols/
+        sed -i '2i2 ConvertBamToFastq,../protocols/ConvertBamToFastq.sh,' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+        sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,ConvertBamToFastq' Public_RNA-seq_QC/workflows/workflowSTAR.csv
     fi
 }
 
