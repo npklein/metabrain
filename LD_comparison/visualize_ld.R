@@ -27,7 +27,7 @@ eqtlGen_replication <- '/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/
 
 # This contains the LD scores between the top SNPs for each gene of metaBrain that is also found in eqtlGen (fdr < 0.05)
 ld_scores_file <- opt$ld_scores
-ld_scores_file <- 'metaBrain_eqtlGen_topSNP_LD.txt'
+ld_scores_file <- '/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/LD_comparison/metaBrain_eqtlGen_topSNP_LD.txt'
 
 #####
 
@@ -88,11 +88,16 @@ get_zscores_do_replication <- function(study_df, fdr_threshold=0.05){
     }
     
     fdr_column <- gsub('OverallZScore','FDR', zscore_column)
-    df_zscore_subset <- study_df[c('SNPName_0','ProbeName_0','OverallZScore_0', zscore_column, 'FDR_0',fdr_column)]
+    alleleAssed_column <- gsub('OverallZScore','AlleleAssessed', zscore_column)
+    snpType_column <- gsub('OverallZScore','SNPType', zscore_column)
+    df_zscore_subset <- study_df[c('SNPName_0','ProbeName_0','OverallZScore_0', zscore_column, 
+                                   'FDR_0',fdr_column,'AlleleAssessed_0',alleleAssed_column,
+                                   'SNPType_0',snpType_column)]
     # Save the PC in a column
     df_zscore_subset$PC <- gsub('OverallZScore_','',colnames(df_zscore_subset[4]))
     # Change the Z-score column name so they are the same ofr all the PCs
-    colnames(df_zscore_subset) <- c('SNPName_0','ProbeName_0','OverallZScore_x', 'OverallZScore_y','FDR_x','FDR_y','PC')
+    colnames(df_zscore_subset) <- c('SNPName_0','ProbeName_0','OverallZScore_x', 'OverallZScore_y','FDR_x','FDR_y',
+                                    'AlleleAssessed_x','AlleleAssessed_y','SNPType_x','SNPType_y','PC')
     df_zscore_subset_fdr <- df_zscore_subset[df_zscore_subset$FDR_x <= fdr_threshold & df_zscore_subset$FDR_y <= fdr_threshold,]
     df_zscore_subset_fdr <- df_zscore_subset_fdr[!is.na(df_zscore_subset_fdr$PC),]
     df_zscore <- rbind(df_zscore, df_zscore_subset_fdr)
@@ -164,17 +169,25 @@ plot_ld <- function(zscores, ld_scores, PCs = 10){
   # remove the version number of gene because ld data does not have it
   zscores$ProbeName_0 <- gsub('\\.[0-9]+','',zscores$ProbeName_0)
   # For the genes in ld_scores, add column if they were concordant or disconcordant direction
-  ld_scores$concordant <- zscores[match(ld_scores$gene, zscores$ProbeName_0),]$concordant
-  
+  zscores$SNPName_0 <- NULL
+  zscores$PC <- NULL
+  ld_scores_merged <- merge(ld_scores, zscores, by.x=c('gene'), by.y=c('ProbeName_0'))
+  colnames(ld_scores_merged) <- c('gene','topSNP_metaBrain','topSNP_eqtlGen',"D'",'R2',
+                                  'OverallZScore_MetaBrain','OverallZScore_eqtlGen',
+                                  'FDR_MetaBrain','FDR_eqtlGen','AlleleAssessed_MetaBrain',
+                                  'AlleleAssessed_eqtlGen','SNPType_MetaBrain','SNPType_eqtlGen',
+                                  'concordant')
+  hgnc <- fread('ensembl_to_hgnc.txt')
+  ld_scores_merged$hgnc <- hgnc[match(ld_scores_merged$gene,hgnc$`Gene stable ID`),]$`HGNC symbol`
   # for som genes there is no concorandt info because they are > 0.05 in metabrain, remove these
-  ld_scores <- ld_scores[!is.na(ld_scores$concordant),]
+  ld_scores_merged <- ld_scores_merged[!is.na(ld_scores_merged$concordant),]
   
   # because error messages were in the column they were considered characters, convert to numeric
-  ld_scores$`D'` <- as.numeric(ld_scores$`D'`)
-  ld_scores$R2 <- as.numeric(ld_scores$R2)
+  ld_scores_merged$`D'` <- as.numeric(ld_scores_merged$`D'`)
+  ld_scores_merged$R2 <- as.numeric(ld_scores_merged$R2)
   
   # make the plot
-  p <- ggplot(ld_scores, aes(x=`D'`, y=R2, colour=concordant))+
+  p <- ggplot(ld_scores_merged, aes(x=`D'`, y=R2, colour=concordant))+
     geom_point(alpha=0.5)+
     xlab("D'")+
     theme_pubr(base_size=18)+
@@ -189,10 +202,13 @@ plot_ld <- function(zscores, ld_scores, PCs = 10){
   ggExtra::ggMarginal(p, type = "histogram",  groupFill = TRUE)
   dev.off()
   
-  write.table(ld_scores, file='LD_scores_topSNP_metaBrain_eqtlGen.txt',sep='\t','quote'=F, row.names = F)
+  write.table(ld_scores_merged, file='LD_scores_topSNP_metaBrain_eqtlGen.txt',sep='\t','quote'=F, row.names = F)
+
+  ld_scores_merged_disconcordant <- ld_scores_merged[ld_scores_merged$concordant==F & ld_scores_merged$R2 == 1,]
+  write.table(ld_scores_merged_disconcordant, file='LD_scores_topSNP_metaBrain_eqtlGen.disconcordant.txt',sep='\t','quote'=F, row.names = F)
   
   # merge zscores and ld
-  ld_zscore <- merge(zscores, ld_scores, by.x='ProbeName_0', by.y='gene')
+  ld_zscore <- merge(zscores, ld_scores_merged, by.x='ProbeName_0', by.y='gene')
   
   # Look at the zscore
   p <- ggplot(ld_zscore, aes(x=abs(OverallZScore_x), y=R2, colour=concordant.x))+
@@ -206,8 +222,8 @@ plot_ld <- function(zscores, ld_scores, PCs = 10){
   
   # also look at tss distance
   eqtlGen_distance <- fread('/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/TSS_distance/tssdist-eqtlgen.txt')
-  colnames(distance) <- c('pval','gene','snp','eqtlgen_snp_distance')
-  ld_zscore <- merge(ld_zscore, distance, by.x='ProbeName_0',by.y='gene')
+  colnames(eqtlGen_distance) <- c('pval','gene','snp','eqtlgen_snp_distance')
+  ld_zscore <- merge(ld_zscore, eqtlGen_distance, by.x='ProbeName_0',by.y='gene')
   
   metaBrain_distance <- fread('/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/TSS_distance/eQTLsFDR0.05-TSS-10pcs.topfxpergene.txt')
   colnames(metaBrain_distance)[4] <- 'metaBrain_snp_distance'
