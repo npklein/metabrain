@@ -1,4 +1,4 @@
-#MOLGENIS nodes=1 ppn=1 mem=16gb walltime=23:59:00
+#MOLGENIS nodes=1 ppn=1 mem=1gb walltime=0:10:00
 
 ### variables to help adding to database (have to use weave)
 #string project
