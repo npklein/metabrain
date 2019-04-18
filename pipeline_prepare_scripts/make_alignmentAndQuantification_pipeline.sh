@@ -351,8 +351,9 @@ cohort_specific_steps(){
     if [[ "$cohort" == "CMC_HBCC" ]];
     then
         rsync -P $script_dir/modified_protocols/ConvertBamToFastq.sh Public_RNA-seq_QC/protocols/
-        sed -i '2i2 ConvertBamToFastq,../protocols/ConvertBamToFastq.sh,' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-        sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,ConvertBamToFastq' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+        sed -i '2iConvertBamToFastq,../protocols/ConvertBamToFastq.sh,' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+        sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,ConvertBamToFastq;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+        sed -i 's;FastQC,../protocols/Fastqc.sh,;FastQC,../protocols/Fastqc.sh,ConvertBamToFastq;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
     fi
 }
 
