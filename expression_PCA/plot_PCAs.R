@@ -6,13 +6,18 @@ library(GGally)
 library(ggrepel)
 library(optparse)
 library(ggExtra)
-
+library(RColorBrewer)
 
 main <- function(){
   options <- get_options()
   # (un)comment depending on if it is an interactive test run
   options <- test()
   PCs <- annotate_PCs(options)
+  
+  PCs[which(PCs$age_death=='90+'),]$age_death <- '90'
+  PCs$age_death <- as.numeric(PCs$age_death)
+  PCs$PMI_.in_hours. <- as.numeric(PCs$PMI_.in_hours.)
+  PCs$RIN <- as.numeric(PCs$RIN)
   plot_PCAs(PCs, options)
 }
 
@@ -49,7 +54,7 @@ annotate_PCs <- function(options){
   #rna_annotation <- fread(paste0(options$annotation,'/rna-tissue.annot.txt'), header=F)
   #rna_dataset <- fread(paste0(options$annotation,'/rna-dataset.annot.txt'),header=F)
   
-  phenotable <- fread('/Users/NPK/UMCG/projects/biogen/cohorts//joined_analysis/phenotype_QC_and_covariates_table/brain.phenotype_QC_covariates.txt')
+  phenotable <- fread('/Users/NPK/UMCG/projects/biogen/cohorts//joined_analysis/phenotype_QC_and_covariates_table/output//brain.phenotype_QC_covariates.txt')
   
   #genotype <- fread(paste0(options$annotation,'rna-genotype.annot.txt'),header=F)
   #colnames(rna_annotation) <- c('sample','region')
@@ -112,7 +117,7 @@ plot_PCAs <- function(PCs, options){
   
   PCs <- PCs[,colSums(is.na(PCs))<nrow(PCs)]
   
-  PCs_subset <- PCs[12:length(colnames(PCs_subset))]
+  PCs_subset <- PCs[12:length(colnames(PCs))]
   PCs_subset <- PCs_subset[!colnames(PCs_subset) %in% c('individualIdentifier.inferred','genotype_id','projid','Flowcell','study','msex',
                                                         'cohort','rnaseq_id')]
   columns_in_front <- c('MEDIAN_5PRIME_BIAS_alignment', 'MEDIAN_3PRIME_BIAS_alignment', 'PCT_PF_READS_ALIGNED_alignment','total_reads')
@@ -126,21 +131,21 @@ plot_PCAs <- function(PCs, options){
   pdf(paste0(options$output,'figures/all_pca.pdf'),width=12, height=8, onefile = TRUE)
   # read-length, read-depth, percentage mapped reads 
   for(column in colnames(PCs_subset)){
-    if(nrow(PCs)/sum(is.na(PCs[[column]])) < 5){
+    if(nrow(PCs)/sum(is.na(PCs[[column]])) < 1){
       print(paste('skip',column))
       next
     }
     if(column == ''){
       next
     }
-    name <- paste0(PC_x,'_',PC_y,'_',column)
-    print(column)
+    name <- paste0('PC1_PC_2_',column)
+    outfile <- paste0(options$output,'/figures/all_pca/',name,'.PCA.png')
+    print(paste(column,'-',outfile))
     
     
     p <- make_pca_plot(PCs, 'PC1', 'PC2', column)
     print(p)
-    
-    outfile <- paste0(options$output,'/figures/all_pca/',name,'.PCA.pdf')
+
     ggsave(outfile, plot=p, width=12, height=8)
     #p <- ggMarginal(p, type = "histogram",  groupFill = TRUE)
     #pdf(outfile, width=12, height=8)

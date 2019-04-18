@@ -4,6 +4,7 @@ import argparse
 parser = argparse.ArgumentParser(description='Get top SNPs for metabrain and eqtlgen')
 parser.add_argument('metaBrain', help='File with the metaBrain results')
 parser.add_argument('eqtlGen', help='File with the eqtlGen results')
+parser.add_argument('output', help='Output file name')
 
 args = parser.parse_args()
 
@@ -41,7 +42,7 @@ with gzip.open(args.metaBrain) as input_file:
         if gene not in top_snp_per_gene_metaBrain or fdr < top_snp_fdr[gene]:
             top_snp_per_gene_metaBrain[gene] = snp
             top_snp_fdr[gene] = fdr
-
+print(top_snp_per_gene_metaBrain)
 
 top_snp_per_gene_eqtlGen = {}
 top_snp_fdr = {}
@@ -59,7 +60,6 @@ with gzip.open(args.eqtlGen) as input_file:
             print(x)
 
         snp, gene, fdr = parse_line(line)
-
         if fdr > 0.05:
             break
 
@@ -73,8 +73,9 @@ with gzip.open(args.eqtlGen) as input_file:
             top_snp_fdr[gene] = fdr
 
 
-with open('top_snp_metaBrain_and_eQTLgen.txt','w') as out:
+with open(args.output,'w') as out:
     out.write('gene\ttopSNP_metaBrain\ttopSNP_eqtlGen\n')
     for gene in top_snp_per_gene_metaBrain:
         if gene in top_snp_per_gene_eqtlGen:
+            print('added')
             out.write(gene+'\t'+top_snp_per_gene_metaBrain[gene]+'\t'+top_snp_per_gene_eqtlGen[gene]+'\n')
