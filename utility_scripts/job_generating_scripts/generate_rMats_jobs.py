@@ -5,6 +5,7 @@ parser = argparse.ArgumentParser(description='Generate rMATs files.')
 parser.add_argument('output_directory', help='Outputdir to write results to')
 parser.add_argument('jobs_directory', help='Directory to write jobs to')
 parser.add_argument('cram_base_directory', help='Directory with cramFiles')
+parser.add_argument('libblas_location', help='Location of directory with libblas library')
 
 args = parser.parse_args()
 
@@ -37,7 +38,7 @@ def make_jobs(template):
         new_template = new_template.replace('REPLACECRAM', cram)
         new_template = new_template.replace('REPLACEBAMCOPY', cram.replace('.cram','.copy.bam'))
         new_template = new_template.replace('REPLACEBAM', cram.replace('cram','bam'))
-
+        new_template = new_template.replace('REPLACELIBBLAS',args.libblas_location)
         with open(jobs_dir+'/'+sample+'.sh','w') as out:
             out.write(new_template)
 
@@ -62,7 +63,7 @@ rsync -vP $TMPDIR/$(basename REPLACEBAM) $TMPDIR/$(basename REPLACEBAMCOPY)
 echo "$TMPDIR/$(basename REPLACEBAM)" > $TMPDIR/b1.txt
 echo "$TMPDIR/$(basename REPLACEBAMCOPY)" > $TMPDIR/b2.txt
 
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/groups/umcg-biogen/tmp04/umcg-ndeklein/rMats/rMATS-turbo-Linux-UCS4/usr/lib64/
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:REPLACELIBBLAS/
 python $EBROOTRMATS/rMATS-turbo-Linux-UCS4/rmats.py \\
     --b1 $TMPDIR/b1.txt \\
     --b2 $TMPDIR/b2.txt \\
