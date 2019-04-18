@@ -22,7 +22,6 @@ parse_samplesheet_files <- function(opt){
                  NABEC, TargetALS, ENA, BrainGVEx,UCLA_ASD,
                  BipSeq,CMC_HBCC)){
       merged_samplesheets <- rbind(merged_samplesheets, df, fill=T)
-      print(sum(names(merged_samplesheets)=='rnaseq_id'))
   }
   
   # remove some columns that are easier to remove now than for specific cohorts
@@ -32,33 +31,7 @@ parse_samplesheet_files <- function(opt){
   return(merged_samplesheets)
 }
 
-harmonize_and_clean_col_values <- function(merged_samplesheets){
-  merged_samplesheets_fixed_columns <- copy(merged_samplesheets)
-  merged_samplesheets_fixed_columns[,c('Ethnicity','Race','race','RACE.inferred','Ancestry','Flowcell','spanish','V47','V48'):=NULL]
-  merged_samplesheets_fixed_columns <- merged_samplesheets_fixed_columns %>% replace_with_na(condition = ~.x == "")
-  merged_samplesheets_fixed_columns <-   merged_samplesheets_fixed_columns[!merged_samplesheets_fixed_columns$rnaseq_id==T,]
-  # For some is reported Gender, others Sex, or other names. Merge into one column and then harmonize
-  
-  change_rows_if_na(merged_samplesheets_fixed_columns,'Gender',c("Sex","Sequenced Sex","Sex Call","Sex Genotype","Genomic Sex","Sex (Sequenced)", "Sex.x","Sex.y"),overwrite=T)
-  merged_samplesheets_fixed_columns[Gender=='female' | Gender == 'Female', Gender := 'F']
-  merged_samplesheets_fixed_columns[Gender=='male' | Gender == 'Male', Gender := 'M']
-  merged_samplesheets_fixed_columns[Gender=='?', Gender := NA]
 
-  change_rows_if_na(merged_samplesheets_fixed_columns,'BrodmannArea',c("Brodmann_Area","BroadmannArea","brodmannArea"))
-  
-  merged_samplesheets_fixed_columns <- fix_broadman_area(merged_samplesheets_fixed_columns)
-
-  merged_samplesheets_fixed_columns$SpecificBrainRegion <- ''
-  change_rows_if_na(merged_samplesheets_fixed_columns, 'SpecificBrainRegion',
-                    c('BrainRegion','Brain_region','tissue','Tissue','organism_part','body_site','body_site_annotations','Sample Source','BrodmannArea'),
-                    overwrite=T,
-                    no_delete=c('BrodmannArea'))
-  
-  merged_samplesheets_fixed_columns <- convert_to_broad_region(merged_samplesheets_fixed_columns)
-  
-
-  return(merged_samplesheets_fixed_columns)
-}
 
 parse_ROSMAP <- function(opt){
   ROSMAP_IDs <- fread(paste0(opt$metadataDir,'/AMP_AD/ROSMAP_IDkey.csv'), na.strings=c(""))
@@ -77,14 +50,13 @@ parse_ROSMAP <- function(opt){
   ROSMAP <- ROSMAP[,which(unlist(lapply(ROSMAP, function(x)!all(is.na(x))))),with=F]
 
   # Change sex code to M/F to match other cohorts
-  ROSMAP[, Gender := as.character(Gender)][Gender == "0", Gender := "M"]
-  ROSMAP[Gender == "1", Gender := "F"]
+  ROSMAP[, Gender := as.character(Gender)][Gender == "1", Gender := "M"]
+  ROSMAP[Gender == "0", Gender := "F"]
   
   # Change empty values to NA for easier processing later
   ROSMAP[which(ROSMAP$age_first_ad_dx==""),]$age_first_ad_dx <- NA
   ROSMAP <- ROSMAP[!duplicated(ROSMAP$rnaseq_id)]
   ROSMAP$Tissue <- 'DLPFC'
-  ROSMAP[rnaseq_id=='150_120419', rnaseq_id:= '150_120419_0_merged']
   return(ROSMAP)
 }
 
@@ -123,17 +95,22 @@ parse_Mayo <- function(opt){
   setnames(Mayo, old = c('WGS_Participant_ID','ApoE','AgeAtDeath'), new = c('genotype_id', 'apoe_genotype','age_death'))
   Mayo[Mayo$age_death=='90_or_above',]$age_death <- '90+'
   Mayo$cohort <- 'Mayo'
+  Mayo[, genotype_id := as.character(genotype_id)]
+  Mayo[is.na(genotype_id),genotype_id := gsub('_CER|_TCX','',rnaseq_id)]
+  
   return(Mayo)
 }
 
 parse_MSBB <- function(opt){
+  MSBB_genotype_id_map <- fread(paste0(opt$metadataDir,'/AMP_AD/MSBB_final.txt'),header=F)
+  colnames(MSBB_genotype_id_map) <- c('rnaseq_id','genotype_id')
+
   MSBB_covariates <- fread(paste0(opt$metadataDir,'/AMP_AD/MSBB_WES_covariatestsv'))
   colnames(MSBB_covariates)[colnames(MSBB_covariates)=='Region'] <- 'BrodmannArea'
   MSBB_covariates$barcode <- NULL
   MSBB_update <- fread(paste0(opt$metadataDir,'/AMP_AD/MSBB_RNAseq_covariates_November2018Update.csv'))
   MSBB_update <- MSBB_update[MSBB_update$fileType=='fastq',]
   MSBB_update <- MSBB_update[,c('synapseId','fileName','barcode','fileType'):= NULL]
-  
   
   if(nrow(MSBB_update) != length(unique(MSBB_update$sampleIdentifier))) { stop("should only be unique samples")}
   
@@ -181,7 +158,10 @@ parse_MSBB <- function(opt){
   MSBB$TotalReads <- NULL
   MSBB$Mapped <- NULL
   
-
+  MSBB$genotype_id <- NULL
+  MSBB <- merge(MSBB, MSBB_genotype_id_map, by='rnaseq_id',all.x=T)
+  MSBB$individualIdentifier <- MSBB$genotype_id
+  MSBB$individualIdentifier.inferred <- NULL
   return(MSBB)
 }
 
@@ -249,6 +229,7 @@ parse_CMC <- function(opt){
   CMC_clinical <- fread(paste0(opt$metadataDir,'/CMC/CMC-CMC_HBCC_clinical_.csv'))
   colnames(CMC_clinical) <- gsub(' ','_',colnames(CMC_clinical))
   CMC_rnaseq <- fread(paste0(opt$metadataDir,'/CMC/CMC_Human_DLPFC_rnaSeq.csv'))
+  
   # This table does not seem to add much
   #CMC_rnaseq_synapse_table <- fread(paste0(opt$metadataDir,'/CMC/CMC_HBCC_RNA_table.txt'))
   #CMC_rnaseq_synapse_table <-   CMC_rnaseq_synapse_table[,which(unlist(lapply(CMC_rnaseq_synapse_table, function(x)!all(is.na(x))))),with=F]
@@ -301,6 +282,7 @@ parse_CMC <- function(opt){
   
   
   if(nrow(CMC_snp)!=length(unique(CMC_snp$Individual_ID)) | nrow(CMC_snp)!=length(unique(CMC_snp$Genotyping_Sample_ID))){ stop("More than 1 DNA per individual, change code")}
+  CMC_snp[,c('260/280', '260/230') := NULL]
   CMC <- merge(CMC_rnaseq, CMC_snp, by=c('Individual_ID'), all.x=T)
   
   CMC <- merge(CMC, CMC_clinical, by='Individual_ID',all.x=T)
@@ -322,6 +304,14 @@ parse_CMC <- function(opt){
   CMC$Brodmann_Area <- paste0('ba',CMC$Brodmann_Area)
   CMC[Brodmann_Area=='baNA', Brodmann_Area := NA]
   
+  CMC[, Cause_of_Death:=as.character(Cause_of_Death)]
+  CMC[Cause_of_Death=='1',Cause_of_Death:='Cardiovascular']
+  CMC[Cause_of_Death=='2',Cause_of_Death:='Non-brain cancer']
+  CMC[Cause_of_Death=='3',Cause_of_Death:='Inection and parasitic disease']
+  CMC[Cause_of_Death=='4',Cause_of_Death:='COPD']
+  CMC[Cause_of_Death=='5',Cause_of_Death:='Other']
+  CMC[Cause_of_Death=='-1',Cause_of_Death:=NA]
+
   return(CMC)
 }
 
@@ -348,7 +338,10 @@ parse_GTEx <- function(opt){
           'Performer','Comment[NOMINAL_LENGTH]','Comment[LIBRARY_STRATEGY]','Comment[LIBRARY_SOURCE]',
           'Extract Name','Protocol REF','Comment[gap_subject_id]','Comment[dbGAP_SAMPLE]','Comment[ENA_SAMPLE]',
           'Comment[BioSD_Sample]','Characteristics[clinical information]','Characteristics[disease]',
-          'Characteristics[organism part]'):=NULL]
+          'Characteristics[organism part]','Characteristics[organism]','histological_part'):=NULL]
+  
+  GTEx_sra_extra_samples <- fread(paste0(opt$metadataDir,'/GTEx/GTEx_SRA_samplesheet.txt'))
+  GTEx <- rbind.fill(GTEx,GTEx_sra_extra_samples )
   GTEx$SampleFull <- paste0(GTEx$rnaseq_id,'_',GTEx$rnaseq_id)
   
   return(GTEx)
@@ -356,23 +349,28 @@ parse_GTEx <- function(opt){
 
 parse_NABEC <- function(opt){
   NABEC <- fread(paste0(opt$metadataDir,'/NABEC/NABEC_phenotypes.txt'))
-
+  NABEC$individualID <- gsub('_e$|-wes\\.2$|-wes\\.1$|-cage-fctx$|-rna-fctx\\.1$|-rna-fctx\\.2$|-rna-fctx\\.3$|-rna-fctx\\.4$|-mrna-fctx$|-wes.3$|-wes.4$|-wes.5$',
+                             '',NABEC$Sample_Name)
+  
   NABEC_RNA <- NABEC[NABEC$Assay_Type=='RNA-Seq',]
 
   NABEC_WXS <- NABEC[NABEC$Assay_Type=='WXS',]
+  
   NABEC_WXS$genotype_id <- NABEC_WXS$submitted_subject_id
+  NABEC_WXS <- NABEC_WXS[,c('individualID','genotype_id')]
+  
+  
 
-  #TODO: Merge with WXS data  
-  #NABEC <- NABEC_RNA
-  setnames(NABEC_RNA, old=c('sex','Center_Name','Run','LibraryLayout','LibrarySelection'), new=c('Gender','cohort','rnaseq_id','library_layout','library_selection'))
+  NABEC <- merge(NABEC_RNA, NABEC_WXS, by='individualID', all.x=T)
+  setnames(NABEC, old=c('sex','Center_Name','Run','LibraryLayout','LibrarySelection'), new=c('Gender','cohort','rnaseq_id','library_layout','library_selection'))
   # many columns are not informative, remove
-  NABEC_RNA$SampleFull <- paste0(NABEC_RNA$BioSample,'_',NABEC_RNA$rnaseq_id)
-  NABEC_RNA[,c('DATASTORE_filetype','DATASTORE_provider','Organism','Consent','LibrarySource','MBytes','study_design',
+  NABEC$SampleFull <- paste0(NABEC$BioSample,'_',NABEC$rnaseq_id)
+  NABEC[,c('DATASTORE_filetype','DATASTORE_provider','Organism','Consent','LibrarySource','MBytes','study_design',
            'gap_parent_phs','biospecimen_repository','study_name','gap_accession','biospecimen_repository_sample_id',
            'analyte_type','Sample_Name','SRA_Study','SRA_Sample','MBases','Library_Name','Experiment','BioProject',
            'BioSample','Assay_Type','ReleaseDate','LoadDate'):=NULL]
-  NABEC_RNA$MetaCohort <- 'NABEC'
-  return(NABEC_RNA)
+  NABEC$MetaCohort <- 'NABEC'
+  return(NABEC)
 }
 
 parse_TargetALS <- function(opt){
@@ -384,6 +382,8 @@ parse_TargetALS <- function(opt){
   # to merge with wgs metadata, change to character
   setnames(TargetALS_metadata_rna, old='Age at Death', new='Age of Death')
   TargetALS_metadata_rna[, `Age of Death` := as.character(`Age of Death`)]
+  
+  TargetALS_metadata_wgs <- fread(paste0(opt$metadataDir,'/TargetALS/TALS_Data_Release_WGS_Metadata_10Oct2018.txt'))
   
   TargetALS_metadata_wgs$`Data File ID` <- NULL
   TargetALS_metadata_wgs <- fread(paste0(opt$metadataDir,'/TargetALS/TALS_Data_Release_WGS_Metadata_10Oct2018.txt'))
@@ -522,11 +522,10 @@ parse_BipSeq <- function(opt){
   BipSeq_clinical_metadata <- fread(paste0(opt$metadataDir,'/BipSeq/LIBD-JHU_R01MH105898_BipSeq_Metadata_Clinical.csv'))
   BipSeq_clinical_metadata <- BipSeq_clinical_metadata[,c('grant','study','Organism'):=NULL]
   
+  setnames(BipSeq_snp_metadata, old=('platform'),new='SnpArrayPlatform')
   BipSeq <- merge(BipSeq_rnaseq_metadata, BipSeq_snp_metadata, by.x='individualID',by.y='Individual_ID',all.x=T)
   BipSeq <- merge(BipSeq, BipSeq_clinical_metadata, by.x='individualID',by.y='Individual_ID',all.x=T)
-  BipSeq$rnaseq_id <- paste0(BipSeq$individualID,'_',BipSeq$specimenID)
-  BipSeq$specimenID <- NULL
-  setnames(BipSeq, old=c('individualID'), new = c('individualID'))
+  setnames(BipSeq, old=c('individualID','specimenID'), new = c('individualID','rnaseq_id'))
   BipSeq$cohort <- 'BipSeq'
   BipSeq$MetaCohort <- 'PsychEncode'
   
@@ -541,6 +540,7 @@ parse_CMC_HBCC <- function(opt){
   CMC_HBCC_rnaseq$genotype_id <- CMC_HBCC_rnaseq$individualID
   CMC_HBCC_rnaseq$cohort <- 'CMC_HBCC'
   CMC_HBCC_rnaseq$MetaCohort <- 'PsychEncode'
+  
   return(CMC_HBCC_rnaseq)
 }
 
