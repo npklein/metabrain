@@ -33,7 +33,7 @@ test <- function(){
   return(opt)
 }
 # comment out when not testing
-#opt <- test()
+opt <- test()
 
 
 print(paste('Searching for input files in: ', opt$input))
@@ -57,13 +57,19 @@ if(!is.null(opt$nabec_phenotypes)){
 
 ##### get cohort from path function that's being used a couple of times ####
 get_cohort_from_path <- function(path){
+  # order is important, goes from most to leas specific. 
+  # e.g. CMC_HBCC needs to be before CMC, otherwise would return CMC due to grep
   if(grepl('ENA',path)) { return('ENA') }
   if(grepl('NABEC',path)) { return('NABEC') }
   if(grepl('GTEx',path)) { return('GTEx') }
   if(grepl('TargetALS',path)) { return('TargetALS') }
   if(grepl('Braineac',path)) { return('Braineac') }
   if(grepl('Brainseq',path)) { return('Brainseq') }
+  if(grepl('CMC_HBCC',path)) { return('CMC_HBCC') }
   if(grepl('CMC',path)) { return('CMC') }
+  if(grepl('BipSeq',path)) { return('BipSeq') }
+  if(grepl('BrainGVEx',path)) { return('BrainGVEx') }
+  if(grepl('UCLA_ASD',path)) { return('UCLA_ASD') }
   stop(paste('unknown cohort:',path))
 }
 #####
@@ -75,6 +81,8 @@ RnaMetrics_multiQC_files <- list.files(path=opt$input,
                                        pattern = "multiqc_picard_RnaSeqMetrics.txt$", 
                                        recursive = TRUE,
                                        full.names = T)
+BPD <- RnaMetrics_multiQC_files[grepl("BPD", RnaMetrics_multiQC_files)]
+
 RnaMetrics_multiQC_files <- RnaMetrics_multiQC_files[!grepl("BPD", RnaMetrics_multiQC_files)]
 RnaMetric_qc_all <- data.frame()
 for(f in RnaMetrics_multiQC_files){
@@ -82,6 +90,9 @@ for(f in RnaMetrics_multiQC_files){
   if(cohort == 'ENA'){
     if(!grepl('multiQC_alignment',  f)) { next }
   }
+  else{print(f)
+    print(cohort)}
+  
   RnaMetrics_qc <- fread(f)
   RnaMetrics_qc$cohort <- cohort
   RnaMetrics_qc$SAMPLE <- NULL
@@ -164,34 +175,32 @@ FastQC_multiQC_files <- FastQC_multiQC_files[!grepl("BPD", FastQC_multiQC_files)
 FastQC_qc_all <- data.frame()
 for(f in FastQC_multiQC_files){
   FastQC_qc <- fread(f)
+
   FastQC_qc$cohort <- get_cohort_from_path(f)
   FastQC_qc_all <- rbind(FastQC_qc_all, FastQC_qc, fill=T)
 }
-
 # Because FastQC gives results per fastq file instead of per sample, adjust the names and merge them together
 FastQC_qc_all <- data.frame(FastQC_qc_all)
 FastQC_qc_all$Sample <- gsub('.cram','',FastQC_qc_all$Sample)
 
-FastQC_qc_all_R1 <- FastQC_qc_all[grepl('*\\.R1|*_1', FastQC_qc_all$Sample),]
-FastQC_qc_all_R1$Sample <- gsub('.R1','',FastQC_qc_all_R1$Sample)
-FastQC_qc_all_R2 <- FastQC_qc_all[grepl('*\\.R2|*_2', FastQC_qc_all$Sample),]
-FastQC_qc_all_R2$Sample <- gsub('.R2','',FastQC_qc_all_R2$Sample)
+FastQC_qc_all_R1 <- FastQC_qc_all[grepl('*_R1$|*\\.R1$|*_1$', FastQC_qc_all$Sample),]
+FastQC_qc_all_R1$Sample <- gsub('*_R1$|*\\.R1$|*_1$','',FastQC_qc_all_R1$Sample)
+FastQC_qc_all_R2 <- FastQC_qc_all[grepl('*_R2$|*\\.R2$|*_2$', FastQC_qc_all$Sample),]
+FastQC_qc_all_R2$Sample <- gsub('*_R2$|*\\.R2$|*_2$','',FastQC_qc_all_R2$Sample)
 
-if('GTEx' %in% FastQC_qc_all_R1$cohort){
-    FastQC_qc_all_R1[FastQC_qc_all_R1$cohort=="GTEx",]$Sample <- gsub('_1','',FastQC_qc_all_R1[FastQC_qc_all_R1$cohort=="GTEx",]$Sample)
-    FastQC_qc_all_R2[FastQC_qc_all_R2$cohort=="GTEx",]$Sample <- gsub('_2','',FastQC_qc_all_R2[FastQC_qc_all_R2$cohort=="GTEx",]$Sample)
-}
+# everything that is leftover is single end, save as R1
+single_end <- FastQC_qc_all[!grepl('*_R1$|*\\.R1$|*_1$', FastQC_qc_all$Sample),]
+single_end <- single_end[!grepl('*_R2$|*\\.R2$|*_2$', single_end$Sample),]
+FastQC_qc_all_R1 <- rbind(FastQC_qc_all_R1, single_end)
 
-if('ENA' %in% FastQC_qc_all_R1$cohort){
-    FastQC_qc_all_R1[FastQC_qc_all_R1$cohort=="ENA",]$Sample <- gsub('_1','',
-                                                             FastQC_qc_all_R1[FastQC_qc_all_R1$cohort=="ENA",]$Sample)
-    FastQC_qc_all_R2[FastQC_qc_all_R2$cohort=="ENA",]$Sample <- gsub('_2','',
-                                                            FastQC_qc_all_R2[FastQC_qc_all_R2$cohort=="ENA",]$Sample)
-}
-
-FastQC_qc_all_merged <- merge(FastQC_qc_all_R1, FastQC_qc_all_R2, by=c('Sample','cohort'), suffix = c("_R1", "_R2"))
+# fill.x = True because single end sample are only in R1
+FastQC_qc_all_merged <- merge(FastQC_qc_all_R1, FastQC_qc_all_R2, by=c('Sample','cohort'), suffix = c("_R1", "_R2"),
+                              all.x=T)
 FastQC_qc_all_merged$FastQC_original_sample <- FastQC_qc_all_merged$Sample
 
+# For a few samples fastqc also got information on a 3rd file that contained orphan reads. Remove these (recognizable by lower total reads
+FastQC_qc_all_merged <- FastQC_qc_all_merged[order(FastQC_qc_all_merged$Sample, -abs(FastQC_qc_all_merged$Total.Sequences_R1) ), ] #sort by id and reverse of abs(value)
+FastQC_qc_all_merged <- FastQC_qc_all_merged[ !duplicated(FastQC_qc_all_merged$Sample), ]    
 
 # TargetALS sample naming is different between FastQC and picard results, change them here to make them match later
 if('TargetALS' %in% FastQC_qc_all_merged$cohort){
@@ -209,6 +218,8 @@ if('Brainseq' %in% FastQC_qc_all_merged$cohort){
                                                                                 Brainseq_full_sample[grepl(x, Brainseq_full_sample)]
                                                                             }))
 }
+
+
 ####### 
 
 
@@ -216,6 +227,12 @@ if('Brainseq' %in% FastQC_qc_all_merged$cohort){
 ###### merge FastQC and picard metrics together #####
 RnaMetric_qc_all[grepl('PCT', colnames(RnaMetric_qc_all))] <- RnaMetric_qc_all[grepl('PCT', 
                                                                                 colnames(RnaMetric_qc_all))]/100
+
+
+
+
+
+
 CombinedMetrics <- merge(RnaMetric_qc_all, MultipleMetric_qc_all, by=c('Sample','cohort',
                                                                        'PF_ALIGNED_BASES',
                                                                        'LIBRARY',
@@ -229,20 +246,40 @@ if('Braineac' %in% CombinedMetrics$cohort){
 if('GTEx' %in% CombinedMetrics$cohort){
     CombinedMetrics[CombinedMetrics$cohort=="GTEx",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="GTEx",]$Sample, "(.*)_.*")[, 2]
 }
-
+if('NABEC' %in% CombinedMetrics$cohort){
+  CombinedMetrics[CombinedMetrics$cohort=="NABEC",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="NABEC",]$Sample, ".*_(.*)")[, 2]
+}
 if('ENA' %in% CombinedMetrics$cohort){
     CombinedMetrics[CombinedMetrics$cohort=="ENA",]$Sample <- str_match(
                                                                 CombinedMetrics[CombinedMetrics$cohort=="ENA",]$Sample,
                                                                                                          ".*_(.*)")[, 2]
 }
-
-if('TargetALS' %in% FastQC_qc_all_merged$cohort){
+if('TargetALS' %in% CombinedMetrics$cohort){
     CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample, ".*(HRA.*)")[, 2]
     CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample <- gsub('-2','',CombinedMetrics[CombinedMetrics$cohort=="TargetALS",]$Sample)
 }
 
+if('BrainGVEx' %in% CombinedMetrics$cohort){
+  CombinedMetrics[CombinedMetrics$cohort=="BrainGVEx",]$Sample <- gsub('_','-',CombinedMetrics[CombinedMetrics$cohort=="BrainGVEx",]$Sample )
+  CombinedMetrics[CombinedMetrics$cohort=="BrainGVEx",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="BrainGVEx",]$Sample,"^([0-9]+-[0-9]+)-[0-9]+-[0-9]+")[, 2]
+}
+if('BipSeq' %in% CombinedMetrics$cohort){
+  CombinedMetrics[CombinedMetrics$cohort=="BipSeq",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="BipSeq",]$Sample,"Br[0-9]+_(R[0-9]+)")[, 2]
+}
+if('UCLA_ASD' %in% CombinedMetrics$cohort){
+  CombinedMetrics[CombinedMetrics$cohort=="UCLA_ASD",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="UCLA_ASD",]$Sample,"[aA-zZ]+[0-9]+_(.+)")[, 2]
+  
+}
+if('CMC_HBCC' %in% CombinedMetrics$cohort){
+  CombinedMetrics[CombinedMetrics$cohort=="CMC_HBCC",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="CMC_HBCC",]$Sample,"individualID.*_specimenID.(.*)")[, 2]
+  
+}
+if('CMC' %in% CombinedMetrics$cohort){
+  CombinedMetrics[CombinedMetrics$cohort=="CMC",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="CMC",]$Sample,"individualID.*_specimenID.(.*)")[, 2]
+}
 
-CombinedMetrics <- merge(CombinedMetrics, FastQC_qc_all_merged, by=c('Sample','cohort'), all = TRUE)
+
+CombinedMetricsWithFastQC <- merge(CombinedMetrics, FastQC_qc_all_merged, by=c('Sample','cohort'), all = TRUE)
 ######
 
 
@@ -265,37 +302,51 @@ if(length(AMP_AD_multiMetrics_files) > 0){
 
     ####### merge AMP-AD with the rest #######
     AMP_AD_multimetrics_qc_all$PF_ALIGNED_BASES.1 <- NULL
-    all_cohorts <- rbind.fill(CombinedMetrics, AMP_AD_multimetrics_qc_all)
+    all_cohorts <- rbind.fill(CombinedMetricsWithFastQC, AMP_AD_multimetrics_qc_all)
 }else{
-    all_cohorts <- CombinedMetrics
+    all_cohorts <- CombinedMetricsWithFastQC
 }
 all_cohorts <- all_cohorts[order(all_cohorts$cohort),]
 all_cohorts$sampleID <- 1:nrow(all_cohorts)
 #######
 
+###### columns with % dont actually show %, have to multiply with 100
+all_cohorts[which(grepl('PCT',colnames(all_cohorts)))] <- all_cohorts[which(grepl('PCT',colnames(all_cohorts)))]*100
+
 ###### set filter based on 3 measurements ######
 all_cohorts$FILTER <- "NO"
 print('set filter')
-if(sum(!is.na(all_cohorts$PCT_CODING_BASES) & all_cohorts$PCT_CODING_BASES <= 0.1) > 0){
-    all_cohorts[!is.na(all_cohorts$PCT_CODING_BASES) & all_cohorts$PCT_CODING_BASES <= 0.1,]$FILTER <- "YES"
-}
-if(sum(!is.na(all_cohorts$PCT_PF_READS_ALIGNED) & all_cohorts$PCT_PF_READS_ALIGNED <= 0.6) > 0){
-    all_cohorts[!is.na(all_cohorts$PCT_PF_READS_ALIGNED) & all_cohorts$PCT_PF_READS_ALIGNED <= 0.6,]$FILTER <- "YES"
-}
-if(sum(!is.na(all_cohorts$uniquely_mapped_percent) & all_cohorts$uniquely_mapped_percent <= 60) > 0){
-    all_cohorts[!is.na(all_cohorts$uniquely_mapped_percent) & all_cohorts$uniquely_mapped_percent <= 60,]$FILTER <- "YES"
-}
-print('done')
 
-all_cohorts[is.na(all_cohorts$SampleFull),]$SampleFull <- all_cohorts[is.na(all_cohorts$SampleFull),]$Sample
-merged_metrics_files <- paste0(opt$output,"/all_cohort_STAR_RNAseqMetrics_MultipleMetrics_FastQC.txt")
-write.table(all_cohorts, merged_metrics_files, quote=F, sep="\t", row.names=F)
-print(paste0("Written merged metrics to ",merged_metrics_files))
+
+if(sum(!is.na(all_cohorts$PCT_CODING_BASES) & all_cohorts$PCT_CODING_BASES <= 10) > 0){
+    all_cohorts[!is.na(all_cohorts$PCT_CODING_BASES) & all_cohorts$PCT_CODING_BASES <= 10,]$FILTER <- "YES"
+}
+if(sum(!is.na(all_cohorts$PCT_PF_READS_ALIGNED) & all_cohorts$PCT_PF_READS_ALIGNED <= 60) > 0){
+    all_cohorts[!is.na(all_cohorts$PCT_PF_READS_ALIGNED) & all_cohorts$PCT_PF_READS_ALIGNED <= 60,]$FILTER <- "YES"
+}
+
+
+# these are wrong in the expression table, but since we don't want to rewrite that one change it here
+all_cohorts[all_cohorts$Sample=='UMB5176_ba41_42_22',]$Sample <- 'UMB5176_ba41.42.22'
+all_cohorts[all_cohorts$Sample=='AN03345_ba41_42_22',]$Sample <- 'AN03345_ba41.42.22'
+all_cohorts[all_cohorts$Sample=='UMB1376_ba41_42_22',]$Sample <- 'UMB1376_ba41.42.22'
+all_cohorts[all_cohorts$Sample=='AN15088_ba41_42_22',]$Sample <- 'AN15088_ba41.42.22'
+all_cohorts[all_cohorts$Sample=='UMB4337_ba41_42_22',]$Sample <- 'UMB4337_ba41.42.22'
+all_cohorts[all_cohorts$Sample=='AN11864_ba41_42_22',]$Sample <- 'AN11864_ba41.42.22'
+
+# sample should have been merged but resequenced sample didn't get transfered to us until the first one was already processed.
+# only keep cov. data for teh correct one
+
+all_cohorts <- all_cohorts[!duplicated(all_cohorts$Sample),]
+
+
+
+all_cohorts[all_cohorts$Sample=='AN04479_BA7',]
 
 
 filtered_samples_file <- paste0(opt$output,"/samples_to_filter.txt")
-write.table(all_cohorts[all_cohorts$FILTER=='YES',]$SampleFull, filtered_samples_file, quote=F, sep="\t", row.names=F)
-print(paste0("Written merged metrics to ",merged_metrics_files))
+write.table(all_cohorts[all_cohorts$FILTER=='YES',]$Sample, filtered_samples_file, quote=F, sep="\t", row.names=F)
+print(paste0("Written samples to filer to ",filtered_samples_file))
 
 
 nSamples <- all_cohorts %>% group_by(cohort) %>% dplyr::summarize(no = sum(FILTER=="NO"),yes = sum(FILTER=="YES"))
@@ -378,12 +429,9 @@ QC_plotter <- function(all_cohorts, column, plot_pca_outliers = F, single_cohort
   
   # Plot a line where we put the threshold
   if(column == "PCT_CODING_BASES"){
-    p <- p + geom_hline(yintercept=0.1, colour="red",  linetype="dashed")
+    p <- p + geom_hline(yintercept=10, colour="red",  linetype="dashed")
   }
   if(column == "PCT_PF_READS_ALIGNED"){
-    p <- p + geom_hline(yintercept=0.6, colour="red",  linetype="dashed")
-  }
-  if(column == "uniquely_mapped_percent"){
     p <- p + geom_hline(yintercept=60, colour="red",  linetype="dashed")
   }
   return(p)
@@ -394,7 +442,7 @@ QC_plotter <- function(all_cohorts, column, plot_pca_outliers = F, single_cohort
 
 # make sure that the columns used for filtering are plotted first so that they are easy to find
 columns_to_plot <- colnames(select_if(all_cohorts, is.numeric))
-filter_columns <-  c("PCT_CODING_BASES","PCT_PF_READS_ALIGNED","uniquely_mapped_percent")
+filter_columns <-  c("PCT_CODING_BASES","PCT_PF_READS_ALIGNED")
 columns_to_plot <- columns_to_plot[!columns_to_plot %in% filter_columns]
 columns_to_plot <- c(filter_columns, columns_to_plot)
 
@@ -464,3 +512,4 @@ plot_with_pca_outliers <- function(){
 }
 #plot_with_pca_outliers()
 #####
+write.table(all_cohorts,file=paste0(opt$output,'/2019-04-09-Freeze2.TMM.Covariates.txt'),quote=F, row.names=T, sep='\t')

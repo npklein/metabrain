@@ -1,0 +1,5 @@
+There are many different phenotypes as well as many different technical factors.
+This dir includes (a) script(s) to combine them all into one big table for easy usage.
+
+To run:
+    Rscript combine_phenoTables_samplesheets_QCmetrics.R
