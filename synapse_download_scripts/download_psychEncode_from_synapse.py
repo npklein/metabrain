@@ -35,27 +35,28 @@ print('Sync psychEncode')
 #with open('metadata/CMC_HBCC/CMC_HBCC_RNAseq_metadata.txt') as input_file:
 # loop through the file backwards (so that half can be downloaded on calculon, rest on boxy)
 
-reversed_list = reversed(list(open("metadata/CMC_HBCC/CMC_HBCC_RNAseq_metadata.txt")))
-reversed_list_len = 0
-with open("metadata/CMC_HBCC/CMC_HBCC_RNAseq_metadata.txt") as input_file:
-    for line in input_file:
-        line = line.strip().split('\t')
-        fname = line[1]
-        if fname.endswith('sortedByCoord.out.bam'):
-            reversed_list_len += 1
-index = 0 
-for line in reversed_list:
+#reversed_list = reversed(list(open("metadata/CMC_HBCC/CMC_HBCC_RNAseq_metadata.txt")))
+#reversed_list_len = 0
+#with open("metadata/CMC_HBCC/CMC_HBCC_RNAseq_metadata.txt") as input_file:
+#    for line in input_file:
+#        line = line.strip().split('\t')
+#        fname = line[1]
+#        if fname.endswith('sortedByCoord.out.bam'):
+#            reversed_list_len += 1
+#index = 0 
+#for line in reversed_list:
 #   for line in input_file:
-    line = line.strip().split('\t')
-    syn_id = line[0]
-    fname = line[1]
-    if fname.endswith('sortedByCoord.out.bam'):
-        index += 1
-        print(str(index)+'/'+str(reversed_list_len))
-        if os.path.isfile('RNAseq/CMC_HBCC/bam/'+fname):
-            print('RNAseq/CMC_HBCC/bam/'+fname+' exists')
-            continue
-        files = synapseutils.syncFromSynapse(syn, syn_id, path = 'RNAseq/CMC_HBCC/bam/')
+#    line = line.strip().split('\t')
+#    syn_id = line[0]
+#    fname = line[1]
+#    if fname.endswith('sortedByCoord.out.bam'):
+#        index += 1
+#        print(str(index)+'/'+str(reversed_list_len))
+#        if os.path.isfile('RNAseq/CMC_HBCC/bam/'+fname):
+#            print('RNAseq/CMC_HBCC/bam/'+fname+' exists')
+#            continue
+#        files = synapseutils.syncFromSynapse(syn, syn_id, path = 'RNAseq/CMC_HBCC/bam/')
+files = synapseutils.syncFromSynapse(syn, 'syn10476936', path = 'RNAseq/CMC_HBCC/bam/')
 
 
 # Download metadata for Brainseq(LIBD_szControl), CMC, and CMC_HBCC to check if we already have all those samples

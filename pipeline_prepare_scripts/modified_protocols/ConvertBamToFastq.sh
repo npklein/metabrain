@@ -1,4 +1,4 @@
-#MOLGENIS nodes=1 ppn=4 mem=12gb walltime=08:00:00
+#MOLGENIS nodes=1 ppn=4 mem=12gb walltime=05:59:00
 
 ### variables to help adding to database (have to use weave)
 #string internalId
@@ -15,6 +15,8 @@
 #string alignedBam
 
 # Get input file
+
+echo "IMPORTANT!! This works only for paired-end samples"
 
 #Load modules
 ${stage} picard/${picardVersion}
@@ -51,8 +53,18 @@ samtools fastq \
   -2 $TMPDIR/$(basename ${reads2FqGz%.gz}) \
   $TMPDIR/$(basename $alignedBam)
 
+echo "gzipping:"
+echo "gzip $TMPDIR/$(basename ${reads1FqGz%.gz})"
+echo "gzip $TMPDIR/$(basename ${reads2FqGz%.gz})"
+gzip $TMPDIR/$(basename ${reads1FqGz%.gz})
+gzip $TMPDIR/$(basename ${reads2FqGz%.gz})
 
+
+
+rsync -vP $TMPDIR/$(basename ${reads1FqGz}) ${reads1FqGz}
+rsync -vP $TMPDIR/$(basename ${reads2FqGz}) ${reads2FqGz}
 returnCode=$?
+
 echo "returncode: $returnCode";
 if [ $returnCode -eq 0 ]
 then
@@ -62,15 +74,10 @@ else
   exit 1;
 fi
 
-echo "gzipping:"
-echo "gzip ${reads1FqGz%.gz}"
-echo "gzip ${reads2FqGz%.gz}"
-gzip ${reads1FqGz%.gz}
-gzip ${reads2FqGz%.gz}
 
 if [ $returnCode -eq 0 ]
 then
-  echo "merge successful, remove $alignedBam and $unalignedBam"
+  echo "merge successful, remove $alignedBam"
   rm $alignedBam
 else
   echo "ERROR: couldn't merge fastq files"
