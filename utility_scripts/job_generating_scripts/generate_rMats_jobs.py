@@ -1,3 +1,4 @@
+import argparse
 import glob
 import os
 
@@ -5,17 +6,20 @@ parser = argparse.ArgumentParser(description='Generate rMATs files.')
 parser.add_argument('output_directory', help='Outputdir to write results to')
 parser.add_argument('jobs_directory', help='Directory to write jobs to')
 parser.add_argument('cram_base_directory', help='Directory with cramFiles')
+parser.add_argument('libblas_location', help='Location of directory with libblas library')
 
 args = parser.parse_args()
 
-cram_files = glob.glob('/groups/umcg-biogen/tmp04/input/rawdata/*/pipelines/results/cramFiles/*cram', recursive=True)
+cram_files = glob.glob(args.cram_base_directory+'/**/*cram', recursive=True)
 print('found ',len(cram_files),'cram files')
 
-outdir = '/groups/umcg-biogen/tmp04/umcg-ndeklein/rMats/rMats_results/'
-job_base_dir = 'rMats_jobs/'
+outdir = args.output_directory
+job_base_dir = args.jobs_directory
 
 if not os.path.exists(outdir):
-    raise RuntimeError('output directory does not exist')
+    os.mkdir(outdir)
+if not os.path.exists(job_base_dir):
+    os.mkdir(job_base_dir)
 
 def make_jobs(template):
     x = 0
@@ -37,7 +41,7 @@ def make_jobs(template):
         new_template = new_template.replace('REPLACECRAM', cram)
         new_template = new_template.replace('REPLACEBAMCOPY', cram.replace('.cram','.copy.bam'))
         new_template = new_template.replace('REPLACEBAM', cram.replace('cram','bam'))
-
+        new_template = new_template.replace('REPLACELIBBLAS',args.libblas_location)
         with open(jobs_dir+'/'+sample+'.sh','w') as out:
             out.write(new_template)
 
@@ -62,7 +66,7 @@ rsync -vP $TMPDIR/$(basename REPLACEBAM) $TMPDIR/$(basename REPLACEBAMCOPY)
 echo "$TMPDIR/$(basename REPLACEBAM)" > $TMPDIR/b1.txt
 echo "$TMPDIR/$(basename REPLACEBAMCOPY)" > $TMPDIR/b2.txt
 
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/groups/umcg-biogen/tmp04/umcg-ndeklein/rMats/rMATS-turbo-Linux-UCS4/usr/lib64/
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:REPLACELIBBLAS/
 python $EBROOTRMATS/rMATS-turbo-Linux-UCS4/rmats.py \\
     --b1 $TMPDIR/b1.txt \\
     --b2 $TMPDIR/b2.txt \\
