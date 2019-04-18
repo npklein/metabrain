@@ -12,6 +12,7 @@ with open(args.topSNPs) as input_file, open('metaBrain_eqtlGen_topSNP_LD.txt','w
     input_file.readline()
     x = 0
     for line in input_file:
+        print(line)
         x += 1
         if x % 1000 == 0:
             print(x)

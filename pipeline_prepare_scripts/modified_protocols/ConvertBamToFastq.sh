@@ -18,6 +18,8 @@
 
 echo "IMPORTANT!! This works only for paired-end samples"
 
+mkdir -p $(dirname reads1FqGz)
+
 #Load modules
 ${stage} picard/${picardVersion}
 ${stage} io_lib/${iolibVersion}
@@ -74,6 +76,11 @@ else
   exit 1;
 fi
 
+echo "gzipping:"
+echo "gzip ${reads1FqGz%.gz}"
+gzip ${reads1FqGz%.gz}
+echo "gzip ${reads2FqGz%.gz}"
+gzip ${reads2FqGz%.gz}
 
 if [ $returnCode -eq 0 ]
 then
