@@ -10,14 +10,16 @@ parser.add_argument('libblas_location', help='Location of directory with libblas
 
 args = parser.parse_args()
 
-cram_files = glob.glob('/groups/umcg-biogen/tmp04/input/rawdata/*/pipelines/results/cramFiles/*cram', recursive=True)
+cram_files = glob.glob(args.cram_base_directory+'/**/*cram', recursive=True)
 print('found ',len(cram_files),'cram files')
 
-outdir = '/groups/umcg-biogen/tmp04/umcg-ndeklein/rMats/rMats_results/'
-job_base_dir = 'rMats_jobs/'
+outdir = args.output_directory
+job_base_dir = args.jobs_directory
 
 if not os.path.exists(outdir):
-    raise RuntimeError('output directory does not exist')
+    os.mkdir(outdir)
+if not os.path.exists(job_base_dir):
+    os.mkdir(job_base_dir)
 
 def make_jobs(template):
     x = 0
