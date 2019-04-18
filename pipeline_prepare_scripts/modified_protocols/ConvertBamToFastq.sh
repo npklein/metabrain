@@ -64,8 +64,8 @@ fi
 
 echo "gzipping:"
 echo "gzip ${reads1FqGz%.gz}"
-echo "gzip ${reads2FqGz%.gz}"
 gzip ${reads1FqGz%.gz}
+echo "gzip ${reads2FqGz%.gz}"
 gzip ${reads2FqGz%.gz}
 
 if [ $returnCode -eq 0 ]
