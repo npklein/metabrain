@@ -29,7 +29,7 @@ def make_jobs(template):
         if not os.path.exists(jobs_dir):
             os.mkdir(jobs_dir)
 
-        sample = bam.split('/')[-1].split('.bam')[0]
+        sample = bam.split('/')[-1].split('.accepted_hits')[0].split('_resequenced')[0]
         new_template = template.replace('REPLACENAME', sample)
         new_template = new_template.replace('REPLACEOUT', outdir+'/'+sample)
         new_template = new_template.replace('REPLACEBAMCOPY', bam.replace('.bam','.copy.bam'))
@@ -44,7 +44,7 @@ template = '''#!/bin/bash
 #SBATCH --job-name=rMats_REPLACENAME
 #SBATCH --output=REPLACENAME.out
 #SBATCH --error=REPLACENAME.err
-#SBATCH --time=05:59:00
+#SBATCH --time=00:30:00
 #SBATCH --cpus-per-task 1
 #SBATCH --mem 8gb
 #SBATCH --nodes 1
