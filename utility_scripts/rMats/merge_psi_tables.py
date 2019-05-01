@@ -16,8 +16,7 @@ if not os.path.exists(args.output_directory):
     os.makedirs(args.output_directory)
 
 
-#events = ['A3SS','A5SS','MXE','RI','SE']
-events = ['SE']
+events = ['A3SS','A5SS','MXE','RI','SE']
 
 
 incl_per_sample_per_event = {'A3SS':{},'A5SS':{},'MXE':{},'RI':{},'SE':{}}
