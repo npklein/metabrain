@@ -7,6 +7,8 @@ parser.add_argument('output_directory', help='Outputdir to write results to')
 parser.add_argument('jobs_directory', help='Directory to write jobs to')
 parser.add_argument('cram_base_directory', help='Directory with cramFiles')
 parser.add_argument('libblas_location', help='Location of directory with libblas library')
+parser.add_argument('ref_gtf', help='Reference gtf file location')
+
 
 args = parser.parse_args()
 
@@ -42,6 +44,7 @@ def make_jobs(template):
         new_template = new_template.replace('REPLACEBAMCOPY', cram.replace('.cram','.copy.bam'))
         new_template = new_template.replace('REPLACEBAM', cram.replace('cram','bam'))
         new_template = new_template.replace('REPLACELIBBLAS',args.libblas_location)
+        new_template = new_template.replace('REPLACEGTF',args.ref_gtf)
         with open(jobs_dir+'/'+sample+'.sh','w') as out:
             out.write(new_template)
 
@@ -70,7 +73,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:REPLACELIBBLAS/
 python $EBROOTRMATS/rMATS-turbo-Linux-UCS4/rmats.py \\
     --b1 $TMPDIR/b1.txt \\
     --b2 $TMPDIR/b2.txt \\
-    --gtf /apps/data/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.gtf \\
+    --gtf REPLACEGTF \\
     --od REPLACEOUT \\
     -t paired \\
     --readLength 100 \\
