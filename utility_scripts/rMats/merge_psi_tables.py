@@ -23,8 +23,8 @@ incl_per_sample_per_event = {'A3SS':{},'A5SS':{},'MXE':{},'RI':{},'SE':{}}
 exons_per_event = {}
 samples = set([])
 genes = {}
+
 samples = []
-#ID    GeneID    geneSymbol    chr    strand    longExonStart_0base    longExonEnd    shortES    shortEE    flankingES    flankingEE    ID    IJC_NEUNE940RZC_CGND_HRA_00399    SJC_NEUNE940RZC_CGND_HRA_00399    IJC__NEUVB305VU7_CGND-HRA-01231    SJC__NEUVB305VU7_CGND-HRA-01231    IncFormLen    SkipFormLen    IncLevel1    IncLevel2    IncLevelDifference
 print('read data')
 for event in events:
     print(event)

@@ -44,7 +44,7 @@ template = '''#!/bin/bash
 #SBATCH --job-name=rMats_REPLACENAME
 #SBATCH --output=REPLACENAME.out
 #SBATCH --error=REPLACENAME.err
-#SBATCH --time=00:30:00
+#SBATCH --time=05:59:00
 #SBATCH --cpus-per-task 1
 #SBATCH --mem 8gb
 #SBATCH --nodes 1
