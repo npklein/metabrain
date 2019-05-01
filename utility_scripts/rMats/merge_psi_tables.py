@@ -16,7 +16,8 @@ if not os.path.exists(args.output_directory):
     os.makedirs(args.output_directory)
 
 
-events = ['A3SS','A5SS','MXE','RI','SE']
+#events = ['A3SS','A5SS','MXE','RI','SE']
+events = ['SE']
 
 
 incl_per_sample_per_event = {'A3SS':{},'A5SS':{},'MXE':{},'RI':{},'SE':{}}
@@ -37,7 +38,8 @@ for event in events:
         if index % 100 == 0:
             print(str(index)+'/'+str(n_event_files))
         sample = f.split('/')[-2]
-        samples.append(sample)
+        if sample not in samples:
+            samples.append(sample)
         with open(f) as input_file:
             header = input_file.readline()
             for line in input_file:
