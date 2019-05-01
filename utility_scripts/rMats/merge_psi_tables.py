@@ -1,4 +1,5 @@
 # merge psi (percent spliced-in)  tables together
+# Round incl. level to 4 decimal behind ocmma
 import glob
 import argparse
 import os
@@ -46,6 +47,10 @@ for event in events:
                 genes[exon] = gene
                 exons_per_event[event].add(exon)
                 incl_level = line[-1]
+                if incl_level == 'NA':
+                    incl_level = ''
+                else:
+                    incl_level = str(round(float(incl_level),4))
                 if exon not in incl_per_sample_per_event[event]:
                     incl_per_sample_per_event[event][exon] = {}
                 incl_per_sample_per_event[event][exon][sample] = incl_level
@@ -66,6 +71,6 @@ for event in events:
                 try:
                     out.write('\t'+incl_per_sample_per_event[event][exon][sample])
                 except:
-                    out.write('\tNA')
+                    out.write('\t')
             out.write('\n')
     print('file written to',outfile)    
