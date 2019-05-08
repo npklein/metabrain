@@ -25,11 +25,10 @@ dependencies = [
     ('libffi', '3.2.1'),
     # OS dependency should be preferred if the os version is more recent then this version,
     # it's nice to have an up to date openssl for security reasons
-    # however, eb is not picking up the system openssl so use this as dependency anyway
-    ('OpenSSL', '1.0.1q'),
+    # ('OpenSSL', '1.0.2l'),
 ]
 
-#osdependencies = [('openssl-devel', 'libssl-dev', 'libopenssl-devel')]
+osdependencies = [('openssl-devel', 'libssl-dev', 'libopenssl-devel')]
 
 # order is important!
 # package versions updated November 24th 2017
