@@ -66,6 +66,6 @@ for event in events:
                 try:
                     out.write('\t'+incl_per_sample_per_event[event][exon][sample])
                 except:
-                    out.write('\tNA')
+                    out.write('\t')
             out.write('\n')
     print('file written to',outfile)    
