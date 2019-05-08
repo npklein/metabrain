@@ -1,4 +1,5 @@
 # merge psi (percent spliced-in)  tables together
+# Round incl. level to 4 decimal behind ocmma
 import glob
 import argparse
 import os
@@ -36,7 +37,8 @@ for event in events:
         if index % 100 == 0:
             print(str(index)+'/'+str(n_event_files))
         sample = f.split('/')[-2]
-        samples.append(sample)
+        if sample not in samples:
+            samples.append(sample)
         with open(f) as input_file:
             header = input_file.readline()
             for line in input_file:
@@ -46,6 +48,10 @@ for event in events:
                 genes[exon] = gene
                 exons_per_event[event].add(exon)
                 incl_level = line[-1]
+                if incl_level == 'NA':
+                    incl_level = ''
+                else:
+                    incl_level = str(round(float(incl_level),4))
                 if exon not in incl_per_sample_per_event[event]:
                     incl_per_sample_per_event[event][exon] = {}
                 incl_per_sample_per_event[event][exon][sample] = incl_level
