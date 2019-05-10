@@ -8,6 +8,7 @@ parser.add_argument('output_directory', help='Outputdir to write results to')
 parser.add_argument('jobs_directory', help='Directory to write jobs to')
 parser.add_argument('bam_base_directory', help='Directory with bamFiles')
 parser.add_argument('libblas_location', help='Location of directory with libblas library')
+parser.add_argument('--sample_split', help='Character to split file name on and take [0] as sample name', default='.cram')
 
 args = parser.parse_args()
 
@@ -28,10 +29,20 @@ def make_jobs(template):
         jobs_dir = job_base_dir + '/'+batch+'/'
         if not os.path.exists(jobs_dir):
             os.mkdir(jobs_dir)
+        
+        if batch == 'MSBB':
+            sample = bam.split('/')[-1].split('.accepted_hits')[0].split('_resequenced')[0]
+        elif batch == 'MayoCBE':
+            sample = bam.split('/')[-1].split('.')[0]
+        else:
+            raise RuntimeError('Unknown batch: '+batch)
 
-        sample = bam.split('/')[-1].split('.accepted_hits')[0].split('_resequenced')[0]
+        results_dir = outdir+'/'+batch
+        if not os.path.exists(results_dir):
+            os.mkdir(results_dir)
+
         new_template = template.replace('REPLACENAME', sample)
-        new_template = new_template.replace('REPLACEOUT', outdir+'/'+sample)
+        new_template = new_template.replace('REPLACEOUT', results_dir+'/'+sample)
         new_template = new_template.replace('REPLACEBAMCOPY', bam.replace('.bam','.copy.bam'))
         new_template = new_template.replace('REPLACEBAM', bam.replace('bam','bam'))
         new_template = new_template.replace('REPLACELIBBLAS',args.libblas_location)

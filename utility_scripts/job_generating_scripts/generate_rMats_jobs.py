@@ -8,6 +8,7 @@ parser.add_argument('jobs_directory', help='Directory to write jobs to')
 parser.add_argument('cram_base_directory', help='Directory with cramFiles')
 parser.add_argument('libblas_location', help='Location of directory with libblas library')
 parser.add_argument('ref_gtf', help='Reference gtf file location')
+parser.add_argument('--sample_split', help='Character to split file name on and take [0] as sample name', default='.cram')
 
 
 args = parser.parse_args()
@@ -30,6 +31,7 @@ def make_jobs(template):
     if not os.path.exists(jobs_dir):
         os.mkdir(jobs_dir)
     for cram in cram_files:
+        study_name = cram.split('/')[-2]
         x += 1
         if x % 25 == 0:
             batch_number += 1
@@ -37,9 +39,13 @@ def make_jobs(template):
             if not os.path.exists(jobs_dir):
                 os.mkdir(jobs_dir)
 
-        sample = cram.split('/')[-1].split('.cram')[0]
+        results_dir = outdir+'/'+study_name
+        if not os.path.exists(results_dir):
+            os.mkdir(results_dir)
+
+        sample = cram.split('/')[-1].split(args.sample_split)[0]
         new_template = template.replace('REPLACENAME', sample)
-        new_template = new_template.replace('REPLACEOUT', outdir+'/'+sample)
+        new_template = new_template.replace('REPLACEOUT', results_dir+'/'+sample)
         new_template = new_template.replace('REPLACECRAM', cram)
         new_template = new_template.replace('REPLACEBAMCOPY', cram.replace('.cram','.copy.bam'))
         new_template = new_template.replace('REPLACEBAM', cram.replace('cram','bam'))
