@@ -19,9 +19,9 @@ outdir = args.output_directory
 job_base_dir = args.jobs_directory
 
 if not os.path.exists(outdir):
-    os.mkdir(outdir)
+    os.makedirs(outdir)
 if not os.path.exists(job_base_dir):
-    os.mkdir(job_base_dir)
+    os.makedirs(job_base_dir)
 
 def make_jobs(template):
     for bam in bam_files:
