@@ -2,30 +2,31 @@ import argparse
 import glob
 import os
 
-parser = argparse.ArgumentParser(description='Generate rMATs files.')
+parser = argparse.ArgumentParser(description='Generate featureCounts files.')
 parser.add_argument('cram_base_directory', help='Directory with cramFiles')
 parser.add_argument('jobs_directory', help='Directory to write jobs to')
 parser.add_argument('output_directory', help='Outputdir to write results to')
 parser.add_argument('ref_gtf', help='Reference gtf file location')
-parser.add_argument('feature_type', help='Feature type to count (e.g. exon or transcript)')
-parser.add_argument('--extra_options', help='Extra options to give to featurecounts (e.g. -O --fraction',
-                     nargs='+')
+parser.add_argument('ref_meta_gtf', help='Reference gtf file location')
+#parser.add_argument('--extra_options', help='Extra options to give to featurecounts (e.g. -O --fraction',
+#                     nargs='+')
+#parser.add_argument('feature_type', help='Feature type to count (e.g. exon or transcript)')
 
 
 args = parser.parse_args()
-extra_options = []
-if args.extra_options:
-    for x in args.extra_options:
-        if len(x) == 1:
-            x = '-'+x
-        else:
-            x = '--'+x
-        extra_options.append(x)
-    extra_options = ' '.join(extra_options)
-else:
-    extra_options = ''
+#extra_options = []
+#if args.extra_options:
+#    for x in args.extra_options:
+#        if len(x) == 1:
+#            x = '-'+x
+#        else:
+#            x = '--'+x
+#        extra_options.append(x)
+#    extra_options = ' '.join(extra_options)
+#else:
+#    extra_options = ''
 
-cram_files = glob.glob(args.cram_base_directory+'/**/*cram', recursive=True)+glob.glob(args.cram_base_directory+'/**/*bam', recursive=True)
+cram_files = glob.glob(args.cram_base_directory+'/**/*.cram', recursive=True)+glob.glob(args.cram_base_directory+'/**/*.bam', recursive=True)
 print('found ',len(cram_files),'cram and bam files')
 
 outdir = args.output_directory
@@ -39,58 +40,112 @@ if not os.path.exists(job_base_dir):
 def make_jobs(template):
     x = 0
     batch_number = 0
-    jobs_dir = job_base_dir + 'batch'+str(batch_number)+'/'
-    if not os.path.exists(jobs_dir):
-        os.mkdir(jobs_dir)
+    prev_study = None
     for cram in cram_files:
+        if not cram.endswith('.cram') or cram.endswith('.bam'):
+            continue
+        if 'AMP_AD' in cram:
+            study = cram.split('/')[-2]
+        else:
+            study = cram.split('/pipelines/')[0].split('/')[-1]
+        if study == 'BPD':
+            continue
+        if study != prev_study:
+            batch_number = 0
+            x = 0
+        if study == '':
+            print(cram)
+        jobs_dir = job_base_dir + '/'+study+'/batch'+str(batch_number)+'/'
+        if not os.path.exists(jobs_dir):
+            os.makedirs(jobs_dir)
         x += 1
         if x % 25 == 0:
             batch_number += 1
-            jobs_dir = job_base_dir + 'batch'+str(batch_number)+'/'
+            jobs_dir = job_base_dir + '/'+study+'/batch'+str(batch_number)+'/'
             if not os.path.exists(jobs_dir):
-                os.mkdir(jobs_dir)
-
-        sample = cram.split('/')[-1].split('.cram')[0]
+                os.makedirs(jobs_dir)
+        if study == 'MSBB':
+            sample = cram.split('/')[-1].split('.accepted_hits')[0].split('_resequenced')[0]
+        elif study == 'MayoCBE' or study == 'GTEx' or study == 'TargetALS':
+            sample = cram.split('/')[-1].split('.')[0]
+        elif study == 'psychEncode':
+            sample = cram.split('/')[-1].split(".cram")[0].replace("individualID.","").replace("specimenID.","")
+        else:
+            print(study)
+            print(cram)
+            raise RuntimeError('Unknown study: '+study)
         new_template = template.replace('REPLACENAME', sample)
-        new_template = new_template.replace('REPLACEOUT', outdir+'/'+sample)
+        new_template = new_template.replace('REPLACEOUT', outdir+'/'+study+'/'+sample)
         new_template = new_template.replace('REPLACECRAM', cram)
         new_template = new_template.replace('REPLACEBAM', cram.replace('cram','bam'))
         new_template = new_template.replace('REPLACEGTF',args.ref_gtf)
-        new_template = new_template.replace('REPLACEFEATURETYPE',args.feature_type)
-        new_template = new_template.replace('REPLACEEXTRAOPTIONS',extra_options)
+        new_template = new_template.replace('REPLACEMETAEXONGTF',args.ref_gtf)
+#        new_template = new_template.replace('REPLACEFEATURETYPE',args.feature_type)
+#        new_template = new_template.replace('REPLACEEXTRAOPTIONS',extra_options)
         with open(jobs_dir+'/'+sample+'.sh','w') as out:
             out.write(new_template)
-
+        prev_study = study
 
 
 template = '''#!/bin/bash
-#SBATCH --job-name=rMats_REPLACENAME
+#SBATCH --job-name=featureCounts_REPLACENAME
 #SBATCH --output=REPLACENAME.out
 #SBATCH --error=REPLACENAME.err
 #SBATCH --time=06:00:00
 #SBATCH --cpus-per-task 1
 #SBATCH --mem 8gb
 #SBATCH --nodes 1
-module load rMATS/4.0.2-foss-2015b-Python-2.7.11
+
+set -e
+set -u
+
+module load Subread/1.6.4-foss-2015b
 module load SAMtools
 
 echo $TMPDIR
 echo "converting cram to bam"
 samtools view -hb REPLACECRAM > $TMPDIR/$(basename REPLACEBAM)
 
-featureCounts \
-    -f \ # read summarization will be performed at featurelevel  (eg.   exon  level)
-    -C \ # chimeric fragments (those fragments that have their  two  ends  aligned  to  different  chromosomes)  will  NOT be counted
-    -s 0 \ # un-stranded
-    -p \ #  fragments (or templates) will be counted insteadof reads.  This option is only applicable for paired-end reads.
-    -t REPLACEFEATURETYPE \ #  feature type.  Only rows which have the matchedfeature type in the provided GTF annotation file will be in-cluded for read counting
-    -g gene_id \ # attribute type used to group features (eg. exons) into meta-features (eg. genes) when GTF annotation is pro-vided. ‘geneid’ by default. This attribute type is usually thegene identifier.
-    -O \ # reads (or fragments if-pis specified) will be al-lowed to be assigned to more than one matched meta-feature
-    -−fraction \ # each overlapping feature will receive a count of 1/y, where y is the total number of features overlapping with the read
-    -a REPLACEGTF \
-    -o REPLACEOUT \
-    $TMPDIR/$(basename REPLACEBAM) \
-    REPLACEEXTRAOPTIONS
+
+mkdir -p REPLACEOUT
+
+#   -f          read summarization will be performed at featurelevel  (eg.   exon  level)
+#   -C          chimeric fragments (those fragments that have their  two  ends  aligned  to  different  chromosomes)  will  NOT be counted
+#   -s 0        un-stranded
+#   -p          fragments (or templates) will be counted insteadof reads.  This option is only applicable for paired-end reads.
+#   -t exon     feature type.  Only rows which have the matchedfeature type in the provided GTF annotation file will be in-cluded for read counting
+#   -g gene_id  attribute type used to group features (eg. exons) into meta-features (eg. genes) when GTF annotation is pro-vided. ‘geneid’ by default. This attribute type is usually thegene identifier.
+#   -O          reads (or fragments if-pis specified) will be al-lowed to be assigned to more than one matched meta-feature
+#   --fraction  each overlapping feature will receive a count of 1/y, where y is the total number of features overlapping with the read
+featureCounts -f -C -s 0 -p -t exon -g gene_id -O \\
+    -a REPLACEGTF \\
+    -o REPLACEOUT.exon.countAll.txt \\
+    $TMPDIR/$(basename REPLACEBAM)
+
+featureCounts -f -C -s 0 -p -t exon -g gene_id -O --fraction \\
+    -a REPLACEGTF \\
+    -o REPLACEOUT.exon.countFraction.txt \\
+    $TMPDIR/$(basename REPLACEBAM)
+
+featureCounts -f -C -s 0 -p exonic_part -g gene_id -O \\
+    -a REPLACEMETAEXONGTF \\
+    -o REPLACEOUT.metaExon.countAll.txt \\
+    $TMPDIR/$(basename REPLACEBAM)
+
+featureCounts -f -C s 0 -p -t exonic_part -g gene_id -O --fraction \\
+    -a REPLACEMETAEXONGTF \\
+    -o REPLACEOUT.metaExon.countFraction.txt \\
+    $TMPDIR/$(basename REPLACEBAM)
+
+featureCounts -f -C -s 0 -p -t transcript -g gene_id -O \\
+    -a REPLACEGTF \\
+    -o REPLACEOUT.transcript.countAll.txt \\
+    $TMPDIR/$(basename REPLACEBAM)
+
+featureCounts -f -C -s 0 -p -t transcript -g gene_id -O --fraction \\
+    -a REPLACEGTF \\
+    -o REPLACEOUT.transcript.countFraction.txt \\
+    $TMPDIR/$(basename REPLACEBAM)
 
 if [ $? -eq 0 ];
 then
