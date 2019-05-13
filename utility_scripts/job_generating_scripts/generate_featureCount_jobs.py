@@ -102,15 +102,17 @@ set -u
 module load Subread/1.6.4-foss-2015b
 module load SAMtools
 
-echo "converting cram to bam"
 if [[ "$REPLACECRAM" == *cram ]];
 then
+    echo "converting cram to bam"
     samtools view -hb REPLACECRAM > $TMPDIR/$(basename REPLACEBAM)
     INPUTBAM=$TMPDIR/$(basename REPLACEBAM)
 else
+    echo "Input file is already in bam format, not conversion needed"
     INPUTBAM=REPLACECRAM
 fi
 
+echo "Using $INPUTBAM as input file"
 
 #   -f          read summarization will be performed at featurelevel  (eg.   exon  level)
 #   -C          chimeric fragments (those fragments that have their  two  ends  aligned  to  different  chromosomes)  will  NOT be counted
@@ -121,36 +123,42 @@ fi
 #   -O          reads (or fragments if-pis specified) will be al-lowed to be assigned to more than one matched meta-feature
 #   --fraction  each overlapping feature will receive a count of 1/y, where y is the total number of features overlapping with the read
 
+echo "Start exon.countAll"
 mkdir -p REPLACEOUT/exon.countAll
 featureCounts -f -C -s 0 -p -t exon -g gene_id -O \\
     -a REPLACEGTF \\
     -o REPLACEOUT/exon.countAll/REPLACENAME.exon.countAll.txt \\
     $INPUTBAM
 
+echo "Start exon.countFraction"
 mkdir -p REPLACEOUT/exon.countFraction
 featureCounts -f -C -s 0 -p -t exon -g gene_id -O --fraction \\
     -a REPLACEGTF \\
     -o REPLACEOUT/exon.countFraction/REPLACENAME.exon.countFraction.txt \\
     $INPUTBAM
 
+echo "Start metaExon.countAll"
 mkdir -p REPLACEOUT/metaExon.countFraction
 featureCounts -f -C -s 0 -p -t exonic_part -g gene_id -O \\
     -a REPLACEMETAEXONGTF \\
     -o REPLACEOUT/metaExon.countAll/REPLACENAME.metaExon.countAll.txt \\
     $INPUTBAM
 
+echo "Start metaExon.countFraction"
 mkdir -p REPLACEOUT/metaExon.countFraction
 featureCounts -f -C -s 0 -p -t exonic_part -g gene_id -O --fraction \\
     -a REPLACEMETAEXONGTF \\
     -o REPLACEOUT/metaExon.countFraction/REPLACENAME.metaExon.countFraction.txt \\
     $INPUTBAM
 
+echo "Start transcript.countAll"
 mkdir -p REPLACEOUT/transcript.countAll
 featureCounts -f -C -s 0 -p -t transcript -g gene_id -O \\
     -a REPLACEGTF \\
     -o REPLACEOUT/transcript.countAll/REPLACENAME.transcript.countAll.txt \\
     $INPUTBAM
 
+echo "Start transcript.countFraction"
 mkdir -p REPLACEOUT/transcript.countFraction
 featureCounts -f -C -s 0 -p -t transcript -g gene_id -O --fraction \\
     -a REPLACEGTF \\
