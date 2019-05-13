@@ -143,7 +143,7 @@ featureCounts -f -C -s 0 -p -t exon -g gene_id -O --fraction \\
     $INPUTBAM
 
 echo "Start metaExon.countAll"
-mkdir -p REPLACEOUT/metaExon.countFraction
+mkdir -p REPLACEOUT/metaExon.countAll
 featureCounts -f -C -s 0 -p -t exonic_part -g gene_id -O \\
     -a REPLACEMETAEXONGTF \\
     -o REPLACEOUT/metaExon.countAll/REPLACENAME.metaExon.countAll.txt \\
