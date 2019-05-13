@@ -42,7 +42,7 @@ def make_jobs(template):
     batch_number = 0
     prev_study = None
     for cram in cram_files:
-        if not cram.endswith('.cram') or cram.endswith('.bam'):
+        if not cram.endswith('.cram') and not cram.endswith('.bam'):
             continue
         if 'AMP_AD' in cram:
             study = cram.split('/')[-2]
@@ -79,7 +79,7 @@ def make_jobs(template):
         new_template = new_template.replace('REPLACECRAM', cram)
         new_template = new_template.replace('REPLACEBAM', cram.replace('cram','bam'))
         new_template = new_template.replace('REPLACEGTF',args.ref_gtf)
-        new_template = new_template.replace('REPLACEMETAEXONGTF',args.ref_gtf)
+        new_template = new_template.replace('REPLACEMETAEXONGTF',args.ref_meta_gtf)
 #        new_template = new_template.replace('REPLACEFEATURETYPE',args.feature_type)
 #        new_template = new_template.replace('REPLACEEXTRAOPTIONS',extra_options)
         with open(jobs_dir+'/'+sample+'.sh','w') as out:
@@ -102,10 +102,14 @@ set -u
 module load Subread/1.6.4-foss-2015b
 module load SAMtools
 
-echo $TMPDIR
 echo "converting cram to bam"
-samtools view -hb REPLACECRAM > $TMPDIR/$(basename REPLACEBAM)
-
+if [[ "$REPLACECRAM" == *cram ]];
+then
+    samtools view -hb REPLACECRAM > $TMPDIR/$(basename REPLACEBAM)
+    INPUTBAM=$TMPDIR/$(basename REPLACEBAM)
+else
+    INPUTBAM=REPLACECRAM
+fi
 
 mkdir -p REPLACEOUT
 
@@ -120,38 +124,42 @@ mkdir -p REPLACEOUT
 featureCounts -f -C -s 0 -p -t exon -g gene_id -O \\
     -a REPLACEGTF \\
     -o REPLACEOUT.exon.countAll.txt \\
-    $TMPDIR/$(basename REPLACEBAM)
+    $INPUTBAM
 
 featureCounts -f -C -s 0 -p -t exon -g gene_id -O --fraction \\
     -a REPLACEGTF \\
     -o REPLACEOUT.exon.countFraction.txt \\
-    $TMPDIR/$(basename REPLACEBAM)
+    \$INPUTBAM
+    $INPUTBAM
 
-featureCounts -f -C -s 0 -p exonic_part -g gene_id -O \\
+featureCounts -f -C -s 0 -p -t exonic_part -g gene_id -O \\
     -a REPLACEMETAEXONGTF \\
     -o REPLACEOUT.metaExon.countAll.txt \\
-    $TMPDIR/$(basename REPLACEBAM)
+    $INPUTBAM
 
-featureCounts -f -C s 0 -p -t exonic_part -g gene_id -O --fraction \\
+featureCounts -f -C -s 0 -p -t exonic_part -g gene_id -O --fraction \\
     -a REPLACEMETAEXONGTF \\
     -o REPLACEOUT.metaExon.countFraction.txt \\
-    $TMPDIR/$(basename REPLACEBAM)
+    $INPUTBAM
 
 featureCounts -f -C -s 0 -p -t transcript -g gene_id -O \\
     -a REPLACEGTF \\
     -o REPLACEOUT.transcript.countAll.txt \\
-    $TMPDIR/$(basename REPLACEBAM)
+    $INPUTBAM
 
 featureCounts -f -C -s 0 -p -t transcript -g gene_id -O --fraction \\
     -a REPLACEGTF \\
     -o REPLACEOUT.transcript.countFraction.txt \\
-    $TMPDIR/$(basename REPLACEBAM)
+    $INPUTBAM
 
 if [ $? -eq 0 ];
 then
     echo "succes!"
     echo "returncode: $?"
-    rm $TMPDIR/$(basename REPLACEBAM)
+    if [[ "$REPLACECRAM" == *cram ]];
+    then
+        rm $INPUTBAM
+    fi
 else
     echo "FAIL!"
     echo "returncode: $?"
