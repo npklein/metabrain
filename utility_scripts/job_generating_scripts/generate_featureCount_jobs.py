@@ -75,7 +75,7 @@ def make_jobs(template):
             print(cram)
             raise RuntimeError('Unknown study: '+study)
         new_template = template.replace('REPLACENAME', sample)
-        new_template = new_template.replace('REPLACEOUT', outdir+'/'+study+'/'+sample)
+        new_template = new_template.replace('REPLACEOUT', outdir+'/'+study+'/')
         new_template = new_template.replace('REPLACECRAM', cram)
         new_template = new_template.replace('REPLACEBAM', cram.replace('cram','bam'))
         new_template = new_template.replace('REPLACEGTF',args.ref_gtf)
@@ -111,7 +111,6 @@ else
     INPUTBAM=REPLACECRAM
 fi
 
-mkdir -p REPLACEOUT
 
 #   -f          read summarization will be performed at featurelevel  (eg.   exon  level)
 #   -C          chimeric fragments (those fragments that have their  two  ends  aligned  to  different  chromosomes)  will  NOT be counted
@@ -121,35 +120,41 @@ mkdir -p REPLACEOUT
 #   -g gene_id  attribute type used to group features (eg. exons) into meta-features (eg. genes) when GTF annotation is pro-vided. ‘geneid’ by default. This attribute type is usually thegene identifier.
 #   -O          reads (or fragments if-pis specified) will be al-lowed to be assigned to more than one matched meta-feature
 #   --fraction  each overlapping feature will receive a count of 1/y, where y is the total number of features overlapping with the read
+
+mkdir -p REPLACEOUT/exon.countAll
 featureCounts -f -C -s 0 -p -t exon -g gene_id -O \\
     -a REPLACEGTF \\
-    -o REPLACEOUT.exon.countAll.txt \\
+    -o REPLACEOUT/exon.countAll/REPLACENAME.exon.countAll.txt \\
     $INPUTBAM
 
+mkdir -p REPLACEOUT/exon.countFraction
 featureCounts -f -C -s 0 -p -t exon -g gene_id -O --fraction \\
     -a REPLACEGTF \\
-    -o REPLACEOUT.exon.countFraction.txt \\
-    \$INPUTBAM
+    -o REPLACEOUT/exon.countFraction/REPLACENAME.exon.countFraction.txt \\
     $INPUTBAM
 
+mkdir -p REPLACEOUT/metaExon.countFraction
 featureCounts -f -C -s 0 -p -t exonic_part -g gene_id -O \\
     -a REPLACEMETAEXONGTF \\
-    -o REPLACEOUT.metaExon.countAll.txt \\
+    -o REPLACEOUT/metaExon.countAll/REPLACENAME.metaExon.countAll.txt \\
     $INPUTBAM
 
+mkdir -p REPLACEOUT/metaExon.countFraction
 featureCounts -f -C -s 0 -p -t exonic_part -g gene_id -O --fraction \\
     -a REPLACEMETAEXONGTF \\
-    -o REPLACEOUT.metaExon.countFraction.txt \\
+    -o REPLACEOUT/metaExon.countFraction/REPLACENAME.metaExon.countFraction.txt \\
     $INPUTBAM
 
+mkdir -p REPLACEOUT/transcript.countAll
 featureCounts -f -C -s 0 -p -t transcript -g gene_id -O \\
     -a REPLACEGTF \\
-    -o REPLACEOUT.transcript.countAll.txt \\
+    -o REPLACEOUT/transcript.countAll/REPLACENAME.transcript.countAll.txt \\
     $INPUTBAM
 
+mkdir -p REPLACEOUT/transcript.countFraction
 featureCounts -f -C -s 0 -p -t transcript -g gene_id -O --fraction \\
     -a REPLACEGTF \\
-    -o REPLACEOUT.transcript.countFraction.txt \\
+    -o REPLACEOUT/transcript.countFraction/REPLACENAME.transcript.countFraction.txt \\
     $INPUTBAM
 
 if [ $? -eq 0 ];
