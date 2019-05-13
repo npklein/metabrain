@@ -66,7 +66,7 @@ def make_jobs(template):
                 os.makedirs(jobs_dir)
         if study == 'MSBB':
             sample = cram.split('/')[-1].split('.accepted_hits')[0].split('_resequenced')[0]
-        elif study == 'MayoCBE' or study == 'GTEx' or study == 'TargetALS':
+        elif study == 'MayoCBE' or study == 'GTEx' or study == 'TargetALS' or study == 'ENA':
             sample = cram.split('/')[-1].split('.')[0]
         elif study == 'psychEncode':
             sample = cram.split('/')[-1].split(".cram")[0].replace("individualID.","").replace("specimenID.","")
