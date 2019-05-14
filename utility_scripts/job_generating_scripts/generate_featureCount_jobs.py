@@ -68,12 +68,17 @@ def make_jobs(template):
                 os.makedirs(jobs_dir)
         if study == 'MSBB':
             sample = cram.split('/')[-1].split('.accepted_hits')[0].split('_resequenced')[0]
-        elif study == 'MayoCBE' or study == 'GTEx' or study == 'TargetALS' or study == 'NABEC' or study == 'Brainseq' or study == 'CMC_HBCC' or study == 'ENA':
+        elif study == 'MayoCBE' or study == 'GTEx' or study == 'TargetALS' or study == 'NABEC' or study == 'Brainseq' or study == 'ENA':
             sample = cram.split('/')[-1].split('.')[0]
+        elif study == 'MayoTCX':
+            if 'Aligned.out' in cram:
+                sample = cram.split('/')[-1].split('Aligned')[0]
+            else:
+                sample = cram.split('/')[-1].split('.cram')[0]
         elif study == 'ucl-upload-biogen':
             sample = cram.split('/')[-1].split('.')[0]
             study = 'Braineac'    
-        elif study == 'psychEncode' or study == 'CMC':
+        elif study == 'psychEncode' or study == 'CMC' or study == 'CMC_HBCC':
             sample = cram.split('/')[-1].split(".cram")[0].replace("individualID.","").replace("specimenID.","")
         else:
             print(study)
@@ -141,6 +146,7 @@ featureCounts -f -C -s 0 -p -t exon -g gene_id -O --fraction \\
     -a REPLACEGTF \\
     -o REPLACEOUT/exon.countFraction/REPLACENAME.exon.countFraction.txt \\
     $INPUTBAM
+gzip REPLACEOUT/exon.countFraction/REPLACENAME.exon.countFraction.txt
 
 echo "Start metaExon.countAll"
 mkdir -p REPLACEOUT/metaExon.countAll
@@ -148,6 +154,7 @@ featureCounts -f -C -s 0 -p -t exonic_part -g gene_id -O \\
     -a REPLACEMETAEXONGTF \\
     -o REPLACEOUT/metaExon.countAll/REPLACENAME.metaExon.countAll.txt \\
     $INPUTBAM
+gzip REPLACEOUT/metaExon.countAll/REPLACENAME.metaExon.countAll.txt
 
 echo "Start metaExon.countFraction"
 mkdir -p REPLACEOUT/metaExon.countFraction
@@ -155,6 +162,7 @@ featureCounts -f -C -s 0 -p -t exonic_part -g gene_id -O --fraction \\
     -a REPLACEMETAEXONGTF \\
     -o REPLACEOUT/metaExon.countFraction/REPLACENAME.metaExon.countFraction.txt \\
     $INPUTBAM
+gzip REPLACEOUT/metaExon.countFraction/REPLACENAME.metaExon.countFraction.txt
 
 echo "Start transcript.countAll"
 mkdir -p REPLACEOUT/transcript.countAll
@@ -162,6 +170,7 @@ featureCounts -f -C -s 0 -p -t transcript -g gene_id -O \\
     -a REPLACEGTF \\
     -o REPLACEOUT/transcript.countAll/REPLACENAME.transcript.countAll.txt \\
     $INPUTBAM
+gzip REPLACEOUT/transcript.countAll/REPLACENAME.transcript.countAll.txt
 
 echo "Start transcript.countFraction"
 mkdir -p REPLACEOUT/transcript.countFraction
@@ -169,6 +178,7 @@ featureCounts -f -C -s 0 -p -t transcript -g gene_id -O --fraction \\
     -a REPLACEGTF \\
     -o REPLACEOUT/transcript.countFraction/REPLACENAME.transcript.countFraction.txt \\
     $INPUTBAM
+gzip REPLACEOUT/transcript.countFraction/REPLACENAME.transcript.countFraction.txt
 
 if [ $? -eq 0 ];
 then
