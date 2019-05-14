@@ -135,51 +135,64 @@ echo "Using $INPUTBAM as input file"
 
 echo "Start exon.countAll"
 mkdir -p REPLACEOUT/exon.countAll
-TMPOUT=$TMPDIR/exon.countAll/REPLACENAME.exon.countAll.txt
+TMPOUT=$TMPDIR/REPLACENAME.exon.countAll.txt
 featureCounts -f -C -s 0 -p -t exon -g gene_id -O \\
     -a REPLACEGTF \\
-    -o REPLACEOUT/exon.countAll/REPLACENAME.exon.countAll.txt \\
+    -o $TMPOUT \\
     $INPUTBAM
+gzip $TMPOUT
+rsync -vP $TMPOUT* REPLACEOUT/exon.countAll/
 
 echo "Start exon.countFraction"
 mkdir -p REPLACEOUT/exon.countFraction
+TMPOUT=$TMPDIR/REPLACENAME.exon.countFraction.txt
 featureCounts -f -C -s 0 -p -t exon -g gene_id -O --fraction \\
     -a REPLACEGTF \\
-    -o REPLACEOUT/exon.countFraction/REPLACENAME.exon.countFraction.txt \\
+    -o $TMPOUT \\
     $INPUTBAM
-gzip REPLACEOUT/exon.countFraction/REPLACENAME.exon.countFraction.txt
+gzip $TMPOUT
+rsync -vP $TMPOUT* REPLACEOUT/exon.countFraction/
 
 echo "Start metaExon.countAll"
 mkdir -p REPLACEOUT/metaExon.countAll
+TMPOUT=$TMPDIR/REPLACENAME.metaExon.countAll.txt
 featureCounts -f -C -s 0 -p -t exonic_part -g gene_id -O \\
     -a REPLACEMETAEXONGTF \\
-    -o REPLACEOUT/metaExon.countAll/REPLACENAME.metaExon.countAll.txt \\
+    -o $TMPOUT \\
     $INPUTBAM
-gzip REPLACEOUT/metaExon.countAll/REPLACENAME.metaExon.countAll.txt
+gzip $TMPOUT
+rsync -vP $TMPOUT* REPLACEOUT/metaExon.countAll/
 
 echo "Start metaExon.countFraction"
 mkdir -p REPLACEOUT/metaExon.countFraction
+TMPOUT=$TMPDIR/REPLACENAME.metaExon.countFraction.txt
 featureCounts -f -C -s 0 -p -t exonic_part -g gene_id -O --fraction \\
     -a REPLACEMETAEXONGTF \\
-    -o REPLACEOUT/metaExon.countFraction/REPLACENAME.metaExon.countFraction.txt \\
+    -o $TMPOUT \\
     $INPUTBAM
-gzip REPLACEOUT/metaExon.countFraction/REPLACENAME.metaExon.countFraction.txt
+gzip $TMPOUT
+rsync -vP $TMPOUT* REPLACEOUT/metaExon.countFraction/
 
 echo "Start transcript.countAll"
-mkdir -p REPLACEOUT/transcript.countAll
+mkdir -p REPLACEOUT/transcript.countAll/
+TMPOUT=$TMPDIR/REPLACENAME.transcript.countAll.txt
 featureCounts -f -C -s 0 -p -t transcript -g gene_id -O \\
     -a REPLACEGTF \\
-    -o REPLACEOUT/transcript.countAll/REPLACENAME.transcript.countAll.txt \\
+    -o $TMPOUT \\
     $INPUTBAM
-gzip REPLACEOUT/transcript.countAll/REPLACENAME.transcript.countAll.txt
+gzip $TMPOUT
+rsync -vP $TMPOUT* REPLACEOUT/transcript.countAll//
 
 echo "Start transcript.countFraction"
 mkdir -p REPLACEOUT/transcript.countFraction
+TMPOUT=$TMPDIR/REPLACENAME.transcript.countFraction.txt
 featureCounts -f -C -s 0 -p -t transcript -g gene_id -O --fraction \\
     -a REPLACEGTF \\
-    -o REPLACEOUT/transcript.countFraction/REPLACENAME.transcript.countFraction.txt \\
+    -o $TMPOUT \\
     $INPUTBAM
-gzip REPLACEOUT/transcript.countFraction/REPLACENAME.transcript.countFraction.txt
+
+gzip $TMPOUT
+rsync -vP $TMPOUT* REPLACEOUT/transcript.countFraction/
 
 if [ $? -eq 0 ];
 then
