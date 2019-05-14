@@ -135,6 +135,7 @@ echo "Using $INPUTBAM as input file"
 
 echo "Start exon.countAll"
 mkdir -p REPLACEOUT/exon.countAll
+TMPOUT=$TMPDIR/exon.countAll/REPLACENAME.exon.countAll.txt
 featureCounts -f -C -s 0 -p -t exon -g gene_id -O \\
     -a REPLACEGTF \\
     -o REPLACEOUT/exon.countAll/REPLACENAME.exon.countAll.txt \\
