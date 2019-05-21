@@ -70,7 +70,7 @@ def make_jobs(template):
             sample = cram.split('/')[-1].split('.accepted_hits')[0].split('_resequenced')[0]
         elif study == 'MayoCBE' or study == 'GTEx' or study == 'TargetALS' or study == 'NABEC' or study == 'Brainseq' or study == 'ENA':
             sample = cram.split('/')[-1].split('.')[0]
-        elif study == 'MayoTCX':
+        elif study == 'MayoTCX' or study == 'ROSMAP':
             if 'Aligned.out' in cram:
                 sample = cram.split('/')[-1].split('Aligned')[0]
             else:
