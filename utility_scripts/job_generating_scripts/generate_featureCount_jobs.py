@@ -80,6 +80,8 @@ def make_jobs(template):
             study = 'Braineac'    
         elif study == 'psychEncode' or study == 'CMC' or study == 'CMC_HBCC':
             sample = cram.split('/')[-1].split(".cram")[0].replace("individualID.","").replace("specimenID.","")
+            if '.Aligned' in sample:
+                sample = sample.split('.Aligned')[0]
         else:
             print(study)
             print(cram)
