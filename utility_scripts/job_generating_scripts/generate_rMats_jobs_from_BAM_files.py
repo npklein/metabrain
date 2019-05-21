@@ -34,7 +34,10 @@ def make_jobs(template):
             sample = bam.split('/')[-1].split('.accepted_hits')[0].split('_resequenced')[0]
         elif batch == 'MayoCBE':
             sample = bam.split('/')[-1].split('.')[0]
+        elif batch == 'MayoTCX' or batch == 'ROSMAP':
+            sample = bam.split('/')[-1].split('.bam')[0].split('Aligned')[0]
         else:
+            print(bam)
             raise RuntimeError('Unknown batch: '+batch)
 
         results_dir = outdir+'/'+batch
