@@ -49,7 +49,7 @@ def make_jobs(template):
         elif 'CMC_HBCC' in cram:
             study = 'CMC_HBCC'
         else:
-            study = cram.split('/pipelines/')[0].split('/')[-1]
+            study = cram.split('/pipelines/')[0].split('/')[-2]
         if study == 'BPD':
             continue
         if study != prev_study:
