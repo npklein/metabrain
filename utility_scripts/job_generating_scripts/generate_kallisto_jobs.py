@@ -167,7 +167,7 @@ elif [ "$PAIRED" -eq 0 ];
 then
     samtools fastq \
         -@ 4 \
-        -1 TMPFASTQ1 \\
+        -1 $TMPFASTQ1 \\
         $TMPDIR/$(basename $INPUTBAM)
 
     kallisto quant \\
