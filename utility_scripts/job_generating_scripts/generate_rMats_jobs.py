@@ -26,19 +26,17 @@ if not os.path.exists(job_base_dir):
 
 def make_jobs(template):
     x = 0
-    batch_number = 0
-    jobs_dir = job_base_dir + 'batch'+str(batch_number)+'/'
-    if not os.path.exists(jobs_dir):
-        os.mkdir(jobs_dir)
+    studies = set([])
     for cram in cram_files:
-        study_name = cram.split('/')[-2]
+        if 'psychEncode' in cram:
+            study_name = cram.split('pipelines/')[1].split('/')[0]
+        else:
+            study_name = cram.split('/pipelines/')[0].split('/')[-1]
+        studies.add(study_name)
+        jobs_dir = job_base_dir +study_name+'/' 
+        if not os.path.exists(jobs_dir):
+            os.mkdir(jobs_dir)
         x += 1
-        if x % 25 == 0:
-            batch_number += 1
-            jobs_dir = job_base_dir + 'batch'+str(batch_number)+'/'
-            if not os.path.exists(jobs_dir):
-                os.mkdir(jobs_dir)
-
         results_dir = outdir+'/'+study_name
         if not os.path.exists(results_dir):
             os.mkdir(results_dir)
@@ -53,7 +51,7 @@ def make_jobs(template):
         new_template = new_template.replace('REPLACEGTF',args.ref_gtf)
         with open(jobs_dir+'/'+sample+'.sh','w') as out:
             out.write(new_template)
-
+    print('Added: '+','.join(studies))
 
 
 template = '''#!/bin/bash
