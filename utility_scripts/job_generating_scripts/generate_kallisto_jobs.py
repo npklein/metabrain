@@ -123,6 +123,7 @@ fi
 
 TMPFASTQ1=$TMPDIR/$(basename ${INPUTBAM%.bam}.R1.fastq)
 TMPFASTQ2=$TMPDIR/$(basename ${INPUTBAM%.bam}.R2.fastq)
+TMPFASTQ3=$TMPDIR/$(basename ${INPUTBAM%.bam}.rest.fastq)
 
 # test if it is single end or paired end. 
 # 1. get the header out of the BAM file (samtools view -H). This contains the use command that was used to make BAM file
@@ -149,11 +150,11 @@ fi
 TMPOUT=$TMPDIR/REPLACENAME/
 if [ "$PAIRED" -eq 1 ];
 then
-    samtools fastq \
-        -@ 4 \
+    samtools fastq \\
+        -@ 4 \\
         -1 $TMPFASTQ1 \\
         -2 $TMPFASTQ2 \\
-        $TMPDIR/$(basename $INPUTBAM)
+        $TMPDIR/$(basename $INPUTBAM) > $TMPFASTQ3
 
     kallisto quant \\
         --bias \\
@@ -165,11 +166,22 @@ then
 
 elif [ "$PAIRED" -eq 0 ];
 then
-    samtools fastq \
-        -@ 4 \
+    samtools fastq \\
+        -@ 4 \\
         -1 $TMPFASTQ1 \\
-        $TMPDIR/$(basename $INPUTBAM)
+        $TMPDIR/$(basename $INPUTBAM) > $TMPFASTQ3
+    
+    # see if the file size of TMPFASTQ3 > TMPFATQ1, if so, use that
+    filesize1=$(stat -c%s $TMPFASTQ1)
+    filesize2=$(stat -c%s $TMPFASTQ3)
 
+    if [[ "$filesize1" -gt "$filesize2" ]]; 
+    then
+        echo "$TMPFASTQ1 larger than $TMPFASTQ3, use for kallisto"
+    else
+        echo "$TMPFASTQ3 larger than $TMPFASTQ1, use for kallisto"
+        TMPFASTQ1=$TMPFASTQ3
+    fi
     kallisto quant \\
         --bias -t 4 \\
         --single \\
