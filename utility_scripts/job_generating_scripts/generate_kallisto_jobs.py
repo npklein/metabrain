@@ -23,8 +23,6 @@ if not os.path.exists(job_base_dir):
     os.makedirs(job_base_dir)
 
 def make_jobs(template):
-    x = 0
-    batch_number = 0
     prev_study = None
     for cram in cram_files:
         if not cram.endswith('.cram') and not cram.endswith('.bam'):
@@ -33,24 +31,21 @@ def make_jobs(template):
             study = cram.split('/')[-2]
         elif 'CMC_HBCC' in cram:
             study = 'CMC_HBCC'
+        elif 'MayoCBE' in cram:
+            study = 'MayoCBE'
+        elif 'ROSMAP' in cram:
+            study = 'ROSMAP'
+        elif 'ENA' in cram:
+            study = 'ENA'
         else:
             study = cram.split('/pipelines/')[0].split('/')[-1]
         if study == 'BPD':
             continue
-        if study != prev_study:
-            batch_number = 0
-            x = 0
         if study == '':
             print(cram)
-        jobs_dir = job_base_dir + '/'+study+'/batch'+str(batch_number)+'/'
+        jobs_dir = job_base_dir + '/'+study+'/'
         if not os.path.exists(jobs_dir):
             os.makedirs(jobs_dir)
-        x += 1
-        if x % 25 == 0:
-            batch_number += 1
-            jobs_dir = job_base_dir + '/'+study+'/batch'+str(batch_number)+'/'
-            if not os.path.exists(jobs_dir):
-                os.makedirs(jobs_dir)
         if study == 'MSBB':
             sample = cram.split('/')[-1].split('.accepted_hits')[0].split('_resequenced')[0]
         elif study == 'MayoCBE' or study == 'GTEx' or study == 'TargetALS' or study == 'NABEC' or study == 'Brainseq' or study == 'ENA':
