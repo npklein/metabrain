@@ -61,6 +61,14 @@ def make_jobs(template):
             study = 'MayoTCX'
         elif 'MayoCBE' in cram:
             study = 'MayoCBE'
+        elif 'CMC' in cram:
+            study = 'CMC'
+        elif 'NABEC' in cram:
+            study = 'NABEC'
+        elif 'ucl-upload-biogen' in cram:
+            study = 'Braineac'
+        elif 'Brainseq' in cram:
+            study = 'Brainseq'
         else:
             study = cram.split('/pipelines/')[0].split('/')[-2]
         if study == '':
@@ -80,7 +88,7 @@ def make_jobs(template):
                 sample = cram.split('/')[-1].split('Aligned')[0]
             else:
                 sample = cram.split('/')[-1].split('.cram')[0]
-        elif study == 'ucl-upload-biogen':
+        elif study == 'Braineac':
             sample = cram.split('/')[-1].split('.')[0]
             study = 'Braineac'    
         elif study == 'BrainGVEx' or study == 'CMC' or study == 'CMC_HBCC' or study == 'UCLA_ASD' or study == 'BipSeq':
