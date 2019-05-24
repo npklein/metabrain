@@ -17,7 +17,9 @@ syn.login(user,password)
 
 print('Sync AMP-AD')
 download_MSBB = True#False
-download_MAYO = False
+download_MSBB = False
+download_MAYOTCX = False
+download_MAYOCBE = False
 download_ROSMAP = False#True
 download_all = False
 
@@ -36,11 +38,13 @@ if download_MSBB:
         # metadata MSBB
         files = synapseutils.syncFromSynapse(syn, 'syn7392158', path = 'metadata/')
 
-if download_MAYO:
+if download_MAYOCBE:
     # STAR MAYO
     files = synapseutils.syncFromSynapse(syn, 'syn12104376', path = 'MAYO/STAR/')
     # aligned BAM files Mayo
     files = synapseutils.syncFromSynapse(syn, 'syn8540821', path = 'BAMs/MayoCBE/')
+
+if download_MAYOTCX:
     files = synapseutils.syncFromSynapse(syn, 'syn8540820', path = 'BAMs/MayoTCX/')
 
     # metadata MAYO
@@ -49,12 +53,13 @@ if download_MAYO:
     files = synapseutils.syncFromSynapse(syn, 'syn3817650', path = 'metadata/')
 
 
+to_download = ['40_120416', '402_120503', '403_120503', '410_120503', '414_120503', '415_120503', '429_120507', '406_120503', '408_120503', '411_120503', '416_120503', '418_120507', '425_120507', '428_120507', '944_131107', '407_120503', '412_120503', '413_120503', '419_120507', '424_120507', '427_120507', '405_120503', '420_120507', '423_120507', '426_120507']
 if download_ROSMAP:
     # aligned bam files ROSMAP
     # only download certain files
     if not download_all:
         for file in syn.getChildren('syn8540863'):
-            if file['name'].startswith('4'):
+            if file['name'].split('Aligned')[0] in to_download:
                 synapseutils.syncFromSynapse(syn, file['id'], path = 'BAMs/ROSMAP/')
                 print(file['id'], file['name'])
     else:
