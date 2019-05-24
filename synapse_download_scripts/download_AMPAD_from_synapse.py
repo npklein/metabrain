@@ -16,17 +16,25 @@ syn.login(user,password)
 
 
 print('Sync AMP-AD')
-download_MSBB = False
+download_MSBB = True#False
 download_MAYO = False
-download_ROSMAP = True
+download_ROSMAP = False#True
+download_all = False
 
 # STAR MSBB
 if download_MSBB:
-    files = synapseutils.syncFromSynapse(syn, 'syn12104381', path = 'MSBB/STAR')
-    # metadata MSBB
-    files = synapseutils.syncFromSynapse(syn, 'syn7392158', path = 'metadata/')
-    # aligned BAM files MSBB
-    files = synapseutils.syncFromSynapse(syn, 'syn8540822', path = 'BAMs/MSBB/')
+    if not download_all:
+        for file in syn.getChildren('syn8540822'):
+            if file['name'].startswith('hB'):
+                synapseutils.syncFromSynapse(syn, file['id'], path = 'BAMs/MSBB/')
+                print(file['id'], file['name'])
+    else:
+        # aligned BAM files MSBB
+        files = synapseutils.syncFromSynapse(syn, 'syn8540822', path = 'BAMs/MSBB/')
+        # STAR MSBB
+        files = synapseutils.syncFromSynapse(syn, 'syn12104381', path = 'MSBB/STAR')
+        # metadata MSBB
+        files = synapseutils.syncFromSynapse(syn, 'syn7392158', path = 'metadata/')
 
 if download_MAYO:
     # STAR MAYO
@@ -42,7 +50,6 @@ if download_MAYO:
 
 
 if download_ROSMAP:
-    download_all = False
     # aligned bam files ROSMAP
     # only download certain files
     if not download_all:
