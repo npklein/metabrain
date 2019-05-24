@@ -46,6 +46,14 @@ def make_jobs(template):
             study = cram.split('/')[-2]
         elif 'CMC_HBCC' in cram:
             study = 'CMC_HBCC'
+        elif 'CMC' in cram:
+            study = 'CMC'
+        elif 'NABEC' in cram:
+            study = 'NABEC'
+        elif 'ucl-upload-biogen' in cram:
+            study = 'Braineac'
+        elif 'Brainseq' in cram:
+            study = 'Brainseq'
         else:
             study = cram.split('/pipelines/')[0].split('/')[-2]
         if study == 'BPD':
@@ -55,7 +63,6 @@ def make_jobs(template):
         jobs_dir = job_base_dir + '/'+study+'/'
         if not os.path.exists(jobs_dir):
             os.makedirs(jobs_dir)
-        x += 1
         if study == 'MSBB':
             sample = cram.split('/')[-1].split('.accepted_hits')[0].split('_resequenced')[0]
         elif study == 'MayoCBE' or study == 'GTEx' or study == 'TargetALS' or study == 'NABEC' or study == 'Brainseq' or study == 'ENA':
@@ -65,10 +72,10 @@ def make_jobs(template):
                 sample = cram.split('/')[-1].split('Aligned')[0]
             else:
                 sample = cram.split('/')[-1].split('.cram')[0]
-        elif study == 'ucl-upload-biogen':
+        elif study == 'Braineac':
             sample = cram.split('/')[-1].split('.')[0]
             study = 'Braineac'    
-        elif study == 'psychEncode' or study == 'CMC' or study == 'CMC_HBCC':
+        elif study == 'CMC' or study == 'CMC_HBCC':
             sample = cram.split('/')[-1].split(".cram")[0].replace("individualID.","").replace("specimenID.","")
             if '.Aligned' in sample:
                 sample = sample.split('.Aligned')[0]
