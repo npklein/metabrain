@@ -40,18 +40,42 @@ if not os.path.exists(job_base_dir):
 def make_jobs(template):
     prev_study = None
     for cram in cram_files:
-        if not cram.endswith('.cram') and not cram.endswith('.bam'):
+        if not cram.endswith('.cram') and not cram.endswith('.bam') or '/BPD/' in cram:
             continue
+        study = None
         if 'AMP_AD' in cram:
             study = cram.split('/')[-2]
         elif 'CMC_HBCC' in cram:
             study = 'CMC_HBCC'
+        elif 'BipSeq' in cram:
+            study = 'BipSeq'
+        elif 'UCLA_ASD' in cram:
+            study = 'UCLA_ASD'
+        elif 'BrainGVEx' in cram:
+            study = 'BrainGVEx'
+        elif 'GTEx' in cram:
+            study = 'GTEx'
+        elif 'TargetALS' in cram:
+            study = 'TargetALS'
+        elif 'MayoTCX' in cram:
+            study = 'MayoTCX'
+        elif 'MayoCBE' in cram:
+            study = 'MayoCBE'
+        elif 'CMC' in cram:
+            study = 'CMC'
+        elif 'NABEC' in cram:
+            study = 'NABEC'
+        elif 'ucl-upload-biogen' in cram:
+            study = 'Braineac'
+        elif 'Brainseq' in cram:
+            study = 'Brainseq'
         else:
             study = cram.split('/pipelines/')[0].split('/')[-2]
-        if study == 'BPD':
-            continue
         if study == '':
             print(cram)
+        if not study:
+            print(cram)
+            raise RuntimeError('Study not set')
         jobs_dir = job_base_dir + '/'+study+'/'
         if not os.path.exists(jobs_dir):
             os.makedirs(jobs_dir)
@@ -64,10 +88,10 @@ def make_jobs(template):
                 sample = cram.split('/')[-1].split('Aligned')[0]
             else:
                 sample = cram.split('/')[-1].split('.cram')[0]
-        elif study == 'ucl-upload-biogen':
+        elif study == 'Braineac':
             sample = cram.split('/')[-1].split('.')[0]
             study = 'Braineac'    
-        elif study == 'psychEncode' or study == 'CMC' or study == 'CMC_HBCC':
+        elif study == 'BrainGVEx' or study == 'CMC' or study == 'CMC_HBCC' or study == 'UCLA_ASD' or study == 'BipSeq':
             sample = cram.split('/')[-1].split(".cram")[0].replace("individualID.","").replace("specimenID.","")
             if '.Aligned' in sample:
                 sample = sample.split('.Aligned')[0]
