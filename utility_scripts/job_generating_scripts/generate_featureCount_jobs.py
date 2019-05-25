@@ -55,7 +55,6 @@ def make_jobs(template):
         jobs_dir = job_base_dir + '/'+study+'/'
         if not os.path.exists(jobs_dir):
             os.makedirs(jobs_dir)
-        x += 1
         if study == 'MSBB':
             sample = cram.split('/')[-1].split('.accepted_hits')[0].split('_resequenced')[0]
         elif study == 'MayoCBE' or study == 'GTEx' or study == 'TargetALS' or study == 'NABEC' or study == 'Brainseq' or study == 'ENA':
