@@ -28,16 +28,44 @@ def make_jobs(template):
     x = 0
     studies = set([])
     for cram in cram_files:
-        if 'psychEncode' in cram:
-            study_name = cram.split('pipelines/')[1].split('/')[0]
-        else:
-            study_name = cram.split('/pipelines/')[0].split('/')[-1]
-        studies.add(study_name)
-        jobs_dir = job_base_dir +study_name+'/' 
+        if not cram.endswith('.cram') and not cram.endswith('.bam') or '/BPD/' in cram:
+            continue
+        study = None
+        if 'AMP_AD' in cram:
+            study = cram.split('/')[-2]
+        elif 'CMC_HBCC' in cram:
+            study = 'CMC_HBCC'
+        elif 'BipSeq' in cram:
+            study = 'BipSeq'
+        elif 'UCLA_ASD' in cram:
+            study = 'UCLA_ASD'
+        elif 'BrainGVEx' in cram:
+            study = 'BrainGVEx'
+        elif 'GTEx' in cram:
+            study = 'GTEx'
+        elif 'TargetALS' in cram:
+            study = 'TargetALS'
+        elif 'MayoTCX' in cram:
+            study = 'MayoTCX'
+        elif 'MayoCBE' in cram:
+            study = 'MayoCBE'
+        elif 'CMC' in cram:
+            study = 'CMC'
+        elif 'NABEC' in cram:
+            study = 'NABEC'
+        elif 'ucl-upload-biogen' in cram:
+            study = 'Braineac'
+        elif 'Brainseq' in cram:
+            study = 'Brainseq'
+        if not study:
+            print(cram)
+            raise RuntimeError('Study not set')
+        studies.add(study)
+        jobs_dir = job_base_dir +study+'/' 
         if not os.path.exists(jobs_dir):
             os.mkdir(jobs_dir)
         x += 1
-        results_dir = outdir+'/'+study_name
+        results_dir = outdir+'/'+study
         if not os.path.exists(results_dir):
             os.mkdir(results_dir)
 
