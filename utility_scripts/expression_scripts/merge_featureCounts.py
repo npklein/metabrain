@@ -6,16 +6,14 @@ import gzip
 import sys
 parser = argparse.ArgumentParser(description='Merge multiple FeatureCount count files into a matrix. Uses featureCount_directory in which files are located to make matrix name')
 parser.add_argument('featureCount_directory', help='featureCount_directory which contains gzipped feature count .txt.gz files')
+parser.add_argument('feature_type', help='Type of feature that is being processed (e.g. exon or transcript')
 parser.add_argument('out_prefix', help='prefix of outfile')
 
 args = parser.parse_args()
 set_of_features = set([])
 featureCount_directory = args.featureCount_directory
 list_of_features = []
-if featureCount_directory.endswith('/'):
-    feature_type = featureCount_directory.split('/')[-2]
-else:
-    feature_type = featureCount_directory.split('/')[-1]
+feature_type = args.feature_type
 
 print(feature_type, featureCount_directory)
 sys.stdout.flush()
