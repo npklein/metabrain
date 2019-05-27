@@ -69,10 +69,6 @@ def make_jobs(template):
             study = 'Braineac'
         elif 'Brainseq' in cram:
             study = 'Brainseq'
-        else:
-            study = cram.split('/pipelines/')[0].split('/')[-2]
-        if study == '':
-            print(cram)
         if not study:
             print(cram)
             raise RuntimeError('Study not set')
