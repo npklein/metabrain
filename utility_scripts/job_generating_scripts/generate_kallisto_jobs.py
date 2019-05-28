@@ -1,3 +1,4 @@
+import sys
 import argparse
 import glob
 import os
@@ -13,6 +14,7 @@ args = parser.parse_args()
 
 cram_files = glob.glob(args.cram_base_directory+'/**/*.cram', recursive=True)+glob.glob(args.cram_base_directory+'/**/*.bam', recursive=True)
 print('found ',len(cram_files),'cram and bam files')
+sys.stdout.flush()
 
 outdir = args.output_directory
 job_base_dir = args.jobs_directory
@@ -37,12 +39,15 @@ def make_jobs(template):
             study = 'ROSMAP'
         elif 'ENA' in cram:
             study = 'ENA'
+        elif 'TCX' in cram:
+            study = 'MayoTCX'
         else:
             study = cram.split('/pipelines/')[0].split('/')[-1]
         if study == 'BPD':
             continue
         if study == '':
             print(cram)
+            sys.stdout.flush()
         jobs_dir = job_base_dir + '/'+study+'/'
         if not os.path.exists(jobs_dir):
             os.makedirs(jobs_dir)
@@ -62,7 +67,9 @@ def make_jobs(template):
             sample = cram.split('/')[-1].split(".cram")[0].replace("individualID.","").replace("specimenID.","")
         else:
             print(study)
+            sys.stdout.flush()
             print(cram)
+            sys.stdout.flush()
             raise RuntimeError('Unknown study: '+study)
         new_template = template.replace('REPLACENAME', sample)
         new_template = new_template.replace('REPLACEOUT', outdir+'/'+study+'/'+sample+'/')
