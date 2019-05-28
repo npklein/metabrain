@@ -125,7 +125,7 @@ returnCode=$?
 echo "returncode: $returnCode";
 if [ $returnCode -eq 0 ]
 then
-  echo "sorting BAM successful"
+  echo "sorting BAM finished"
 else
   echo "ERROR: couldn't sort BAM"
   exit 1;
@@ -140,7 +140,7 @@ TMPFASTQ3=$TMPDIR/$(basename ${INPUTBAM%.bam}.rest.fastq)
 # 2. get the line out of the header that contains the user command (grep)
 # 3. split the line on "user command line" (awk) and print everything that is after
 # 4. in this string, count the number of occurences of fastq.gz and fq.gz
-FASTQINPUTFILE=$(samtools view -H $TMPDIR/$(basename $INPUTBAM) | grep "user command line" | awk -F"user command line:" '{ print $2}' | grep -o ".fastq.gz\|.fq.gz" | wc -l)
+FASTQINPUTFILE=$(samtools view -H $TMPDIR/$(basename $INPUTBAM) | grep "user command line" | awk -F"user command line:" '{ print $2}' | grep -o ".fastq.gz\|.fq.gz\|.fastq" | wc -l)
 
 PAIRED=
 if [ "$FASTQINPUTFILE" -eq 1 ];
