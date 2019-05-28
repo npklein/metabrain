@@ -7,6 +7,7 @@ import sys
 parser = argparse.ArgumentParser(description='Merge multiple FeatureCount count files into a matrix. Uses featureCount_directory in which files are located to make matrix name')
 parser.add_argument('featureCount_directory', help='featureCount_directory which contains gzipped feature count .txt.gz files')
 parser.add_argument('feature_type', help='Type of feature that is being processed (e.g. exon or transcript')
+parser.add_argument('gtf', help='GTF file')
 parser.add_argument('out_prefix', help='prefix of outfile')
 
 args = parser.parse_args()
@@ -48,7 +49,7 @@ def parse_gtf(gtf, feature_type):
 
 feature_info = None
 prev_line = None
-with open(args.out_prefix+feature_type+'.txt','w') as out:
+with gzip.open(args.out_prefix+feature_type+'.txt.gz','wt') as out:
     x = 0
     out.write('-')
     for f in glob.iglob(featureCount_directory+'/**/*txt.gz', recursive=True):
@@ -62,8 +63,7 @@ with open(args.out_prefix+feature_type+'.txt','w') as out:
                     line = line.decode('utf-8')
                     if line.startswith('#'):
                         if 'metaExon' not in feature_type:
-                            gtf = line.split('-a" "')[1].split('"')[0]
-                            feature_info = parse_gtf(gtf, feature_type)
+                            feature_info = parse_gtf(args.gtf, feature_type)
                         continue
                     if line.startswith('Geneid'):
                         continue
@@ -87,6 +87,8 @@ with open(args.out_prefix+feature_type+'.txt','w') as out:
         # sample_name of the sample is everything before . of the filename
         sample_name = f.split('/')[-1].split('.')[0]
         out.write(sample_name)
+        print(f)
+        sys.stdout.flush()
         with gzip.open(f) as input_file:
             input_file.readline()
             y = 0
