@@ -70,7 +70,7 @@ def make_jobs(template):
                 sample = cram.split('/')[-1].split('Aligned')[0]
             else:
                 sample = cram.split('/')[-1].split('.cram')[0]
-        elif study == 'ucl-upload-biogen':
+        elif study == 'Braineac':
             sample = cram.split('/')[-1].split('.')[0]
             study = 'Braineac'    
         elif study == 'BipSeq' or study == 'CMC' or study == 'CMC_HBCC' or study == 'BrainGVEx' or study == 'CMC_HBCC' or study == 'UCLA_ASD':
