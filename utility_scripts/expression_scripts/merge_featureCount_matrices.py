@@ -1,3 +1,4 @@
+import datetime
 import gzip
 import glob
 import argparse
@@ -14,10 +15,10 @@ for type in ["transcript.countAll", "transcript.countFraction", "exon.countAll",
     for f in glob.glob(args.input_dir+'/*'+type+'*gz'):
         out_name_list.append(f.split('/')[-1].split('.')[0])
     
-     
-    out_name = '_'.join(out_name_list)
+    now = datetime.datetime.now()
+    out_name = now.strftime("%Y-%m-%d")+'.'+'-'.join(out_name_list)
     prev_header = None
-    with gzip.open(out_name+'.'+type+'.txt','wt') as out:
+    with open('multi_cohort_feature_count_matrices/'+out_name+'.'+type+'.txt','w') as out:
         for index, f in enumerate(glob.glob(args.input_dir+'/*'+type+'*gz')):
             print(f)
             with gzip.open(f) as input_file:
