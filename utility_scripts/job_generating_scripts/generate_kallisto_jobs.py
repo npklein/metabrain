@@ -27,27 +27,43 @@ if not os.path.exists(job_base_dir):
 def make_jobs(template):
     prev_study = None
     for cram in cram_files:
-        if not cram.endswith('.cram') and not cram.endswith('.bam'):
+        if not cram.endswith('.cram') and not cram.endswith('.bam') or '/BPD/' in cram:
             continue
+        study = None
         if 'AMP_AD' in cram:
             study = cram.split('/')[-2]
         elif 'CMC_HBCC' in cram:
             study = 'CMC_HBCC'
+        elif 'BipSeq' in cram:
+            study = 'BipSeq'
+        elif 'UCLA_ASD' in cram:
+            study = 'UCLA_ASD'
+        elif 'BrainGVEx' in cram:
+            study = 'BrainGVEx'
+        elif 'GTEx' in cram:
+            study = 'GTEx'
+        elif 'TargetALS' in cram:
+            study = 'TargetALS'
+        elif 'MayoTCX' in cram:
+            study = 'MayoTCX'
         elif 'MayoCBE' in cram:
             study = 'MayoCBE'
         elif 'ROSMAP' in cram:
             study = 'ROSMAP'
         elif 'ENA' in cram:
             study = 'ENA'
-        elif 'TCX' in cram:
-            study = 'MayoTCX'
-        else:
-            study = cram.split('/pipelines/')[0].split('/')[-1]
-        if study == 'BPD':
-            continue
-        if study == '':
+        elif 'CMC' in cram:
+            study = 'CMC'
+        elif 'NABEC' in cram:
+            study = 'NABEC'
+        elif 'ucl-upload-biogen' in cram:
+            study = 'Braineac'
+        elif 'Brainseq' in cram:
+            study = 'Brainseq'
+        if not study:
             print(cram)
-            sys.stdout.flush()
+            raise RuntimeError('Study not set')
+
         jobs_dir = job_base_dir + '/'+study+'/'
         if not os.path.exists(jobs_dir):
             os.makedirs(jobs_dir)
@@ -63,7 +79,7 @@ def make_jobs(template):
         elif study == 'ucl-upload-biogen':
             sample = cram.split('/')[-1].split('.')[0]
             study = 'Braineac'    
-        elif study == 'psychEncode' or study == 'CMC' or study == 'CMC_HBCC':
+        elif study == 'BipSeq' or study == 'CMC' or study == 'CMC_HBCC' or study == 'BrainGVEx' or study == 'CMC_HBCC' or study == 'UCLA_ASD':
             sample = cram.split('/')[-1].split(".cram")[0].replace("individualID.","").replace("specimenID.","")
         else:
             print(study)
@@ -117,7 +133,7 @@ returnCode=$?
 echo "returncode: $returnCode";
 if [ $returnCode -eq 0 ]
 then
-  echo "sorting BAM successful"
+  echo "sorting BAM finished"
 else
   echo "ERROR: couldn't sort BAM"
   exit 1;
@@ -132,7 +148,7 @@ TMPFASTQ3=$TMPDIR/$(basename ${INPUTBAM%.bam}.rest.fastq)
 # 2. get the line out of the header that contains the user command (grep)
 # 3. split the line on "user command line" (awk) and print everything that is after
 # 4. in this string, count the number of occurences of fastq.gz and fq.gz
-FASTQINPUTFILE=$(samtools view -H $TMPDIR/$(basename $INPUTBAM) | grep "user command line" | awk -F"user command line:" '{ print $2}' | grep -o ".fastq.gz\|.fq.gz" | wc -l)
+FASTQINPUTFILE=$(samtools view -H $TMPDIR/$(basename $INPUTBAM) | grep "user command line" | awk -F"user command line:" '{ print $2}' | grep -o ".fastq.gz\|.fq.gz\|.fastq" | wc -l)
 
 PAIRED=
 if [ "$FASTQINPUTFILE" -eq 1 ];

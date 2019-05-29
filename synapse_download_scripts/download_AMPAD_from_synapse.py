@@ -16,10 +16,9 @@ syn.login(user,password)
 
 
 print('Sync AMP-AD')
-download_MSBB = True#False
 download_MSBB = False
 download_MAYOTCX = False
-download_MAYOCBE = False
+download_MAYOCBE = True
 download_ROSMAP = False
 download_all = False
 
