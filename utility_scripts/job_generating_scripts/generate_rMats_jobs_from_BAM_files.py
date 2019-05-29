@@ -26,7 +26,10 @@ if not os.path.exists(job_base_dir):
 
 def make_jobs(template):
     for bam in bam_files:
-        batch = bam.split('/')[-2]
+        if 'TCX' in bam:
+            batch = 'MayoTCX'
+        else:
+            batch = bam.split('/')[-2]
         jobs_dir = job_base_dir + '/'+batch+'/'
         if not os.path.exists(jobs_dir):
             os.mkdir(jobs_dir)
