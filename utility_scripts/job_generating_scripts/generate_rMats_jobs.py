@@ -101,13 +101,35 @@ rsync -vP $TMPDIR/$(basename REPLACEBAM) $TMPDIR/$(basename REPLACEBAMCOPY)
 echo "$TMPDIR/$(basename REPLACEBAM)" > $TMPDIR/b1.txt
 echo "$TMPDIR/$(basename REPLACEBAMCOPY)" > $TMPDIR/b2.txt
 
+# test if it is single end or paired end.
+# 1. get the header out of the BAM file (samtools view -H). This contains the use command that was used to make BAM file
+# 2. get the line out of the header that contains the user command (grep)
+# 3. split the line on "user command line" (awk) and print everything that is after
+# 4. in this string, count the number of occurences of fastq.gz and fq.gz
+FASTQINPUTFILE=$(samtools view -H $TMPDIR/$(basename $INPUTBAM) | grep "user command line" | awk -F"user command line:" '{ print $2}' | grep -o ".fastq.gz\|.fq.gz" | wc -l)
+
+t=
+if [ "$FASTQINPUTFILE" -eq 1 ];
+then
+    t="single"
+    echo "BAM file is single-end, will only extract 1 fastq file"
+elif [ "$FASTQINPUTFILE" -eq 2 ];
+then
+    t="paired"
+    echo "BAM file is paired-end, will extract 2 fastq files"
+else
+    echo "ERROR: PAIRED was $PAIRED, should have been 1 or 2";
+    exit 1;
+fi
+
+
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:REPLACELIBBLAS/
 python $EBROOTRMATS/rMATS-turbo-Linux-UCS4/rmats.py \\
     --b1 $TMPDIR/b1.txt \\
     --b2 $TMPDIR/b2.txt \\
     --gtf REPLACEGTF \\
     --od REPLACEOUT \\
-    -t paired \\
+    -t ${t} \\
     --readLength 100 \\
     --cstat 0.0001 \\
     --libType fr-unstranded
