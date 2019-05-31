@@ -108,7 +108,7 @@ echo "$TMPDIR/$(basename REPLACEBAMCOPY)" > $TMPDIR/b2.txt
 # 2. get the line out of the header that contains the user command (grep)
 # 3. split the line on "user command line" (awk) and print everything that is after
 # 4. in this string, count the number of occurences of fastq.gz and fq.gz
-FASTQINPUTFILE=$(samtools view -H $REPLACECRAM | grep "user command line" | awk -F"user command line:" '{ print $2}' | grep -o ".fastq.gz\|.fq.gz" | wc -l)
+FASTQINPUTFILE=$(samtools view -H REPLACEBAM | grep "user command line" | awk -F"user command line:" '{ print $2}' | grep -o ".fastq.gz\|.fq.gz" | wc -l)
 
 t=
 if [ "$FASTQINPUTFILE" -eq 1 ];
