@@ -109,6 +109,12 @@ python $EBROOTRMATS/rMATS-turbo-Linux-UCS4/rmats.py \\
 
 if [ $? -eq 0 ];
 then
+    N=$(wc -l < REPLACEOUT/A3SS.MATS.JCEC.txt;)
+    if [[ "$N" -eq 1 ]];
+    then
+        echo "ERROR: only header written (possibly running paired end on single end files or vice versa?)"
+        exit 1
+    fi
     echo "succes!"
     echo "returncode: $?"
     rm $TMPDIR/$(basename REPLACEBAMCOPY)
