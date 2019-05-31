@@ -75,6 +75,13 @@ rsync -vP REPLACEBAM $TMPDIR/$(basename REPLACEBAMCOPY)
 echo "REPLACEBAM" > $TMPDIR/b1.txt
 echo "$TMPDIR/$(basename REPLACEBAMCOPY)" > $TMPDIR/b2.txt
 
+# test if it is single end or paired end.
+# 1. get the header out of the BAM file (samtools view -H). This contains the use command that was used to make BAM file
+# 2. get the line out of the header that contains the user command (grep)
+# 3. split the line on "user command line" (awk) and print everything that is after
+# 4. in this string, count the number of occurences of fastq.gz and fq.gz
+FASTQINPUTFILE=$(samtools view -H $TMPDIR/$(basename $INPUTBAM) | grep "user command line" | awk -F"user command line:" '{ print $2}' | grep -o "\.fastq.gz\|\.fq.gz\|\.fastq" | wc -l)
+
 t=
 if [ "$FASTQINPUTFILE" -eq 1 ];
 then
