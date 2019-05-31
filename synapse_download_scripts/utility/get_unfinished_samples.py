@@ -38,9 +38,10 @@ for study in studies:
                 if x >= 2:
                     has_output = True
                     break
-        if not has_output:
-            continue
         sample_name = rMats_file.split('/')[-2]
+        if not has_output:
+            print('rm '+sample_name+'.err')
+            continue
         samples_processed['rMats'].add(sample_name)
 
 def fix_name(name):

@@ -4,71 +4,61 @@ import glob
 import argparse
 import gzip
 import sys
-parser = argparse.ArgumentParser(description='Merge multiple FeatureCount count files into a matrix. Uses featureCount_directory in which files are located to make matrix name')
-parser.add_argument('transcript_count_matrix', help='Matrix with transcript counts')
-parser.add_argument('outfile', help='name of the outfile')
+parser = argparse.ArgumentParser(description='Calculate the fraction each transcript of a gene is expressed')
+parser.add_argument('feature_count_matrix', help='Feature count matrix with as rows samples and columns genes')
+parser.add_argument('gtf', help='GTF file')
+parser.add_argument('out_file', help='outfile')
 
 args = parser.parse_args()
-set_of_features = set([])
-featureCount_directory = args.featureCount_directory
-list_of_features = []
-if featureCount_directory.endswith('/'):
-    feature_type = featureCount_directory.split('/')[-2]
-else:
-    feature_type = featureCount_directory.split('/')[-1]
+feature_gene_id = {}
+feature_per_gene = {}
+with open(args.gtf) as input_file:
+    for line in input_file:
+        if line.startswith('#'):
+            continue
+        line = line.strip().split('\t')
+        feature = line[2]
+        if feature != 'transcript':
+            continue
+        chr = line[0]
+        start = line[3]
+        end = line[4]
+        info = line[8]
+        if 'transcript_id "' not in info:
+            print(line)
+            raise RuntimeError('transcript_id not in info')
+        id = info.split('transcript_id "')[1].split('"')[0]
+        gene_id = info.split('gene_id "')[1].split('"')[0]
+        feature_gene_id[id] = gene_id
+        if gene_id not in feature_per_gene:
+            feature_per_gene[gene_id] = 0
+        feature_per_gene[gene_id] += 1
+            
+transcript_indices = {}
+with open(args.feature_count_matrix) as input_file:
+    header = input_file.readline().strip().split('\t')
+    for index, element in enumerate(header[1:]):
+        transcript_indices[index] = element
+    counts_per_gene = {}
+    print('first loop through file')
+    for line in input_file:
+        line = line.strip().split('\t')
+        for index, element in enumerate(line[1:]):
+            gene_id = feature_gene_id[transcript_indices[index]]
+            if gene_id not in counts_per_gene:
+                counts_per_gene[gene_id] = 0
+            counts_per_gene[gene_id] += float(element)
 
-print(feature_type, featureCount_directory)
-sys.stdout.flush()
-with open(args.out_prefix+feature_type+'.txt','w') as out:
-    x = 0
-    out.write('-')
-    for f in glob.iglob(featureCount_directory+'/**/*txt.gz', recursive=True):
-        # open the first file to get a list of features
-
-        if x == 0:
-            print(feature_type+': read first file to get a list of features')
-            sys.stdout.flush()
-            with gzip.open(f) as input_file:
-                for line in input_file:
-                    line = line.decode('utf-8')
-                    if line.startswith('#'):
-                        continue
-                    if line.startswith('Geneid'):
-                        continue
-                    line = line.strip().split('\t')
-                    chr = line[1]
-                    if not chr.startswith('chr'):
-                        continue
-                    list_of_features.append(line[0])
-                    out.write('\t'+line[0])
-            out.write('\n')
-            print(feature_type+': Done')
-            sys.stdout.flush()
-
-        x += 1
-        if x % 100 == 0:
-            print(feature_type+': '+str(x))
-            sys.stdout.flush()
-        # sample_name of the sample is everything before . of the filename
-        sample_name = f.split('/')[-1].split('.')[0]
-        out.write(sample_name)
-        with gzip.open(f) as input_file:
-            input_file.readline()
-            y = 0
-            for line in input_file:
-                line = line.decode('utf-8')
-                if line.startswith('#') or line.startswith('Geneid'):
-                    continue
-                line = line.strip().split('\t')
-                chr = line[1]
-                if not chr.startswith('chr'):
-                    continue
-                if line[0] != list_of_features[y]:
-                    raise RuntimeError('feature not the same. Current: '+line[0]+'. Original: '+list_of_features[y]+'. Index: '+str(y))
-                feature =  line[0]
-                count = line[6]
-                out.write('\t'+count)
-                y += 1
+   
+with open(args.feature_count_matrix) as input_file, open(args.feature_count_matrix.replace('.txt','.RATIOS.txt','w')) as out:
+    header = input_file.readline()
+    out.write(header)
+    print('second loop through file')
+    for line in input_file:
+        line = line.strip().split('\t')
+        out.write(line[0])
+        for index, element in enumerate(line[1:]):
+            gene_id = feature_gene_id[transcript_indices[index]]
+            new_count = float(element) / counts_per_gene[gene_id]
+            out.write('\t'+str(new_count))
         out.write('\n')
-
-print(feature_type+': Done')
