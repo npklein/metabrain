@@ -1,1 +1,9 @@
 Scripts for analysing eQTL data
+
+
+count_sign_hit_per_trait.py
+    From an eQTL file with only significant hits, count occurance of each gwas trait (found in GWAS_TRAIT column)
+
+gwas_annotate_eqtl.py
+    Annotate an eQTL output file with overlapping GWAS trait
+
