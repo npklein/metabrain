@@ -16,23 +16,61 @@ syn.login(user,password)
 
 
 print('Sync AMP-AD')
+download_MSBB = False
+download_MAYOTCX = False
+download_MAYOCBE = True
+download_ROSMAP = False
+download_all = False
 
 # STAR MSBB
-# files = synapseutils.syncFromSynapse(syn, 'syn12104381', path = 'MSBB/STAR')#, exclude='.bam')
-# metadata MSBB
-files = synapseutils.syncFromSynapse(syn, 'syn7392158', path = 'metadata/')#, exclude='.bam')
+if download_MSBB:
+    if not download_all:
+        for file in syn.getChildren('syn8540822'):
+            if file['name'].startswith('hB'):
+                synapseutils.syncFromSynapse(syn, file['id'], path = 'BAMs/MSBB/')
+                print(file['id'], file['name'])
+    else:
+        # aligned BAM files MSBB
+        files = synapseutils.syncFromSynapse(syn, 'syn8540822', path = 'BAMs/MSBB/')
+        # STAR MSBB
+        files = synapseutils.syncFromSynapse(syn, 'syn12104381', path = 'MSBB/STAR')
+        # metadata MSBB
+        files = synapseutils.syncFromSynapse(syn, 'syn7392158', path = 'metadata/')
 
-# STAR MAYO
-#files = synapseutils.syncFromSynapse(syn, 'syn12104376', path = 'MAYO/STAR/')#, exclude='.bam')
-# metadata MAYO
-files = synapseutils.syncFromSynapse(syn, 'syn11384571', path = 'metadata/')#, exclude='.bam')
-files = synapseutils.syncFromSynapse(syn, 'syn5223705', path = 'metadata/')#, exclude='.bam')
-files = synapseutils.syncFromSynapse(syn, 'syn3817650', path = 'metadata/')#, exclude='.bam')
+if download_MAYOCBE:
+    # STAR MAYO
+    files = synapseutils.syncFromSynapse(syn, 'syn12104376', path = 'MAYO/STAR/')
+    # aligned BAM files Mayo
+    files = synapseutils.syncFromSynapse(syn, 'syn8540821', path = 'BAMs/MayoCBE/')
 
-# STAR ROSMAP
-#files = synapseutils.syncFromSynapse(syn, 'syn12104384', path = 'ROSMAP/STAR/')#, exclude='.bam')
-# ROSMAP metadata
-files = synapseutils.syncFromSynapse(syn, 'syn3157322', path = 'metadata')#, exclude='.bam')
-files = synapseutils.syncFromSynapse(syn, 'syn11958660', path = 'metadata')#, exclude='.bam')
-files = synapseutils.syncFromSynapse(syn, 'syn11384589', path = 'metadata')#, exclude='.bam')
+if download_MAYOTCX:
+    files = synapseutils.syncFromSynapse(syn, 'syn8540820', path = 'BAMs/MayoTCX/')
+
+    # metadata MAYO
+    files = synapseutils.syncFromSynapse(syn, 'syn11384571', path = 'metadata/')
+    files = synapseutils.syncFromSynapse(syn, 'syn5223705', path = 'metadata/')
+    files = synapseutils.syncFromSynapse(syn, 'syn3817650', path = 'metadata/')
+
+
+to_download = ['74_120417']
+if download_ROSMAP:
+    # aligned bam files ROSMAP
+    # only download certain files
+    if not download_all:
+        for file in syn.getChildren('syn8540863'):
+            if '120417' in file['name']:
+                print(file['name'])
+            if file['name'].split('Aligned')[0] in to_download:
+                synapseutils.syncFromSynapse(syn, file['id'], path = 'BAMs/ROSMAP/')
+                print(file['id'], file['name'])
+    else:
+        # STAR ROSMAP
+        files = synapseutils.syncFromSynapse(syn, 'syn12104384', path = 'ROSMAP/STAR/')
+        files = synapseutils.syncFromSynapse(syn, 'syn8540863', path = 'BAMs/ROSMAP/')
+
+
+    # ROSMAP metadata
+    files = synapseutils.syncFromSynapse(syn, 'syn3157322', path = 'metadata')
+    files = synapseutils.syncFromSynapse(syn, 'syn11958660', path = 'metadata')
+    files = synapseutils.syncFromSynapse(syn, 'syn11384589', path = 'metadata')
 
