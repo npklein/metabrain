@@ -28,19 +28,34 @@ with open(args.gwas_annotation_file) as input_file:
 traits = {}
 SNPs_in_gwas = set([])
 print('start reading GWAS file')
+snp_gwas_info = {}
 with open(args.gwas_file) as input_file:
     header = input_file.readline().strip().split('\t')
     snps_index = header.index('SNPS')
+    pval_index = header.index('P-VALUE')
+    OR_or_beta_index = header.index('OR or BETA')
+    risk_allele_index = header.index('STRONGEST SNP-RISK ALLELE')
     for line in input_file:
         line = line.strip().split('\t')
         trait = line[7]
-        for snp in line[snps_index].split('; '):
+        pval = line[pval_index]
+        OR_or_beta = line[OR_or_beta_index]
+        risk_allele = line[risk_allele_index]
+        SNPs = line[snps_index].split(';')
+        if len(SNPs) > 1:
+            print(', '.join(SNPs))
+            print(OR_or_beta)
+            print(risk_allele)
+            exit()
+        for snp in SNPs:
             if 'rs' not in snp:
                 continue
             if snp not in traits:
-                traits[snp] = set([])
-            traits[snp].add(trait)
+                traits[snp] = []
+            traits[snp].append([trait, pval, OR_or_beta, risk_allele])
             SNPs_in_gwas.add(snp)
+            snp_gwas_info
+
 SNPs_tested_in_gwas = SNPs_tested & SNPs_in_gwas
 
 
@@ -51,7 +66,7 @@ highest_pvalue = -1
 print('start reading eQTL file '+args.eQTL_file)
 print('start writing results to '+args.outfile)
 with gzip.open(args.eQTL_file,'rt') as input_file, open(args.outfile,'wt') as out:
-    out.write('SNP\tlowest_pval\ttrait\tparent_term\tmodified_parent_term\n')
+    out.write('SNP\tlowest_pval\ttrait\tparent_term\tmodified_parent_term\tgwas_pval\tgwas_OR_or_beta\tgwas_risk_allele\n')
     header = input_file.readline().strip('\n')
     split_head = header.split('\t')
     pval_index = split_head.index('PValue')
@@ -61,7 +76,7 @@ with gzip.open(args.eQTL_file,'rt') as input_file, open(args.outfile,'wt') as ou
     for line in input_file:
         x += 1
         if x == 100000:
-            print(x,'lines read,',y,'lines written')
+            print(x,'lines read,',y,'lines written')    
         line = line.strip('\n')
         snp = line.split('\t')[snp_index]
         pval = line.split('\t')[pval_index]
@@ -72,11 +87,11 @@ with gzip.open(args.eQTL_file,'rt') as input_file, open(args.outfile,'wt') as ou
             continue
         snp_seen.add(snp)
         if snp not in traits:
-            out.write(snp+'\t'+pval+'\tNotInGWAS\tNotInGWAS\tNotInGWAS\n')
+            out.write(snp+'\t'+pval+'\tNotInGWAS\tNotInGWAS\tNotInGWAS\tNotInGWAS\tNotInGWAS\tNotInGWAS\n')
             continue
         traits_of_snp = traits[snp]
-        for trait in traits_of_snp:
-            trait = trait.lower()
+        for trait_gwas_info in traits_of_snp:
+            trait = trait_gwas_info[0].lower()
             try:
                 parent_term = trait_info[trait][0]
                 modified_parent_term = trait_info[trait][1]
@@ -84,16 +99,16 @@ with gzip.open(args.eQTL_file,'rt') as input_file, open(args.outfile,'wt') as ou
                 print(trait,'not found')
                 parent_term = 'UNKNOWN'
                 modified_parent_term = 'UNKNOWN'
-            out.write(snp+'\t'+pval+'\t'+trait+'\t'+parent_term+'\t'+modified_parent_term+'\n')
+            out.write(snp+'\t'+pval+'\t'+trait_gwas_info[0]+'\t'+parent_term+'\t'+modified_parent_term+'\t'+trait_gwas_info[1]+'\t'+trait_gwas_info[2]+'\t'+trait_gwas_info[3]+'\n')
             y += 1
     print('following list of SNPs not in eqtl file, giving the highest p-value ('+str(highest_pvalue)+')')
     for snp in SNPs_tested_in_gwas - snp_seen:
         if snp not in traits:
-            out.write(snp+'\t'+pval+'\tNotInGWAS\tNotInGWAS\tNotInGWAS\n')
+            out.write(snp+'\t'+pval+'\tNotInGWAS\tNotInGWAS\tNotInGWAS\tNotInGWAS\tNotInGWAS\tNotInGWAS\n')
             continue
         traits_of_snp = traits[snp]
-        for trait in traits_of_snp:
-            trait = trait.lower()
+        for trait_gwas_info in traits_of_snp:
+            trait = trait_gwas_info[0].lower()
             try:
                 parent_term = trait_info[trait][0]
                 modified_parent_term = trait_info[trait][1]
@@ -101,7 +116,7 @@ with gzip.open(args.eQTL_file,'rt') as input_file, open(args.outfile,'wt') as ou
                 print(trait,'not found')
                 parent_term = 'UNKNOWN'
                 modified_parent_term = 'UNKNOWN'
-            out.write(snp+'\t'+pval+'\t'+trait+'\t'+parent_term+'\t'+modified_parent_term+'\n')
+            out.write(snp+'\t'+pval+'\t'+trait_gwas_info[0]+'\t'+parent_term+'\t'+modified_parent_term+'\t'+trait_gwas_info[1]+'\t'+trait_gwas_info[2]+'\t'+trait_gwas_info[3]+'\n')
         
 print('written to '+args.outfile)
 print('Done!')
