@@ -37,6 +37,7 @@ def main():
             line = line.split('\t')
             list_of_genes.append(transcript_to_gene[line[0]])
 
+    # parallel process kallisto files. Per sample 1 thread
     with Pool(int(args.threads)) as pool:
         kallisto_data = pool.map(parse_kallisto_files, kallisto_files)
 
