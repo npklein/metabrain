@@ -1,4 +1,4 @@
-Scripts for analysing eQTL data
+Scripts for analysing GWAS overlap with eQTL data. Using different method, leaving this if needed for future comparisons
 
 
 count_sign_hit_per_trait.py
