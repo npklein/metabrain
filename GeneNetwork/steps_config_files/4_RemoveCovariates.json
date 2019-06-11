@@ -1,0 +1,11 @@
+{
+  "expressionMatrix": "/groups/umcg-wijmenga/tmp03/users/umcg-svandam/skyMap2/samples500000reads/3_deSeqNorm/Homo_sapiens.gene_symbol.est_counts_withHeaders_extractedColumnsnoVarianceRowsRemoved_80825samples_dupsRemovednoVarianceRowsRemoved.DESeqNorm.txt.gz",
+  "covariateMatrix": "/groups/umcg-wijmenga/tmp03/users/umcg-svandam/skyMap2/samples500000reads/4_covariateRemoval/Homo_sapiens.gene_symbol.est_counts_withHeaders_extractedColumnsnoVarianceRowsRemoved_80825samples_dupsRemovednoVarianceRowsRemoved.DESeqNorm_sampleNames_transposed.txt",
+  "writeFolder": "/groups/umcg-wijmenga/tmp03/users/umcg-svandam/skyMap2/samples500000reads/4_covariateRemoval/",
+  "sampleIncludeList": null,
+  "className": "GeneNetwork.CovariateAdjuster",
+  "startTime": "2018-09-16 15:01:59",
+  "executor": "file:/groups/umcg-wijmenga/tmp03/users/umcg-svandam/jar/RunV12.jar",
+  "runTime": "1 hours 44 minutes 25 seconds 34 ms",
+  "jsonFN": "config_GeneNetwork.CovariateAdjuster_2018-01-30.json"
+}
