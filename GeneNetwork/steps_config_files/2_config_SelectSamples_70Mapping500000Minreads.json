@@ -1,0 +1,16 @@
+{
+  "comments": "//all variables in this file containing (Comment) are comments on the variable below and do not need to be initiated",
+  "fileNameComment": "/root/directory/valueMatrix.txt; OPTIONAL; Input file for which the rowAverages should be calculated",
+  "fileName": "/groups/umcg-wijmenga/tmp03/users/umcg-svandam/skyMap2/Homo_sapiens.gene_symbol.est_counts_withHeaders.txt",
+  "writeFolder": "/groups/umcg-wijmenga/tmp03/users/umcg-svandam/skyMap2/samples500000reads/",
+  "includeHeadersFnComment": "/root/directory/columnHeaders.txt.; OPTIONAL; A file with the headersnames of the columns to include (enter separated)",
+  "includeHeadersFn": "/groups/umcg-wijmenga/tmp03/users/umcg-svandam/skyMap2/samples500000reads/SamplesToKeep.txt",
+  "stepListComment": "//e.g. averages,center,removeNoVarianceRows; MANDATORY //comma separated list of all steps to take in this order",
+  "stepList": "getcolumns",
+  "nThreads": 1,
+  "className": "RowAnalyses.RowJobPipeline",
+  "startTime": "2018-09-05 13:15:55",
+  "executor": "file:/groups/umcg-wijmenga/tmp03/users/umcg-svandam/jar/RunV12.jar",
+  "runTime": "1 hours 0 minutes 54 seconds 659 ms",
+  "jsonFN": "/groups/umcg-wijmenga/tmp03/users/umcg-svandam/skyMap2/samples500000reads/config_RowAnalyses.RowJobPipeline_server.json"
+}
