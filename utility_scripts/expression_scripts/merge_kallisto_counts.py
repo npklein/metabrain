@@ -29,24 +29,27 @@ def main():
         sample = f.split('/')[-2]
         estimated_counts_per_gene[sample] = {}
 
-    # get a list of genes (all files have the same list so only need to read 1 file)
-    list_of_genes = []
+    # get a set of genes (all files have the same list so only need to read 1 file)
+    set_of_genes = set([])
     with open(kallisto_files[0]) as input_file:
         input_file.readline()
         for line in input_file:
             line = line.split('\t')
-            list_of_genes.append(transcript_to_gene[line[0]])
+            set_of_genes.add(transcript_to_gene[line[0]])
 
     # parallel process kallisto files. Per sample 1 thread
     with Pool(int(args.threads)) as pool:
         kallisto_data = pool.map(parse_kallisto_files, kallisto_files)
+    
+    print('Done reading kallisto file, start writing output matrix')
+    sys.stdout.flush()
 
     with open(args.outfile,'w') as out:
         for result in kallisto_data:
             # result[0] is the sample name
             out.write('\t'+result[0])
         out.write('\n')
-        for gene in list_of_genes:
+        for gene in set_of_genes:
             out.write(gene)
             for result in kallisto_data:
                 # result[1] is the kallisto data for that specific sample

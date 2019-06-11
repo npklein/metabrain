@@ -2,7 +2,7 @@ import pandas as pd;
 import argparse
 import gzip
 from multiprocessing import Process,Pool
-import re
+
 parser = argparse.ArgumentParser(description='Compare eQTLgen to MetaBrain')
 parser.add_argument('meataBrain_eQTL_file',
                     help='File with eQTL data')
@@ -29,15 +29,18 @@ with gzip.open(args.SNPs_to_include_2,'rt') as input_file:
         snp = line.strip()
         if snp.startswith('rs'):
             snps_to_include_2.add(snp)
+snps_to_use = snps_to_include_1.intersection(snps_to_include_2)
 
-snps_to_use = snps_to_include_1 & snps_to_include_2
-print(len(snps_to_use),'overlapping snps')
-
-neuro_str=['lateral sclerosis','\Wals$|\Wals\W|^als\W','bipolar','park','\Wpd$|\Wpd\W',
-           'alzh|\Wad\W|\Wad$|^ad\W','schiz','depression|depressive','multiple sclerosis|\Wms\W|\Wms$|^ms\W']
 def parse_traits(eqtl_file, snps_to_use):
-    counts_per_trait = {'total':0,'neuro':0,'non-neuro':0}
+    counts_per_trait = {'total':0}
+    print(eqtl_file+' - '+str(len(snps_to_use))+' overlapping snps')
     print('start reading '+eqtl_file)
+    snps_no_gwas = 0
+    snps_no_rs = 0
+    snps_not_overlapping = 0
+    snps_double = 0
+    snps_seen = set([])
+    snps_seen_all = set([])
     with gzip.open(eqtl_file,'rt') as input_file:
         header = input_file.readline().strip().split('\t')
         gwas_index = header.index('GWAS_TRAIT')
@@ -45,33 +48,38 @@ def parse_traits(eqtl_file, snps_to_use):
         x = 0
         for line in input_file:
             x += 1
-            if x % 1000000 == 0:
-                print(eqtl_file+': '+str(x))
             line = line.strip().split('\t')
             snp = line[snp_name_index]
-            if 'rs' not in snp:
-                continue
-            if ':' in snp:
+            if 'rs' in snp and ':' in snp:
                 snp = snp.split(':')[2]
-            gwas_trait = line[gwas_index]
 
             if snp not in snps_to_use:
+                snps_not_overlapping += 1
                 continue
+
+            snps_seen_all.add(snp)
+            gwas_trait = line[gwas_index]
+
             if gwas_trait == '-':
+                snps_no_gwas += 1
                 continue
+
+            if snp in snps_seen:
+                snps_double += 1
+                continue
+            snps_seen.add(snp)
+
             for trait in gwas_trait.split(';;'):
-                if trait == '-':
-                    raise RuntimeError('should not happen')
-                neuro = False
-                for neuro_trait in neuro_str:
-                    if bool(re.search(neuro_trait, trait)):
-                        print(neuro_trait,trait)
-                        neuro = True
-                if neuro:
-                    counts_per_trait['neuro'] += 1
-                else:
-                    counts_per_trait['non-neuro'] += 1
+                if trait not in counts_per_trait:
+                    counts_per_trait[trait] = 0
+                counts_per_trait[trait] += 1
             counts_per_trait['total']  += 1
+    print(eqtl_file+' - total: '+str(x))
+    print(eqtl_file+' - SNPs not overlapping: '+str(snps_not_overlapping))
+    print(eqtl_file +' SNPs FDR > 0.05:'+str(x-len(snps_seen_all)))
+    print(eqtl_file+' - SNPs no GWAS: '+str(snps_no_gwas))
+    print(eqtl_file+' - SNPs double: '+str(snps_not_overlapping))
+    print(eqtl_file+' - total: '+str(counts_per_trait['total']))
     return(counts_per_trait)
 
 

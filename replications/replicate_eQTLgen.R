@@ -30,7 +30,7 @@ fdr_threshold = 1
 #####
 
 
-main <- function(eqtlGen_replication, ld_scores_file, fdr_threshold){
+main <- function(eqtlGen_replication, fdr_threshold){
   # Main function for program flow
   # eqtlGen_replication: The file containing replication of MetaBrain in eqtlGen
   # fdr_threshold: fdr threshold to filter both the meta analysis data and the replication data on
@@ -157,6 +157,6 @@ plot_replication <- function(zscores, replication, PCs=10){
 
 # runs only when script is run by itself, similar to Python's if __name__ == __main__
 if (sys.nframe() == 0){
-  main(eqtlGen_replication, ld_scores_file, fdr_threshold)
+  main(eqtlGen_replication, fdr_threshold)
 }
 
