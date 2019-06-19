@@ -1,0 +1,16 @@
+{
+  "comments": "//all variables in this file containing (Comment) are comments on the variable below and do not need to be initiated. capitalized variables that start with REPLACE have to be replaced with user input",
+  "fileNameComment": "/root/directory/valueMatrix.txt; OPTIONAL; Input file for which the rowAverages should be calculated",
+  "fileName": "REPLACEEXPRFILE",
+  "writeFolder": "REPLACEOUTPUTDIR",
+  "includeHeadersFnComment": "/root/directory/columnHeaders.txt.; OPTIONAL; A file with the headersnames of the columns to include (enter separated)",
+  "includeHeadersFn": "REPLACEINCLUDESAMPLES",
+  "stepListComment": "//e.g. averages,center,removeNoVarianceRows; MANDATORY //comma separated list of all steps to take in this order",
+  "stepList": "getcolumns,removeNoVarianceRows",
+  "nThreads": 1,
+  "className": "RowAnalyses.RowJobPipeline",
+  "startTime": "2019-06-18 11:22:08",
+  "executor": "file:/groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/jars/RunV12.jar",
+  "runTime": "24 minutes 27 seconds 913 ms",
+  "jsonFN": "/home/umcg-ndeklein/brain_eQTL/GeneNetwork/steps_config_files/2_config_SelectSamples.json"
+}
