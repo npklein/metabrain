@@ -19,7 +19,7 @@ main(){
     sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/4_DeseqNormalizedData.json
     sed -i "s;REPLACEOUTDIR;$outdir;" $project_dir/configs/4_DeseqNormalizedData.json
     sed -i "s;REPLACEINCLUDESAMPLES;$sample_file;" $project_dir/configs/4_DeseqNormalizedData.json
-    sed -i "s;REPLACEPCCORRECTEDDIR;$corrected_dir;" $project_dir/configs/4_DeseqNormalizedData.json
+    sed -i "s;REPLACEPCCORRECTED;$corrected_dir;" $project_dir/configs/4_DeseqNormalizedData.json
 
     mkdir -p $(dirname $outdir)
 #Rscript ~/brain_eQTL/GeneNetwork/misc/calculate_geoMean.R \
@@ -27,7 +27,7 @@ main(){
 #    -o /groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/output/step3_step4/geoMean.txt
 
     mkdir -p $(dirname $outdir)
-    java -jar $jardir/RunV12.jar $project_dir/configs/4_DeseqNormalizedData.sh
+    java -jar $jardir/RunV12.jar $project_dir/configs/4_DeseqNormalizedData.json
 
 
 }
