@@ -35,8 +35,8 @@ for type in ["metaExon.countAll", "metaExon.countFraction", "transcript.countAll
             if index == 0:
                 out.write(header)
             elif prev_header != header:
-                print(prev_header)
-                print(header)
+                print(prev_header[1:10])
+                print(header[1:10])
                 raise RuntimeError('headers not the same')
             prev_header = header
             for line in input_file:
