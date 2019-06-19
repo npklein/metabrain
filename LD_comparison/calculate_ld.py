@@ -4,10 +4,11 @@ import requests
 parser = argparse.ArgumentParser(description='Compare LD between metabrain and eqtlgen')
 parser.add_argument('topSNPs', help='File with the top SNPs for metaBrain and eqtlGen (gene in column 1, rs1 in column 2, rs2 in column3)')
 parser.add_argument('ldlink_token', help='Token for API access ldlink (https://ldlink.nci.nih.gov/?tab=apiaccess)')
+parser.add_argument('outfile', help='outfile name')
 
 args = parser.parse_args()
 
-with open(args.topSNPs) as input_file, open('metaBrain_eqtlGen_topSNP_LD.txt','w') as out:
+with open(args.topSNPs) as input_file, open(args.outfile,'w') as out:
     out.write("gene\ttopSNP_metaBrain\ttopSNP_eqtlGen\tD'\tR2\n")
     input_file.readline()
     x = 0
