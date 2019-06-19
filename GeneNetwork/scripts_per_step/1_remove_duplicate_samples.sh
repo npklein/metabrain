@@ -74,31 +74,31 @@ parse_commandline(){
     if [ -z "$project_dir" ];
     then
         echo "ERROR: -p/--project_dir not set!"
-        usagae
+        usage
         exit 1;
     fi
     if [ -z "$expression_file" ];
     then
         echo "ERROR: -e/--expression_file not set!"
-        usagae
+        usage
         exit 1;
     fi
     if [ -z "$outfile" ];
     then
         echo "ERROR: -o/--outfile not set!"
-        usagae
+        usage
         exit 1;
     fi
     if [ -z "$jardir" ];
     then
         echo "ERROR: -j/--jardir not set!"
-        usagae
+        usage
         exit 1;
     fi
     if [ -z "$config_templates" ];
     then
         echo "ERROR: -c/--config_templates not set!"
-        usagae
+        usage
         exit 1;
     fi
 }
