@@ -22,7 +22,6 @@ main(){
 
     mkdir -p $(dirname $outdir)
     java -jar $jardir/RunV12.jar $project_dir/configs/2_config_SelectSamples.json
-
 }
 
 usage(){

@@ -9,7 +9,6 @@ outdir=
 config_templates=
 jardir=
 sample_file=
-corrected_dir=
 main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
@@ -76,9 +75,6 @@ parse_commandline(){
             -s | --sample_file )        shift
                                         sample_file=$1
                                         ;;
-            -z | --corrected_dir )      shift
-                                        corrected_dir=$1
-                                        ;;
             -h | --help )               usage
                                         exit
                                         ;;
@@ -117,12 +113,6 @@ parse_commandline(){
     if [ -z "$config_templates" ];
     then
         echo "ERROR: -c/--config_templates not set!"
-        usage
-        exit 1;
-    fi
-    if [ -z "$corrected_dir" ];
-    then
-        echo "ERROR: -z/--corrected_dir not set!"
         usage
         exit 1;
     fi
