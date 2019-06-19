@@ -5,7 +5,7 @@ set -e
 set -u
 
 project_dir=
-outfile=
+outdir=
 config_templates=
 jardir=
 sample_file=
@@ -13,13 +13,14 @@ main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
 
-    rsync -vP $config_templates/1_config_RemoveDuplicates.json $project_dir/configs/
+    echo "rsync -vP $config_templates/2_config_SelectSamples.json $project_dir/configs/"
+    rsync -vP $config_templates/2_config_SelectSamples.json $project_dir/configs/
 
     sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/2_config_SelectSamples.json
-    sed -i "s;REPLACEOUTPUT;$outfile;" $project_dir/configs/2_config_SelectSamples.json
+    sed -i "s;REPLACEOUTPUTDIR;$outdir;" $project_dir/configs/2_config_SelectSamples.json
     sed -i "s;REPLACEINCLUDESAMPLES;$sample_file;" $project_dir/configs/2_config_SelectSamples.json
 
-    mkdir -p $(dirname $outfile)
+    mkdir -p $(dirname $outdir)
     java -jar $jardir/RunV12.jar $project_dir/configs/2_config_SelectSamples.json
 
 }
@@ -55,8 +56,8 @@ parse_commandline(){
             -e | --expression_file )    shift
                                         expression_file=$1
                                         ;;
-            -o | --outfile )            shift
-                                        outfile=$1
+            -o | --outdir )            shift
+                                        outdir=$1
                                         ;;
             -c | --config_templates )   shift
                                         config_templates=$1
@@ -90,9 +91,9 @@ parse_commandline(){
         usage
         exit 1;
     fi
-    if [ -z "$outfile" ];
+    if [ -z "$outdir" ];
     then
-        echo "ERROR: -o/--outfile not set!"
+        echo "ERROR: -o/--outdir not set!"
         usage
         exit 1;
     fi
@@ -114,7 +115,6 @@ parse_commandline(){
         usage
         exit 1;
     fi
-    
 }
 
 # [[ ${BASH_SOURCE[0]} = "$0" ]] -> main does not run when this script is sourced
