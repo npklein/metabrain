@@ -33,6 +33,7 @@ usage(){
     echo "  -o      Output file that will be written"
     echo "  -c      Dir with configuration template files"
     echo "  -j      Location of V12 jar file"
+    echo "  -s      File with samples to analyze"
     echo "  -h      display help"
     exit 1
 }
@@ -49,29 +50,29 @@ parse_commandline(){
     while [[ $# -ge 1 ]]; do
         case $1 in
             -p | --project_dir )        shift
-                                    project_dir=$1
-                                    ;;
+                                        project_dir=$1
+                                        ;;
             -e | --expression_file )    shift
-                                    expression_file=$1
-                                    ;;
-            -o | --outfile )         shift
-                                    outfile=$1
-                                    ;;
-            -c | --configs )        shift
-                                    config_templates=$1
-                                    ;;
-            -j | --jardir )         shift
-                                    jardir=$1
-                                    ;;
-            -s | --sample_file )         shift
-                                    sample_file=$1
-                                    ;;
-            -h | --help )           usage
-                                    exit
-                                    ;;
-            * )                     echo "ERROR: Undexpected argument: $1"
-                                    usage
-                                    exit 1
+                                        expression_file=$1
+                                        ;;
+            -o | --outfile )            shift
+                                        outfile=$1
+                                        ;;
+            -c | --config_templates )   shift
+                                        config_templates=$1
+                                        ;;
+            -j | --jardir )             shift
+                                        jardir=$1
+                                        ;;
+            -s | --sample_file )        shift
+                                        sample_file=$1
+                                        ;;
+            -h | --help )               usage
+                                        exit
+                                        ;;
+            * )                         echo "ERROR: Undexpected argument: $1"
+                                        usage
+                                        exit 1
         esac
         shift
     done
