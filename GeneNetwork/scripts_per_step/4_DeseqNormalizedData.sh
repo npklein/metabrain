@@ -5,7 +5,7 @@ set -e
 set -u
 
 project_dir=
-outfile=
+outdir=
 config_templates=
 jardir=
 sample_file=
@@ -17,16 +17,16 @@ main(){
     rsync -vP $config_templates/4_DeseqNormalizedData.json $project_dir/configs/
 
     sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/4_DeseqNormalizedData.json
-    sed -i "s;REPLACEOUTPUT;$outfile;" $project_dir/configs/4_DeseqNormalizedData.json
+    sed -i "s;REPLACEOUTDIR;$outdir;" $project_dir/configs/4_DeseqNormalizedData.json
     sed -i "s;REPLACEINCLUDESAMPLES;$sample_file;" $project_dir/configs/4_DeseqNormalizedData.json
     sed -i "s;REPLACEPCCORRECTEDDIR;$corrected_dir;" $project_dir/configs/4_DeseqNormalizedData.json
 
-    mkdir -p $(dirname $outfile)
+    mkdir -p $(dirname $outdir)
 #Rscript ~/brain_eQTL/GeneNetwork/misc/calculate_geoMean.R \
 #    -e /groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/output/samples500000reads/2019-06-12.all-datasets.FIXEDSAMPLEHEADER.kallistoAbunds_extractedColumns.txt.gz \
 #    -o /groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/output/step3_step4/geoMean.txt
 
-    mkdir -p $(dirname $outfile)
+    mkdir -p $(dirname $outdir)
     java -jar $jardir/RunV12.jar $project_dir/configs/4_DeseqNormalizedData.sh
 
 
@@ -64,8 +64,8 @@ parse_commandline(){
             -e | --expression_file )    shift
                                         expression_file=$1
                                         ;;
-            -o | --outfile )            shift
-                                        outfile=$1
+            -o | --outdir )            shift
+                                        outdir=$1
                                         ;;
             -c | --config_templates )   shift
                                         config_templates=$1
@@ -102,9 +102,9 @@ parse_commandline(){
         usage
         exit 1;
     fi
-    if [ -z "$outfile" ];
+    if [ -z "$outdir" ];
     then
-        echo "ERROR: -o/--outfile not set!"
+        echo "ERROR: -o/--outdir not set!"
         usage
         exit 1;
     fi
