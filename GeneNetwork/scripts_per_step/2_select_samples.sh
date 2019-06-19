@@ -15,13 +15,13 @@ main(){
 
     rsync -vP $config_templates/2_config_SelectSamples.json.json $project_dir/configs/
 
-    sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/2_config_SelectSamples.json
-    sed -i "s;REPLACEOUTPUT;$outfile;" $project_dir/configs/2_config_SelectSamples.json
-    sed -i "s;REPLACEINCLUDESAMPLES;$sample_file;" $project_dir/configs/2_config_SelectSamples.json
+    sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/3_PCA_on_quantNormalizedData.json
+    sed -i "s;REPLACEOUTPUT;$outfile;" $project_dir/configs/3_PCA_on_quantNormalizedData.json
+    sed -i "s;REPLACEINCLUDESAMPLES;$sample_file;" $project_dir/configs/3_PCA_on_quantNormalizedData.json
 
     mkdir -p $(dirname $outfile)
-    java -jar $jardir/RunV12.jar $project_dir/configs/2_config_SelectSamples.json
-
+    java -jar $jardir/RunV12.jar $project_dir/configs/3_PCA_on_quantNormalizedData.json
+    
 }
 
 usage(){

@@ -25,7 +25,7 @@
   "quantileNormComment": "//true for DESeq normalization of the data before the PCA",
   "quantileNorm": true,
   "sampleFileComment": "Optional; e.g. /root/directory/filesToCorrect.txt//Filename of the file containing the samples for which the expression should be corrected",
-  "sampleFile": null,
+  "sampleFile": "REPLACEINCLUDESAMPLES",
   "PCsComment": "Optional; e.g. 1,4,7-10  //Princial components to correct for function takes format like: 1,4,5-10 or 3-10",
   "PCs": "",
   "writeFolderCorrectedComment": "Optional; e.g. /root/directory/corrected/  //folder where the files corrected for principal components should be written (default\u003dremoveExtention(sample.getName())+/",
