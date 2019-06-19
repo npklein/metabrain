@@ -1,0 +1,12 @@
+{
+  "expressionFN": "/groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/output/5_covariateRemoval/normalized_log2.CovariatesRemoved.txt.gz",
+  "writeFn": "/groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/output/6_correlationMatrix/normalized_log2.Correlation.txt.gz",
+  "threads": 20,
+  "correlation": true,
+  "overRows": true,
+  "className": "PCA.CorrelationLarge",
+  "startTime": "2019-06-19 12:58:30",
+  "executor": "file:/groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/jars/RunV12.jar",
+  "runTime": "31 minutes 57 seconds 51 ms",
+  "jsonFN": "/home/umcg-ndeklein/brain_eQTL/GeneNetwork/steps_config_files/6_CorrelationMatrix.json"
+}
