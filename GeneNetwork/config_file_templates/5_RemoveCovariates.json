@@ -1,0 +1,11 @@
+{
+  "expressionMatrix": "/groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/output/step3_step4/2019-06-12.all-datasets.FIXEDSAMPLEHEADER.kallistoAbunds_extractedColumns/normalized_log2.txt.gz",
+  "covariateMatrix": "/groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/data/2019-04-11-Freeze2.TMM.Covariates-Numeric-Top10Covariates.transposed.txt",
+  "writeFolder": "/groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/output/5_covariateRemoval/",
+  "sampleIncludeList": null,
+  "className": "GeneNetwork.CovariateAdjuster",
+  "startTime": "2019-06-19 12:13:37",
+  "executor": "file:/groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/jars/RunV12.jar",
+  "runTime": "9 minutes 36 seconds 342 ms",
+  "jsonFN": "/home/umcg-ndeklein/brain_eQTL/GeneNetwork/steps_config_files/5_RemoveCovariates.json"
+}
