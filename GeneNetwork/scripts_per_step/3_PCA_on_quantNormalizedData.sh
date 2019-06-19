@@ -13,16 +13,16 @@ main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
 
-    rsync -vP $config_templates/4_DeseqNormalizedData.json $project_dir/configs/
+    rsync -vP $config_templates/3_PCA_on_quantNormalizedData.json $project_dir/configs/
 
-    sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/4_DeseqNormalizedData.json
-    sed -i "s;REPLACEOUTDIR;$outdir;" $project_dir/configs/4_DeseqNormalizedData.json
-    sed -i "s;REPLACEINCLUDESAMPLES;$sample_file;" $project_dir/configs/4_DeseqNormalizedData.json
-
-    mkdir -p $(dirname $outdir)
+    sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/3_PCA_on_quantNormalizedData.json
+    sed -i "s;REPLACEOUTDIR;$outdir;" $project_dir/configs/3_PCA_on_quantNormalizedData.json
+    sed -i "s;REPLACEINCLUDESAMPLES;$sample_file;" $project_dir/configs/3_PCA_on_quantNormalizedData.json
 
     mkdir -p $(dirname $outdir)
-    java -jar $jardir/RunV12.jar $project_dir/configs/4_DeseqNormalizedData.json
+
+    mkdir -p $(dirname $outdir)
+    java -jar $jardir/RunV12.jar $project_dir/configs/3_PCA_on_quantNormalizedData.json
 
 
 }
