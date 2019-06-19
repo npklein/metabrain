@@ -9,7 +9,6 @@ outdir=
 config_templates=
 jardir=
 sample_file=
-corrected_dir=
 main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
@@ -19,7 +18,6 @@ main(){
     sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/4_DeseqNormalizedData.json
     sed -i "s;REPLACEOUTDIR;$outdir;" $project_dir/configs/4_DeseqNormalizedData.json
     sed -i "s;REPLACEINCLUDESAMPLES;$sample_file;" $project_dir/configs/4_DeseqNormalizedData.json
-    sed -i "s;REPLACEPCCORRECTEDDIR;$corrected_dir;" $project_dir/configs/4_DeseqNormalizedData.json
 
     mkdir -p $(dirname $outdir)
 #Rscript ~/brain_eQTL/GeneNetwork/misc/calculate_geoMean.R \
@@ -27,7 +25,7 @@ main(){
 #    -o /groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/output/step3_step4/geoMean.txt
 
     mkdir -p $(dirname $outdir)
-    java -jar $jardir/RunV12.jar $project_dir/configs/4_DeseqNormalizedData.sh
+    java -jar $jardir/RunV12.jar $project_dir/configs/4_DeseqNormalizedData.json
 
 
 }
@@ -76,9 +74,6 @@ parse_commandline(){
             -s | --sample_file )        shift
                                         sample_file=$1
                                         ;;
-            -z | --corrected_dir )      shift
-                                        corrected_dir=$1
-                                        ;;
             -h | --help )               usage
                                         exit
                                         ;;
@@ -117,12 +112,6 @@ parse_commandline(){
     if [ -z "$config_templates" ];
     then
         echo "ERROR: -c/--config_templates not set!"
-        usage
-        exit 1;
-    fi
-    if [ -z "$corrected_dir" ];
-    then
-        echo "ERROR: -z/--corrected_dir not set!"
         usage
         exit 1;
     fi
