@@ -10,7 +10,7 @@ parser.add_argument('output_dir')
 args = parser.parse_args()
 
 
-for type in ["metaExon.countAll", "metaExon.countFraction", "transcript.countAll", "transcript.countFraction"]:#, "exon.countAll", "exon.countFraction", "metaExon.countAll", "metaExon.countFraction"]:
+for type in ["metaExon.countAll", "metaExon.countFraction", "transcript.countAll", "transcript.countFraction", "exon.countAll", "exon.countFraction", "metaExon.countAll", "metaExon.countFraction"]:
     print(type)
     out_name_list = []
     for f in glob.glob(args.input_dir+'/*'+type+'*gz')+glob.glob(args.input_dir+'/*'+type+'*txt'):
