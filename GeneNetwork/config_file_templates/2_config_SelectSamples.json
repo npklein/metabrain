@@ -1,8 +1,8 @@
 {
   "comments": "//all variables in this file containing (Comment) are comments on the variable below and do not need to be initiated. capitalized variables that start with REPLACE have to be replaced with user input",
   "fileNameComment": "/root/directory/valueMatrix.txt; OPTIONAL; Input file for which the rowAverages should be calculated",
-  "fileName": "REPLACEFILENAME",
-  "writeFolder": "REPLACEOUTPUT",
+  "fileName": "REPLACEEXPRFILE",
+  "writeFolder": "REPLACEOUTPUTDIR",
   "includeHeadersFnComment": "/root/directory/columnHeaders.txt.; OPTIONAL; A file with the headersnames of the columns to include (enter separated)",
   "includeHeadersFn": "REPLACEINCLUDESAMPLES",
   "stepListComment": "//e.g. averages,center,removeNoVarianceRows; MANDATORY //comma separated list of all steps to take in this order",
