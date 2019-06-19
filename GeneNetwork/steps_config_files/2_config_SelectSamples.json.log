@@ -1,9 +1,0 @@
-2019-06-18 11:22:08 (RowAnalyses.RowJobPipeline):	Config file written at:	/home/umcg-ndeklein/brain_eQTL/GeneNetwork/steps_config_files/2_config_SelectSamples.json
-2019-06-18 11:22:08 (RowAnalyses.RowJobPipeline):	step = getcolumns
-2019-06-18 11:22:08 (RowAnalyses.RowJobPipeline):	fn=	2019-06-12.all-datasets.FIXEDSAMPLEHEADER.kallistoAbunds.txt.gz
-2019-06-18 11:22:08 (RowAnalyses.RowJobPipeline):	Executing 1 jobs
-2019-06-18 11:33:38 (RowAnalyses.RowJobPipeline):	step = removenovariancerows
-2019-06-18 11:33:38 (RowAnalyses.RowJobPipeline):	fn=	2019-06-12.all-datasets.FIXEDSAMPLEHEADER.kallistoAbunds_extractedColumns.txt.gz
-2019-06-18 11:33:38 (RowAnalyses.RowJobPipeline):	Executing 1 jobs
-2019-06-18 11:46:36 (RowAnalyses.RowJobPipeline):	Config file written at:	/home/umcg-ndeklein/brain_eQTL/GeneNetwork/steps_config_files/2_config_SelectSamples.json
-2019-06-18 11:46:36 (RowAnalyses.RowJobPipeline):	Done! Runtime:	24 minutes 27 seconds 913 ms
