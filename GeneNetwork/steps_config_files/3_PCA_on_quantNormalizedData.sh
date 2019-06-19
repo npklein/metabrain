@@ -3,9 +3,9 @@
   "runModeComment": "//0 for PCA+data correction; 1 for data correction alone",
   "runMode": 0,
   "expFileComment": "MANDATORY; e.g.: /root/diretory/expression.txt; //expression file on which the PCA should be conducted",
-  "expFile": "/groups/umcg-wijmenga/tmp03/users/umcg-svandam/skyMap2/samples500000reads/70percMapping/Homo_sapiens.gene_symbol.est_counts_withHeaders_extractedColumns.txt.gz",
+  "expFile": "/groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/output/samples500000reads/2019-06-12.all-datasets.FIXEDSAMPLEHEADER.kallistoAbunds_extractedColumns.txt.gz",
   "writeFolderComment": "OPTIONAL; e.g.: /root/diretory/pcaResults/; //folder where all output should be written (default: removeExtention(expFile)+/)",
-  "writeFolder": "/groups/umcg-wijmenga/tmp03/users/umcg-svandam/skyMap2/samples500000reads/70percMapping/1_covariance/",
+  "writeFolder": "/groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/output/step3/",
   "genesToIncludeComment": "OPTIONAL; e.g.: /root/diretory/includeGenes.txt; //A file containing a list of genes you wish to include. Any genes not in this file are excluded. Should have gene names in a column (first column). First row is excluded (header)",
   "genesToInclude": null,
   "isPcaOverGenesComment": "//true for PCA over genes, false for PCA over samples",
@@ -33,8 +33,8 @@
   "avgStdevFolderComment": "Optional; e.g. /root/directory/PCAresults/  //this is the folder with the files for the z-score calculations containing the averages and standard deviations to be used for this. allows z-scores to be calculated using the BBMRI averages and stdevs",
   "avgStdevFolder": null,
   "className": "PCA.PcaPipelineLite",
-  "startTime": "2018-09-18 00:48:19",
-  "executor": "file:/groups/umcg-wijmenga/tmp03/users/umcg-svandam/jar/RunV12_edited.jar",
-  "runTime": "11 hours 5 minutes 58 seconds 113 ms",
-  "jsonFN": "/groups/umcg-wijmenga/tmp03/users/umcg-svandam/skyMap2/samples500000reads/70percMapping/1_covariance/config_PCA.PcaPipelineLite.json"
+  "startTime": "2019-06-17 14:02:31",
+  "executor": "file:/groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/jars/RunV12.jar",
+  "runTime": "12 hours 44 minutes 23 seconds 387 ms",
+  "jsonFN": "/home/umcg-ndeklein/brain_eQTL/GeneNetwork/steps_config_files/3_PCA_on_quantNormalizedData.sh"
 }
