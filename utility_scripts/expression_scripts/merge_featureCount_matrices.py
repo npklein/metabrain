@@ -14,14 +14,14 @@ for type in ["metaExon.countAll", "metaExon.countFraction", "transcript.countAll
     print(type)
     out_name_list = []
     for f in glob.glob(args.input_dir+'/*'+type+'*gz')+glob.glob(args.input_dir+'/*'+type+'*txt'):
-        out_name_list.append(f.split('/')[-1].split('.')[1])
+        out_name_list.append(f.split('/')[-1].split('.')[0])
     
     now = datetime.datetime.now()
     out_name = now.strftime("%Y-%m-%d")+'.'+'-'.join(out_name_list)
+    print('name:',out_name)
     prev_header = None
 
     with open(args.output_dir+'/'+out_name+'.'+type+'.txt','w') as out:
-        print(glob.glob(args.input_dir+'/*'+type+'*.txt'))
         for index, f in enumerate(glob.glob(args.input_dir+'/*'+type+'*.gz')+glob.glob(args.input_dir+'/*'+type+'*.txt')):
             if f.endswith('gz'):
                 input_file = gzip.open(f)
