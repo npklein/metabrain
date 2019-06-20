@@ -9,6 +9,7 @@ outdir=
 config_templates=
 jardir=
 sample_file=
+expression_file=
 main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
@@ -21,7 +22,7 @@ main(){
     sed -i "s;REPLACEINCLUDESAMPLES;$sample_file;" $project_dir/configs/2_config_SelectSamples.json
 
     mkdir -p $(dirname $outdir)
-    java -jar $jardir/RunV12.jar $project_dir/configs/2_config_SelectSamples.json
+    java -jar $jardir/RunV13.jar $project_dir/configs/2_config_SelectSamples.json
 }
 
 usage(){
@@ -32,7 +33,7 @@ usage(){
     echo "  -p      Base of the project_dir where config files will be written"
     echo "  -o      Output file that will be written"
     echo "  -c      Dir with configuration template files"
-    echo "  -j      Location of V12 jar file"
+    echo "  -j      Location of V13 jar file"
     echo "  -s      File with samples to analyze"
     echo "  -h      display help"
     exit 1
