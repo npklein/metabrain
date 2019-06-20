@@ -1,6 +1,6 @@
 {
-  "expressionFN": "/groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/output/5_covariateRemoval/normalized_log2.CovariatesRemoved.txt.gz",
-  "writeFn": "/groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/output/6_correlationMatrix/normalized_log2.Correlation.txt.gz",
+  "expressionFN": "REPLACEEXPRFILE",
+  "writeFn": "REPLACEOUTFILE",
   "threads": 20,
   "correlation": true,
   "overRows": true,
