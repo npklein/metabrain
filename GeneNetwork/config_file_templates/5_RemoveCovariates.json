@@ -1,7 +1,7 @@
 {
-  "expressionMatrix": "/groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/output/step3_step4/2019-06-12.all-datasets.FIXEDSAMPLEHEADER.kallistoAbunds_extractedColumns/normalized_log2.txt.gz",
-  "covariateMatrix": "/groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/data/2019-04-11-Freeze2.TMM.Covariates-Numeric-Top10Covariates.transposed.txt",
-  "writeFolder": "/groups/umcg-biogen/tmp04/umcg-ndeklein/GeneNetwork/output/5_covariateRemoval/",
+  "expressionMatrix": "REPLACEEXPRFILE",
+  "covariateMatrix": "REPLCACECOVARMATRIX",
+  "writeFolder": "REPLACEOUTDIR",
   "sampleIncludeList": null,
   "className": "GeneNetwork.CovariateAdjuster",
   "startTime": "2019-06-19 12:13:37",

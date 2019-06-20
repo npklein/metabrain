@@ -1,5 +1,5 @@
 
-# This script runs 4th step to making GeneNetwork: do the DESEQ normalisation
+# This script runs 4th step to making GeneNetwork: Remove covariates from normalized data
 
 set -e
 set -u
@@ -9,21 +9,20 @@ outdir=
 config_templates=
 jardir=
 expression_file=
-corrected_dir=
+covar_matrix=
 main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
 
     rsync -vP $config_templates/4_DeseqNormalizedData.json $project_dir/configs/
 
-    sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/4_DeseqNormalizedData.json
-    sed -i "s;REPLACEOUTDIR;$outdir/;" $project_dir/configs/4_DeseqNormalizedData.json
-    sed -i "s;REPLACEPCCORRECTED;$corrected_dir/;" $project_dir/configs/4_DeseqNormalizedData.json
+    sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/5_RemoveCovariates.json
+    sed -i "s;REPLACEOUTDIR;$outdir/;" $project_dir/configs/5_RemoveCovariates.json
+    sed -i "s;REPLCACECOVARMATRIX;$covar_matrix;" $project_dir/configs/5_RemoveCovariates.json
 
     mkdir -p $(dirname $outdir)
 
-    mkdir -p $(dirname $outdir)
-    java -jar $jardir/RunV13.jar $project_dir/configs/4_DeseqNormalizedData.json
+    java -jar $jardir/RunV13.jar $project_dir/configs/5_RemoveCovariates.json
 
 
 }
@@ -68,8 +67,8 @@ parse_commandline(){
             -j | --jardir )             shift
                                         jardir=$1
                                         ;;
-            -z | --corrected_dir )      shift
-                                        corrected_dir=$1
+            -z | --covar_matrix )       shift
+                                        covar_matrix=$1
                                         ;;
             -h | --help )               usage
                                         exit
@@ -114,7 +113,7 @@ parse_commandline(){
     fi
     if [ -z "$corrected_dir" ];
     then
-        echo "ERROR: -z/--corrected_dir not set!"
+        echo "ERROR: -z/--covar_matrix not set!"
         usage
         exit 1;
     fi
