@@ -14,7 +14,7 @@ main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
 
-    rsync -vP $config_templates/4_DeseqNormalizedData.json $project_dir/configs/
+    rsync -vP $config_templates/5_RemoveCovariates.json $project_dir/configs/
 
     sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/5_RemoveCovariates.json
     sed -i "s;REPLACEOUTDIR;$outdir/;" $project_dir/configs/5_RemoveCovariates.json
@@ -111,7 +111,7 @@ parse_commandline(){
         usage
         exit 1;
     fi
-    if [ -z "$corrected_dir" ];
+    if [ -z "$covar_matrix" ];
     then
         echo "ERROR: -z/--covar_matrix not set!"
         usage
