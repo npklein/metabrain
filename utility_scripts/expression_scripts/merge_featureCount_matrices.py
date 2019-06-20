@@ -14,7 +14,12 @@ for type in ["metaExon.countAll", "metaExon.countFraction", "transcript.countAll
     print(type)
     out_name_list = []
     for f in glob.glob(args.input_dir+'/*'+type+'*gz')+glob.glob(args.input_dir+'/*'+type+'*txt'):
-        out_name_list.append(f.split('/')[-1].split('.')[0])
+        # sometimes has date a first in name, other times not. Change split value based on that.
+        if f.startswith('20'):
+            s = 1
+        else:
+            s = 0
+        out_name_list.append(f.split('/')[-1].split('.')[1])
     
     now = datetime.datetime.now()
     out_name = now.strftime("%Y-%m-%d")+'.'+'-'.join(out_name_list)
