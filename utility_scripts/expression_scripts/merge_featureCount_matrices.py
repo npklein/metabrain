@@ -19,7 +19,7 @@ for type in ["metaExon.countAll", "metaExon.countFraction", "transcript.countAll
             s = 1
         else:
             s = 0
-        out_name_list.append(f.split('/')[-1].split('.')[1])
+        out_name_list.append(f.split('/')[-1].split('.')[s])
     
     now = datetime.datetime.now()
     out_name = now.strftime("%Y-%m-%d")+'.'+'-'.join(out_name_list)
