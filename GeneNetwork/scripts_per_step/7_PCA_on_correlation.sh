@@ -17,10 +17,14 @@ then
     cd $TMPDIR
     /groups/umcg-wijmenga/tmp04/projects/2019-comethylationnetwork/tools/pcapp/pcaplusplus/pca pca correlation $outfile_step6
     /groups/umcg-wijmenga/tmp04/projects/2019-comethylationnetwork/tools/pcapp/pcaplusplus/pca pc-scores correlation $outfile_step6 eigenvectors.txt
-    /groups/umcg-wijmenga/tmp04/projects/2019-comethylationnetwork/tools/pcapp/pcaplusplus/pca evd filename
 
     mkdir -p $output_dir/7_PCA_on_correlation_matrix/
-    mv summary.txt correlation.txt eigenvalues.txt eigenvectors.txt pc-scores.txt cronbach.txt $output_dir/7_PCA_on_correlation_matrix/
+    mv summary.txt $output_dir/7_PCA_on_correlation_matrix/MetaBrain.summary.txt
+    mv correlation.txt $output_dir/7_PCA_on_correlation_matrix/MetaBrain.correlation.txt
+    mv eigenvalues.txt $output_dir/7_PCA_on_correlation_matrix/MetaBrain.eigenvalues.txt
+    mv eigenvectors.txt $output_dir/7_PCA_on_correlation_matrix/MetaBrain.eigenvectors.txt
+    mv pc-scores.txt $output_dir/7_PCA_on_correlation_matrix/MetaBrain.pc-scores.txt
+    mv cronbach.txt $output_dir/7_PCA_on_correlation_matrix/MetaBrain.cronbach.txt.txt
     cd -
 fi
 
