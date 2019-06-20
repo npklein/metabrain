@@ -9,6 +9,7 @@ outdir=
 config_templates=
 jardir=
 sample_file=
+expression_file=
 main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
