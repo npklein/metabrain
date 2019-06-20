@@ -18,11 +18,9 @@ main(){
     sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/6_CorrelationMatrix.json
     sed -i "s;REPLACEOUTFILE;$outfile/;" $project_dir/configs/6_CorrelationMatrix.json
 
-    mkdir -p $(dirname $outdir)
+    mkdir -p $(dirname $outfile)
 
-    java -jar $jardir/RunV13.jar $project_dir/configs/5_RemoveCovariates.json
-
-
+    java -jar $jardir/RunV13.jar $project_dir/configs/6_CorrelationMatrix.json
 }
 
 usage(){

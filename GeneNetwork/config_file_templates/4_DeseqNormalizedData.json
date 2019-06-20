@@ -1,7 +1,7 @@
 {
   "comments": "//all variables in this file containing (Comment) are comments on the variable below and do not need to be initiated",
   "runModeComment": "//0 for PCA+data correction; 1 for data correction alone",
-  "runMode": 1,
+  "runMode": 0,
   "expFileComment": "MANDATORY; e.g.: /root/diretory/expression.txt; //expression file on which the PCA should be conducted",
   "expFile": "REPLACEEXPRFILE",
   "writeFolderComment": "OPTIONAL; e.g.: /root/diretory/pcaResults/; //folder where all output should be written (default: removeExtention(expFile)+/)",
@@ -11,7 +11,7 @@
   "isPcaOverGenesComment": "//true for PCA over genes, false for PCA over samples",
   "isPcaOverGenes": true,
   "correlationComment": "//true for correlation, false for covariance",
-  "correlation": false,
+  "correlation": true,
   "centerGenesComment": "//true centers the expression for the genes (sets average to 0); should be used when conducting PCA over genes. If PCA over genes, use centerSamples\u003dfalse",
   "centerGenes": false,
   "centerSamplesComment": "//true centers expression over the samples (sets average to 0); should be used when conducting PCA over samples. Centering over samples happens after centering over genes. If PCA over samples, reccommended to also use centerGenes\u003dtrue",
