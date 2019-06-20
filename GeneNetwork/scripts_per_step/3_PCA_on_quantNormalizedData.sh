@@ -9,6 +9,7 @@ outdir=
 config_templates=
 jardir=
 sample_file=
+expression_file=
 main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
@@ -16,7 +17,7 @@ main(){
     rsync -vP $config_templates/3_PCA_on_quantNormalizedData.json $project_dir/configs/
 
     sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/3_PCA_on_quantNormalizedData.json
-    sed -i "s;REPLACEOUTDIR;$outdir;" $project_dir/configs/3_PCA_on_quantNormalizedData.json
+    sed -i "s;OUTPUTDIR;$outdir/;" $project_dir/configs/3_PCA_on_quantNormalizedData.json
     sed -i "s;REPLACEINCLUDESAMPLES;$sample_file;" $project_dir/configs/3_PCA_on_quantNormalizedData.json
 
     mkdir -p $(dirname $outdir)
