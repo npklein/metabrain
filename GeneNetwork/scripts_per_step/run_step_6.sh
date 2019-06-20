@@ -13,4 +13,4 @@ module load Java/1.8.0_144-unlimited_JCE
 set -e
 set -u
 
-java -jar -Xms99G -Xmx99G jars/RunV12.jar ~/brain_eQTL/GeneNetwork/steps_config_files/6_CorrelationMatrix.json
+java -jar -Xms99G -Xmx99G jars/RunV13.jar ~/brain_eQTL/GeneNetwork/steps_config_files/6_CorrelationMatrix.json

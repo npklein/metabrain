@@ -18,7 +18,7 @@ main(){
     sed -i "s;REPLACEOUTPUT;$outfile;" $project_dir/configs/1_config_RemoveDuplicates.json
 
     mkdir -p $(dirname $outfile)
-    java -jar $jardir/RunV12.jar $project_dir/configs/1_config_RemoveDuplicates.json
+    java -jar $jardir/RunV13.jar $project_dir/configs/1_config_RemoveDuplicates.json
 
 }
 
@@ -30,7 +30,7 @@ usage(){
     echo "  -p      Base of the project_dir where config files will be written"
     echo "  -o      Output file that will be written"
     echo "  -c      Dir with configuration template files"
-    echo "  -j      Location of V12 jar file"
+    echo "  -j      Location of V13 jar file"
     echo "  -h      display help"
     exit 1
 }
