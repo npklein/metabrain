@@ -1,5 +1,5 @@
 
-# This script runs 4th step to making GeneNetwork: Remove covariates from normalized data
+# This script runs 5th step to making GeneNetwork: Remove covariates from normalized data
 
 set -e
 set -u
@@ -33,10 +33,10 @@ usage(){
     echo "usage: $programname -e expression_file -p project_directory -o output_dir"
     echo "  -e      Expression file to remove duplciates from"
     echo "  -p      Base of the project_dir where config files will be written"
-    echo "  -o      Output file that will be written"
+    echo "  -o      Output directory that will be written"
     echo "  -c      Dir with configuration template files"
     echo "  -j      Location of V13 jar file"
-    echo "  -z      Directory to write expr files corrected by PCAs to"
+    echo "  -z      Covariance matrix to regress out"
     echo "  -h      display help"
     exit 1
 }
