@@ -15,7 +15,7 @@ for type in ["metaExon.countAll", "metaExon.countFraction", "transcript.countAll
     out_name_list = []
     for f in glob.glob(args.input_dir+'/*'+type+'*gz')+glob.glob(args.input_dir+'/*'+type+'*txt'):
         # sometimes has date a first in name, other times not. Change split value based on that.
-        if f.startswith('20'):
+        if f.split('/')[-1].startswith('20'):
             s = 1
         else:
             s = 0

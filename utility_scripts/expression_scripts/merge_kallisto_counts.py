@@ -61,7 +61,6 @@ def parse_kallisto_files(kallisto_abundance_file):
     # loop over all the kallisto abundance files. Take the estimated counts and 
     # sum counts from all transcript of certain gene to that gene
     sample_name = kallisto_abundance_file.split('/')[-2]
-    print(kallisto_abundance_file)
     sys.stdout.flush()
     estimated_counts_per_gene = {}
     with open(kallisto_abundance_file) as input_file:
