@@ -3,12 +3,14 @@ import sys
 import argparse
 
 parser = argparse.ArgumentParser(description='Merge (gzipped) matrices by column')
-parser.add_argument('output_file', help='File to write output to')
+parser.add_argument('outfile', help='File to write output to')
 parser.add_argument('input_files', help='files to merge', nargs='+')
+parser.add_argument('--rowname_column', help='col number of column to merge on', default = 0)
 
 args = parser.parse_args()
 
-def openfile(filename, mode='rt',gzip=True):
+rowname_column = int(args.rowname_column)
+def openfile(filename, mode='rt'):
     if filename.endswith('.gz'):
         return gzip.open(filename, mode) 
     else:
@@ -18,34 +20,41 @@ def openfile(filename, mode='rt',gzip=True):
 value_per_column_per_row = {}
 row_set = set([])
 columns = []
-for f in ars.input_files:
+cols_before_merge = {}
+for f in args.input_files:
     print(f)
     column_index = {}
     with openfile(f,'rt') as input_file:
         header = input_file.readline().rstrip('\n').split('\t')
-        for index, element in enumerate(header[1:]):
+        print('merging on',header[rowname_column])
+        for index, element in enumerate(header[rowname_column+1:]):
             column_index[index] = element
             columns.append(element)
         for line in input_file:
             line = line.rstrip('\n').split('\t')
-            rowname = line[0]
+            rowname = line[rowname_column]
+            if rowname_column != 0:
+                for i in range(0,rowname_column):
+                    rowname = line[i]+'_'+rowname
             row_set.add(rowname)
             if rowname not in value_per_column_per_row:
                 value_per_column_per_row[rowname] = {}
-            for index, element in enumerate(line[1:]):
+            for index, element in enumerate(line[rowname_column+1:]):
                 value_per_column_per_row[rowname][column_index[index]] = element
-
 sorted_rownames = sorted(row_set)
 print('done reading, start writing')
-with openfile(outfile,'wt') as out:
+with openfile(args.outfile,'wt') as out:
     out.write('-')
-    for sample in columns:
-        out.write('\t'+sample)
+    for colname in columns:
+        out.write('\t'+colname)
     out.write('\n')
     for rowname in sorted_rownames:
         out.write(rowname)
-        for sample in columns:
-            out.write('\t'+value_per_column_per_row[rowname][sample])
+        for colname in columns:
+            if colname in value_per_column_per_row[rowname]:
+                out.write('\t'+value_per_column_per_row[rowname][colname])
+            else:
+                out.write('')
         out.write('\n')
 
 
