@@ -75,7 +75,7 @@ for event in events:
                                                       get_exon(chr, line[6], line[7]),
                                                       get_exon(chr, line[8], line[9])]
 
-                genes[split_event] = gene
+                genes[splice_event] = gene
                 exons_per_event[event].add(splice_event)
                 incl_level = line[-1]
                 if incl_level == 'NA':
