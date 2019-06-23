@@ -73,7 +73,7 @@ for event in events:
                 splice_event = line[4]+'_'+line[5]+'_'+line[6]+'_'+line[7]+'_'+line[8]+'_'+line[9]
                 exon_per_splice_event[splice_event] =[get_exon(chr, line[4], line[5]),
                                                       get_exon(chr, line[6], line[7]),
-                                                      get_exon(chr. line[8], line[9])]
+                                                      get_exon(chr, line[8], line[9])]
 
                 genes[split_event] = gene
                 exons_per_event[event].add(splice_event)
