@@ -148,7 +148,7 @@ TMPFASTQ3=$TMPDIR/$(basename ${INPUTBAM%.bam}.rest.fastq)
 # 2. get the line out of the header that contains the user command (grep)
 # 3. split the line on "user command line" (awk) and print everything that is after
 # 4. in this string, count the number of occurences of fastq.gz and fq.gz
-FASTQINPUTFILE=$(samtools view -H $TMPDIR/$(basename $INPUTBAM) | grep "user command line" | awk -F"user command line:" '{ print $2}' | grep -o "\.fastq.gz\|\.fq.gz\|\.fastq" | wc -l)
+FASTQINPUTFILE=$(samtools view -H $TMPDIR/$(basename $INPUTBAM) | grep "user command line" | awk -F"--readFilesIn" '{ print $2}' | grep -o "\.fastq.gz\|\.fq.gz\|\.fastq" | wc -l)
 
 PAIRED=
 if [ "$FASTQINPUTFILE" -eq 1 ];
@@ -161,6 +161,7 @@ then
     echo "BAM file is paired-end, will extract 2 fastq files"
 else
     echo "ERROR: PAIRED was $PAIRED, should have been 1 or 2";
+    echo "FASTQUINPUTFILE was $FASTQINPUTFILE"
     exit 1;
 fi
 

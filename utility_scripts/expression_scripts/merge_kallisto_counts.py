@@ -24,12 +24,13 @@ def main():
 
     # dict to sum transcript coutns per gene per sample
     estimated_counts_per_gene = {}
-    # loop over all kallisto files to get list of sample names
-    print('loop over all kallisto files to get list of sample name')
+    print('loop over all kallisto files to get list of sample names')
+    sys.stdout.flush()
     for f in kallisto_files:
         sample = f.split('/')[-2]
         estimated_counts_per_gene[sample] = {}
     print('done')
+    sys.stdout.flush()
     # get a set of genes (all files have the same list so only need to read 1 file)
     set_of_genes = set([])
     with open(kallisto_files[0]) as input_file:
@@ -37,7 +38,8 @@ def main():
         for line in input_file:
             line = line.split('\t')
             set_of_genes.add(transcript_to_gene[line[0]])
-
+    print('start map')
+    sys.stdout.flush()
     # parallel process kallisto files. Per sample 1 thread
     with Pool(int(args.threads)) as pool:
         kallisto_data = pool.map(parse_kallisto_files, kallisto_files)
@@ -62,7 +64,6 @@ def parse_kallisto_files(kallisto_abundance_file):
     # loop over all the kallisto abundance files. Take the estimated counts and 
     # sum counts from all transcript of certain gene to that gene
     sample_name = kallisto_abundance_file.split('/')[-2]
-    sys.stdout.flush()
     estimated_counts_per_gene = {}
     with open(kallisto_abundance_file) as input_file:
         input_file.readline()
