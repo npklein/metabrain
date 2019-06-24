@@ -25,10 +25,11 @@ def main():
     # dict to sum transcript coutns per gene per sample
     estimated_counts_per_gene = {}
     # loop over all kallisto files to get list of sample names
+    print('loop over all kallisto files to get list of sample name')
     for f in kallisto_files:
         sample = f.split('/')[-2]
         estimated_counts_per_gene[sample] = {}
-
+    print('done')
     # get a set of genes (all files have the same list so only need to read 1 file)
     set_of_genes = set([])
     with open(kallisto_files[0]) as input_file:
