@@ -71,10 +71,13 @@ for event in events:
                 gene = line[0]
                 chr = line[2]
                 splice_event = line[4]+'_'+line[5]+'_'+line[6]+'_'+line[7]+'_'+line[8]+'_'+line[9]
-                exon_per_splice_event[splice_event] =[get_exon(chr, line[4], line[5]),
+              
+                exon_per_splice_event[splice_event] = [get_exon(chr, line[4], line[5]),
                                                       get_exon(chr, line[6], line[7]),
                                                       get_exon(chr, line[8], line[9])]
-
+                if event == 'MXE':
+                    exon_per_splice_event[splice_event].append(get_exon(chr, line[10], line[11]))
+                    
                 genes[splice_event] = gene
                 exons_per_event[event].add(splice_event)
                 incl_level = line[-1]
@@ -95,7 +98,7 @@ for event in events:
         if event == 'A3SS' or event == 'A5SS':
             out.write('\tlongExon\tshort\tflanking')
         elif event == 'MXE':
-            out.write('\t1stExon\t2ndExon\tupstream')
+            out.write('\t1stExon\t2ndExon\tupstream\tdownstream')
         elif event == 'RI':
             out.write('\triExon\tupstream\tdownstread')
         elif event == 'SE':
@@ -110,6 +113,8 @@ for event in events:
             out.write(','.join(exon_per_splice_event[splice_event][0])+'\t')
             out.write(','.join(exon_per_splice_event[splice_event][1])+'\t')
             out.write(','.join(exon_per_splice_event[splice_event][2]))
+            if event == 'MXE':
+                out.write('\t'+','.join(exon_per_splice_event[splice_event][3]))
             for sample in samples:
                 try:
                     out.write('\t'+incl_per_sample_per_event[event][splice_event][sample])
