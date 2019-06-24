@@ -46,7 +46,7 @@ def get_exon(chr, start, stop):
     try:
         return exons[location]
     except KeyError:
-        return
+        return []
 event_header = {}
 samples = []
 print('read data');
