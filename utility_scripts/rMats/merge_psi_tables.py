@@ -99,7 +99,7 @@ for event in events:
         elif event == 'RI':
             out.write('\triExon\tupstream\tdownstread')
         elif event == 'SE':
-            out.write('exon\tupstream\tdownstream')
+            out.write('\texon\tupstream\tdownstream')
 
         for sample in samples:
             out.write('\t'+sample)
@@ -112,7 +112,7 @@ for event in events:
             out.write(','.join(exon_per_splice_event[splice_event][2]))
             for sample in samples:
                 try:
-                    out.write('\t'+incl_per_sample_per_event[event][exon][sample])
+                    out.write('\t'+incl_per_sample_per_event[event][splice_event][sample])
                 except:
                     out.write('\t')
             out.write('\n')
