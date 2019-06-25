@@ -2,6 +2,8 @@ import datetime
 import gzip
 import glob
 import argparse
+import datetime
+from multiprocessing import Pool
 
 parser = argparse.ArgumentParser(description='Merge multiple FeatureCount matrices')
 parser.add_argument('input_dir')
@@ -10,7 +12,7 @@ parser.add_argument('output_dir')
 args = parser.parse_args()
 
 
-for type in ["metaExon.countAll", "metaExon.countFraction", "transcript.countAll", "transcript.countFraction", "exon.countAll", "exon.countFraction", "metaExon.countAll", "metaExon.countFraction"]:
+def merge_files(type):
     print(type)
     out_name_list = []
     for f in glob.glob(args.input_dir+'/*'+type+'*gz')+glob.glob(args.input_dir+'/*'+type+'*txt'):
@@ -26,7 +28,7 @@ for type in ["metaExon.countAll", "metaExon.countFraction", "transcript.countAll
     print('name:',out_name)
     prev_header = None
 
-    with open(args.output_dir+'/'+out_name+'.'+type+'.txt','w') as out:
+    with gzip.open(args.output_dir+'/'+out_name+'.'+type+'.txt.gz','wt') as out:
         for index, f in enumerate(glob.glob(args.input_dir+'/*'+type+'*.gz')+glob.glob(args.input_dir+'/*'+type+'*.txt')):
             if f.endswith('gz'):
                 input_file = gzip.open(f)
@@ -49,3 +51,8 @@ for type in ["metaExon.countAll", "metaExon.countFraction", "transcript.countAll
                     line = line.decode('utf-8')
                 out.write(line)
             input_file.close()
+
+#list_of_types = ["metaExon.countAll", "metaExon.countFraction", "transcript.countAll", "transcript.countFraction", "exon.countAll", "exon.countFraction", "metaExon.countAll", "metaExon.countFraction"]
+list_of_types = ["transcript.countAll", "transcript.countFraction"]
+p = Pool(len(list_of_types))
+p.map(merge_files, list_of_types)
