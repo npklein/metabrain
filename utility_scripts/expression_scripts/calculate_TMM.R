@@ -4,7 +4,7 @@
 
 library(edgeR)
 library("optparse")
-
+library(data.table)
 # Get command line arguments 
 option_list = list(
   make_option(c("-c", "--countsFile"), type="character", default=getwd(), 
@@ -25,7 +25,7 @@ cpmOut <- opt$cpmOut
 samplePerc <- 0.01 # args[3] # (0.01)
 
 
-counts <- read.delim(countsFile,row.names=1, check.names=FALSE)
+counts <- data.frame(fread(paste0('gunzip -c ', countsFile),check.names=FALSE), row.names = 1)
 
 counts_features <- counts[!rownames(counts) %in% c('N_unmapped','N_noFeature','N_multimapping',
                                                                        'N_ambiguous'),]

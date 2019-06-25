@@ -6,6 +6,7 @@ parser = argparse.ArgumentParser(description='Use mice imputation on table.')
 parser.add_argument('input_file', help='input file')
 parser.add_argument('output_file', help='outputf file')
 
+
 args = parser.parse_args()
 
 df = pd.read_csv(args.input_file,sep="\t", index_col=0)   

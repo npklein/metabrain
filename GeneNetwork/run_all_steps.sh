@@ -121,7 +121,8 @@ print_command_arguments(){
             sed -i "s;REPLACEGENECOVARIANCE;$TMPDIR/3_quantileNormalized/gene_covariance.txt;" $TMPDIR/3_quantileNormalized/run_PCA.sh
             sed -i "s;REPLACEOUT;$TMPDIR/3_quantileNormalized//;" $TMPDIR/3_quantileNormalized/run_PCA.sh
             sed -i "s;REPLACEPRECOR;$TMPDIR/3_quantileNormalized/pre_Correlation_Or_Covariance.txt;" $TMPDIR/3_quantileNormalized/run_PCA.sh
-            sbatch $TMPDIR/3_quantileNormalized/run_PCA.sh
+            sbatch --wait $TMPDIR/3_quantileNormalized/run_PCA.sh
+            wait
             mv $MPDIR/3_quantileNormalized/ $output_dir/
         fi
     fi
@@ -161,18 +162,17 @@ print_command_arguments(){
 }
 
 6_CorrelationMatrix(){
-    output_file_step6="$output_dir/6_correlation_matrix/MetaBrain.deseqNorm.covarCorrected.correlation.txt.gz"
+    output_file_step6="$output_dir/6_correlation_matrix/MetaBrain.deseqNorm.covarCorrected.correlation.txt"
+    #.gz"
     if [ ! -f $output_file_step6 ];
     then
         # Step 6. Make correlation matrix
         bash $github_dir/GeneNetwork/scripts_per_step/6_CorrelationMatrix.sh \
             -p $project_dir \
             -e $output_file_step5 \
-            -o $TMPDIR/$(basename $output_file_step6) \
+            -o ${output_file_step6%.gz} \
             -c $config_template_dir \
             -j $jar_dir
-        mkdir -p $(dirname $output_file_step6)
-        mv $TMPDIR/$(basename $output_dir_step6) $output_file_step6
     fi
 }
 
@@ -180,11 +180,16 @@ print_command_arguments(){
     if [ ! -f $output_dir/7_PCA_on_correlation_matrix/MetaBrain.pc-scores.txt ];
     then
         # step 7. Run PCA on correlation matrix
-        rsync -vP $github_dir/GeneNetwork/scripts_per_step/7_PCA_on_correlation.sh $TMPDIR/7_PCA_on_correlation.sh
-        sed -i "s;REPLACEOUTDIR;$output_dir/;" $TMPDIR/7_PCA_on_correlation.sh
-        sed -i "s;REPLACEoutput_dir;$output_file_step6;" $TMPDIR/7_PCA_on_correlation.sh
-        sed -i "s;REPLACEPCASETUP;$github_dir/GeneNetwork/PCA_setup_calculon.sh;" $TMPDIR/7_PCA_on_correlation.sh
-        sbatch $TMPDIR/7_PCA_on_correlation.sh
+        mkdir -p  $output_dir/7_PCA_on_correlation_matrix/
+        rsync -vP $github_dir/GeneNetwork/scripts_per_step/7_PCA_on_correlation.sh $output_dir/7_PCA_on_correlation_matrix/7_PCA_on_correlation.sh
+        echo "replace"
+#        sed -i "s;REPLACEOUTDIR;$TMPDIR/7_PCA_on_correlation_matrix/;" $TMPDIR/7_PCA_on_correlation.sh
+        sed -i "s;REPLACEOUTFILE;$output_file_step6;" $output_dir/7_PCA_on_correlation_matrix//7_PCA_on_correlation.sh
+        sed -i "s;REPLACEPCASETUP;$github_dir/GeneNetwork/PCA_setup_calculon.sh;" $output_dir/7_PCA_on_correlation_matrix/7_PCA_on_correlation.sh
+        echo "sbatch submit"
+        cd $output_dir/7_PCA_on_correlation_matrix/
+        sbatch 7_PCA_on_correlation.sh
+        cd -
     fi
 }
 

@@ -1,5 +1,5 @@
 
-# This runs the complete GeneNetwork processing pipeline
+# This runs the complete expression_normalization processing pipeline
 
 set -e
 set -u
@@ -21,8 +21,6 @@ jar_dir=
 sample_file=
 # github dir
 github_dir=
-# quant normalize only necesarry to select samples. we already know which are the good ones, so skip
-quant_norm=false
 # covariate table
 covar_table=
 ####
@@ -43,7 +41,7 @@ print_command_arguments(){
 }
 
 print_command_arguments(){
-    echo "Processing expression data for GeneNetwork."
+    echo "Processing expression data for expression_normalization."
     echo "Starting program with:"
     echo "expression_file=$expression_file"
     echo "output_dir=$output_dir"
@@ -60,10 +58,11 @@ print_command_arguments(){
     # Step 1. Select samples from expression file
     output_dir_step1="${output_dir}/1_selectSamples/$(basename ${expression_file%.txt.gz}).extractedColumns.txt.gz"
     new_output_file_step1=$output_dir/1_selectSamples/$(basename ${expression_file%.txt.gz})_extractedColumnsnoVarianceRowsRemoved.txt.gz
+    echo "${new_output_file_step1}"
     if [ ! -f ${new_output_file_step1} ]
     then
         echo "start step 1"
-        bash $github_dir/GeneNetwork/scripts_per_step/1_select_samples.sh \
+        bash $github_dir/expression_normalization/scripts_per_step/1_select_samples.sh \
             -e $expression_file \
             -p $project_dir \
             -o $TMPDIR/1_selectSamples/ \
@@ -74,7 +73,7 @@ print_command_arguments(){
         # change this
         f1=$TMPDIR/1_selectSamples/$(basename ${expression_file%.txt.gz})_extractedColumns_noVarRemoved.txt.gz
         mv $TMPDIR/1_selectSamples/ $output_dir/
-        mv $f1 $TMPDIR/1_selectSamples/$(basename $new_output_file_step1)
+        mv $f1 $output_dir/1_selectSamples/$(basename $new_output_file_step1)
     fi
 }
 
@@ -85,7 +84,7 @@ print_command_arguments(){
     if [ ! -f ${output_file_step2} ];
     then
         echo "start step 2"
-        bash $github_dir/GeneNetwork/scripts_per_step/2_remove_duplicate_samples.sh \
+        bash $github_dir/expression_normalization/scripts_per_step/2_remove_duplicate_samples.sh \
             -p $project_dir \
             -e $new_output_file_step1 \
             -o $TMPDIR/$(basename $output_file_step2) \
@@ -98,53 +97,52 @@ print_command_arguments(){
 }
 
 3_quantileNormalized(){
-    if [ "quant_norm" = true ];
+    # Step 3. make PCA of quantile normalized data. Do visual inspection, if samples need to be removed, run from step 2 again (selecting only correct samples)
+    # and then skip step 1 and 3 and go to step 4. I think this step is nececarry for step 4, not sure why though.
+    output_file_step3=$output_dir/3_quantileNormalized/$(basename ${output_file_step2%.txt.gz}.QuantileNormalized.txt.gz)
+    if [ ! -f $output_file_step3 ];
     then
-        # Step 3. make PCA of quantile normalized data. Do visual inspection, if samples need to be removed, run from step 2 again (selecting only correct samples)
-        # and then skip step 1 and 3 and go to step 4. I think this step is nececarry for step 4, not sure why though.
-        output_file_step3=$output_dir/3_quantileNormalized/$(basename ${output_file_step2%.txt.gz}.QuantileNormalized.txt.gz)
-        if [ ! -f $output_file_step3 ];
-        then
-            bash $github_dir/GeneNetwork/scripts_per_step/3_PCA_on_quantNormalizedData.sh \
-                -p $project_dir \
-                -e $output_file_step2 \
-                -o $TMPDIR/3_quantileNormalized/ \
-                -c $config_template_dir \
-                -j $jar_dir
+        bash $github_dir/expression_normalization/scripts_per_step/3_PCA_on_quantNormalizedData.sh \
+            -p $project_dir \
+            -e $output_file_step2 \
+            -o $TMPDIR/3_quantileNormalized/ \
+            -c $config_template_dir \
+            -j $jar_dir
 
-            # The export.sh file has hardcoded paths for running PCA, change these
-            rsync -vP $github_dir/GeneNetwork/scripts_per_step/run_PCA.sh $TMPDIR/3_quantileNormalized/run_PCA.sh
-            sed -i "s;REPLACEGENECOVARIANCE;$TMPDIR/3_quantileNormalized/gene_covariance.txt;" $TMPDIR/3_quantileNormalized/run_PCA.sh
-            sed -i "s;REPLACEOUT;$TMPDIR/3_quantileNormalized//;" $TMPDIR/3_quantileNormalized/run_PCA.sh
-            sed -i "s;REPLACEPRECOR;$TMPDIR/3_quantileNormalized/pre_Correlation_Or_Covariance.txt;" $TMPDIR/3_quantileNormalized/run_PCA.sh
-            sbatch $TMPDIR/3_quantileNormalized/run_PCA.sh
-            mv $MPDIR/3_quantileNormalized/ $output_dir/
-        fi
+        # The export.sh file has hardcoded paths for running PCA, change these
+        rsync -vP $github_dir/expression_normalization/scripts_per_step/run_PCA.sh $TMPDIR/3_quantileNormalized/run_PCA.sh
+        sed -i "s;REPLACEGENECOVARIANCE;$TMPDIR/3_quantileNormalized/gene_covariance.txt;" $TMPDIR/3_quantileNormalized/run_PCA.sh
+        sed -i "s;REPLACEOUT;$TMPDIR/3_quantileNormalized//;" $TMPDIR/3_quantileNormalized/run_PCA.sh
+        sed -i "s;REPLACEPRECOR;$TMPDIR/3_quantileNormalized/pre_Correlation_Or_Covariance.txt;" $TMPDIR/3_quantileNormalized/run_PCA.sh
+        sbatch --wait $TMPDIR/3_quantileNormalized/run_PCA.sh
+        wait
+        mv $MPDIR/3_quantileNormalized/ $output_dir/
     fi
 }
 
 4_RemoveCovariates(){
-    output_file_step5=$output_dir/5_covariatesRemoved/$(basename ${output_file_step4%.txt.gz}.ProbesWithZeroVarianceRemoved.CovariatesRemoved.txt.gz)
+    output_file_step4=$output_dir/4_covariatesRemoved/$(basename ${output_file_step4%.txt.gz}.ProbesWithZeroVarianceRemoved.CovariatesRemoved.txt.gz)
     if [ ! -f $output_file_step5 ];
     then
-        # Step 5. Remove covariates from deseq normalized data
-        bash $github_dir/GeneNetwork/scripts_per_step/5_RemoveCovariates.sh \
+        # Step 4. Remove covariates from quantile normalized data
+        bash $github_dir/expression_normalization/scripts_per_step/4_RemoveCovariates.sh \
             -p $project_dir \
-            -e $output_file_step4 \
-            -o $TMPDIR/5_covariatesRemoved \
+            -e $output_file_step3 \
+            -o $TMPDIR/4_covariatesRemoved \
             -c $config_template_dir \
             -j $jar_dir \
             -z $covar_table
-        mv $TMPDIR/5_covariatesRemoved $output_dir/
+        mv $TMPDIR/4_covariatesRemoved $output_dir/
     fi
 
             # The export.sh file has hardcoded paths for running PCA, change these
-            rsync -vP $github_dir/GeneNetwork/scripts_per_step/run_PCA.sh $TMPDIR/3_quantileNormalized/run_PCA.sh
-            sed -i "s;REPLACEGENECOVARIANCE;$TMPDIR/3_quantileNormalized/gene_covariance.txt;" $TMPDIR/3_quantileNormalized/run_PCA.sh
-            sed -i "s;REPLACEOUT;$TMPDIR/3_quantileNormalized//;" $TMPDIR/3_quantileNormalized/run_PCA.sh
-            sed -i "s;REPLACEPRECOR;$TMPDIR/3_quantileNormalized/pre_Correlation_Or_Covariance.txt;" $TMPDIR/3_quantileNormalized/run_PCA.sh
-            sbatch $TMPDIR/3_quantileNormalized/run_PCA.sh
-            mv $MPDIR/3_quantileNormalized/ $output_dir/
+            rsync -vP $github_dir/expression_normalization/scripts_per_step/run_PCA.sh $TMPDIR/4_covariatesRemoved/run_PCA.sh
+            sed -i "s;REPLACEGENECOVARIANCE;$TMPDIR/4_covariatesRemoved/gene_covariance.txt;" $TMPDIR/4_covariatesRemoved/run_PCA.sh
+            sed -i "s;REPLACEOUT;$TMPDIR/4_covariatesRemoved//;" $TMPDIR/4_covariatesRemoved/run_PCA.sh
+            sed -i "s;REPLACEPRECOR;$TMPDIR/4_covariatesRemoved/pre_Correlation_Or_Covariance.txt;" $TMPDIR/4_covariatesRemoved/run_PCA.sh
+            sbatch --wait $TMPDIR/4_covariatesRemoved/run_PCA.sh
+            wait
+            mv $MPDIR/4_covariatesRemoved/ $output_dir/
 }
 
 usage(){
@@ -158,7 +156,7 @@ usage(){
     echo "  -o      Output directory where results will be written"
     echo "  -j      Location of V13 jar file"
     echo "  -s      File with samples to include"
-    echo "  -g      Github GeneNetwork directory"
+    echo "  -g      Github expression_normalization directory"
     echo "  -z      Covariate table"
     echo "  -h      display help"
     exit 1
