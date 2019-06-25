@@ -18,7 +18,7 @@ main(){
     sed -i "s;REPLACEOUTPUT;$outfile;" $project_dir/configs/2_config_RemoveDuplicates.json
 
     mkdir -p $(dirname $outfile)
-    java -jar $jardir/RunV13.jar $project_dir/configs/2_config_RemoveDuplicates.json
+    java -Xmx90g  -jar $jardir/RunV13.jar $project_dir/configs/2_config_RemoveDuplicates.json
 
 }
 

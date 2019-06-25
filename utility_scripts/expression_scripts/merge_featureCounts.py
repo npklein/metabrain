@@ -42,17 +42,19 @@ def parse_gtf(gtf, feature_type):
             id = info.split(feature_name+'_id "')[1].split('"')[0]
             if chr+start+end in feature_info:
                 # add name of overlapping transcripts
-                feature_info[chr+start+end] += '_'+id
+                feature_info[chr+'_'+start+'_'+end] += '_'+id
             else:
-                feature_info[chr+start+end] = id
+                feature_info[chr+'_'+start+'_'+end] = id
     return(feature_info)
 
 feature_info = None
 prev_line = None
+number_of_transcript = 0
 with gzip.open(args.out_prefix+feature_type+'.txt.gz','wt') as out:
     x = 0
     out.write('-')
     for f in glob.iglob(featureCount_directory+'/**/*txt.gz', recursive=True):
+        number_of_transcript_written = 0
         # open the first file to get a list of features
 
         if x == 0:
@@ -60,6 +62,7 @@ with gzip.open(args.out_prefix+feature_type+'.txt.gz','wt') as out:
             sys.stdout.flush()
             with gzip.open(f) as input_file:
                 for line in input_file:
+
                     line = line.decode('utf-8')
                     if line.startswith('#'):
                         if 'metaExon' not in feature_type:
@@ -73,12 +76,13 @@ with gzip.open(args.out_prefix+feature_type+'.txt.gz','wt') as out:
                         continue
                     list_of_features.append(line[0])
                     if 'metaExon' not in feature_type:
-                        out.write('\t'+feature_info[line[1]+line[2]+line[3]])
+                        out.write('\t'+feature_info[line[1]+'_'+line[2]+'_'+line[3]])
                     else:
                         out.write('\t'+line[0])
             out.write('\n')
             print(feature_type+': Done')
             sys.stdout.flush()
+            number_of_transcript += 1
 
         x += 1
         if x % 100 == 0:
@@ -93,10 +97,10 @@ with gzip.open(args.out_prefix+feature_type+'.txt.gz','wt') as out:
             input_file.readline()
             y = 0
             for line in input_file:
-                if line == prev_line:
+#                if line == prev_line:
                     # some lines are identical because of overlapping transcript, if so, skip
-                    y += 1
-                    continue
+#                    y += 1
+#                    continue
                 prev_line = line
                 line = line.decode('utf-8')
                 if line.startswith('#') or line.startswith('Geneid'):
@@ -111,6 +115,8 @@ with gzip.open(args.out_prefix+feature_type+'.txt.gz','wt') as out:
                 count = line[6]
                 out.write('\t'+count)
                 y += 1
+                number_of_transcript_written += 1
         out.write('\n')
-
+    if number_of_transcript != number_of_transcript_written:
+        raise RuntimeError('number_of_transcript not same as number_of_transcript_written: '+str(number_of_transcript)+'\t'+str(number_of_transcript_written))
 print(feature_type+': Done')
