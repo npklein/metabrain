@@ -73,11 +73,11 @@ def main():
             # result[0] is the sample name
             out_TPM.write('\t'+result[0])
         out_TPM.write('\n')
-        for gene in set_of_genes:
-            out_TPM.write(gene)
+        for transcript in set_of_transcripts:
+            out_TPM.write(transcript)
             for result in kallisto_data:
                 # result[2] is the kallisto transcript TPM data for that specific sample
-                out_TPM.write('\t'+str(result[2][gene]))
+                out_TPM.write('\t'+str(result[2][transcript]))
             out_TPM.write('\n')
 
 
