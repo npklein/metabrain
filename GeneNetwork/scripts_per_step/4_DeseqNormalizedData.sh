@@ -23,7 +23,7 @@ main(){
     mkdir -p $(dirname $outdir)
 
     mkdir -p $(dirname $outdir)
-    java -jar $jardir/RunV13.jar $project_dir/configs/4_DeseqNormalizedData.json
+    java -Xmx90g -Xms90g -jar $jardir/RunV13.jar $project_dir/configs/4_DeseqNormalizedData.json
 
 
 }
