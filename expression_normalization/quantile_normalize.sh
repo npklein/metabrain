@@ -34,10 +34,7 @@ main(){
     1_select_samples
     2_remove_duplicate_samples
     3_quantileNormalized
-    4_DeseqNormalizedData
-    5_RemoveCovariates
-    6_CorrelationMatrix
-    7_PCA_on_correlation
+    4_RemoveCovariates
 }
 
 print_command_arguments(){
@@ -56,7 +53,6 @@ print_command_arguments(){
     echo "sample_file=$sample_file"
     echo "github_dir=$github_dir"
     echo "covar_table=$covar_table"
-    echo "quant_norm=$quant_norm"
 }
 
 
@@ -127,24 +123,7 @@ print_command_arguments(){
     fi
 }
 
-4_DeseqNormalizedData(){
-    output_file_step4=$output_dir/4_deseqNormalized/$(basename ${output_file_step2%.txt.gz}noVarianceRowsRemoved.DESeqNorm.txt.gz)
-    if [ ! -f $output_file_step4 ];
-    then
-        # Step 4. Do deseq normalisation on the original counts
-        bash $github_dir/GeneNetwork/scripts_per_step/4_DeseqNormalizedData.sh \
-            -p $project_dir \
-            -e $output_file_step2 \
-            -o $TMPDIR/4_deseqNormalized/ \
-            -c $config_template_dir \
-            -j $jar_dir \
-            -z $TMPDIR/4_deseqNormalized/PCA_corrected_expression/
-
-        mv $TMPDIR/4_deseqNormalized/ $output_dir/
-    fi
-}
-
-5_RemoveCovariates(){
+4_RemoveCovariates(){
     output_file_step5=$output_dir/5_covariatesRemoved/$(basename ${output_file_step4%.txt.gz}.ProbesWithZeroVarianceRemoved.CovariatesRemoved.txt.gz)
     if [ ! -f $output_file_step5 ];
     then
@@ -158,41 +137,20 @@ print_command_arguments(){
             -z $covar_table
         mv $TMPDIR/5_covariatesRemoved $output_dir/
     fi
-}
 
-6_CorrelationMatrix(){
-    output_file_step6="$output_dir/6_correlation_matrix/MetaBrain.deseqNorm.covarCorrected.correlation.txt.gz"
-    if [ ! -f $output_file_step6 ];
-    then
-        # Step 6. Make correlation matrix
-        bash $github_dir/GeneNetwork/scripts_per_step/6_CorrelationMatrix.sh \
-            -p $project_dir \
-            -e $output_file_step5 \
-            -o $TMPDIR/$(basename $output_file_step6) \
-            -c $config_template_dir \
-            -j $jar_dir
-        mkdir -p $(dirname $output_file_step6)
-        mv $TMPDIR/$(basename $output_dir_step6) $output_file_step6
-    fi
+            # The export.sh file has hardcoded paths for running PCA, change these
+            rsync -vP $github_dir/GeneNetwork/scripts_per_step/run_PCA.sh $TMPDIR/3_quantileNormalized/run_PCA.sh
+            sed -i "s;REPLACEGENECOVARIANCE;$TMPDIR/3_quantileNormalized/gene_covariance.txt;" $TMPDIR/3_quantileNormalized/run_PCA.sh
+            sed -i "s;REPLACEOUT;$TMPDIR/3_quantileNormalized//;" $TMPDIR/3_quantileNormalized/run_PCA.sh
+            sed -i "s;REPLACEPRECOR;$TMPDIR/3_quantileNormalized/pre_Correlation_Or_Covariance.txt;" $TMPDIR/3_quantileNormalized/run_PCA.sh
+            sbatch $TMPDIR/3_quantileNormalized/run_PCA.sh
+            mv $MPDIR/3_quantileNormalized/ $output_dir/
 }
-
-7_PCA_on_correlation(){
-    if [ ! -f $output_dir/7_PCA_on_correlation_matrix/MetaBrain.pc-scores.txt ];
-    then
-        # step 7. Run PCA on correlation matrix
-        rsync -vP $github_dir/GeneNetwork/scripts_per_step/7_PCA_on_correlation.sh $TMPDIR/7_PCA_on_correlation.sh
-        sed -i "s;REPLACEOUTDIR;$output_dir/;" $TMPDIR/7_PCA_on_correlation.sh
-        sed -i "s;REPLACEoutput_dir;$output_file_step6;" $TMPDIR/7_PCA_on_correlation.sh
-        sed -i "s;REPLACEPCASETUP;$github_dir/GeneNetwork/PCA_setup_calculon.sh;" $TMPDIR/7_PCA_on_correlation.sh
-        sbatch $TMPDIR/7_PCA_on_correlation.sh
-    fi
-}
-
 
 usage(){
     # print the usage of the programme
     programname=$0
-    echo "usage: $programname -t TMPDIR -e expression_file -o output_dir -p project_dir -c config_template_dir -j jar_dir -s sample_file -g github_dir -z covar_table -q quant_norm (default: false)"
+    echo "usage: $programname -t TMPDIR -e expression_file -o output_dir -p project_dir -c config_template_dir -j jar_dir -s sample_file -g github_dir -z covar_table"
     echo "  -t      TMPDIR where files will be written during runtime"
     echo "  -e      Expression file"
     echo "  -p      Base of the project_dir where config files will be written"
@@ -202,7 +160,6 @@ usage(){
     echo "  -s      File with samples to include"
     echo "  -g      Github GeneNetwork directory"
     echo "  -z      Covariate table"
-    echo "  -q      true/false wether quntile normalization should be done"
     echo "  -h      display help"
     exit 1
 }
@@ -244,9 +201,6 @@ parse_commandline(){
                                             ;;
             -z | --covar_table )            shift
                                             covar_table=$1
-                                            ;;
-            -q | --quant_norm )             shift
-                                            quant_norm=$1
                                             ;;
             -h | --help )                   usage
                                             exit
