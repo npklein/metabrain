@@ -1,5 +1,4 @@
-
-# This script runs 6th step to making GeneNetwork: Make the correlation matrix
+# This script runs first step to making GeneNetwork: remove duplicate samples
 
 set -e
 set -u
@@ -13,14 +12,14 @@ main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
 
-    rsync -vP $config_templates/6_CorrelationMatrix.json $project_dir/configs/
+    rsync -vP $config_templates/2_config_RemoveDuplicates.json $project_dir/configs/
 
-    sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/6_CorrelationMatrix.json
-    sed -i "s;REPLACEOUTFILE;$outfile/;" $project_dir/configs/6_CorrelationMatrix.json
+    sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/2_config_RemoveDuplicates.json
+    sed -i "s;REPLACEOUTPUT;$outfile;" $project_dir/configs/2_config_RemoveDuplicates.json
 
     mkdir -p $(dirname $outfile)
+    java -jar $jardir/RunV13.jar $project_dir/configs/2_config_RemoveDuplicates.json
 
-    java -Xmx90g -Xms90g -jar $jardir/RunV13.jar $project_dir/configs/6_CorrelationMatrix.json
 }
 
 usage(){
@@ -48,26 +47,26 @@ parse_commandline(){
     while [[ $# -ge 1 ]]; do
         case $1 in
             -p | --project_dir )        shift
-                                        project_dir=$1
-                                        ;;
+                                    project_dir=$1
+                                    ;;
             -e | --expression_file )    shift
-                                        expression_file=$1
-                                        ;;
-            -o | --outfile )            shift
-                                        outfile=$1
-                                        ;;
-            -c | --config_templates )   shift
-                                        config_templates=$1
-                                        ;;
-            -j | --jardir )             shift
-                                        jardir=$1
-                                        ;;
-            -h | --help )               usage
-                                        exit
-                                        ;;
-            * )                         echo "ERROR: Undexpected argument: $1"
-                                        usage
-                                        exit 1
+                                    expression_file=$1
+                                    ;;
+            -o | --outfile )         shift
+                                    outfile=$1
+                                    ;;
+            -c | --configs )        shift
+                                    config_templates=$1
+                                    ;;
+            -j | --jardir )         shift
+                                    jardir=$1
+                                    ;;
+            -h | --help )           usage
+                                    exit
+                                    ;;
+            * )                     echo "ERROR: Undexpected argument: $1"
+                                    usage
+                                    exit 1
         esac
         shift
     done
@@ -109,9 +108,5 @@ parse_commandline(){
 # main "$@" -> Send the arguments to the main function (this way project flow can be at top)
 # exit -> safeguard against the file being modified while it is interpreted
 [[ ${BASH_SOURCE[0]} = "$0" ]] && main "$@"; exit;
-
-
-
-
 
 
