@@ -16,11 +16,12 @@ main(){
     rsync -vP $config_templates/6_CorrelationMatrix.json $project_dir/configs/
 
     sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/6_CorrelationMatrix.json
-    sed -i "s;REPLACEOUTFILE;$outfile/;" $project_dir/configs/6_CorrelationMatrix.json
+    sed -i "s;REPLACEOUTFILE;$outfile;" $project_dir/configs/6_CorrelationMatrix.json
 
     mkdir -p $(dirname $outfile)
 
     java -Xmx90g -Xms90g -jar $jardir/RunV13.jar $project_dir/configs/6_CorrelationMatrix.json
+    gzip $outfile
 }
 
 usage(){
