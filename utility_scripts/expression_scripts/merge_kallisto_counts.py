@@ -40,11 +40,13 @@ def main():
     sys.stdout.flush()
     # get a set of genes (all files have the same list so only need to read 1 file)
     set_of_genes = set([])
+    set_of_transcripts = set([])
     with open(kallisto_files[0]) as input_file:
         input_file.readline()
         for line in input_file:
             line = line.split('\t')
             set_of_genes.add(transcript_to_gene[line[0]])
+            set_of_transcripts.add(line[0])
     print('start map')
     sys.stdout.flush()
     # parallel process kallisto files. Per sample 1 thread
@@ -54,22 +56,30 @@ def main():
     print('Done reading kallisto file, start writing output matrix')
     sys.stdout.flush()
 
-    with openfile(args.outfile_geneCounts,'wt') as out_geneCounts, openfile(args.outfile_transcriptTPMs,'wt') as out_TPM:
+    with openfile(args.outfile_geneCounts,'wt') as out_geneCounts):
         for result in kallisto_data:
             # result[0] is the sample name
             out_geneCounts.write('\t'+result[0])
-            out_TPM.write('\t'+result[0])
         out_geneCounts.write('\n')
-        out_TPM.write('\n')
         for gene in set_of_genes:
             out_geneCounts.write(gene)
-            out_TPM.write(gene)
             for result in kallisto_data:
                 # result[1] is the kallisto genecount data for that specific sample
                 out_geneCounts.write('\t'+str(result[1][gene]))
+            out_geneCounts.write('\n')
+
+    with openfile(args.outfile_transcriptTPMs,'wt') as out_TPM:
+        for result in kallisto_data:
+            # result[0] is the sample name
+            out_TPM.write('\t'+result[0])
+        out_TPM.write('\n')
+        for gene in set_of_genes:
+            out_TPM.write(gene)
+            for result in kallisto_data:
                 # result[2] is the kallisto transcript TPM data for that specific sample
                 out_TPM.write('\t'+str(result[2][gene]))
-            out_geneCounts.write('\n')
+            out_TPM.write('\n')
+
 
 
 def parse_kallisto_files(kallisto_abundance_file):
