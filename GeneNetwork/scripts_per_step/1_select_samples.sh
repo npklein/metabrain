@@ -14,15 +14,15 @@ main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
 
-    echo "rsync -vP $config_templates/2_config_SelectSamples.json $project_dir/configs/"
-    rsync -vP $config_templates/2_config_SelectSamples.json $project_dir/configs/
+    echo "rsync -vP $config_templates/1_config_SelectSamples.json $project_dir/configs/"
+    rsync -vP $config_templates/1_config_SelectSamples.json $project_dir/configs/
 
-    sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/2_config_SelectSamples.json
-    sed -i "s;REPLACEOUTPUTDIR;$outdir;" $project_dir/configs/2_config_SelectSamples.json
-    sed -i "s;REPLACEINCLUDESAMPLES;$sample_file;" $project_dir/configs/2_config_SelectSamples.json
+    sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/1_config_SelectSamples.json
+    sed -i "s;REPLACEOUTPUTDIR;$outdir;" $project_dir/configs/1_config_SelectSamples.json
+    sed -i "s;REPLACEINCLUDESAMPLES;$sample_file;" $project_dir/configs/1_config_SelectSamples.json
 
     mkdir -p $(dirname $outdir)
-    java -jar $jardir/RunV13.jar $project_dir/configs/2_config_SelectSamples.json
+    java -jar $jardir/RunV13.jar $project_dir/configs/1_config_SelectSamples.json
 }
 
 usage(){

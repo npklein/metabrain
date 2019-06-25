@@ -12,13 +12,13 @@ main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
 
-    rsync -vP $config_templates/1_config_RemoveDuplicates.json $project_dir/configs/
+    rsync -vP $config_templates/2_config_RemoveDuplicates.json $project_dir/configs/
 
-    sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/1_config_RemoveDuplicates.json
-    sed -i "s;REPLACEOUTPUT;$outfile;" $project_dir/configs/1_config_RemoveDuplicates.json
+    sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/2_config_RemoveDuplicates.json
+    sed -i "s;REPLACEOUTPUT;$outfile;" $project_dir/configs/2_config_RemoveDuplicates.json
 
     mkdir -p $(dirname $outfile)
-    java -jar $jardir/RunV13.jar $project_dir/configs/1_config_RemoveDuplicates.json
+    java -jar $jardir/RunV13.jar $project_dir/configs/2_config_RemoveDuplicates.json
 
 }
 

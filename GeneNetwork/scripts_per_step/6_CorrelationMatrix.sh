@@ -20,7 +20,7 @@ main(){
 
     mkdir -p $(dirname $outfile)
 
-    java -jar $jardir/RunV13.jar $project_dir/configs/6_CorrelationMatrix.json
+    java -Xmx90g -Xms90g -jar $jardir/RunV13.jar $project_dir/configs/6_CorrelationMatrix.json
 }
 
 usage(){

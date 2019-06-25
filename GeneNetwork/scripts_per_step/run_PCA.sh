@@ -1,3 +1,13 @@
+#!/bin/bash
+#SBATCH --job-name=PCA
+#SBATCH --output=PCA.out
+#SBATCH --error=PCA.err
+#SBATCH --time=23:59:59
+#SBATCH --cpus-per-task 22
+#SBATCH --mem 100gb
+#SBATCH --nodes 1
+#SBATCH --qos=dev
+
 . ~/brain_eQTL/GeneNetwork/PCA_setup_calculon.sh
 echo "done"
 cd REPLACEOUT
