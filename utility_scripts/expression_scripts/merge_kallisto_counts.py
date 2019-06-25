@@ -56,7 +56,7 @@ def main():
     print('Done reading kallisto file, start writing output matrix')
     sys.stdout.flush()
 
-    with openfile(args.outfile_geneCounts,'wt') as out_geneCounts):
+    with openfile(args.outfile_geneCounts,'wt') as out_geneCounts:
         for result in kallisto_data:
             # result[0] is the sample name
             out_geneCounts.write('\t'+result[0])
