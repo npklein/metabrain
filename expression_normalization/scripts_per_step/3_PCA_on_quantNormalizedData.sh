@@ -21,7 +21,7 @@ main(){
     mkdir -p $(dirname $outdir)
 
     mkdir -p $(dirname $outdir)
-    java -jar $jardir/RunV13.jar $project_dir/configs/3_PCA_on_quantNormalizedData.json
+    java -Xmx100g -jar $jardir/RunV13.jar $project_dir/configs/3_PCA_on_quantNormalizedData.json
 
 
 }

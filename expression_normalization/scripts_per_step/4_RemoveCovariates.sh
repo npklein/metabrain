@@ -22,7 +22,7 @@ main(){
 
     mkdir -p $(dirname $outdir)
 
-    java -jar $jardir/RunV13.jar $project_dir/configs/5_RemoveCovariates.json
+    java -Xmx100g -Xms100g -jar $jardir/RunV13.jar $project_dir/configs/5_RemoveCovariates.json
 
 
 }

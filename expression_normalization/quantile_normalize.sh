@@ -87,7 +87,7 @@ print_command_arguments(){
         bash $github_dir/expression_normalization/scripts_per_step/2_remove_duplicate_samples.sh \
             -p $project_dir \
             -e $new_output_file_step1 \
-            -o $TMPDIR/$(basename $output_file_step2) \
+            -o $TMPDIR/$(basename $output_file_step) \
             -c $config_template_dir \
             -j $jar_dir
         echo "done"
@@ -99,7 +99,8 @@ print_command_arguments(){
 3_quantileNormalized(){
     # Step 3. make PCA of quantile normalized data. Do visual inspection, if samples need to be removed, run from step 2 again (selecting only correct samples)
     # and then skip step 1 and 3 and go to step 4. I think this step is nececarry for step 4, not sure why though.
-    output_file_step3=$output_dir/3_quantileNormalized/$(basename ${output_file_step2%.txt.gz}.QuantileNormalized.txt.gz)
+    output_file_step3=$output_dir/3_quantileNormalized/$(basename ${output_file_step2%.txt.gz})noVarianceRowsRemoved.QuantileNormalized.txt.gz
+    echo $output_file_step3
     if [ ! -f $output_file_step3 ];
     then
         bash $github_dir/expression_normalization/scripts_per_step/3_PCA_on_quantNormalizedData.sh \
@@ -126,21 +127,18 @@ print_command_arguments(){
         bash $github_dir/expression_normalization/scripts_per_step/4_RemoveCovariates.sh \
             -p $project_dir \
             -e $output_file_step3 \
-            -o $TMPDIR/4_covariatesRemoved \
+            -o $output_dir/4_covariatesRemoved2 \
             -c $config_template_dir \
             -j $jar_dir \
             -z $covar_table
-        mv $TMPDIR/4_covariatesRemoved $output_dir/
     fi
 
             # The export.sh file has hardcoded paths for running PCA, change these
-            rsync -vP $github_dir/expression_normalization/scripts_per_step/run_PCA.sh $TMPDIR/4_covariatesRemoved/run_PCA.sh
-            sed -i "s;REPLACEGENECOVARIANCE;$TMPDIR/4_covariatesRemoved/gene_covariance.txt;" $TMPDIR/4_covariatesRemoved/run_PCA.sh
-            sed -i "s;REPLACEOUT;$TMPDIR/4_covariatesRemoved//;" $TMPDIR/4_covariatesRemoved/run_PCA.sh
-            sed -i "s;REPLACEPRECOR;$TMPDIR/4_covariatesRemoved/pre_Correlation_Or_Covariance.txt;" $TMPDIR/4_covariatesRemoved/run_PCA.sh
-            sbatch --wait $TMPDIR/4_covariatesRemoved/run_PCA.sh
-            wait
-            mv $MPDIR/4_covariatesRemoved/ $output_dir/
+            rsync -vP $github_dir/expression_normalization/scripts_per_step/run_PCA.sh $output_dir/4_covariatesRemoved/run_PCA.sh
+            sed -i "s;REPLACEGENECOVARIANCE;$output_dir/4_covariatesRemoved/gene_covariance.txt;" $output_dir/4_covariatesRemoved/run_PCA.sh
+            sed -i "s;REPLACEOUT;$output_dir/4_covariatesRemoved//;" $output_dir/4_covariatesRemoved/run_PCA.sh
+            sed -i "s;REPLACEPRECOR;$output_dir/4_covariatesRemoved/pre_Correlation_Or_Covariance.txt;" $output_dir/4_covariatesRemoved/run_PCA.sh
+            sbatch  $output_dir/4_covariatesRemoved/run_PCA.sh
 }
 
 usage(){
