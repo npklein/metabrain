@@ -14,7 +14,7 @@ cd REPLACEOUT
 echo "run PCA"
 /groups/umcg-wijmenga/tmp04/projects/2019-comethylationnetwork/tools/pcapp/pcaplusplus/pca evd REPLACEGENECOVARIANCE
 mv eigenvectors.txt REPLACEOUT/GENE.eigenvectors.txt
-/groups/umcg-wijmenga/tmp04/projects/2019-comethylationnetwork/tools/pcapp/pcaplusplus/pca pc-scores covariance REPLACEPRECOR REPLACEOUT/GENE.eigenvectors.txt
+/groups/umcg-wijmenga/tmp04/projects/2019-comethylationnetwork/tools/pcapp/pcaplusplus/pca pc-scores covariance REPLACEGENECOVARIANCE REPLACEOUT/GENE.eigenvectors.txt
 mv eigenvalues.txt REPLACEOUT/GENE.eigenvalues.txt
 n=0
 while read line; do
