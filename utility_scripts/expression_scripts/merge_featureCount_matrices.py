@@ -22,7 +22,7 @@ def merge_files(type):
         else:
             s = 0
         out_name_list.append(f.split('/')[-1].split('.')[s])
-    name = sorted(name)
+    out_name_list = sorted(out_name_list)
     now = datetime.datetime.now()
     out_name = now.strftime("%Y-%m-%d")+'.'+'-'.join(out_name_list)
     print('name:',out_name)
