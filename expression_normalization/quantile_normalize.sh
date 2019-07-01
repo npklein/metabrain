@@ -105,24 +105,22 @@ print_command_arguments(){
         bash $github_dir/expression_normalization/scripts_per_step/3_PCA_on_quantNormalizedData.sh \
             -p $project_dir \
             -e $output_file_step2 \
-            -o $TMPDIR/3_quantileNormalized/ \
+            -o $output_dir/3_quantileNormalized/ \
             -c $config_template_dir \
             -j $jar_dir
 
         # The export.sh file has hardcoded paths for running PCA, change these
-        rsync -vP $github_dir/expression_normalization/scripts_per_step/run_PCA.sh $TMPDIR/3_quantileNormalized/run_PCA.sh
-        sed -i "s;REPLACEGENECOVARIANCE;$TMPDIR/3_quantileNormalized/gene_covariance.txt;" $TMPDIR/3_quantileNormalized/run_PCA.sh
-        sed -i "s;REPLACEOUT;$TMPDIR/3_quantileNormalized//;" $TMPDIR/3_quantileNormalized/run_PCA.sh
-        sed -i "s;REPLACEPRECOR;$TMPDIR/3_quantileNormalized/pre_Correlation_Or_Covariance.txt;" $TMPDIR/3_quantileNormalized/run_PCA.sh
-        sbatch --wait $TMPDIR/3_quantileNormalized/run_PCA.sh
-        wait
-        mv $MPDIR/3_quantileNormalized/ $output_dir/
+        rsync -vP $github_dir/expression_normalization/scripts_per_step/run_PCA.sh $output_dir/3_quantileNormalized/run_PCA.sh
+        sed -i "s;REPLACEGENECOVARIANCE;$output_dir/3_quantileNormalized/gene_covariance.txt;" $output_dir/3_quantileNormalized/run_PCA.sh
+        sed -i "s;REPLACEOUT;$output_dir/3_quantileNormalized//;" $output_dir/3_quantileNormalized/run_PCA.sh
+        sed -i "s;REPLACEPRECOR;$output_dir/3_quantileNormalized/pre_Correlation_Or_Covariance.txt;" $output_dir/3_quantileNormalized/run_PCA.sh
+        sbatch $output_dir/3_quantileNormalized/run_PCA.sh
     fi
 }
 
 4_RemoveCovariates(){
     output_file_step4=$output_dir/4_covariatesRemoved/$(basename ${output_file_step4%.txt.gz}.ProbesWithZeroVarianceRemoved.CovariatesRemoved.txt.gz)
-    if [ ! -f $output_file_step5 ];
+    if [ ! -f $output_file_step4 ];
     then
         # Step 4. Remove covariates from quantile normalized data
         bash $github_dir/expression_normalization/scripts_per_step/4_RemoveCovariates.sh \
