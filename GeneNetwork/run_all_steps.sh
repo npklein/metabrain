@@ -31,6 +31,8 @@ covar_table=
 gtf=
 # number of threads to use for correlation and PCA step
 threads=
+# Cut-off value for cronbach alphas of PCA
+cronbach_cutoff=
 ####
 
 main(){
@@ -69,6 +71,7 @@ print_command_arguments(){
     echo "covar_table=$covar_table"
     echo "quant_norm=$quant_norm"
     echo "gtf=$gtf"
+    echo "cronbach_cutoff=$cronbach_cutoff"
 }
 
 
@@ -233,7 +236,10 @@ print_command_arguments(){
         sed -i "s;REPLACECOVCORRECTEDEXPRESSION;${output_file_step5%.gz};" $output_dir/7_PCA_on_correlation_matrix/7_PCA_on_correlation.sh
         sed -i "s;REPLACEOUTDIR;$output_dir/;" $output_dir/7_PCA_on_correlation_matrix/7_PCA_on_correlation.sh
         sed -i "s;REPLACETHREADS;$threads;" $output_dir/7_PCA_on_correlation_matrix/7_PCA_on_correlation.sh
-        echo "sbatch submit"
+        sed -i "s;REPLACECRONBACHCUTOFF;${cronbach_cutoff};" $output_dir/7_PCA_on_correlation_matrix/7_PCA_on_correlation.sh
+        echo "!!!PCA++ does not work correctly on the cluster. Copy data to GeneNetwork and run 7_PCA_on_correlation.sh!!!"
+        echo "Afterwards, copy data back and run run_all_steps.sh again"
+        exit 0;
         cd $output_dir/7_PCA_on_correlation_matrix/
         sbatch 7_PCA_on_correlation.sh
         cd -
@@ -244,7 +250,7 @@ print_command_arguments(){
 usage(){
     # print the usage of the programme
     programname=$0
-    echo "usage: $programname -t TMPDIR -e expression_file -o output_dir -p project_dir -c config_template_dir -j jar_dir -s sample_file -g github_dir -z covar_table -t threads -q quant_norm (default: false)"
+    echo "usage: $programname -t TMPDIR -e expression_file -o output_dir -p project_dir -c config_template_dir -j jar_dir -s sample_file -g github_dir -z covar_table -t threads -a cronbach_cutoff -q quant_norm (default: false)"
     echo "  -t      TMPDIR where files will be written during runtime"
     echo "  -e      Expression file"
     echo "  -p      Base of the project_dir where config files will be written"
@@ -257,6 +263,7 @@ usage(){
     echo "  -a      GTF file"
     echo "  -v      Number of threads to use for correlation step and PCA step"
     echo "  -q      true/false wether quntile normalization should be done"
+    echo "  -a      Cronbach alpha cut-off"
     echo "  -h      display help"
     exit 1
 }
@@ -304,6 +311,9 @@ parse_commandline(){
                                             ;;
             -z | --covar_table )            shift
                                             covar_table=$1
+                                            ;;
+            -a | --cronbach_cutoff )        shift
+                                            cronbach_cutoff=$1
                                             ;;
             -q | --quant_norm )             shift
                                             quant_norm=$1
@@ -376,6 +386,12 @@ parse_commandline(){
     if [ -z "$covar_table" ];
     then
         echo "ERROR: -z/--covar_table not set!"
+        usage
+        exit 1;
+    fi
+    if [ -z "$crobach_cutoff" ];
+    then
+        echo "ERROR: -a/--cronbach_cutoff not set!"
         usage
         exit 1;
     fi
