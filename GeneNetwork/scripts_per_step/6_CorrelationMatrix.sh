@@ -9,6 +9,7 @@ outfile=
 config_templates=
 jardir=
 expression_file=
+threads=
 main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
@@ -17,10 +18,51 @@ main(){
 
     sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/6_CorrelationMatrix.json
     sed -i "s;REPLACEOUTFILE;$outfile;" $project_dir/configs/6_CorrelationMatrix.json
-
+    sed -i "s;REPLACETHREADS;$threads;" $project_dir/configs/6_CorrelationMatrix.json
     mkdir -p $(dirname $outfile)
 
-    java -Xmx90g -Xms90g -jar $jardir/RunV13.jar $project_dir/configs/6_CorrelationMatrix.json
+    echo "Starting sbatch with:"
+    echo "#!/bin/bash
+#SBATCH --job-name=correlation
+#SBATCH --output=$(dirname $outfile)/correlation.out
+#SBATCH --error=$(dirname $outfile)/correlation.err
+#SBATCH --time=05:59:59
+#SBATCH --cpus-per-task $threads
+#SBATCH --mem 100gb
+#SBATCH --nodes 1
+
+ml Java;
+java -Xmx90g -Xms90g -jar $jardir/RunV13.jar $project_dir/configs/6_CorrelationMatrix.json
+
+if [ $? -eq 0 ];
+then
+    echo "success!"
+    touch $(dirname $outfile)/correlation.finished
+else
+    echo "error!"
+    exit 1;
+fi
+
+" > $(dirname $outfile)/correlation.sh
+
+    echo "start sbatch with:"
+    echo "sbatch $(dirname $outfile)/correlation.sh"
+    sbatch $(dirname $outfile)/correlation.sh
+
+    echo "sleep 10 minutes before checking if correlation is done"
+    sleep 600
+    while [ ! -f $(dirname $outfile)/correlation.finished ]
+    do
+      echo "$(dirname $outfile)/correlation.finished does not exist yet"
+      echo "sleep 2 minutes before checking again"
+      sleep 120
+    done
+
+    if [ ! -f $outfile ];
+    then
+        echo "$outfile not made!"
+        exit 1;
+    fi
     gzip $outfile
 }
 
@@ -33,6 +75,7 @@ usage(){
     echo "  -o      Output file that will be written"
     echo "  -c      Dir with configuration template files"
     echo "  -j      Location of V13 jar file"
+    echo "  -t      Number of threads"
     echo "  -h      display help"
     exit 1
 }
@@ -59,6 +102,9 @@ parse_commandline(){
                                         ;;
             -c | --config_templates )   shift
                                         config_templates=$1
+                                        ;;
+            -t | --threads )            shift
+                                        threads=$1
                                         ;;
             -j | --jardir )             shift
                                         jardir=$1
@@ -95,6 +141,12 @@ parse_commandline(){
     if [ -z "$jardir" ];
     then
         echo "ERROR: -j/--jardir not set!"
+        usage
+        exit 1;
+    fi
+    if [ -z "$threads" ];
+    then
+        echo "ERROR: -t/--threads not set!"
         usage
         exit 1;
     fi
