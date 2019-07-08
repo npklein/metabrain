@@ -10,6 +10,7 @@ config_templates=
 jardir=
 expression_file=
 covar_matrix=
+threads=
 main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"

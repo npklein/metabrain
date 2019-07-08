@@ -4,6 +4,8 @@
 set -e
 set -u
 
+module load Python
+
 #### Only lines that should be changed ####
 # TMPDIR for writing files
 TMPDIR=
@@ -25,25 +27,34 @@ github_dir=
 quant_norm=false
 # covariate table
 covar_table=
+# GTF file
+gtf=
+# number of threads to use for correlation and PCA step
+threads=
 ####
 
 main(){
     parse_commandline "$@"
     print_command_arguments
     mkdir -p $output_dir
+    echo "0_remove_genes"
+    0_remove_genes
+    echo "1_select_samples"
     1_select_samples
+    echo "2_remove_duplicate_samples"
     2_remove_duplicate_samples
+    echo "3_quantileNormalized"
     3_quantileNormalized
+    echo "4_DeseqNormalizedData"
     4_DeseqNormalizedData
+    echo "5_RemoveCovariates"
     5_RemoveCovariates
+    echo "6_CorrelationMatrix"
     6_CorrelationMatrix
+    echo "7_PCA_on_correlation"
     7_PCA_on_correlation
 }
 
-print_command_arguments(){
-    echo "Starting program with:"
-
-}
 
 print_command_arguments(){
     echo "Processing expression data for GeneNetwork."
@@ -57,18 +68,33 @@ print_command_arguments(){
     echo "github_dir=$github_dir"
     echo "covar_table=$covar_table"
     echo "quant_norm=$quant_norm"
+    echo "gtf=$gtf"
 }
 
 
+0_remove_genes(){
+    # Step 1. Select samples from expression file
+    outfile_step0="${output_dir}/0_remove_genes/$(basename ${expression_file%.txt.gz}).genesRemoved.txt.gz"
+    if [ ! -f ${outfile_step0} ]
+    then
+        echo "start step 0"
+        python $github_dir/GeneNetwork/scripts_per_step/0_remove_duplicate_sameCounts_scaffolded_genes.py \
+            -e $expression_file \
+            -o $TMPDIR/0_remove_genes/$(basename $outfile_step0) \
+            -g $gtf
+        mv $TMPDIR/0_remove_genes ${output_dir}/
+    fi
+}
+
 1_select_samples(){
     # Step 1. Select samples from expression file
-    output_dir_step1="${output_dir}/1_selectSamples/$(basename ${expression_file%.txt.gz}).extractedColumns.txt.gz"
-    new_output_file_step1=$output_dir/1_selectSamples/$(basename ${expression_file%.txt.gz})_extractedColumnsnoVarianceRowsRemoved.txt.gz
+    new_output_file_step1=$output_dir/1_selectSamples/$(basename ${outfile_step0%.txt.gz})_extractedColumnsnoVarianceRowsRemoved.txt.gz
+    echo $new_output_file_step1
     if [ ! -f ${new_output_file_step1} ]
     then
         echo "start step 1"
         bash $github_dir/GeneNetwork/scripts_per_step/1_select_samples.sh \
-            -e $expression_file \
+            -e $outfile_step0 \
             -p $project_dir \
             -o $TMPDIR/1_selectSamples/ \
             -c $config_template_dir \
@@ -76,9 +102,15 @@ print_command_arguments(){
             -s $sample_file
         # input of next file expect postfix of extractedColumnsnoVarianceRowsRemoved.txt.gz but is extractedColumns_noVarRemoved.txt.gz
         # change this
-        f1=$TMPDIR/1_selectSamples/$(basename ${expression_file%.txt.gz})_extractedColumns_noVarRemoved.txt.gz
+        f1=$output_dir/1_selectSamples/$(basename ${outfile_step0%.txt.gz})_extractedColumns_noVarRemoved.txt.gz
+        echo  "mv $TMPDIR/1_selectSamples/ $output_dir/"
         mv $TMPDIR/1_selectSamples/ $output_dir/
-        mv $f1 $TMPDIR/1_selectSamples/$(basename $new_output_file_step1)
+        mv $f1 $new_output_file_step1
+        if [ ! -f ${new_output_file_step1} ];
+        then
+            echo "${new_output_file_step1} does not exist"
+            exit 1;
+        fi
     fi
 }
 
@@ -129,13 +161,14 @@ print_command_arguments(){
 }
 
 4_DeseqNormalizedData(){
-    output_file_step4=$output_dir/4_deseqNormalized/$(basename ${output_file_step2%.txt.gz}noVarianceRowsRemoved.DESeqNorm.txt.gz)
+    output_file_step4="$output_dir/4_deseqNormalized/$(basename ${output_file_step2%.txt.gz}noVarianceRowsRemoved.DESeqNorm.log2.txt)"
     if [ ! -f $output_file_step4 ];
     then
         # Step 4. Do deseq normalisation on the original counts
         bash $github_dir/GeneNetwork/scripts_per_step/4_DeseqNormalizedData.sh \
             -p $project_dir \
             -e $output_file_step2 \
+            -f $TMPDIR/4_deseqNormalized/$(basename ${output_file_step2%.txt.gz}noVarianceRowsRemoved.DESeqNorm.txt.gz) \
             -o $TMPDIR/4_deseqNormalized/ \
             -c $config_template_dir \
             -j $jar_dir \
@@ -146,7 +179,8 @@ print_command_arguments(){
 }
 
 5_RemoveCovariates(){
-    output_file_step5=$output_dir/5_covariatesRemoved/$(basename ${output_file_step4%.txt.gz}.ProbesWithZeroVarianceRemoved.CovariatesRemoved.txt.gz)
+    output_file_step5=$output_dir/5_covariatesRemoved/$(basename ${output_file_step4%.txt}.ProbesWithZeroVarianceRemoved.CovariatesRemoved.txt.gz)
+    echo "$output_file_step5"
     if [ ! -f $output_file_step5 ];
     then
         # Step 5. Remove covariates from deseq normalized data
@@ -163,29 +197,42 @@ print_command_arguments(){
 
 6_CorrelationMatrix(){
     output_file_step6="$output_dir/6_correlation_matrix/MetaBrain.deseqNorm.covarCorrected.correlation.txt"
-    #.gz"
-    if [ ! -f $output_file_step6 ];
+    if [ ! -f $output_file_step6 ]  && [ ! -f ${output_file_step6}.gz ];
     then
         # Step 6. Make correlation matrix
         bash $github_dir/GeneNetwork/scripts_per_step/6_CorrelationMatrix.sh \
             -p $project_dir \
             -e $output_file_step5 \
-            -o ${output_file_step6%.gz} \
+            -o ${output_file_step6} \
             -c $config_template_dir \
-            -j $jar_dir
+            -j $jar_dir \
+            -t $threads
     fi
 }
 
 7_PCA_on_correlation(){
+    if [ ! -f $output_file_step6 ] && [ -f ${output_file_step6}.gz ];
+    then
+        zcat ${output_file_step6}.gz > ${output_file_step6}
+    fi
+
+    if [ ! -f ${output_file_step5%.gz} ] && [ -f ${output_file_step5} ];
+    then
+         zcat ${output_file_step5} > ${output_file_step5%.gz}
+    fi
+
+
     if [ ! -f $output_dir/7_PCA_on_correlation_matrix/MetaBrain.pc-scores.txt ];
     then
         # step 7. Run PCA on correlation matrix
         mkdir -p  $output_dir/7_PCA_on_correlation_matrix/
         rsync -vP $github_dir/GeneNetwork/scripts_per_step/7_PCA_on_correlation.sh $output_dir/7_PCA_on_correlation_matrix/7_PCA_on_correlation.sh
         echo "replace"
-#        sed -i "s;REPLACEOUTDIR;$TMPDIR/7_PCA_on_correlation_matrix/;" $TMPDIR/7_PCA_on_correlation.sh
-        sed -i "s;REPLACEOUTFILE;$output_file_step6;" $output_dir/7_PCA_on_correlation_matrix//7_PCA_on_correlation.sh
         sed -i "s;REPLACEPCASETUP;$github_dir/GeneNetwork/PCA_setup_calculon.sh;" $output_dir/7_PCA_on_correlation_matrix/7_PCA_on_correlation.sh
+        sed -i "s;REPLACECORMATRIX;$output_file_step6;" $output_dir/7_PCA_on_correlation_matrix/7_PCA_on_correlation.sh
+        sed -i "s;REPLACECOVCORRECTEDEXPRESSION;${output_file_step5%.gz};" $output_dir/7_PCA_on_correlation_matrix/7_PCA_on_correlation.sh
+        sed -i "s;REPLACEOUTDIR;$output_dir/;" $output_dir/7_PCA_on_correlation_matrix/7_PCA_on_correlation.sh
+        sed -i "s;REPLACETHREADS;$threads;" $output_dir/7_PCA_on_correlation_matrix/7_PCA_on_correlation.sh
         echo "sbatch submit"
         cd $output_dir/7_PCA_on_correlation_matrix/
         sbatch 7_PCA_on_correlation.sh
@@ -197,7 +244,7 @@ print_command_arguments(){
 usage(){
     # print the usage of the programme
     programname=$0
-    echo "usage: $programname -t TMPDIR -e expression_file -o output_dir -p project_dir -c config_template_dir -j jar_dir -s sample_file -g github_dir -z covar_table -q quant_norm (default: false)"
+    echo "usage: $programname -t TMPDIR -e expression_file -o output_dir -p project_dir -c config_template_dir -j jar_dir -s sample_file -g github_dir -z covar_table -t threads -q quant_norm (default: false)"
     echo "  -t      TMPDIR where files will be written during runtime"
     echo "  -e      Expression file"
     echo "  -p      Base of the project_dir where config files will be written"
@@ -207,6 +254,8 @@ usage(){
     echo "  -s      File with samples to include"
     echo "  -g      Github GeneNetwork directory"
     echo "  -z      Covariate table"
+    echo "  -a      GTF file"
+    echo "  -v      Number of threads to use for correlation step and PCA step"
     echo "  -q      true/false wether quntile normalization should be done"
     echo "  -h      display help"
     exit 1
@@ -246,6 +295,12 @@ parse_commandline(){
                                             ;;
             -g | --github_dir )             shift
                                             github_dir=$1
+                                            ;;
+            -a | --gtf )                    shift
+                                            gtf=$1
+                                            ;;
+            -v | --threads )                shift
+                                            threads=$1
                                             ;;
             -z | --covar_table )            shift
                                             covar_table=$1
@@ -306,6 +361,12 @@ parse_commandline(){
         usage
         exit 1;
     fi
+    if [ -z "$gtf" ];
+    then
+        echo "ERROR: -a/--gtf not set!"
+        usage
+        exit 1;
+    fi
     if [ -z "$config_template_dir" ];
     then
         echo "ERROR: -c/--config_template_dir not set!"
@@ -315,6 +376,12 @@ parse_commandline(){
     if [ -z "$covar_table" ];
     then
         echo "ERROR: -z/--covar_table not set!"
+        usage
+        exit 1;
+    fi
+    if [ -z "$threads" ];
+    then
+        echo "ERROR: -v/--threads not set!"
         usage
         exit 1;
     fi

@@ -3,13 +3,14 @@
 
 set -e
 set -u
-
+module load RPlus
 project_dir=
 outdir=
 config_templates=
 jardir=
 expression_file=
 corrected_dir=
+outfile=
 main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
@@ -24,7 +25,8 @@ main(){
 
     mkdir -p $(dirname $outdir)
     java -Xmx90g -Xms90g -jar $jardir/RunV13.jar $project_dir/configs/4_DeseqNormalizedData.json
-
+    current_dir=$(dirname "$0")
+    Rscript $current_dir/log2.R -i $outfile -o ${outfile%.txt.gz}.log2.txt
 
 }
 
@@ -36,6 +38,7 @@ usage(){
     echo "  -p      Base of the project_dir where config files will be written"
     echo "  -o      Output file that will be written"
     echo "  -c      Dir with configuration template files"
+    echo "  -f      Name of the outfile"
     echo "  -j      Location of V13 jar file"
     echo "  -z      Directory to write expr files corrected by PCAs to"
     echo "  -h      display help"
@@ -59,8 +62,11 @@ parse_commandline(){
             -e | --expression_file )    shift
                                         expression_file=$1
                                         ;;
-            -o | --outdir )            shift
+            -o | --outdir )             shift
                                         outdir=$1
+                                        ;;
+            -f | --outfile )            shift
+                                        outfile=$1
                                         ;;
             -c | --config_templates )   shift
                                         config_templates=$1
@@ -97,6 +103,12 @@ parse_commandline(){
     if [ -z "$outdir" ];
     then
         echo "ERROR: -o/--outdir not set!"
+        usage
+        exit 1;
+    fi
+    if [ -z "$outfile" ];
+    then
+        echo "ERROR: -f/--outfile not set!"
         usage
         exit 1;
     fi
