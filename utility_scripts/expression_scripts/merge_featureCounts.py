@@ -81,10 +81,10 @@ with gzip.open(args.out_prefix+feature_type+'.txt.gz','wt') as out:
                         out.write('\t'+feature_info[line[1]+'_'+line[2]+'_'+line[3]]+'_'+line[1]+'_'+line[2]+'_'+line[3])
                     else:
                         out.write('\t'+line[0]+line[1]+'_'+line[2]+'_'+line[3]+'_'+line[4])
+                    number_of_transcript += 1
             out.write('\n')
             print(feature_type+': Done')
             sys.stdout.flush()
-            number_of_transcript += 1
 
         x += 1
         if x % 100 == 0:
