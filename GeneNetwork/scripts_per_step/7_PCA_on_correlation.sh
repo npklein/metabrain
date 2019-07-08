@@ -24,16 +24,16 @@ then
     while read line;
     do
         if [[ $line == "Cronbach"* ]]; then continue; fi
-        compare=$(echo $line'<'0.7 | bc)
+        compare=$(echo $line'<'REPLACECRONBACHCUTOFF | bc)
         if [[ compare -eq 1 ]]; then break; fi
         ((n=$n+1))
     done < cronbach.txt
-    cat < eigenvectors.txt | cut -f1-$n > eigenvectors0.7.txt
-
+    cat < eigenvectors.txt | cut -f1-$n > MetaBrain.eigenvectors0.7.txt
     mv eigenvectors.txt $output_dir/7_PCA_on_correlation_matrix/MetaBrain.eigenvectors.txt
     mv pc-scores.txt $output_dir/7_PCA_on_correlation_matrix/MetaBrain.pc-scores.txt
     gzip $output_dir/7_PCA_on_correlation_matrix/MetaBrain.eigenvectors.txt
     gzip $output_dir/7_PCA_on_correlation_matrix/MetaBrain.pc-scores.txt
+    gzip $output_dir/7_PCA_on_correlation_matrix/MetaBrain.eigenvectors0.7.txt
     cd -
 fi
 
