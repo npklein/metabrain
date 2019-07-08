@@ -28,12 +28,12 @@ then
         if [[ compare -eq 1 ]]; then break; fi
         ((n=$n+1))
     done < cronbach.txt
-    cat < eigenvectors.txt | cut -f1-$n > MetaBrain.eigenvectors0.7.txt
+    cat < eigenvectors.txt | cut -f1-$n > MetaBrain.eigenvectors.cronbach_REPLACECRONBACHCUTOFF.txt
     mv eigenvectors.txt $output_dir/7_PCA_on_correlation_matrix/MetaBrain.eigenvectors.txt
     mv pc-scores.txt $output_dir/7_PCA_on_correlation_matrix/MetaBrain.pc-scores.txt
     gzip $output_dir/7_PCA_on_correlation_matrix/MetaBrain.eigenvectors.txt
     gzip $output_dir/7_PCA_on_correlation_matrix/MetaBrain.pc-scores.txt
-    gzip $output_dir/7_PCA_on_correlation_matrix/MetaBrain.eigenvectors0.7.txt
+    gzip $output_dir/7_PCA_on_correlation_matrix/MetaBrain.eigenvectors.cronbach_REPLACECRONBACHCUTOFF.txt
     cd -
 fi
 

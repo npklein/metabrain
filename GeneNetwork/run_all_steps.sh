@@ -225,7 +225,7 @@ print_command_arguments(){
     fi
 
 
-    if [ ! -f $output_dir/7_PCA_on_correlation_matrix/MetaBrain.pc-scores.txt ];
+    if [ ! -f $output_dir/7_PCA_on_correlation_matrix/MetaBrain.eigenvectors.cronbach_$cronbach_cutoff.txt.gz ];
     then
         # step 7. Run PCA on correlation matrix
         mkdir -p  $output_dir/7_PCA_on_correlation_matrix/
