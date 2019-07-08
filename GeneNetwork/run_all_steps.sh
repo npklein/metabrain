@@ -1,4 +1,4 @@
-
+#!/bin/bash
 # This runs the complete GeneNetwork processing pipeline
 
 set -e
@@ -33,6 +33,8 @@ gtf=
 threads=
 # Cut-off value for cronbach alphas of PCA
 cronbach_cutoff=
+# gene_network_dir that contains GeneNetworkBackend-1.0.7-SNAPSHOT-jar-with-dependencies.jar and PathwayMatrix/
+gene_network_dir=
 ####
 
 main(){
@@ -55,6 +57,8 @@ main(){
     6_CorrelationMatrix
     echo "7_PCA_on_correlation"
     7_PCA_on_correlation
+    echo "8_GeneNetwork_predictions"
+    8_GeneNetwork_predictions
 }
 
 
@@ -72,6 +76,7 @@ print_command_arguments(){
     echo "quant_norm=$quant_norm"
     echo "gtf=$gtf"
     echo "cronbach_cutoff=$cronbach_cutoff"
+    echo "gene_network_dir=$gene_network_dir"
 }
 
 
@@ -216,11 +221,13 @@ print_command_arguments(){
 7_PCA_on_correlation(){
     if [ ! -f $output_file_step6 ] && [ -f ${output_file_step6}.gz ];
     then
+        echo "zcat ${output_file_step6}.gz > ${output_file_step6}"
         zcat ${output_file_step6}.gz > ${output_file_step6}
     fi
 
     if [ ! -f ${output_file_step5%.gz} ] && [ -f ${output_file_step5} ];
     then
+        echo "zcat ${output_file_step5} > ${output_file_step5%.gz}"
          zcat ${output_file_step5} > ${output_file_step5%.gz}
     fi
 
@@ -240,17 +247,48 @@ print_command_arguments(){
         echo "!!!PCA++ does not work correctly on the cluster. Copy data to GeneNetwork and run 7_PCA_on_correlation.sh!!!"
         echo "Afterwards, copy data back and run run_all_steps.sh again"
         exit 0;
-        cd $output_dir/7_PCA_on_correlation_matrix/
-        sbatch 7_PCA_on_correlation.sh
-        cd -
+#        cd $output_dir/7_PCA_on_correlation_matrix/
+#        sbatch 7_PCA_on_correlation.sh
+#        cd -
     fi
 }
 
+8_GeneNetwork_predictions(){
+    mkdir -p  $output_dir/8_GeneNetwork_predictions/scripts/
+    declare -A fullname=( ["go_F"]="goa_human.gaf_F" ["go_P"]="goa_human.gaf_P" ["kegg"]="c2.cp.kegg.v6.1.entrez.gmt" ["hpo"]="ALL_SOURCES_ALL_FREQUENCIES_phenotype_to_genes.txt" ["reactome"]="Ensembl2Reactome_All_Levels.txt" ["go_C"]="goa_human.gaf_C")
+    for type in "go_F" "go_P" "kegg" "hpo" "reactome" "go_C";
+    do
+        mkdir -p $output_dir/8_GeneNetwork_predictions/scripts/$type/
+        outfile="$output_dir/8_GeneNetwork_predictions/MetaBrain.${type}_predictions.txt"
+        if [ ! -f $outfile ];
+        then
+            for f in ${gene_network_dir}/PathwayMatrix/split_matrices/$type/*txt;
+            do
+                outfile="$output_dir/8_GeneNetwork_predictions/${type}/$(basename ${f%.txt}).predictions.txt"
+                # step 7. Run PCA on correlation matrix
+                rsync -vP $github_dir/GeneNetwork/scripts_per_step/8_GeneNetwork_predictions.sh $output_dir/8_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
+                sed -i "s;REPLACENAME;${type}_$(basename ${f%.txt});" $output_dir/8_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
+                sed -i "s;REPLACEGENENETWORKDIR;${gene_network_dir};" $output_dir/8_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
+                sed -i "s;REPLACEIDENTITYMATRIX;$f;" $output_dir/8_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
+                sed -i "s;REPLACEEIGENVECTORS;${output_dir}/7_PCA_on_correlation_matrix/MetaBrain.eigenvectors.cronbach_${cronbach_cutoff}.filteredOnPathwayGenes.txt;" $output_dir/8_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
+                sed -i "s;REPLACEOUT;$outfile;" $output_dir/8_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
+                sed -i "s;REPLACETYPE;${fullname[$type]};" $output_dir/8_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
+                cd $output_dir/8_GeneNetwork_predictions/scripts/
+    #            sbatch --wait ${type}_predictions.sh &
+    #            wait
+    #            grep AUC ${type}_predictions.out | cut -f2,7,11,13 > ${outfile.txt}.AUC.txt;
+                cd -
+           done
+        fi
+    done
+}
 
 usage(){
     # print the usage of the programme
     programname=$0
-    echo "usage: $programname -t TMPDIR -e expression_file -o output_dir -p project_dir -c config_template_dir -j jar_dir -s sample_file -g github_dir -z covar_table -t threads -a cronbach_cutoff -q quant_norm (default: false)"
+    echo "usage: $programname -t TMPDIR -e expression_file -o output_dir -p project_dir -c config_template_dir"
+    echo "                    -j jar_dir -s sample_file -g github_dir -z covar_table -t threads -a cronbach_cutoff"
+    echo "                    -d GeneNetworkDir -q quant_norm (default: false)"
     echo "  -t      TMPDIR where files will be written during runtime"
     echo "  -e      Expression file"
     echo "  -p      Base of the project_dir where config files will be written"
@@ -262,8 +300,9 @@ usage(){
     echo "  -z      Covariate table"
     echo "  -a      GTF file"
     echo "  -v      Number of threads to use for correlation step and PCA step"
+    echo "  -d      GeneNetwork directory (with backend data for predictions"
     echo "  -q      true/false wether quntile normalization should be done"
-    echo "  -a      Cronbach alpha cut-off"
+    echo "  -r      Cronbach alpha cut-off"
     echo "  -h      display help"
     exit 1
 }
@@ -312,7 +351,10 @@ parse_commandline(){
             -z | --covar_table )            shift
                                             covar_table=$1
                                             ;;
-            -a | --cronbach_cutoff )        shift
+            -d | --gene_network_dir )       shift
+                                            gene_network_dir=$1
+                                            ;;
+            -r | --cronbach_cutoff )        shift
                                             cronbach_cutoff=$1
                                             ;;
             -q | --quant_norm )             shift
@@ -389,9 +431,15 @@ parse_commandline(){
         usage
         exit 1;
     fi
-    if [ -z "$crobach_cutoff" ];
+    if [ -z "$gene_network_dir" ];
     then
-        echo "ERROR: -a/--cronbach_cutoff not set!"
+        echo "ERROR: -d/--gene_network_dir not set!"
+        usage
+        exit 1;
+    fi
+    if [ -z "$cronbach_cutoff" ];
+    then
+        echo "ERROR: -r/--cronbach_cutoff not set!"
         usage
         exit 1;
     fi
