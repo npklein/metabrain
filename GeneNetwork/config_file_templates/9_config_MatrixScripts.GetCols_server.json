@@ -1,7 +1,7 @@
 {
-  "fileName": "REPLACEIN",
-  "fileName2": "REPLACEOUT1",
-  "writeName": "REPLACEOUT2",
+  "fileName": "REPLACEIN1",
+  "fileName2": "REPLACEIN2",
+  "writeName": "REPLACEOUT",
   "remove": null,
   "extraColumns": 0,
   "className": "MatrixScripts.GetCols",
