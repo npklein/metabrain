@@ -50,6 +50,7 @@ def main():
     print('start map')
     sys.stdout.flush()
     # parallel process kallisto files. Per sample 1 thread
+    print('starting',args.threads,'processes')
     with Pool(int(args.threads)) as pool:
         kallisto_data = pool.map(parse_kallisto_files, kallisto_files)
     
