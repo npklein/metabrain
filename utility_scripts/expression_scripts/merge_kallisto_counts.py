@@ -89,8 +89,8 @@ def main():
         for transcript in set_of_transcripts:
             out_counts.write(transcript)
             for result in kallisto_data:
-                # result[1] is the kallisto transcript count data for that specific sample
-                out_counts.write('\t'+str(result[1][transcript]))
+                # result[3] is the kallisto transcript count data for that specific sample
+                out_counts.write('\t'+str(result[3][transcript]))
             out_counts.write('\n')
 
 def parse_kallisto_files(kallisto_abundance_file):
@@ -99,6 +99,7 @@ def parse_kallisto_files(kallisto_abundance_file):
     sample_name = kallisto_abundance_file.split('/')[-2]
     estimated_counts_per_gene = {}
     tpm_per_transcript = {}
+    count_per_transcript = {}
     with open(kallisto_abundance_file) as input_file:
         input_file.readline()
         for line in input_file:
@@ -112,7 +113,8 @@ def parse_kallisto_files(kallisto_abundance_file):
             else:
                 estimated_counts_per_gene[gene] = est_counts
             tpm_per_transcript[transcript] = tpm
-    return(sample_name, estimated_counts_per_gene, tpm_per_transcript)
+            count_per_transcript[transcript] = est_counts
+    return(sample_name, estimated_counts_per_gene, tpm_per_transcript, count_per_transcript)
             
 if __name__ == '__main__':
     main()
