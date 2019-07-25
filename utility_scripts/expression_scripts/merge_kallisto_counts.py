@@ -9,6 +9,7 @@ parser.add_argument('kallisto_base_path', help='base path from where to search f
 parser.add_argument('transcript_to_gene_ID', help='File containing mapping of transcript ID to gene ID')
 parser.add_argument('outfile_geneCounts', help='output file name gene counts')
 parser.add_argument('outfile_transcriptTPMs', help='output file name transcript TPMs')
+parser.add_argument('outfile_transcriptCounts', help='output file name transcript counts')
 parser.add_argument('--threads', help='Number of threads', default=1)
 
 
@@ -80,7 +81,17 @@ def main():
                 out_TPM.write('\t'+str(result[2][transcript]))
             out_TPM.write('\n')
 
-
+    with openfile(args.outfile_transcriptCounts,'wt') as out_counts:
+        for result in kallisto_data:
+            # result[0] is the sample name
+            out_counts.write('\t'+result[0])
+        out_counts.write('\n')
+        for transcript in set_of_transcripts:
+            out_counts.write(transcript)
+            for result in kallisto_data:
+                # result[1] is the kallisto transcript count data for that specific sample
+                out_counts.write('\t'+str(result[1][transcript]))
+            out_counts.write('\n')
 
 def parse_kallisto_files(kallisto_abundance_file):
     # loop over all the kallisto abundance files. Take the estimated counts and 
