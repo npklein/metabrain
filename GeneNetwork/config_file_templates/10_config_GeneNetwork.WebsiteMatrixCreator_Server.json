@@ -1,0 +1,12 @@
+{
+  "termsUrlFn": "REPLACETERMFILE",
+  "geneXTermFn": "REPLACEIDENTITY",
+  "aucFn": "REPLACEAUC",
+  "zScoreFn": "REPLACEZSCORE",
+  "writeFolder": "REPLACEOUTDIR",
+  "className": "GeneNetwork.WebsiteMatrixCreator",
+  "startTime": "2018-04-18 15:02:26",
+  "executor": "file:/groups/umcg-wijmenga/tmp04/umcg-svandam/Jar/RunV11.jar",
+  "runTime": "1 minutes 29 seconds 931 ms",
+  "jsonFN": "/groups/umcg-wijmenga/tmp04/umcg-svandam/GeneNetwork/Data31995Genes05-12-2017/GeneNetwork_V2_01-02-2018/ImportToWebsite/config_GeneNetwork.WebsiteMatrixCreator_GO_C_Server.json"
+}
