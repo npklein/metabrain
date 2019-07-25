@@ -57,8 +57,14 @@ main(){
     6_CorrelationMatrix
     echo "7_PCA_on_correlation"
     7_PCA_on_correlation
-    echo "8_GeneNetwork_predictions"
-    8_GeneNetwork_predictions
+    echo "8_correlate_eigenvectors"
+    8_correlate_eigenvectors
+    echo "9_GeneNetwork_predictions"
+    9_GeneNetwork_predictions
+    echo "10_bonferonni_correction"
+    10_bonferonni_correction
+    echo "11_WebsiteMatrixCreator"
+    11_WebsiteMatrixCreator
 }
 
 
@@ -253,27 +259,44 @@ print_command_arguments(){
     fi
 }
 
-8_GeneNetwork_predictions(){
-    mkdir -p  $output_dir/8_GeneNetwork_predictions/scripts/
+8_correlate_eigenvectors(){
+    output_file_step8="$output_dir/8_eigenvector_correlation_matrix/MetaBrain.eigenvectors.cronbach_${cronbach_cutoff}.correlation.txt"
+    if [ ! -f $output_file_step8 ]  && [ ! -f ${output_file_step8}.gz ];
+    then
+        # Step 8. Make correlation matrix of eigenvectors
+        bash $github_dir/GeneNetwork/scripts_per_step/8_CorrelateEigenvectors.sh \
+            -p $project_dir \
+            -e $output_dir/7_PCA_on_correlation_matrix/MetaBrain.eigenvectors.cronbach_${cronbach_cutoff}.txt.gz \
+            -o ${output_file_step8} \
+            -c $config_template_dir \
+            -j $jar_dir \
+            -t $threads
+    fi
+}
+
+9_GeneNetwork_predictions(){
+    mkdir -p  $output_dir/9_GeneNetwork_predictions/scripts/
     declare -A fullname=( ["go_F"]="goa_human.gaf_F" ["go_P"]="goa_human.gaf_P" ["kegg"]="c2.cp.kegg.v6.1.entrez.gmt" ["hpo"]="ALL_SOURCES_ALL_FREQUENCIES_phenotype_to_genes.txt" ["reactome"]="Ensembl2Reactome_All_Levels.txt" ["go_C"]="goa_human.gaf_C")
     for type in "go_F" "go_P" "kegg" "hpo" "reactome" "go_C";
     do
-        mkdir -p $output_dir/8_GeneNetwork_predictions/scripts/$type/
-        outfile="$output_dir/8_GeneNetwork_predictions/MetaBrain.${type}_predictions.txt"
+        mkdir -p $output_dir/9_GeneNetwork_predictions/scripts/$type/
+        outfile="$output_dir/9_GeneNetwork_predictions/MetaBrain.${type}_predictions.txt"
         if [ ! -f $outfile ];
         then
+            echo "!!!not implemented correctly yet!!!"
+            exit 1;
             for f in ${gene_network_dir}/PathwayMatrix/split_matrices/$type/*txt;
             do
-                outfile="$output_dir/8_GeneNetwork_predictions/${type}/$(basename ${f%.txt}).predictions.txt"
+                outfile="$output_dir/9_GeneNetwork_predictions/${type}/$(basename ${f%.txt}).predictions.txt"
                 # step 7. Run PCA on correlation matrix
-                rsync -vP $github_dir/GeneNetwork/scripts_per_step/8_GeneNetwork_predictions.sh $output_dir/8_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
-                sed -i "s;REPLACENAME;${type}_$(basename ${f%.txt});" $output_dir/8_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
-                sed -i "s;REPLACEGENENETWORKDIR;${gene_network_dir};" $output_dir/8_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
-                sed -i "s;REPLACEIDENTITYMATRIX;$f;" $output_dir/8_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
-                sed -i "s;REPLACEEIGENVECTORS;${output_dir}/7_PCA_on_correlation_matrix/MetaBrain.eigenvectors.cronbach_${cronbach_cutoff}.filteredOnPathwayGenes.txt;" $output_dir/8_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
-                sed -i "s;REPLACEOUT;$outfile;" $output_dir/8_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
-                sed -i "s;REPLACETYPE;${fullname[$type]};" $output_dir/8_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
-                cd $output_dir/8_GeneNetwork_predictions/scripts/
+                rsync -vP $github_dir/GeneNetwork/scripts_per_step/9_GeneNetwork_predictions.sh $output_dir/9_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
+                sed -i "s;REPLACENAME;${type}_$(basename ${f%.txt});" $output_dir/9_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
+                sed -i "s;REPLACEGENENETWORKDIR;${gene_network_dir};" $output_dir/9_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
+                sed -i "s;REPLACEIDENTITYMATRIX;$f;" $output_dir/9_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
+                sed -i "s;REPLACEEIGENVECTORS;${output_dir}/7_PCA_on_correlation_matrix/MetaBrain.eigenvectors.cronbach_${cronbach_cutoff}.filteredOnPathwayGenes.txt;" $output_dir/9_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
+                sed -i "s;REPLACEOUT;$outfile;" $output_dir/9_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
+                sed -i "s;REPLACETYPE;${fullname[$type]};" $output_dir/9_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
+                cd $output_dir/9_GeneNetwork_predictions/scripts/
     #            sbatch --wait ${type}_predictions.sh &
     #            wait
     #            grep AUC ${type}_predictions.out | cut -f2,7,11,13 > ${outfile.txt}.AUC.txt;
@@ -281,6 +304,16 @@ print_command_arguments(){
            done
         fi
     done
+}
+
+10_bonferonni_correction(){
+    echo "!!!not implemented correctly yet!!!"
+    exit 1;
+}
+
+11_WebsiteMatrixCreator(){
+    echo "!!!not implemented correctly yet!!!"
+    exit 1;
 }
 
 usage(){
