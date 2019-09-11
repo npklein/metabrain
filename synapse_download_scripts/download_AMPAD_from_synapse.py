@@ -16,11 +16,11 @@ syn.login(user,password)
 
 
 print('Sync AMP-AD')
-download_MSBB = False
-download_MAYOTCX = False
-download_MAYOCBE = True
+download_MSBB = True
+download_MAYOTCX = True
+download_MAYOCBE = False
 download_ROSMAP = False
-download_all = False
+download_all = True
 
 # STAR MSBB
 if download_MSBB:
