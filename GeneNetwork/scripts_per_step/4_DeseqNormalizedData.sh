@@ -26,7 +26,7 @@ main(){
     mkdir -p $(dirname $outdir)
     java -Xmx90g -Xms90g -jar $jardir/RunV13.jar $project_dir/configs/4_DeseqNormalizedData.json
     current_dir=$(dirname "$0")
-    Rscript $current_dir/log2.R -i $outfile -o ${outfile%.txt.gz}.log2.txt
+    Rscript $current_dir/../table_scripts/log2.R -i $outfile -o ${outfile%.txt.gz}.log2.txt
 
 }
 
