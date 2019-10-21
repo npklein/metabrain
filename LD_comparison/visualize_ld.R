@@ -23,11 +23,11 @@ opt = parse_args(opt_parser);
 #### Set the data: file to read ####
 # This contains the replication of MetaBrain in eQTLgen at different PC cut-offs
 eqtlGen_replication <- opt$eqtlGenReplication
-eqtlGen_replication <- '/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/LD_comparison/data/metabrain_eqtlgen_FDR0.05_replication.CIS.txt'
+#eqtlGen_replication <- '/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/LD_comparison/data/metabrain_eqtlgen_FDR0.05_replication.CIS.txt'
 
 # This contains the LD scores between the top SNPs for each gene of metaBrain that is also found in eqtlGen (fdr < 0.05)
 ld_scores_file <- opt$ld_scores
-ld_scores_file <- '/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/LD_comparison/data/metaBrain_eqtlGen_topSNP_LD.txt'
+#ld_scores_file <- '/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/LD_comparison/data/metaBrain_eqtlGen_topSNP_LD.txt'
 
 #####
 
