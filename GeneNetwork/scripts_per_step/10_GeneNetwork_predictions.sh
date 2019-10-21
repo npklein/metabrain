@@ -17,3 +17,5 @@ java -jar -Xms30g -Xmx30g REPLACEGENENETWORKDIR/GeneNetworkBackend-1.0.7-SNAPSHO
   -p REPLACEIDENTITYMATRIX \
   -b REPLACEGENENETWORKDIR/PathwayMatrix/REPLACETYPE_genesInPathways_filteredOnEigenVectorGenes.txt \
   -o REPLACEOUT
+
+touch REPLACENAME.finished

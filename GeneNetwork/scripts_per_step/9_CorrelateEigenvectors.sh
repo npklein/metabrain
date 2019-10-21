@@ -14,11 +14,11 @@ main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
 
-    rsync -vP $config_templates/6_CorrelationMatrix.json $project_dir/configs/8_CorrelateEigenvectors.json
+    rsync -vP $config_templates/6_CorrelationMatrix.json $project_dir/configs/9_CorrelateEigenvectors.json
 
-    sed -i "s;REPLACEEXPRFILE;$eigenvector_file;" $project_dir/configs/8_CorrelateEigenvectors.json
-    sed -i "s;REPLACEOUTFILE;$outfile;" $project_dir/configs/8_CorrelateEigenvectors.json
-    sed -i "s;REPLACETHREADS;$threads;" $project_dir/configs/8_CorrelateEigenvectors.json
+    sed -i "s;REPLACEEXPRFILE;$eigenvector_file;" $project_dir/configs/9_CorrelateEigenvectors.json
+    sed -i "s;REPLACEOUTFILE;$outfile;" $project_dir/configs/9_CorrelateEigenvectors.json
+    sed -i "s;REPLACETHREADS;$threads;" $project_dir/configs/9_CorrelateEigenvectors.json
     mkdir -p $(dirname $outfile)
 
     echo "Starting sbatch with:"
@@ -32,7 +32,7 @@ main(){
 #SBATCH --nodes 1
 
 ml Java;
-java -Xmx90g -Xms90g -jar $jardir/RunV13.jar $project_dir/configs/8_CorrelateEigenvectors.json
+java -Xmx90g -Xms90g -jar $jardir/RunV13.jar $project_dir/configs/9_CorrelateEigenvectors.json
 
 if [ $? -eq 0 ];
 then
@@ -50,12 +50,18 @@ fi
     sbatch $(dirname $outfile)/correlation.sh
 
     echo "sleep 10 minutes before checking if correlation is done"
+    dt=$(date '+%d/%m/%Y %H:%M:%S');
+    echo "$dt"
     sleep 600
+    echo "done sleeping, check again"
     while [ ! -f $(dirname $outfile)/correlation.finished ]
     do
       echo "$(dirname $outfile)/correlation.finished does not exist yet"
       echo "sleep 2 minutes before checking again"
+      dt=$(date '+%d/%m/%Y %H:%M:%S');
+      echo "$dt"
       sleep 120
+      echo "done sleeping, check again"
     done
 
     if [ ! -f $outfile ];
