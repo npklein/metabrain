@@ -5,8 +5,10 @@ parser = argparse.ArgumentParser(description='Get top SNPs for metabrain and eqt
 parser.add_argument('metaBrain', help='File with the metaBrain results')
 parser.add_argument('eqtlGen', help='File with the eqtlGen results')
 parser.add_argument('output', help='Output file name')
+parser.add_argument('fdr',help='Require FDR threshold')
 
 args = parser.parse_args()
+
 
 def parse_line(line):
     '''Decode binary line and select snp, gene and fdr'''
@@ -19,7 +21,9 @@ def parse_line(line):
 
 top_snp_per_gene_metaBrain = {}
 top_snp_fdr = {}
+fdrthreshold = float(args.fdr)
 print('parse metaBrain')
+
 with gzip.open(args.metaBrain) as input_file:
     header = input_file.readline().decode('utf-8').strip().split('\t')
     if header[-1] != 'FDR':
@@ -34,7 +38,7 @@ with gzip.open(args.metaBrain) as input_file:
         gene = gene.split('.')[0]
 
         # Only interested in those that are significant for this analysis
-        if fdr > 0.05:
+        if fdr > fdrthreshold:
             break
 
         # only want the top SNP. Since can't be sure that file is sorted by pvalues, check if pval is lower than previous
@@ -42,7 +46,7 @@ with gzip.open(args.metaBrain) as input_file:
         if gene not in top_snp_per_gene_metaBrain or fdr < top_snp_fdr[gene]:
             top_snp_per_gene_metaBrain[gene] = snp
             top_snp_fdr[gene] = fdr
-print(top_snp_per_gene_metaBrain)
+print("{} top snps in metabrain.".format(len(top_snp_per_gene_metaBrain))
 
 top_snp_per_gene_eqtlGen = {}
 top_snp_fdr = {}
@@ -60,7 +64,7 @@ with gzip.open(args.eqtlGen) as input_file:
             print(x)
 
         snp, gene, fdr = parse_line(line)
-        if fdr > 0.05:
+        if fdr > fdrthreshold:
             break
 
         # only use genes that are also found in metaBrain
