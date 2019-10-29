@@ -24,10 +24,10 @@ if not os.path.exists(outdir):
 if not os.path.exists(job_base_dir):
     os.makedirs(job_base_dir)
 
-def make_jobs(template):
+def make_jobs(cram_files, template):
     prev_study = None
     for cram in cram_files:
-        if not cram.endswith('.cram') and not cram.endswith('.bam') or '/BPD/' in cram:
+        if not (cram.endswith('.cram') and not cram.endswith('.bam')) or '/BPD/' in cram:
             continue
         study = None
         if 'AMP_AD' in cram:
@@ -233,4 +233,4 @@ fi
 '''
 
 
-make_jobs(template)
+make_jobs(cram_files, template)
