@@ -85,8 +85,9 @@ adjust_workflows(){
 
     # Change/add steps that are not in by default
     sed -i '2iConvertBamOrCramToFastq,../protocols/ConvertBamOrCramToFastq.sh,' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+    sed -i 's;FastQC,../protocols/Fastqc.sh,;FastQC,../protocols/Fastqc.sh,ConvertBamOrCramToFastq;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
     echo 'RemoveOriginalCramFile,../protocols/RemoveOriginalCramFile.sh,CreateCramFiles;FastQC;RemoveFastqFiles' >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
-    sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,ConvertBamOrCramToFastq.sh;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+    sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,ConvertBamOrCramToFastq;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
 
     # Have the collect metrics depend on STARMapping. Leave in dependence on CreateCramFiles in for a bit, will be removed later
     # sed -i 's/SortBam/CreateCramFiles/' Public_RNA-seq_QC/workflows/workflowSTAR.csv
@@ -226,12 +227,19 @@ make_samplesheets(){
         # samplesheet can be downloaded from Synapse
         python $samplesheet_script_dir/make_samplesheet_UCLA_ASD.py $samplesheet $RNAseqDir
 
+    elif [[ "$cohort" == "GTEx" ]];
+    then
+        # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
+        # samplesheet can be downloaded from Synapse
+        python $samplesheet_script_dir/make_samplesheet_GTEx.py $samplesheet \
+                                                                    $cramdir \
+                                                                    $project_dir/results/fastq
     elif [[ "$cohort" == "ENA" ]];
     then
         echo "ERROR: need to get genotypes as well for the ENA samples. Because the pipeline needs to be set up quite differently, use make_alignmentQuantificationAndGenotype_pipeline.sh instead"
         exit 1;
     else
-        echo "No code written for cohort $cohort"
+        echo "ERROR: No samplesheet code written for cohort: $cohort"
         exit 1;
     fi
 }
