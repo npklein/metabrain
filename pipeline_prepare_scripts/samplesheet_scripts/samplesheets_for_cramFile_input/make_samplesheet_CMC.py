@@ -35,9 +35,9 @@ with open(args.samplesheet) as input_file:
         fastq_path = args.fastq_dir+'/'+sample_id+'_R1.fq.gz'
 
         # Have to point to the cramfile
-        alignedBamOrCram = args.cram_dir+'/individualID.'+individual_id+'_specimenID.'+sample_id+'.cram'
-        if not os.path.exists(alignedBamOrCram):
-            raise RuntimeError(alignedBamOrCram+' does not exist')
+        cram = args.cram_dir+'/individualID.'+individual_id+'_specimenID.'+sample_id+'.cram'
+        if not os.path.exists(cram):
+            raise RuntimeError(cram+' does not exist')
 
         study_subset = re.search('(.*?)_\d+', sample_id).group(1)
         if study_subset not in index:
@@ -52,7 +52,7 @@ with open(args.samplesheet) as input_file:
         if batch_name not in samples_per_batch:
             samples_per_batch[batch_name] = []
             study_batch_order.append(batch_name)
-        samples_per_batch[batch_name].append([fastq_path, sample_id,alignedBamOrCram])
+        samples_per_batch[batch_name].append([fastq_path, sample_id,cram])
 
 for batch in study_batch_order:
     print('batch: '+batch)
