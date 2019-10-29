@@ -226,12 +226,19 @@ make_samplesheets(){
         # samplesheet can be downloaded from Synapse
         python $samplesheet_script_dir/make_samplesheet_UCLA_ASD.py $samplesheet $RNAseqDir
 
+    elif [[ "$cohort" == "GTEx" ]];
+    then
+        # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
+        # samplesheet can be downloaded from Synapse
+        python $samplesheet_script_dir/make_samplesheet_GTEx.py $samplesheet \
+                                                                    $cramdir \
+                                                                    $project_dir/results/fastq
     elif [[ "$cohort" == "ENA" ]];
     then
         echo "ERROR: need to get genotypes as well for the ENA samples. Because the pipeline needs to be set up quite differently, use make_alignmentQuantificationAndGenotype_pipeline.sh instead"
         exit 1;
     else
-        echo "No code written for cohort $cohort"
+        echo "ERROR: No samplesheet code written for cohort: $cohort"
         exit 1;
     fi
 }
