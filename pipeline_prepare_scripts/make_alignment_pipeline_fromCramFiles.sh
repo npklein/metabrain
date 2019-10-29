@@ -11,7 +11,7 @@
 set -e
 set -u
 
-module load Python/3.5.1-foss-2015b
+module load Python
 
 cohort=
 project_dir=
