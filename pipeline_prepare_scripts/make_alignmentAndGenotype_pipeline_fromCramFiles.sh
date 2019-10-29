@@ -150,17 +150,18 @@ change_parameter_files(){
     #       Either change below code or change the parameters.csv file
     sed -i 's;group,umcg-wijmenga;group,umcg-biogen;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i "s;resDir,/groups/umcg-wijmenga/tmp04/resources/;resDir,/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i "s;resDir,/groups/umcg-wijmenga/tmp03/resources/;resDir,/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i "s;projectDir,\${root}/\${group}/\${tmp}/projects/umcg-ndeklein/\${project}/;projectDir,${results_dir}/results/\${batch};" Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;STARindex;STARindex,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/STAR/${starVersion}/;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;STARindex;STARindex,${resDir}/UMCG/gtexrefference/STAR_genome_GRCh38_noALT_noHLA_noDecoy_ERCC_v26_oh100/;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;alignmentDir,${projectDir}/hisat/;alignmentDir,${projectDir}/star;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;fastqExtension,.gz;fastqExtension,.fq.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;goolf-1.7.20;foss-2015b;g' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;fastqExtension,.fq.gz;fastqExtension,.fastq.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;1.102-Java-1.7.0_80;1.119-Java-1.7.0_80;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;onekgGenomeFasta,${resDir}/${genomeBuild}/indices/human_g1k_v${human_g1k_vers}.fasta;onekgGenomeFasta,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/GRCh38.p5.genome.fa;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;genesRefFlat,${resDir}/Ensembl/release-${ensemblVersion}/gtf/homo_sapiens/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.refflat;genesRefFlat,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.refflat;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;rRnaIntervalList,${resDir}//picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.rrna.interval_list;rRnaIntervalList,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.rRNA.interval_list;' Public_RNA-seq_QC/parameter_files/parameters.csv
+
+    sed -i 's;onekgGenomeFasta,${resDir}/${genomeBuild}/indices/human_g1k_v${human_g1k_vers}.fasta;onekgGenomeFasta,${resDir}/UMCG/gtexrefference/Homo_sapiens_assembly38_noALT_noHLA_noDecoy_ERCC.fasta;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;genesRefFlat,${resDir}/Ensembl/release-${ensemblVersion}/gtf/homo_sapiens/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.refflat;genesRefFlat,${resDir}/UMCG/gtexrefference/hg38.refflat;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;rRnaIntervalList,${resDir}//picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.rrna.interval_list;rRnaIntervalList,${resDir}/UMCG/gtexrefference/gencode.v26.GRCh38.ERCC.genes.rRNA.interval_list;' Public_RNA-seq_QC/parameter_files/parameters.csv
+
     sed -i 's;gatkVersion,3.4-0-Java-1.7.0_80;gatkVersion,4.0.8.1-foss-2015b-Python-3.6.3;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;dbSNP/dbsnp_138.b37.vcf;ftp.ncbi.nlm.nih.gov/snp/organisms/archive/human_9606_b144_GRCh38p2/VCF/All_20150603.with_chr.vcf.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
     # Change in genotyping parameter file, but that has been merged with the QC parameter file
@@ -173,9 +174,6 @@ change_parameter_files(){
     sed -i 's;analyseCovariatesPdf,${analyseCovarsDir}/${sampleName}.analysecovariates.pdf;analyseCovariatesPdf,${analyseCovarsDir}/${sampleName}.analysecovariates.${chromosome}.pdf;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;${genomeBuild}/sv/1000G/Mills_and_1000G_gold_standard.indels.b37.vcf;storage.cloud.google.com/genomics-public-data/resources/broard/hg38/v0/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;${genomeBuild}/sv/1000G/1000G_phase1.indels.b37.vcf;storage.cloud.google.com/genomics-public-data/resources/broard/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
-
-    # Change the qunatification pipeline parameter file
-    chr38gtf="/apps/data/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.gtf.gz"
 
     # Change in both(both is still from the quantificaiton, altho not used at the moment anymore
     sed -i 's;genomeBuild,b37;genomeBuild,b38;' Public_RNA-seq*/parameter_files/parameters.csv
