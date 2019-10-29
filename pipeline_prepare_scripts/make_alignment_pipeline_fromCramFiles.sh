@@ -131,7 +131,6 @@ change_parameter_files(){
     # NOTE: The replacemets are cluster specific, but don't want to make this command line options because that would make too many of them
     #       Either change below code or change the parameters.csv file
     sed -i 's;group,umcg-wijmenga;group,umcg-biogen;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i "s;resDir,/groups/umcg-wijmenga/tmp04/resources/;resDir,/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i "s;resDir,/groups/umcg-wijmenga/tmp03/resources/;resDir,/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i "s;projectDir,\${root}/\${group}/\${tmp}/projects/umcg-ndeklein/\${project}/;projectDir,${project_dir}/results/;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;alignmentDir,${projectDir}/hisat/;alignmentDir,${projectDir}/star;' Public_RNA-seq_QC/parameter_files/parameters.csv
@@ -139,9 +138,9 @@ change_parameter_files(){
     sed -i 's;goolf-1.7.20;foss-2015b;g' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;fastqExtension,.fq.gz;fastqExtension,.fastq.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;1.102-Java-1.7.0_80;1.119-Java-1.7.0_80;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;onekgGenomeFasta,${resDir}/${genomeBuild}/indices/human_g1k_v${human_g1k_vers}.fasta;onekgGenomeFasta,/apps/data/UMCG/gtexrefference/Homo_sapiens_assembly38_noALT_noHLA_noDecoy_ERCC.fasta;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;genesRefFlat,${resDir}/Ensembl/release-${ensemblVersion}/gtf/homo_sapiens/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.refflat;genesRefFlat,/apps/data/UMCG/gtexrefference/hg38.refflat;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;rRnaIntervalList,${resDir}//picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.rrna.interval_list;rRnaIntervalList,/apps/data/UMCG/gtexrefference/gencode.v26.GRCh38.ERCC.genes.rRNA.interval_list;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;onekgGenomeFasta,${resDir}/${genomeBuild}/indices/human_g1k_v${human_g1k_vers}.fasta;onekgGenomeFasta,${resDir}/UMCG/gtexrefference/Homo_sapiens_assembly38_noALT_noHLA_noDecoy_ERCC.fasta;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;genesRefFlat,${resDir}/Ensembl/release-${ensemblVersion}/gtf/homo_sapiens/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.refflat;genesRefFlat,${resDir}/UMCG/gtexrefference/hg38.refflat;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;rRnaIntervalList,${resDir}//picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.rrna.interval_list;rRnaIntervalList,${resDir}/UMCG/gtexrefference/gencode.v26.GRCh38.ERCC.genes.rRNA.interval_list;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;genomeBuild,b37;genomeBuild,b38;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;genomeGrchBuild,GRCh37;genomeGrchBuild,GRCh38;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;human_g1k_vers,37;human_g1k_vers,38;' Public_RNA-seq_QC/parameter_files/parameters.csv
