@@ -37,7 +37,9 @@ with open(args.samplesheet) as input_file:
         # Have to point to the cramfile
         alignedBamOrCram = args.cram_dir+'/individualID.'+individual_id+'_specimenID.'+sample_id+'.cram'
         if not os.path.exists(alignedBamOrCram):
-            raise RuntimeError(alignedBamOrCram+' does not exist')
+            print(alignedBamOrCram+' does not exist')
+            continue
+#            raise RuntimeError(alignedBamOrCram+' does not exist')
 
         study_subset = re.search('(.*?)_\d+', sample_id).group(1)
         if study_subset not in index:

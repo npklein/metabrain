@@ -85,8 +85,9 @@ adjust_workflows(){
 
     # Change/add steps that are not in by default
     sed -i '2iConvertBamOrCramToFastq,../protocols/ConvertBamOrCramToFastq.sh,' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+    sed -i 's;FastQC,../protocols/Fastqc.sh,;FastQC,../protocols/Fastqc.sh,ConvertBamOrCramToFastq;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
     echo 'RemoveOriginalCramFile,../protocols/RemoveOriginalCramFile.sh,CreateCramFiles;FastQC;RemoveFastqFiles' >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
-    sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,ConvertBamOrCramToFastq.sh;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+    sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,ConvertBamOrCramToFastq;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
 
     # Have the collect metrics depend on STARMapping. Leave in dependence on CreateCramFiles in for a bit, will be removed later
     # sed -i 's/SortBam/CreateCramFiles/' Public_RNA-seq_QC/workflows/workflowSTAR.csv
