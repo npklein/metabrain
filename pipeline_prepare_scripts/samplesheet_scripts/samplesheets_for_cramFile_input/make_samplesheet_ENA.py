@@ -1,13 +1,14 @@
 import os.path
-import os
 import glob
-import re
 import argparse
 
 parser = argparse.ArgumentParser(description='Make Molgenis Compute samplesheet for ENA.')
-parser.add_argument('samplesheet', help='ENA samplesheet')
-parser.add_argument('fastq_dir', help='path of dir to download fastq files to')
-parser.add_argument('outdir',help='Directory where output is written')
+parser.add_argument('samplesheet', help='CMC samplesheet from synapse')
+parser.add_argument('cram_dir', help='path to cram file dir for input')
+parser.add_argument('fastq_dir', help='path to fastq file dir for output')
+parser.add_argument('samplesheet_dir',help='Directory where samplesheet is written',
+                             nargs='?',
+                             default = 'Public_RNA-seq_QC/samplesheets/')
 args = parser.parse_args()
 
 
@@ -61,6 +62,8 @@ with open(args.samplesheet) as input_file:
             raise RuntimeError('Sample '+sample+' already seen')
         seen.add(sample)
 
+
+batches_with_missing_cramfiles = set([])
 seen = set([])
 # Divide the jobs up per study, easier to keep track later (although some studies have only 1 sample)
 # Since some studies are very large, make batches per <batch_size> samples, but make sure that samples from same individual are in the same batch
@@ -83,9 +86,9 @@ for study in study_individuals:
             
             batch_number = int(total_number_of_samples / batch_size)
             batch = 'batch'+str(batch_number)
-            print('writing to '+args.outdir+'/samplesheet_ENA_RNA.'+study+'_'+batch+'.txt')
-            out = open(args.outdir+'/samplesheet_ENA_RNA.'+study+'_'+batch+'.txt','w')
-            out.write('internalId,project,sampleName,reads1FqGz,reads2FqGz,sortedBamFile,batch\n')
+       #     print('writing to '+args.samplesheet_dir+'/samplesheet_ENA_RNA.'+study+'_'+batch+'.txt')
+            out = open(args.samplesheet_dir+'/samplesheet_ENA_RNA.'+study+'_'+batch+'.txt','w')
+            out.write('internalId,project,sampleName,reads1FqGz,reads2FqGz,sortedBamFile,batch,alignedBamOrCram\n')
             current_number_of_samples = 0
 
         # Because some of the samples from an indivudal might not have been added to this batch, do it now before closing the file
@@ -110,8 +113,28 @@ for study in study_individuals:
                 R2 = fastq_dir+'/'+study+'/'+fastq_files[1].split('/')[-1]
             elif len(fastq_files) > 2:
                 raise RuntimeError('Should only have 2 fastq files')
-            out.write(sample+',ENA,'+individual+','+R1+','+R2+',${sortedBam},'+study+'_'+batch+'\n')
+
+        cram = glob.glob(args.cram_dir+'/*/cramFiles/'+individual+'_'+sample+'.cram')
+        if len(cram) > 1:
+            print(args.cram_dir+'/*/cramFiles/'+individual+'_'+sample+'.cram')
+            print(cram)
+            raise RuntimeError('Should find 1 file')
+        if len(cram) == 0:
+            print(individual+'_'+sample+' not found')
+            continue
+        cram = cram[0]
+       
+        if not os.path.exists(cram):
+            batches_with_missing_cramfiles.add(study+'_'+batch)
+            print(cram+' does not exist')
+            continue
+#            raise RuntimeError(cram+' does not exist')
+
+        out.write(sample+',ENA,'+individual+','+R1+','+R2+',${sortedBam},'+study+'_'+batch+','+cram+'\n')
         total_number_of_samples += len(samples_per_individual[individual])
         current_number_of_samples += len(samples_per_individual[individual])
 
     out.close()
+#print(batches_with_missing_cramfiles)
+#import sys
+#sys.exit(1)
