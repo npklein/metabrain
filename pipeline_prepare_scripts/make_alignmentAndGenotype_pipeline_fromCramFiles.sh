@@ -180,7 +180,7 @@ change_parameter_files(){
     sed -i 's;genomeGrchBuild,GRCh37;genomeGrchBuild,GRCh38;' Public_RNA-seq*/parameter_files/parameters.csv
     sed -i 's;human_g1k_vers,37;human_g1k_vers,38;' Public_RNA-seq*/parameter_files/parameters.csv
     sed -i 's;ensemblVersion,75;ensemblVersion,?;' Public_RNA-seq*/parameter_files/parameters.csv
-    sed -i 's;${resDir}/UMCG/1000G_interval_list//ALL.wgs.phase3_shapeit2_mvncall_integrated_v5.20130502.sites.MAF_0.05.SNPs_only.recode.annotated.EXON_only.interval_list;${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.exon.interval_list;' Public_RNA-seq*/parameter_files/parameters.csv
+    sed -i 's;${resDir}/UMCG/1000G_interval_list//ALL.wgs.phase3_shapeit2_mvncall_integrated_v5.20130502.sites.MAF_0.05.SNPs_only.recode.annotated.EXON_only.interval_list;${resDir}/UMCG/gtexrefference/gencode.v26.GRCh38.ERCC.genes.exon.interval_list;' Public_RNA-seq*/parameter_files/parameters.csv
 }
 
 
