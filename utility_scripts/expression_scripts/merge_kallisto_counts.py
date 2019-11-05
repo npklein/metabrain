@@ -21,7 +21,7 @@ with open(args.gtf) as input_file:
     for line in input_file:
         if 'transcript_id' in line:
             info = line.split('\t')[8]
-            transcript_id = info.split('transcript_id "')[1].split('"')[0]
+            transcript_id = info.split('transcript_id "')[1].split('"')[0].split('.')[0]
             gene_id = info.split('gene_id "')[1].split('"')[0]
             transcript_to_gene[transcript_id] = gene_id
 print('done')
