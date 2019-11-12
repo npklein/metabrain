@@ -234,6 +234,11 @@ make_samplesheets(){
         python $samplesheet_script_dir/make_samplesheet_GTEx.py $samplesheet \
                                                                     $cramdir \
                                                                     $project_dir/results/fastq
+    elif [[ "$cohort" == "MSBB" ]];
+    then
+        python $samplesheet_script_dir/make_samplesheet_MSBB.py $samplesheet \
+                                                                 $cramdir \
+                                                                 $project_dir/results/fastq
     elif [[ "$cohort" == "ENA" ]];
     then
         echo "ERROR: need to get genotypes as well for the ENA samples. Because the pipeline needs to be set up quite differently, use make_alignmentQuantificationAndGenotype_pipeline.sh instead"
