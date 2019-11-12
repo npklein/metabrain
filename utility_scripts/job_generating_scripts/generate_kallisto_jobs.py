@@ -92,7 +92,11 @@ def make_jobs(cram_files, template):
         new_template = new_template.replace('REPLACECRAM', cram)
         new_template = new_template.replace('REPLACEBAM', cram.replace('cram','bam'))
         new_template = new_template.replace('REPLACEINDEX',args.kallisto_index)
-        with open(jobs_dir+'/'+sample+'.sh','w') as out:
+
+        if not os.path.exists(jobs_dir+'/'+study+'/'):
+            os.makedirs(jobs_dir+'/'+study+'/')
+
+        with open(jobs_dir+'/'+study+'/'+sample+'.sh','w') as out:
             out.write(new_template)
         prev_study = study
 

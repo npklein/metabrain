@@ -11,6 +11,7 @@
 set -e
 set -u
 
+
 module load Python
 
 cohort=
@@ -135,18 +136,17 @@ change_parameter_files(){
     sed -i "s;resDir,/groups/umcg-wijmenga/tmp03/resources/;resDir,/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i "s;projectDir,\${root}/\${group}/\${tmp}/projects/umcg-ndeklein/\${project}/;projectDir,${project_dir}/results/;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;alignmentDir,${projectDir}/hisat/;alignmentDir,${projectDir}/star;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;fastqExtension,fastq.gz;fastqExtension,.fq.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;fastqExtension,fastq.gz;fastqExtension,.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;goolf-1.7.20;foss-2015b;g' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;fastqExtension,.fq.gz;fastqExtension,.fastq.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;1.102-Java-1.7.0_80;1.119-Java-1.7.0_80;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;onekgGenomeFasta,${resDir}/${genomeBuild}/indices/human_g1k_v${human_g1k_vers}.fasta;onekgGenomeFasta,/apps/data/UMCG/gtexrefference/Homo_sapiens_assembly38_noALT_noHLA_noDecoy_ERCC.fasta;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;genesRefFlat,${resDir}/Ensembl/release-${ensemblVersion}/gtf/homo_sapiens/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.refflat;genesRefFlat,/apps/data/UMCG/gtexrefference/hg38.refflat;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;rRnaIntervalList,${resDir}//picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.rrna.interval_list;rRnaIntervalList,/apps/data/UMCG/gtexrefference/gencode.v26.GRCh38.ERCC.genes.rRNA.interval_list;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;onekgGenomeFasta,${resDir}/${genomeBuild}/indices/human_g1k_v${human_g1k_vers}.fasta;onekgGenomeFasta,${resDir}//ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/GRCh38.primary_assembly.genome.fa;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;genesRefFlat,${resDir}/Ensembl/release-${ensemblVersion}/gtf/homo_sapiens/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.refflat;genesRefFlat,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/gencode.v32.primary_assembly.annotation.collapsedGenes.refflat;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;rRnaIntervalList,${resDir}//picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.rrna.interval_list;rRnaIntervalList,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/gencode.v32.primary_assembly.annotation.collapsedGenes.rRNA.interval_list;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;genomeBuild,b37;genomeBuild,b38;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;genomeGrchBuild,GRCh37;genomeGrchBuild,GRCh38;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;human_g1k_vers,37;human_g1k_vers,38;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;ensemblVersion,75;ensemblVersion,?;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;STARindex,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/STAR/${starVersion}/;STARindex,${resDir}/UMCG/gtexrefference/STAR_genome_GRCh38_noALT_noHLA_noDecoy_ERCC_v26_oh100/;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;STARindex,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/STAR/${starVersion}/;STARindex,${resDir}/UMCG/STAR_index/gencode_32/STAR_genome_GRCh38_gencode.v32.primaryAssembly_oh100/;' Public_RNA-seq_QC/parameter_files/parameters.csv
 }
 
 make_samplesheets(){
@@ -161,19 +161,10 @@ make_samplesheets(){
     samplesheet_script_dir=$script_dir/samplesheet_scripts/samplesheets_for_cramFile_input/
     if [[ "$cohort" == "TargetALS" ]];
     then
-        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/../sample_annotation/UMG-Target_ALS_RNA_Clinical_Data_06122018.txt \
-                                                                    $project_dir/../data/ \
-                                                                     Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.
+        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $samplesheet \
+                                                                     $cramdir \
+                                                                     $project_dir/results/fastq/
 
-        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/../sample_annotation/RNA_Metadata_TALS_2_5July2018.txt \
-                                                                     $project_dir/../data/ \
-                                                                     Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.samplesheet5july2018_
-
-        # give this an extra prefix because tehre is double data in this file and the Clinical_Data file. Since jobs have already been run for the
-        # Clinical_Data file, I don't want those to be overwritten by jobs based on RNA_Metadata. Have to check afterwards by hand which are double
-        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/../sample_annotation/Target_ALS_RNA_Metadata_03062019.txt \
-                                                                     $project_dir/../data/ \
-                                                                     Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.03062019_
     elif [[ "$cohort" == "CMC" ]];
     then
         # The sameplesheet that is given as input is the samplesheet that is donwloaded from CMC
@@ -183,9 +174,9 @@ make_samplesheets(){
                                                                $project_dir/results/fastq/
     elif [[ "$cohort" == "CMC_HBCC" ]];
     then
-        # here RNAseqDir is the directory containing the BAM files, did not want to make an extra variable for it
-        echo "python $samplesheet_script_dir/make_samplesheet_CMC_HBCC.py $samplesheet $RNAseqDir $project_dir/results/fastq/ $project_dir"
-        python $samplesheet_script_dir/make_samplesheet_CMC_HBCC.py $samplesheet $RNAseqDir $project_dir/results/fastq/
+        python $samplesheet_script_dir/make_samplesheet_CMC_HBCC.py  $samplesheet \
+                                                                     $cramdir \
+                                                                     $project_dir/results/fastq/
     elif [[ "$cohort" == "Braineac" ]];
     then
         python $samplesheet_script_dir/make_samplesheet_Braineac.py $samplesheet  \
@@ -206,14 +197,16 @@ make_samplesheets(){
     then
         # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
         # samplesheet can be downloaded from Synapse
-        python $samplesheet_script_dir/make_samplesheet_BipSeq.py /groups/umcg-biogen/tmp04/input/rawdata/psychEncode/metadata/BipSeq/LIBD-JHU_BipSeq_R01MH105898_Metadata_RNAseq_DLPFC_Limbic.csv \
-                                                                  /groups/umcg-biogen/tmp04/input/rawdata/psychEncode/RNAseq/BipSeq/DLPFC_merged/
+        python $samplesheet_script_dir/make_samplesheet_BipSeq.py $samplesheet \
+                                                                  $cramdir \
+                                                                  $project_dir/results/fastq
     elif [[ "$cohort" == "BrainGVEx" ]];
     then
         # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
         # samplesheet can be downloaded from Synapse
-        python $samplesheet_script_dir/make_samplesheet_BrainGVEx.py /groups/umcg-biogen/tmp04/input/rawdata/psychEncode/metadata/BrainGVEX/UIC-UChicago-U01MH103340_BrainGVEX_RNAseqMetadata_August2016Release.csv \
-                                                                     /groups/umcg-biogen/tmp04/input/rawdata/psychEncode/RNAseq/BrainGVEX/merged
+        python $samplesheet_script_dir/make_samplesheet_BrainGVEx.py $samplesheet \
+                                                                     $cramdir \
+                                                                     $project_dir/results/fastq
     elif [[ "$cohort" == "EpiGABA" ]];
     then
         # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
@@ -225,8 +218,9 @@ make_samplesheets(){
     then
         # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
         # samplesheet can be downloaded from Synapse
-        python $samplesheet_script_dir/make_samplesheet_UCLA_ASD.py $samplesheet $RNAseqDir
-
+        python $samplesheet_script_dir/make_samplesheet_UCLA_ASD.py  $samplesheet \
+                                                                     $cramdir \
+                                                                     $project_dir/results/fastq
     elif [[ "$cohort" == "GTEx" ]];
     then
         # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
