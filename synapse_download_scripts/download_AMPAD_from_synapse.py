@@ -18,8 +18,8 @@ syn.login(user,password)
 print('Sync AMP-AD')
 download_MSBB = True
 download_MAYOTCX = True
-download_MAYOCBE = False
-download_ROSMAP = False
+download_MAYOCBE = True
+download_ROSMAP = True
 download_all = True
 
 # STAR MSBB
@@ -31,20 +31,21 @@ if download_MSBB:
                 print(file['id'], file['name'])
     else:
         # aligned BAM files MSBB
-        files = synapseutils.syncFromSynapse(syn, 'syn8540822', path = 'BAMs/MSBB/')
+#        files = synapseutils.syncFromSynapse(syn, 'syn8540822', path = 'BAMs/MSBB/')
         # STAR MSBB
-        files = synapseutils.syncFromSynapse(syn, 'syn12104381', path = 'MSBB/STAR')
+#        files = synapseutils.syncFromSynapse(syn, 'syn12104381', path = 'MSBB/STAR')
         # metadata MSBB
         files = synapseutils.syncFromSynapse(syn, 'syn7392158', path = 'metadata/')
 
 if download_MAYOCBE:
+    pass
     # STAR MAYO
-    files = synapseutils.syncFromSynapse(syn, 'syn12104376', path = 'MAYO/STAR/')
+#    files = synapseutils.syncFromSynapse(syn, 'syn12104376', path = 'MAYO/STAR/')
     # aligned BAM files Mayo
-    files = synapseutils.syncFromSynapse(syn, 'syn8540821', path = 'BAMs/MayoCBE/')
+#    files = synapseutils.syncFromSynapse(syn, 'syn8540821', path = 'BAMs/MayoCBE/')
 
 if download_MAYOTCX:
-    files = synapseutils.syncFromSynapse(syn, 'syn8540820', path = 'BAMs/MayoTCX/')
+#    files = synapseutils.syncFromSynapse(syn, 'syn8540820', path = 'BAMs/MayoTCX/')
 
     # metadata MAYO
     files = synapseutils.syncFromSynapse(syn, 'syn11384571', path = 'metadata/')
@@ -64,9 +65,10 @@ if download_ROSMAP:
                 synapseutils.syncFromSynapse(syn, file['id'], path = 'BAMs/ROSMAP/')
                 print(file['id'], file['name'])
     else:
+        pass
         # STAR ROSMAP
-        files = synapseutils.syncFromSynapse(syn, 'syn12104384', path = 'ROSMAP/STAR/')
-        files = synapseutils.syncFromSynapse(syn, 'syn8540863', path = 'BAMs/ROSMAP/')
+#        files = synapseutils.syncFromSynapse(syn, 'syn12104384', path = 'ROSMAP/STAR/')
+#        files = synapseutils.syncFromSynapse(syn, 'syn8540863', path = 'BAMs/ROSMAP/')
 
 
     # ROSMAP metadata
