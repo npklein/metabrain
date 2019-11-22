@@ -62,7 +62,7 @@ else
   echo "single-end, writing 1 fastq file"
   samtools fastq \
     -@ 4 \
-    -1 $TMPDIR/$(basename ${reads1FqGz}) \
+    -0 $TMPDIR/$(basename ${reads1FqGz}) \
     $TMPDIR/$(basename $alignedBamOrCram)
     rsync -vP $TMPDIR/$(basename ${reads1FqGz}) ${reads1FqGz}
 fi
