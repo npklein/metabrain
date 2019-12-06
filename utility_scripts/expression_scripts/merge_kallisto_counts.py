@@ -6,7 +6,7 @@ import gzip
 
 parser = argparse.ArgumentParser(description='Merge multiple kallisto count files into a matrix.')
 parser.add_argument('kallisto_base_path', help='base path from where to search for kallisto abundance.tsv files')
-parser.add_argument('transcript_to_gene_ID', help='File containing mapping of transcript ID to gene ID')
+parser.add_argument('gtf', help='GTF file containing mapping of transcript ID to gene ID')
 parser.add_argument('outfile_geneCounts', help='output file name gene counts')
 parser.add_argument('outfile_transcriptTPMs', help='output file name transcript TPMs')
 parser.add_argument('outfile_transcriptCounts', help='output file name transcript counts')
@@ -16,10 +16,15 @@ parser.add_argument('--threads', help='Number of threads', default=1)
 args = parser.parse_args()
 
 transcript_to_gene = {}
-with open(args.transcript_to_gene_ID) as input_file:
+print('read gtf file')
+with open(args.gtf) as input_file:
     for line in input_file:
-        line = line.strip().split('\t')
-        transcript_to_gene[line[0]] = line[1]
+        if 'transcript_id' in line:
+            info = line.split('\t')[8]
+            transcript_id = info.split('transcript_id "')[1].split('"')[0].split('.')[0]
+            gene_id = info.split('gene_id "')[1].split('"')[0]
+            transcript_to_gene[transcript_id] = gene_id
+print('done')
 
 def openfile(filename, mode='rt'):
     if filename.endswith('.gz'):
@@ -46,8 +51,8 @@ def main():
         input_file.readline()
         for line in input_file:
             line = line.split('\t')
-            set_of_genes.add(transcript_to_gene[line[0]])
-            set_of_transcripts.add(line[0])
+            set_of_genes.add(transcript_to_gene[line[0].split('.')[0]])
+            set_of_transcripts.add(line[0].split('.')[0])
     print('start map')
     sys.stdout.flush()
     # parallel process kallisto files. Per sample 1 thread
@@ -107,7 +112,7 @@ def parse_kallisto_files(kallisto_abundance_file):
             line = line.strip().split('\t')
             est_counts = float(line[3])
             tpm = line[4]
-            transcript = line[0]
+            transcript = line[0].split('.')[0]
             gene = transcript_to_gene[transcript]
             if gene in estimated_counts_per_gene:
                 estimated_counts_per_gene[gene] += est_counts

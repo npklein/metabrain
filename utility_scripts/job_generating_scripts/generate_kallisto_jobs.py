@@ -24,10 +24,10 @@ if not os.path.exists(outdir):
 if not os.path.exists(job_base_dir):
     os.makedirs(job_base_dir)
 
-def make_jobs(template):
+def make_jobs(cram_files, template):
     prev_study = None
     for cram in cram_files:
-        if not cram.endswith('.cram') and not cram.endswith('.bam') or '/BPD/' in cram:
+        if not (cram.endswith('.cram') and not cram.endswith('.bam')) or '/BPD/' in cram:
             continue
         study = None
         if 'AMP_AD' in cram:
@@ -92,7 +92,11 @@ def make_jobs(template):
         new_template = new_template.replace('REPLACECRAM', cram)
         new_template = new_template.replace('REPLACEBAM', cram.replace('cram','bam'))
         new_template = new_template.replace('REPLACEINDEX',args.kallisto_index)
-        with open(jobs_dir+'/'+sample+'.sh','w') as out:
+
+        if not os.path.exists(jobs_dir+'/'+study+'/'):
+            os.makedirs(jobs_dir+'/'+study+'/')
+
+        with open(jobs_dir+'/'+study+'/'+sample+'.sh','w') as out:
             out.write(new_template)
         prev_study = study
 
@@ -233,4 +237,4 @@ fi
 '''
 
 
-make_jobs(template)
+make_jobs(cram_files, template)
