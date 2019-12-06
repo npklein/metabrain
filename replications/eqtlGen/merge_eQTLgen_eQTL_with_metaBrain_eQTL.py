@@ -1,4 +1,3 @@
-raise RuntimeError('This script is wrong, need to take in consideration that the genotypes can be swapped')
 import argparse
 import gzip
 parser = argparse.ArgumentParser(description='Merge MetaBrain with eQTLs from eqtlGen et al.')
@@ -38,6 +37,7 @@ with gzip.open(args.eqtlGen_eqtls,'rt') as input_file:
         zscore = line[10]
         eqtlGen_eQTLs[rs+'_'+gene] = [zscore, allele_assessed, FDR, alleles, isTopSNP]
         n_in_eqtlGen += 1
+
 lowest_pval_gene = {}
 print(args.eqtlGen_eqtls,'- done, start reading metabrain and start writing')
 with gzip.open(args.MetaBrain_eqtls, 'rt') as input_file, open(args.output_file,'w') as out:
@@ -75,10 +75,15 @@ with gzip.open(args.MetaBrain_eqtls, 'rt') as input_file, open(args.output_file,
         if alleles != eqtlGen[3] and [alleles[1], alleles[0]] != eqtlGen[3]:
            print('/'.join(alleles)+' '+ '/'.join(eqtlGen[3])+'. Genotype not the same, skip: '+SNP+'_'+gene)
            continue
+
+
         if eqtlGen[1] != allele_assessed:
             zscore_swapped = -1*float(zscore)
         else:
             zscore_swapped = zscore
+
+        # sometimes the genotype is swapped, then the z-score has to be swapped again
+
         same_direction = float(zscore_swapped) * float(eqtlGen[0]) >= 0
         out.write(chr+'\t'+pos+'\t'+SNP+'\t'+gene+'\t'+FDR+'\t'+zscore+'\t'+str(zscore_swapped)+'\t'+allele_assessed+'\t'+eqtlGen[2]+'\t')
         out.write(eqtlGen[0]+'\t'+eqtlGen[1]+'\t'+str(same_direction)+'\t'+str(isTopSNP)+'\t'+str(eqtlGen[4])+'\n')

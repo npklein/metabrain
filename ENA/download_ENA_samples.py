@@ -283,6 +283,8 @@ class Download_ENA_samples:
 
 
 if __name__ == "__main__":
+    exclusion_list = []
+    inclusion_list = []
     if args.sample:
         inclusion_list = [args.sample]
         exclusion_list = []
@@ -297,7 +299,7 @@ if __name__ == "__main__":
             with open(args.exclusion_list_file) as input_file:
                 exclusion_list = input_file.read().split('\n')
         else:
-            exclusion_list == []
+            exclusion_list = []
     download = Download_ENA_samples(args.samplesheet, args.download_location, args.aspera_binary, 
                                     args.aspera_openssh, args.download_speed, inclusion_list, exclusion_list,
                                     args.include_all_samples)

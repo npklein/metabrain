@@ -9,7 +9,9 @@ import argparse
 parser = argparse.ArgumentParser(description='Make Molgenis Compute samplesheet for CMC.')
 parser.add_argument('samplesheet', help='CMC samplesheet from synapse')
 parser.add_argument('fastq_dir', help='path to fastq file dir')
-parser.add_argument('outdir',help='Directory where output is written',default = 'Public_RNA-seq_QC/samplesheets/')
+parser.add_argument('outdir',help='Directory where output is written',
+                             nargs='?',
+                             default = 'Public_RNA-seq_QC/samplesheets/')
 
 args = parser.parse_args()
 
