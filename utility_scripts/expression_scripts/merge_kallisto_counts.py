@@ -110,9 +110,14 @@ def parse_kallisto_files(kallisto_abundance_file):
         input_file.readline()
         for line in input_file:
             line = line.strip().split('\t')
-            est_counts = float(line[3])
-            tpm = line[4]
-            transcript = line[0].split('.')[0]
+            try:
+                est_counts = float(line[3])
+                tpm = line[4]
+                transcript = line[0].split('.')[0]
+            except IndexError:
+                print('ERROR!! Line does not have enough value for: '+kallisto_abundance_file)
+                print(line)
+                raise
             gene = transcript_to_gene[transcript]
             if gene in estimated_counts_per_gene:
                 estimated_counts_per_gene[gene] += est_counts
