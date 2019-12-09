@@ -76,8 +76,8 @@ with openfile(args.expression_file,'rt') as input_file:
         if all_expression not in expr_set:
             expr_set[all_expression] = set(gene)
         else:
-            genes_to_filter = genes_to_filter.union(expr_set[all_expression])
-        
+            genes_to_filter.add(gene)
+
         has_expr = False
 #        average_expression = 0
         for element in spl_line[1:]:
