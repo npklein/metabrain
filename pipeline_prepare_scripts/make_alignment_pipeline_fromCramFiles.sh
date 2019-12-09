@@ -136,7 +136,7 @@ change_parameter_files(){
     sed -i "s;resDir,/groups/umcg-wijmenga/tmp03/resources/;resDir,/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i "s;projectDir,\${root}/\${group}/\${tmp}/projects/umcg-ndeklein/\${project}/;projectDir,${project_dir}/results/;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;alignmentDir,${projectDir}/hisat/;alignmentDir,${projectDir}/star;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;fastqExtension,fastq.gz;fastqExtension,.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
+#    sed -i 's;fastqExtension,fastq.gz;fastqExtension,.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;goolf-1.7.20;foss-2015b;g' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;1.102-Java-1.7.0_80;1.119-Java-1.7.0_80;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;onekgGenomeFasta,${resDir}/${genomeBuild}/indices/human_g1k_v${human_g1k_vers}.fasta;onekgGenomeFasta,${resDir}//ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/GRCh38.primary_assembly.genome.fa;' Public_RNA-seq_QC/parameter_files/parameters.csv
@@ -147,6 +147,16 @@ change_parameter_files(){
     sed -i 's;human_g1k_vers,37;human_g1k_vers,38;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;ensemblVersion,75;ensemblVersion,?;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;STARindex,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/STAR/${starVersion}/;STARindex,${resDir}/UMCG/STAR_index/gencode_32/STAR_genome_GRCh38_gencode.v32.primaryAssembly_oh100/;' Public_RNA-seq_QC/parameter_files/parameters.csv
+
+    HOSTNAME=$(hostname)
+    if [ "$HOSTNAME" = "gearshift" ];
+    then
+        echo "Change some parameters specifically for gearshift because different versions of tools are installed there"
+        sed -i s';picardVersion,2.18.26-Java-1.8.0_74;picardVersion,2.20.5-Java-11-LTS;' Public_RNA-seq_QC/parameter_files/parameters.csv
+        sed -i s';iolibVersion,1.14.6-foss-2015b;iolibVersion,1.14.11-GCCcore-7.3.0;' Public_RNA-seq_QC/parameter_files/parameters.csv
+        sed -i s';samtoolsVersion,1.5-foss-2015b;samtoolsVersion,1.9-GCCcore-7.3.0;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    fi
+
 }
 
 make_samplesheets(){
@@ -228,6 +238,11 @@ make_samplesheets(){
         python $samplesheet_script_dir/make_samplesheet_GTEx.py $samplesheet \
                                                                     $cramdir \
                                                                     $project_dir/results/fastq
+    elif [[ "$cohort" == "MSBB" ]];
+    then
+        python $samplesheet_script_dir/make_samplesheet_MSBB.py $samplesheet \
+                                                                 $cramdir \
+                                                                 $project_dir/results/fastq
     elif [[ "$cohort" == "ENA" ]];
     then
         echo "ERROR: need to get genotypes as well for the ENA samples. Because the pipeline needs to be set up quite differently, use make_alignmentQuantificationAndGenotype_pipeline.sh instead"
@@ -249,6 +264,14 @@ change_prepare_scripts(){
     sed -i "s;workflow.csv;${project_dir}/Public_RNA-seq_QC/workflows/workflowSTAR.csv;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
     sed -i "s;-rundir /groups/umcg-wijmenga/tmp04/umcg-ndeklein/rundirs/QC/;-rundir ${project_dir}/alignment//alignmentDir;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
     sed -i "s;/groups/umcg-wijmenga/tmp04/umcg-ndeklein/samplesheets/;${project_dir}/Public_RNA-seq_QC/samplesheets/;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
+
+
+    HOSTNAME=$(hostname)
+    if [ ! "$HOSTNAME" = "gearshift" ];
+    then
+        sed -i 's;Molgenis-Compute/v16.04.1-Java-11-LTS;Molgenis-Compute/v16.04.1-Java-1.8.0_45;' Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
+    fi
+
 
     # Do specific changes per samplesheet batch
     mkdir Public_RNA-seq_QC/prepare_scripts/
