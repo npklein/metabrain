@@ -32,12 +32,14 @@ with open(args.samplesheet) as input_file:
             raise RuntimeError('Sample ID in multiple times')
         individual_per_sample[sample_id] = individual_id
 
-        fastq_path = args.fastq_dir+'/'+sample_id+'_R1.fq.gz'
+        fastq_path = args.fastq_dir+'/'+sample_id+'_R1.fastq.gz'
 
         # Have to point to the cramfile
         cram = args.cram_dir+'/individualID.'+individual_id+'_specimenID.'+sample_id+'.cram'
         if not os.path.exists(cram):
-            raise RuntimeError(cram+' does not exist')
+            cram = args.cram_dir.replace('no_patch','patch')+'/individualID.'+individual_id+'_specimenID.'+sample_id+'.cram'
+            if not os.path.exists(cram):
+                raise RuntimeError(cram+' does not exist')
 
         study_subset = re.search('(.*?)_\d+', sample_id).group(1)
         if study_subset not in index:

@@ -47,12 +47,12 @@ main(){
 usage(){
     # print the usage of the programme
     programname=$0
-    echo "usage: $programname -c cohort -p project_directory -t tmp04"
+    echo "usage: $programname -c cohort -p project_directory -t tmp04 -s samplesheet.txt -r /path/to/fastq/"
     echo "  -c      provide the cohort to prepare pipeline for (mandatory)"
     echo "  -p      Base of the project_dir where pipeline scripts will be put (mandatory)"
-    echo "  -t      tmpdir of the cluster (e.g. tmp03 for boxy, tmp04 for calculon). Will use /groups/$TMPDIR/.../"
-    echo "  -s      Samplesheet to use to get sample info from (optional)"
-    echo "  -r      Location of directory that contains RNAseq files, usually either fastq or bam files (optional)"
+    echo "  -t      tmpdir of the cluster (e.g. tmp03 for boxy, tmp04 for calculon). Will use /groups/<tmp>/.../"
+    echo "  -s      Samplesheet to use to get sample info from"
+    echo "  -r      Location of directory that contains RNAseq files, usually either fastq or bam files"
     echo "  -h      display help"
     exit 1
 }
@@ -114,7 +114,7 @@ change_protocols(){
     # Original SAM to BAM conversion is done in seperate step, but this step is removed from the workflow
     # Add the conversion to the STAR alignment script
     echo "echo \"convert SAM to BAM\"" >> Public_RNA-seq_QC/protocols/STARMapping.sh
-    echo "module load SAMtools/1.5-foss-2015b" >> Public_RNA-seq_QC/protocols/STARMapping.sh
+    echo "module load SAMtools/1.5-foss-2018b" >> Public_RNA-seq_QC/protocols/STARMapping.sh
     echo "mkdir -p ${project_dir}/results/\${unfilteredBamDir}/" >> Public_RNA-seq_QC/protocols/STARMapping.sh
     echo "samtools view -h -b \${alignmentDir}/\${uniqueID}.sam > \${unfilteredBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/STARMapping.sh
     echo "rm \${alignmentDir}/\${uniqueID}.sam" >> Public_RNA-seq_QC/protocols/STARMapping.sh
@@ -143,41 +143,37 @@ change_parameter_files(){
     # NOTE: The replacemets are cluster specific, but don't want to make this command line options because that would make too many of them
     #       Either change below code or change the parameters.csv file
     sed -i 's;group,umcg-wijmenga;group,umcg-biogen;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i "s;resDir,/groups/umcg-wijmenga/tmp04/resources/;resDir,/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i "s;resDir,/groups/umcg-wijmenga/tmp03/resources/;resDir,/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i "s;resDir,/groups/umcg-wijmenga/tmp04/resources/;resDir,/groups/umcg-biogen/tmp01/apps/data;" Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i "s;resDir,/groups/umcg-wijmenga/tmp03/resources/;resDir,/groups/umcg-biogen/tmp01/apps/data;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i "s;projectDir,\${root}/\${group}/\${tmp}/projects/umcg-ndeklein/\${project}/;projectDir,${project_dir}/results/;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;alignmentDir,${projectDir}/hisat/;alignmentDir,${projectDir}/star;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;fastqExtension,.gz;fastqExtension,.fq.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;goolf-1.7.20;foss-2015b;g' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;goolf-1.7.20;foss-2018b;g' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;foss-2018b;foss-2018b;g' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;fastqExtension,.fq.gz;fastqExtension,.fastq.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;1.102-Java-1.7.0_80;1.119-Java-1.7.0_80;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;onekgGenomeFasta,${resDir}/${genomeBuild}/indices/human_g1k_v${human_g1k_vers}.fasta;onekgGenomeFasta,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/GRCh38.p5.genome.fa;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;genesRefFlat,${resDir}/Ensembl/release-${ensemblVersion}/gtf/homo_sapiens/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.refflat;genesRefFlat,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.refflat;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;rRnaIntervalList,${resDir}//picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.rrna.interval_list;rRnaIntervalList,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.rRNA.interval_list;' Public_RNA-seq_QC/parameter_files/parameters.csv
-
-    # Change the qunatification pipeline parameter file
-    sed -i 's;group,umcg-wijmenga;group,umcg-biogen;' Public_RNA-seq_quantification/parameter_files/parameters.csv
-    sed -i "s;tmp03;$tmpdir;" Public_RNA-seq_quantification/parameter_files/parameters.csv
-    sed -i "s;projectDir,\${root}/\${group}/\${tmp}/projects/umcg-ndeklein/\${project}/;projectDir,${project_dir}/results/;" Public_RNA-seq_quantification/parameter_files/parameters.csv
-    sed -i "s;projects/umcg-ndeklein/\${project};biogen/input/${cohort}/results/;" Public_RNA-seq_quantification/parameter_files/parameters.csv
-    chr38gtf="/apps/data/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/gencode.v24.chr_patch_hapl_scaff.annotation.gtf.gz"
-    sed -i "s;annotationGtf,/apps/data/ftp.ensembl.org/pub/release-75/gtf/homo_sapiens/Homo_sapiens.GRCh37.75.gtf;annotationGtf,${chr38gtf};" Public_RNA-seq_quantification/parameter_files/parameters.csv
-    echo "bedtoolsVersion,2.25.0-foss-2015b" >> Public_RNA-seq_quantification/parameter_files/parameters.csv
-    echo "picardVersion,2.10.0-foss-2015b-Java-1.8.0_74" >> Public_RNA-seq_quantification/parameter_files/parameters.csv
-    echo "iolibVersion,1.14.6-foss-2015b" >> Public_RNA-seq_quantification/parameter_files/parameters.csv
-    echo "resDir,/apps/data/" >> Public_RNA-seq_quantification/parameter_files/parameters.csv
-    echo 'onekgGenomeFasta,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/GRCh38.p5.genome.fa' >> Public_RNA-seq_quantification/parameter_files/parameters.csv
-    sed -i 's;htseqVersion,0.6.1p1-foss-2015b;htseqVersion,0.9.1-foss-2015b-Python-2.7.11;' Public_RNA-seq_quantification/parameter_files/parameters.csv
-    # most of the protocols are not stranded, so change here. If protocol is stranded for one of the
-    # cohorts it will be adjusted in cohort specific method below
-    sed -i 's;stranded,reverse;stranded,no;' Public_RNA-seq_quantification/parameter_files/parameters.csv
 
 
-    # Change in both
-    sed -i 's;genomeBuild,b37;genomeBuild,b38;' Public_RNA-seq*/parameter_files/parameters.csv
-    sed -i 's;genomeGrchBuild,GRCh37;genomeGrchBuild,GRCh38;' Public_RNA-seq*/parameter_files/parameters.csv
-    sed -i 's;human_g1k_vers,37;human_g1k_vers,38;' Public_RNA-seq*/parameter_files/parameters.csv
-    sed -i 's;ensemblVersion,75;ensemblVersion,?;' Public_RNA-seq*/parameter_files/parameters.csv
+    sed -i 's;genesRefFlat,${resDir}/Ensembl/release-${ensemblVersion}/gtf/homo_sapiens/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.refflat;genesRefFlat,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/gencode.v32.primary_assembly.annotation.collapsedGenes.refflat;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;STARindex,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/STAR/${starVersion}/;STARindex,${resDir}/UMCG/STAR_index/gencode_32/STAR_genome_GRCh38_gencode.v32.primaryAssembly_oh100/;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;onekgGenomeFasta,${resDir}/${genomeBuild}/indices/human_g1k_v${human_g1k_vers}.fasta;onekgGenomeFasta,${resDir}//ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/GRCh38.primary_assembly.genome.fa;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;rRnaIntervalList,${resDir}//picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.rrna.interval_list;rRnaIntervalList,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/gencode.v32.primary_assembly.annotation.collapsedGenes.rRNA.interval_list;' Public_RNA-seq_QC/parameter_files/parameters.cs
+
+    sed -i 's;genomeBuild,b37;genomeBuild,b38;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;genomeGrchBuild,GRCh37;genomeGrchBuild,GRCh38;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;human_g1k_vers,37;human_g1k_vers,38;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;ensemblVersion,75;ensemblVersion,?;' Public_RNA-seq_QC/parameter_files/parameters.csv
+
+    HOSTNAME=$(hostname)
+    if [ "$HOSTNAME" = "gearshift" ];
+    then
+        echo "Change some parameters specifically for gearshift because different versions of tools are installed there"
+#        sed -i s';picardVersion,2.18.26-Java-1.8.0_74;picardVersion,2.20.5-Java-11-LTS;' Public_RNA-seq_QC/parameter_files/parameters.csv
+#        sed -i s';iolibVersion,1.14.6-foss-2018b;iolibVersion,1.14.11-GCCcore-7.3.0;' Public_RNA-seq_QC/parameter_files/parameters.csv
+        sed -i s';samtoolsVersion,1.5-foss-2018b;samtoolsVersion,1.5-GCCcore-7.3.0;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    fi
+
+
 }
 
 
@@ -250,8 +246,12 @@ make_samplesheets(){
     then
         # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
         # samplesheet can be downloaded from Synapse
-        python $samplesheet_script_dir/make_samplesheet_UCLA_ASD.py $samplesheet $RNAseqDir
-
+        python $samplesheet_script_dir/make_samplesheet_UCLA_ASD.py $samplesheet \
+                                                                    $RNAseqDir
+    elif [[ "$cohort" == "MSBB" ]];
+    then
+        python $samplesheet_script_dir/make_samplesheet_MSBB.py $samplesheet \
+                                                                $RNAseqDir
     elif [[ "$cohort" == "ENA" ]];
     then
         echo "ERROR: need to get genotypes as well for the ENA samples. Because the pipeline needs to be set up quite differently, use make_alignmentQuantificationAndGenotype_pipeline.sh instead"
@@ -315,12 +315,12 @@ make_pipeline_scripts(){
     done
     cd -
 
-    cd Public_RNA-seq_quantification/prepare_scripts
-    for f in *sh;
-    do
-        bash $f;
-    done
-    cd -
+#    cd Public_RNA-seq_quantification/prepare_scripts
+#    for f in *sh;
+#    do
+#        bash $f;
+#    done
+#    cd -
 }
 
 
@@ -399,6 +399,12 @@ parse_commandline(){
     echo "Project directory = $project_dir"
 
     # if -z tests if variable is empty. Make sure the relevant variables are set
+    if [ -z "$RNAseqDir" ];
+    then
+        echo "ERROR: -r/--RNAseqDir not set!"
+        usage
+        exit 1;
+    fi
     if [ -z "$cohort" ];
     then
         echo "ERROR: -c/--cohort not set!"
@@ -417,10 +423,16 @@ parse_commandline(){
         usagae
         exit 1;
     fi
+    if [ -z "$samplesheet" ];
+    then
+        echo "ERROR: -s/--samplesheet not set!"
+        usagae
+        exit 1;
+    fi
     echo "Making pipeline..."
 }
 
 # [[ ${BASH_SOURCE[0]} = "$0" ]] -> main does not run when this script is sourced
 # main "$@" -> Send the arguments to the main function (this way project flow can be at top)
 # exit -> safeguard against the file being modified while it is interpreted
-[[ ${BASH_SOURCE[0]} = "$0" ]] && main "$@"; exit;
+main "$@"
