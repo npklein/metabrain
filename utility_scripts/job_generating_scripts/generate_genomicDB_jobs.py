@@ -85,7 +85,9 @@ input = {'1':'','2':'','3':'','4':'','5':'','6':'','7':'',
 
 
 lines = sorted(lines)
-for line in lines:
+for index, line in enumerate(lines):
+    if index % 10000 == 0:
+        print(index, len(lines))
     if len(line.strip()) == 0:
         continue
     for chr in range(1, 26, 1):
@@ -98,6 +100,7 @@ for line in lines:
         input[str(chr)] += ' --variant '+line.strip().replace('chr15','chr'+str(chr))
 
 for chr in input:
+    print(chr)
     outfile = args.jobs_dir+'genomicDB_chr'+chr+'.sh'
     with open(outfile,'w') as out:
         new_template = template.replace('REPLACECHROMOSOME',chr)
