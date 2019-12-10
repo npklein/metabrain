@@ -148,6 +148,14 @@ change_parameter_files(){
     sed -i 's;ensemblVersion,75;ensemblVersion,?;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;STARindex,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/STAR/${starVersion}/;STARindex,${resDir}/UMCG/STAR_index/gencode_32/STAR_genome_GRCh38_gencode.v32.primaryAssembly_oh100/;' Public_RNA-seq_QC/parameter_files/parameters.csv
 
+    HOSTNAME=$(hostname)
+    if [ "$HOSTNAME" = "gearshift" ];
+    then
+        echo "Change some parameters specifically for gearshift because different versions of tools are installed there"
+        sed -i s';picardVersion,2.18.26-Java-1.8.0_74;picardVersion,2.20.5-Java-11-LTS;' Public_RNA-seq_QC/parameter_files/parameters.csv
+        sed -i s';iolibVersion,1.14.6-foss-2015b;iolibVersion,1.14.11-GCCcore-7.3.0;' Public_RNA-seq_QC/parameter_files/parameters.csv
+        sed -i s';samtoolsVersion,1.5-foss-2015b;samtoolsVersion,1.9-GCCcore-7.3.0;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    fi
 
 }
 
