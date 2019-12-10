@@ -1,0 +1,37 @@
+easyblock = 'PackedBinary'
+
+name = 'rMATS'
+version = '4.0.2'
+
+homepage = 'http://rnaseq-mats.sourceforge.net/'
+description = """MATS is a computational tool to detect differential 
+alternative splicing events from RNA-Seq data"""
+
+toolchain = {'name': 'foss', 'version': '2018b'}
+
+#https://sourceforge.net/projects/rnaseq-mats/files/MATS/rMATS.4.0.2.tgz/download
+sources = ['rMATS.%(version)s.tgz']
+source_urls = [('https://sourceforge.net/projects/rnaseq-mats/files/MATS/', 'download')]
+
+python = 'Python'
+# Has to be Python 2
+pyver = '2.7.11'
+pyshortver = '.'.join(pyver.split('.')[:2])
+versionsuffix = "-%s-%s" % (python, pyver)
+
+# Has to be verison 1.16 of GSL becasue libgsl.so.0 is hardcoded in
+# Later version of GSL have a newer version of ligsl.so
+dependencies = [
+    ('GSL','1.16'),
+    ('numpy','1.11.0',versionsuffix),
+    ('GCC', '4.9.3','-binutils-2.25',('dummy','dummy'))
+]
+
+modextrapaths = {'PATH': ['']}
+
+sanity_check_paths = {
+    'files': ['rMATS-turbo-Linux-UCS4/rmatspipeline.so','rMATS-turbo-Linux-UCS4/rmats.py','rMATS-turbo-Linux-UCS4/rMATS_C/rMATSexe'],
+    'dirs': ['rMATS-turbo-Linux-UCS4/'],
+}
+
+moduleclass = 'bio'
