@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ml Java
-ml R
+ml R/3.5.1-foss-2015b-bare
 
 
 coloctools=/groups/umcg-biogen/tmp03/tools/COLOCTools.jar # java coloc tools for merging eqtl files, calculating beta's etc
