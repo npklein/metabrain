@@ -22,7 +22,7 @@ java -Xmx10g -jar $coloctools \
 	--mergegwaswitheqtls \
 	--eqtl $eqtlfile \
 	--eqtlsummarystats $eqtlsummarystats \
-	--gwas $gwasinput
+	--gwas $gwasinput \
 	--output $colocdir/tmp/
 
 # run coloc
