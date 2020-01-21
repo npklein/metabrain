@@ -217,6 +217,13 @@ make_samplesheets(){
         python $samplesheet_script_dir/make_samplesheet_BrainGVEx.py $samplesheet \
                                                                      $cramdir \
                                                                      $project_dir/results/fastq
+    elif [[ "$cohort" == "MayoCBE" ]];
+    then
+        # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
+        # samplesheet can be downloaded from Synapse
+        python $samplesheet_script_dir/make_samplesheet_MayoCBE.py $samplesheet \
+                                                                     $cramdir \
+                                                                     $project_dir/results/fastq
     elif [[ "$cohort" == "EpiGABA" ]];
     then
         # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
