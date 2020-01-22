@@ -6,13 +6,15 @@ import math
 def main():
 	
 	parser = argparse.ArgumentParser(description='LiftOver utils.')
-	parser.add_argument('--mode', choices=['gwastobed', 'liftovergwas'], help="Type of program to run", required=True)
+	parser.add_argument('--mode', choices=['gwastobed', 'liftovergwas','updatetrityperpos','updatetrityperrsid'], help="Type of program to run", required=True)
 	
 	
 	parser.add_argument('--in',help="Input file", dest="input")
 	parser.add_argument('--out',help="Output file", dest="output")
 	parser.add_argument('--bed',help="Bed file", dest="bed")
+	parser.add_argument('--bedlifted',help="Lifted Bed file", dest="bedlifted")
 	parser.add_argument('--snpmap',help="SNPMap file", dest="snpmap")
+	parser.add_argument('--vcf',help="(dbSNP) vcf file", dest="vcf")
 	
 	args = parser.parse_args()
 	
@@ -21,11 +23,11 @@ def main():
 	elif args.mode == "liftovergwas":
 		liftovergwas(args.input,args.bed,args.output)
 	elif args.mode == "updatetrityperpos":
-        updatetrityperpos(originalbed, liftoverbed, outdir)
-    elif args.mode == "updatetrityperrsid":
-        updatetrityperrsid(liftoverbed, dbsnpvcf, outdir)
-    
-	
+		updatetrityperpos(args.bed, args.bedlifted, args.output)
+	elif args.mode == "updatetrityperrsid":
+		updatetrityperrsid(args.snpmap, args.vcf, args.output)
+
+
 # modes:
 # eqtltobed
 # liftovereqtl
