@@ -183,7 +183,7 @@ def updatetrityperpos(snpfile, liftoverbed, outdir):
     
     print("{} total positions read".format(len(snpmap))
     
-    fh = getFH(snpfile)
+    fhs = getFH(snpfile)
     print("Reading: "+snpfile)
     fhsnp = getFHO(outdir+"SNPs_lifted.txt.gz")
     print("Writing: "+outdir+"SNPs_lifted.txt.gz")
@@ -191,7 +191,7 @@ def updatetrityperpos(snpfile, liftoverbed, outdir):
     print("Writing: "+outdir+"SNPMappings_lifted.txt.gz")
     lifted = 0
     unlifted = 0
-    for line in fh:
+    for line in fhs:
         line = line.strip()
         newid = snpmap.get(line)
         if newid is not None:
@@ -206,7 +206,7 @@ def updatetrityperpos(snpfile, liftoverbed, outdir):
             unlifted = unlifted + 1
     fhsnp.close()
     fhsnpmap.close()
-    fh.close()
+    fhs.close()
     print("{} variants lifted over, {} variants not lifted over.".format(lifted,unlifted))
 
 def updatetrityperrsid(liftoversnmap, dbsnpvcf, outdir):
@@ -229,10 +229,10 @@ def updatetrityperrsid(liftoversnmap, dbsnpvcf, outdir):
     # read snp ids from VCF
     print("{} snps in SNPMAP {}".format(len(snpmap), liftoversnmap))
     print("Reading: "+dbsnpvcf)
-    fh = getFH(dbsnpvcf)
+    fhv = getFH(dbsnpvcf)
     replaced = 0
     ctr = 0
-    for line in fh:
+    for line in fhv:
         if not line.startswith("#"):
             elems = line.split("\t")
             query = elems[0]+":"+elems[1]
@@ -244,15 +244,15 @@ def updatetrityperrsid(liftoversnmap, dbsnpvcf, outdir):
             ctr = ctr + 1
             if ctr % 100000 == 0:
                 print("{} variants processed sofar".format(ctr))
-    fh.close()
+    fhv.close()
     print("{} replacements found out of {}".format(replaced,len(snpmap)))
     
     # now write the files
     # read in current ids
-    fh = getFH(liftoversnmap)
+    fhs = getFH(liftoversnmap)
     fhsnp = getFHO(outdir+"SNPs_rsIdsUpdated.txt.gz")
     fhsnpmap = getFHO(outdir+"SNPMappings_rsIdsUpdated.txt.gz")
-    for line in fh:
+    for line in fhs:
         line = line.strip()
         elems = line.split("\t")
         if not line.contains("unlifted"):
@@ -263,7 +263,7 @@ def updatetrityperrsid(liftoversnmap, dbsnpvcf, outdir):
         else:
             fhsnp.write(elems[2])
             fhsnpmap.write(line+"\n")
-    fh.close()
+    fhs.close()
     fhsnp.close()
     fhsnpmap.close()
 	
