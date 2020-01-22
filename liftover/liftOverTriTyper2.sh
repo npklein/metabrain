@@ -52,15 +52,15 @@ gzip -v $outdir/liftover/*.bed
 # rewrite SNPMappings.txt.gz
 python $liftoverutils \
 	--mode updatetrityperpos \
-	--input $outdir/liftover/snps.bed.gz \
-	--input2 $outdir/liftover/snps_hg38_lifted.bed.gz \
+	--bed $outdir/liftover/snps.bed.gz \
+	--bedlifted $outdir/liftover/snps_hg38_lifted.bed.gz \
 	--output $outdir/liftover/
 #fi
 # update RS ids
 python $liftoverutils \
 	--mode updatetrityperrsid \
-	--input $outdir/liftover/SNPMappings_lifted.txt.gz \
-	--input2 $dbsnp \
+	--snpmap $outdir/liftover/SNPMappings_lifted.txt.gz \
+	--vcf $dbsnp \
 	--output $outdir/liftover/
 
 
