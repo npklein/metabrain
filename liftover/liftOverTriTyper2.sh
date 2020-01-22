@@ -28,26 +28,26 @@ allelewriter=/groups/umcg-biogen/tmp03/tools/TriTyperSNPAlleleWriter.jar
 
 #if [ 1 -eq 2 ]; then
 mkdir -p $liftoverdir
-rm -v $liftoverdir/*
+# rm -v $liftoverdir/*
 
 # strip chr label
-python $removechr $indir/SNPs.txt.gz $indir/SNPs.tmp.txt.gz
-python $removechr $indir/SNPMappings.txt.gz $indir/SNPMappings.tmp.txt.gz
+# python $removechr $indir/SNPs.txt.gz $indir/SNPs.tmp.txt.gz
+# python $removechr $indir/SNPMappings.txt.gz $indir/SNPMappings.tmp.txt.gz
 
-# convert to bed, write alleles
-java -Xmx8g -jar $allelewriter \
-	$indir \
-	$outdir/liftover/snps.bed
+# # convert to bed, write alleles
+# java -Xmx8g -jar $allelewriter \
+	# $indir \
+	# $outdir/liftover/snps.bed
 
-# lift over
-$ucscliftover \
-        $outdir/liftover/snps.bed \
-        $chainfile \
-        $outdir/liftover/snps_hg38_lifted.bed \
-        $outdir/liftover/snps_hg38_unlifted.bed
+# # lift over
+# $ucscliftover \
+        # $outdir/liftover/snps.bed \
+        # $chainfile \
+        # $outdir/liftover/snps_hg38_lifted.bed \
+        # $outdir/liftover/snps_hg38_unlifted.bed
 
-# gzip
-gzip -v $outdir/liftover/*.bed
+# # gzip
+# gzip -v $outdir/liftover/*.bed
 
 # rewrite SNPMappings.txt.gz
 python $liftoverutils \
