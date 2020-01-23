@@ -54,14 +54,14 @@ python $liftoverutils \
 	--mode updatetrityperpos \
 	--bed $outdir/liftover/snps.bed.gz \
 	--bedlifted $outdir/liftover/snps_hg38_lifted.bed.gz \
-	--output $outdir/liftover/
+	--out $outdir/liftover/
 #fi
 # update RS ids
 python $liftoverutils \
 	--mode updatetrityperrsid \
 	--snpmap $outdir/liftover/SNPMappings_lifted.txt.gz \
 	--vcf $dbsnp \
-	--output $outdir/liftover/
+	--out $outdir/liftover/
 
 
 # liftover done
