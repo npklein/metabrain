@@ -244,8 +244,8 @@ def updatetrityperrsid(liftoversnmap, dbsnpvcf, outdir):
 				snpmap[curid] = id
 				replaced = replaced + 1
 			ctr = ctr + 1
-			if ctr % 100000 == 0:
-				print("{} variants processed sofar".format(ctr))
+			if ctr % 1000000 == 0:
+				print("{} variants processed sofar, {} out of {} replaced sofar".format(ctr,replaced,len(snpmap)))
 	fhv.close()
 	print("{} replacements found out of {}".format(replaced,len(snpmap)))
 	
