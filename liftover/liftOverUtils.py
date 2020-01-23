@@ -259,11 +259,11 @@ def updatetrityperrsid(liftoversnmap, dbsnpvcf, outdir):
 		elems = line.split("\t")
 		if "unlifted" not in line:
 			id = snpmap[elems[0]+":"+elems[1]]
-			fhsnp.write(id+"\n")
 			elems[2] = id
+			fhsnp.write(id+"\n")
 			fhsnpmap.write("\t".join(elems)+"\n")
 		else:
-			fhsnp.write(elems[2])
+			fhsnp.write(elems[2]+"\n")
 			fhsnpmap.write(line+"\n")
 	fhs.close()
 	fhsnp.close()
