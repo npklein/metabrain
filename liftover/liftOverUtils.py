@@ -221,7 +221,7 @@ def updatetrityperrsid(liftoversnmap, dbsnpvcf, outdir):
 	fh = getFH(liftoversnmap)
 	for line in fh:
 		line = line.strip()
-		if not line.contains("unlifted"):
+		if "unlifted" not in line:
 			elems = line.split("\t")
 			snpmap[elems[0]+":"+elems[1]] = elems[2]
 	fh.close()
@@ -255,7 +255,7 @@ def updatetrityperrsid(liftoversnmap, dbsnpvcf, outdir):
 	for line in fhs:
 		line = line.strip()
 		elems = line.split("\t")
-		if not line.contains("unlifted"):
+		if "unlifted" not in line:
 			id = snpmap[elems[0]+":"+elems[1]]
 			fhsnp.write(id+"\n")
 			elems[2] = id
