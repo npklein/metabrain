@@ -241,7 +241,7 @@ def updatetrityperrsid(liftoversnmap, dbsnpvcf, outdir):
 			id = elems[2]
 			curid = snpmap.get(query)
 			if curid is not None:
-				snpmap[curid] = id
+				snpmap[query] = id
 				replaced = replaced + 1
 			ctr = ctr + 1
 			if ctr % 1000000 == 0:
