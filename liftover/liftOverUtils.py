@@ -193,7 +193,9 @@ def updatetrityperpos(snpfile, liftoverbed, outdir):
 	unlifted = 0
 	for line in fhs:
 		line = line.strip()
-		newid = snpmap.get(line)
+        elems = line.split("\t")
+        id = elems[3]
+		newid = snpmap.get(id)
 		if newid is not None:
 			idelems = newid.split(":")
 			alleles = idelems[2].replace("_",",")
@@ -201,8 +203,8 @@ def updatetrityperpos(snpfile, liftoverbed, outdir):
 			fhsnpmap.write(idelems[0]+"\t"+idelems[1]+"\t"+newid+"\t"+alleles+"\n")
 			lifted = lifted + 1
 		else:
-			fhsnp.write(line+"_unlifted\n")
-			fhsnpmap.write("0\t0\t"+line+"_unlifted\n")
+			fhsnp.write(id+"_unlifted\n")
+			fhsnpmap.write("0\t0\t"+id+"_unlifted\n")
 			unlifted = unlifted + 1
 	fhsnp.close()
 	fhsnpmap.close()
@@ -215,7 +217,7 @@ def updatetrityperrsid(liftoversnmap, dbsnpvcf, outdir):
 	print("SNPMap: "+liftoversnmap)
 	print("dbSNP: "+dbsnpvcf)
 	print("Output: "+outdir)
-	snmap = {}
+	snpmap = {}
 	
 	# read in current ids
 	fh = getFH(liftoversnmap)
