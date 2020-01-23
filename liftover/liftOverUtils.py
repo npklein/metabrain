@@ -193,8 +193,8 @@ def updatetrityperpos(snpfile, liftoverbed, outdir):
 	unlifted = 0
 	for line in fhs:
 		line = line.strip()
-        elems = line.split("\t")
-        id = elems[3]
+		elems = line.split("\t")
+		id = elems[3]
 		newid = snpmap.get(id)
 		if newid is not None:
 			idelems = newid.split(":")
