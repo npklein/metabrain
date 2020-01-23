@@ -55,19 +55,19 @@ def getFHO(outfile):
 	return fho
 
 def removeChr(infile, outfile):
-    fh = getFH(infile,'rt')
-    fho = getFHO(outfile,'wt')
+	fh = getFH(infile,'rt')
+	fho = getFHO(outfile,'wt')
 
-    print("in: "+infile)
-    print("out: "+outfile)
+	print("in: "+infile)
+	print("out: "+outfile)
 
-    for line in fh:
-        line = line.replace('chr','')
-        fho.write(line)
+	for line in fh:
+		line = line.replace('chr','')
+		fho.write(line)
 
-    fh.close()
-    fho.close()
-    os.rename(sys.argv[2],sys.argv[1])
+	fh.close()
+	fho.close()
+	os.rename(sys.argv[2],sys.argv[1])
 
 def readLiftOverBed(liftoverbed):
 	snpmap = {}
@@ -131,7 +131,7 @@ def liftovergwas(infile,liftoverbed,outfile):
 		update = snpmap.get(query)
 		if update is not None:
 			elems[0] = update[0]+":"+update[1]
-			# SNP     A1      A2      BETA    SE      P       CHR     BP
+			# SNP	 A1	  A2	  BETA	SE	  P	   CHR	 BP
 			elems[6] = update[0]
 			elems[7] = update[1]
 			fho.write("\t".join(elems)+"\t"+query+"\n")
@@ -151,7 +151,7 @@ def snpmaptobed(infile,bedout):
 	fho.close()
 
 def eqtlfiletobed(infile,bedout):
-	fh    = getFH(infile)
+	fh	= getFH(infile)
 	fho   = getFHO(bedout)
 	idset = set()
 	fh.readline()
@@ -165,107 +165,107 @@ def eqtlfiletobed(infile,bedout):
 	fho.close()
 	
 def updatetrityperpos(snpfile, liftoverbed, outdir):
-    print("Updating TriTyper position files")
-    # expect data to have the following format: 
-    # snps.txt.gz: id
-    # lifted SNPs: chr sta sto id
-    # order of snps.txt.gz should remain constant
-    snpmap = {}
-    print("Reading: "+liftoverbed) 
-    fh = getFH(liftoverbed)
-    for line in fh:
-        elems = line.split("\t")
-        elems[0] = elems[0].replace("chr","")
-        id = elems[3]
-        newid = elems[0]+":"+elems[1]+":"+elems[4]+"_"+elems[5]
-        snpmap[id] = newid
-    fh.close()
-    
-    print("{} total positions read".format(len(snpmap))
-    
-    fhs = getFH(snpfile)
-    print("Reading: "+snpfile)
-    fhsnp = getFHO(outdir+"SNPs_lifted.txt.gz")
-    print("Writing: "+outdir+"SNPs_lifted.txt.gz")
-    fhsnpmap = getFHO(outdir+"SNPMappings_lifted.txt.gz")
-    print("Writing: "+outdir+"SNPMappings_lifted.txt.gz")
-    lifted = 0
-    unlifted = 0
-    for line in fhs:
-        line = line.strip()
-        newid = snpmap.get(line)
-        if newid is not None:
-            idelems = newid.split(":")
-            alleles = idelems[2].replace("_",",")
-            fhsnp.write(newid+"\n")
-            fhsnpmap.write(idelems[0]+"\t"+idelems[1]+"\t"+newid+"\t"+alleles+"\n")
-            lifted = lifted + 1
-        else:
-            fhsnp.write(line+"_unlifted\n")
-            fhsnpmap.write("0\t0\t"+line+"_unlifted\n")
-            unlifted = unlifted + 1
-    fhsnp.close()
-    fhsnpmap.close()
-    fhs.close()
-    print("{} variants lifted over, {} variants not lifted over.".format(lifted,unlifted))
+	print("Updating TriTyper position files")
+	# expect data to have the following format: 
+	# snps.txt.gz: id
+	# lifted SNPs: chr sta sto id
+	# order of snps.txt.gz should remain constant
+	snpmap = {}
+	print("Reading: "+liftoverbed) 
+	fh = getFH(liftoverbed)
+	for line in fh:
+		elems = line.split("\t")
+		elems[0] = elems[0].replace("chr","")
+		id = elems[3]
+		newid = elems[0]+":"+elems[1]+":"+elems[4]+"_"+elems[5]
+		snpmap[id] = newid
+	fh.close()
+	
+	print("{} total positions read".format(len(snpmap)))
+	
+	fhs = getFH(snpfile)
+	print("Reading: "+snpfile)
+	fhsnp = getFHO(outdir+"SNPs_lifted.txt.gz")
+	print("Writing: "+outdir+"SNPs_lifted.txt.gz")
+	fhsnpmap = getFHO(outdir+"SNPMappings_lifted.txt.gz")
+	print("Writing: "+outdir+"SNPMappings_lifted.txt.gz")
+	lifted = 0
+	unlifted = 0
+	for line in fhs:
+		line = line.strip()
+		newid = snpmap.get(line)
+		if newid is not None:
+			idelems = newid.split(":")
+			alleles = idelems[2].replace("_",",")
+			fhsnp.write(newid+"\n")
+			fhsnpmap.write(idelems[0]+"\t"+idelems[1]+"\t"+newid+"\t"+alleles+"\n")
+			lifted = lifted + 1
+		else:
+			fhsnp.write(line+"_unlifted\n")
+			fhsnpmap.write("0\t0\t"+line+"_unlifted\n")
+			unlifted = unlifted + 1
+	fhsnp.close()
+	fhsnpmap.close()
+	fhs.close()
+	print("{} variants lifted over, {} variants not lifted over.".format(lifted,unlifted))
 
 def updatetrityperrsid(liftoversnmap, dbsnpvcf, outdir):
-    print("Updating RSids")
-    print("This assumes that SNPs.txt and SNPMappings.txt have the same variant content and order!")
-    print("SNPMap: "+liftoversnmap)
-    print("dbSNP: "+dbsnpvcf)
-    print("Output: "+outdir)
-    snmap = {}
-    
-    # read in current ids
-    fh = getFH(liftoversnmap)
-    for line in fh:
-        line = line.strip()
-        if not line.contains("unlifted"):
-            elems = line.split("\t")
-            snpmap[elems[0]+":"+elems[1]] = elems[2]
-    fh.close()
-    
-    # read snp ids from VCF
-    print("{} snps in SNPMAP {}".format(len(snpmap), liftoversnmap))
-    print("Reading: "+dbsnpvcf)
-    fhv = getFH(dbsnpvcf)
-    replaced = 0
-    ctr = 0
-    for line in fhv:
-        if not line.startswith("#"):
-            elems = line.split("\t")
-            query = elems[0]+":"+elems[1]
-            id = elems[2]
-            curid = snpmap.get(query)
-            if curid is not None:
-                snpmap[curid] = id
-                replaced = replaced + 1
-            ctr = ctr + 1
-            if ctr % 100000 == 0:
-                print("{} variants processed sofar".format(ctr))
-    fhv.close()
-    print("{} replacements found out of {}".format(replaced,len(snpmap)))
-    
-    # now write the files
-    # read in current ids
-    fhs = getFH(liftoversnmap)
-    fhsnp = getFHO(outdir+"SNPs_rsIdsUpdated.txt.gz")
-    fhsnpmap = getFHO(outdir+"SNPMappings_rsIdsUpdated.txt.gz")
-    for line in fhs:
-        line = line.strip()
-        elems = line.split("\t")
-        if not line.contains("unlifted"):
-            id = snpmap[elems[0]+":"+elems[1]]
-            fhsnp.write(id+"\n")
-            elems[2] = id
-            fhsnpmap.write("\t".join(elems)+"\n")
-        else:
-            fhsnp.write(elems[2])
-            fhsnpmap.write(line+"\n")
-    fhs.close()
-    fhsnp.close()
-    fhsnpmap.close()
+	print("Updating RSids")
+	print("This assumes that SNPs.txt and SNPMappings.txt have the same variant content and order!")
+	print("SNPMap: "+liftoversnmap)
+	print("dbSNP: "+dbsnpvcf)
+	print("Output: "+outdir)
+	snmap = {}
+	
+	# read in current ids
+	fh = getFH(liftoversnmap)
+	for line in fh:
+		line = line.strip()
+		if not line.contains("unlifted"):
+			elems = line.split("\t")
+			snpmap[elems[0]+":"+elems[1]] = elems[2]
+	fh.close()
+	
+	# read snp ids from VCF
+	print("{} snps in SNPMAP {}".format(len(snpmap), liftoversnmap))
+	print("Reading: "+dbsnpvcf)
+	fhv = getFH(dbsnpvcf)
+	replaced = 0
+	ctr = 0
+	for line in fhv:
+		if not line.startswith("#"):
+			elems = line.split("\t")
+			query = elems[0]+":"+elems[1]
+			id = elems[2]
+			curid = snpmap.get(query)
+			if curid is not None:
+				snpmap[curid] = id
+				replaced = replaced + 1
+			ctr = ctr + 1
+			if ctr % 100000 == 0:
+				print("{} variants processed sofar".format(ctr))
+	fhv.close()
+	print("{} replacements found out of {}".format(replaced,len(snpmap)))
+	
+	# now write the files
+	# read in current ids
+	fhs = getFH(liftoversnmap)
+	fhsnp = getFHO(outdir+"SNPs_rsIdsUpdated.txt.gz")
+	fhsnpmap = getFHO(outdir+"SNPMappings_rsIdsUpdated.txt.gz")
+	for line in fhs:
+		line = line.strip()
+		elems = line.split("\t")
+		if not line.contains("unlifted"):
+			id = snpmap[elems[0]+":"+elems[1]]
+			fhsnp.write(id+"\n")
+			elems[2] = id
+			fhsnpmap.write("\t".join(elems)+"\n")
+		else:
+			fhsnp.write(elems[2])
+			fhsnpmap.write(line+"\n")
+	fhs.close()
+	fhsnp.close()
+	fhsnpmap.close()
 	
 def liftovereqtl(eqtlfilein, eqtlfileout, geneannotation, liftoverbed, dbsnpvcf):
 	
@@ -331,4 +331,4 @@ def liftovereqtl(eqtlfilein, eqtlfileout, geneannotation, liftoverbed, dbsnpvcf)
 
 
 if __name__ == '__main__':
-    main()
+	main()
