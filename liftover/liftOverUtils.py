@@ -259,12 +259,12 @@ def updatetrityperrsid(liftoversnmap, dbsnpvcf, outdir):
 		elems = line.split("\t")
 		if "unlifted" not in line:
 			rsid = snpmap[elems[0]+":"+elems[1]]
-            if len(rsid) == 0:
-                rsid = "nors"
-            currentid = elems[2]
-            alleles = currentid.split(":")
-            alleles = alleles[2]
-            newid = elems[0]+":"+elems[1]+":"+rsid+":"+alleles
+			if len(rsid) == 0:
+				rsid = "nors"
+			currentid = elems[2]
+			alleles = currentid.split(":")
+			alleles = alleles[2]
+			newid = elems[0]+":"+elems[1]+":"+rsid+":"+alleles
 			elems[2] = newid
 			fhsnp.write(newid+"\n")
 			fhsnpmap.write("\t".join(elems)+"\n")
