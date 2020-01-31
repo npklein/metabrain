@@ -208,7 +208,7 @@ make_samplesheets(){
         # Need to know where to find samplesheet_ENA_20181212.tx, this is in the brain_eQTL github directory. Since this script is also in this directory, find the directory like so (and add it to parameters file):
         python $samplesheet_script_dir/samplesheets_for_cramFile_input/make_samplesheet_ENA.py  $samplesheet \
                                                                                                 $cramdir \
-                                                                                                $project_dir/results/fastq/
+                                                                                                /scratch/umcg-ndeklein/tmp03/ENA/pipelines/no_patch_chromosomes/results/fastq
     else
         echo "No code written for cohort $cohort"
         exit 1;
