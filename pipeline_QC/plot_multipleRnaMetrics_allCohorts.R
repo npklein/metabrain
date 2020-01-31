@@ -1,7 +1,6 @@
 
 library(data.table)
 library(ggplot2)
-library(jcolors)
 library(plyr)
 library("dplyr")
 library(stringr)
@@ -16,6 +15,8 @@ option_list = list(
                 help="path to output dir", metavar="character"),
   make_option(c("-p", "--pcaOutliers"), type="character", default=NULL,
               help="path to file with PCA outliers", metavar="character"),
+  make_option(c("-f", "--freeze"), type="character", default=NULL,
+              help="freeze version, e.g. 2 or freeze2dot1", metavar="character"),
   make_option(c("-n", "--NABEC_pheno"), type="character", default=NULL,
               help="phenotype data for NABEC", metavar="character")
   
@@ -24,16 +25,16 @@ option_list = list(
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
-test <- function(){
-  opt <- list()
-  opt$input <- "/Users/NPK/UMCG/projects/biogen/cohorts/"
-  opt$output <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/QC"
-  opt$pcaOutliers <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/QC/rna-pcaoutliers.txt"
-  opt$NABEC_pheno <- "/Users/NPK/UMCG/projects/biogen/cohorts/NABEC/phenotypes/NABEC_phenotypes.txt"
-  return(opt)
-}
+#test <- function(){
+#  opt <- list()
+#  opt$input <- "/Users/NPK/UMCG/projects/biogen/cohorts/"
+#  opt$output <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/QC"
+#  opt$pcaOutliers <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/QC/rna-pcaoutliers.txt"
+#  opt$NABEC_pheno <- "/Users/NPK/UMCG/projects/biogen/cohorts/NABEC/phenotypes/NABEC_phenotypes.txt"
+#  return(opt)
+#}
 # comment out when not testing
-opt <- test()
+#opt <- test()
 
 
 print(paste('Searching for input files in: ', opt$input))
@@ -344,7 +345,7 @@ all_cohorts <- all_cohorts[!duplicated(all_cohorts$Sample),]
 all_cohorts[all_cohorts$Sample=='AN04479_BA7',]
 
 
-filtered_samples_file <- paste0(opt$output,"/samples_to_filter.txt")
+filtered_samples_file <- paste0(opt$output,"/",sys.date(),"-samplesToFilter-",opt$freeze,".txt")
 write.table(all_cohorts[all_cohorts$FILTER=='YES',]$Sample, filtered_samples_file, quote=F, sep="\t", row.names=F)
 print(paste0("Written samples to filer to ",filtered_samples_file))
 
@@ -512,4 +513,4 @@ plot_with_pca_outliers <- function(){
 }
 #plot_with_pca_outliers()
 #####
-write.table(all_cohorts,file=paste0(opt$output,'/2019-04-09-Freeze2.TMM.Covariates.txt'),quote=F, row.names=T, sep='\t')
+write.table(all_cohorts,file=paste0(opt$output,'/',Sys.Date(),'-',opt$freeze,'.TMM.Covariates.txt'),quote=F, row.names=T, sep='\t')
