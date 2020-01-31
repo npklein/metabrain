@@ -146,7 +146,7 @@ write_output <- function(outputdir, phenotype_data){
     setcolorder(phenotype_data, c(c, setdiff(names(phenotype_data), c)))
   }
   
-  outfile <- paste0(outputdir,'/brain.phenotypes.txt')
+  outfile <- paste0(outputdir,'/2019-07-29-brain.phenotypes.txt')
   write.table(phenotype_data, outfile, quote=F, sep='\t', row.names=F)
   print(paste('Written to',outfile))
   
