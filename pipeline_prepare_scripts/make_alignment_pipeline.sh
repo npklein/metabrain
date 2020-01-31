@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
+
 # Download and make alignment pipeline
 # This script clones the Molgenis Compute pipeline for alignin FastQ files and
 # modifies the protocols and parameter files for analysis of Brain eQTL data.
 # Makes samplesheet dependent parameter files.
 
 # NOTE: This script changes paths in a parameters.csv that are specific to our clusters
-#       If you want to use this somewhere else you have to change that in the script
+#       If you want to use this somewhere else you have to change that in the script"
 
 
 set -e
 set -u
-
 
 module load Python
 
@@ -18,7 +18,7 @@ cohort=
 project_dir=
 tmpdir=
 samplesheet=
-cramdir=
+RNAseqDir=
 script_dir=$(dirname "$0")
 
 main(){
@@ -47,12 +47,12 @@ main(){
 usage(){
     # print the usage of the programme
     programname=$0
-    echo "usage: $programname -c cohort -p project_directory -t tmp04"
+    echo "usage: $programname -c cohort -p project_directory -t tmp04 -s samplesheet.txt -r /path/to/fastq/"
     echo "  -c      provide the cohort to prepare pipeline for (mandatory)"
     echo "  -p      Base of the project_dir where pipeline scripts will be put (mandatory)"
-    echo "  -t      tmpdir of the cluster (e.g. tmp03 for boxy, tmp04 for calculon). Will use /groups/<tmpdir>/.../"
+    echo "  -t      tmpdir of the cluster (e.g. tmp03 for boxy, tmp04 for calculon). Will use /groups/<tmp>/.../"
     echo "  -s      Samplesheet to use to get sample info from"
-    echo "  -r      Location of directory that contains cram files"
+    echo "  -r      Location of directory that contains RNAseq files, usually either fastq or bam files"
     echo "  -h      display help"
     exit 1
 }
@@ -85,14 +85,11 @@ adjust_workflows(){
     sed -i '/AddOr/d' Public_RNA-seq_QC/workflows/workflowSTAR.csv
 
     # Change/add steps that are not in by default
-    sed -i '2iConvertBamOrCramToFastq,../protocols/ConvertBamOrCramToFastq.sh,' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-    sed -i 's;FastQC,../protocols/Fastqc.sh,;FastQC,../protocols/Fastqc.sh,ConvertBamOrCramToFastq;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-    echo 'RemoveOriginalCramFile,../protocols/RemoveOriginalCramFile.sh,CreateCramFiles;FastQC;RemoveFastqFiles' >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
-    sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,ConvertBamOrCramToFastq;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-
     # Have the collect metrics depend on STARMapping. Leave in dependence on CreateCramFiles in for a bit, will be removed later
-    # sed -i 's/SortBam/CreateCramFiles/' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+#    sed -i 's/SortBam/CreateCramFiles/' Public_RNA-seq_QC/workflows/workflowSTAR.csv
 }
+
+
 
 change_protocols(){
     # Adjust the molgenis compute protocols based on needs of the brain eQTL project
@@ -101,6 +98,12 @@ change_protocols(){
     # add a line to delete the unfiltered BAM and sorted BAM after cramming
     echo "rm \${sortedBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/CreateCramFiles.sh
 
+    # Because we first convert to cram before running the collectMetrics jobs, change this for all Collect*sh scripts
+    # This has changed for the new cohorts like Brainseq, keeping this in temporarily but will be removed later
+#    sed -i 's;#string sortedBam;#string cramFileDir;' Public_RNA-seq_QC/protocols/Collect*sh
+#    sed -i 's;#string sortedBai;#string uniqueID;' Public_RNA-seq_QC/protocols/Collect*sh
+#    sed -i 's;${sortedBam};${cramFileDir}${uniqueID}.cram;' Public_RNA-seq_QC/protocols/Collect*sh
+
     # Did not add readgroup information at this point, so remove line METRIC_ACCUMULATION_LEVEL
     # Otherwise, tries to do it per readgroud. Now does it per file
     sed -i '/METRIC_ACCUMULATION_LEVEL/d' Public_RNA-seq_QC/protocols/CollectRnaSeqQcMetrics.sh
@@ -108,8 +111,8 @@ change_protocols(){
     # Original SAM to BAM conversion is done in seperate step, but this step is removed from the workflow
     # Add the conversion to the STAR alignment script
     echo "echo \"convert SAM to BAM\"" >> Public_RNA-seq_QC/protocols/STARMapping.sh
-    echo "module load SAMtools/1.5-foss-2015b" >> Public_RNA-seq_QC/protocols/STARMapping.sh
-    echo "mkdir -p ${project_dir}/results/\${unfilteredBamDir}/" >> Public_RNA-seq_QC/protocols/STARMapping.sh
+    echo "module load SAMtools/1.5-GCCcore-7.3.0" >> Public_RNA-seq_QC/protocols/STARMapping.sh
+    echo "mkdir -p \${unfilteredBamDir}/" >> Public_RNA-seq_QC/protocols/STARMapping.sh
     echo "samtools view -h -b \${alignmentDir}/\${uniqueID}.sam > \${unfilteredBamDir}/\${uniqueID}.bam" >> Public_RNA-seq_QC/protocols/STARMapping.sh
     echo "rm \${alignmentDir}/\${uniqueID}.sam" >> Public_RNA-seq_QC/protocols/STARMapping.sh
 
@@ -119,9 +122,6 @@ change_protocols(){
     # remove unfilteredBam after sorting
     echo "rm \${unfilteredBam}" >> Public_RNA-seq_QC/protocols/SortBam.sh
 
-    # copy over convertCramToFastq protocol and RemoveCram protol
-    rsync -P $script_dir/modified_protocols/ConvertBamOrCramToFastq.sh Public_RNA-seq_QC/protocols/
-    rsync -P $script_dir/modified_protocols/RemoveOriginalCramFile.sh Public_RNA-seq_QC/protocols/
 }
 
 change_parameter_files(){
@@ -132,98 +132,99 @@ change_parameter_files(){
     # NOTE: The replacemets are cluster specific, but don't want to make this command line options because that would make too many of them
     #       Either change below code or change the parameters.csv file
     sed -i 's;group,umcg-wijmenga;group,umcg-biogen;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i "s;resDir,/groups/umcg-wijmenga/tmp04/resources/;resDir,/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i "s;resDir,/groups/umcg-wijmenga/tmp03/resources/;resDir,/apps/data/;" Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i "s;resDir,/groups/umcg-wijmenga/tmp04/resources/;resDir,/groups/umcg-biogen/tmp01/apps/data;" Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i "s;resDir,/groups/umcg-wijmenga/tmp03/resources/;resDir,/groups/umcg-biogen/tmp01/apps/data;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i "s;projectDir,\${root}/\${group}/\${tmp}/projects/umcg-ndeklein/\${project}/;projectDir,${project_dir}/results/;" Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;alignmentDir,${projectDir}/hisat/;alignmentDir,${projectDir}/star;' Public_RNA-seq_QC/parameter_files/parameters.csv
-#    sed -i 's;fastqExtension,fastq.gz;fastqExtension,.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;goolf-1.7.20;foss-2015b;g' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;1.102-Java-1.7.0_80;1.119-Java-1.7.0_80;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;onekgGenomeFasta,${resDir}/${genomeBuild}/indices/human_g1k_v${human_g1k_vers}.fasta;onekgGenomeFasta,${resDir}//ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/GRCh38.primary_assembly.genome.fa;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;fastqExtension,.gz;fastqExtension,.fq.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;goolf-1.7.20;foss-2018b;g' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;foss-2015b;foss-2018b;g' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;fastqExtension,.fq.gz;fastqExtension,.fastq.gz;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i "s;tmp04;$tmpdir;" Public_RNA-seq_QC/parameter_files/parameters.csv
+
+
     sed -i 's;genesRefFlat,${resDir}/Ensembl/release-${ensemblVersion}/gtf/homo_sapiens/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.refflat;genesRefFlat,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/gencode.v32.primary_assembly.annotation.collapsedGenes.refflat;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;STARindex,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/STAR/${starVersion}/;STARindex,${resDir}/UMCG/STAR_index/gencode_32/STAR_genome_GRCh38_gencode.v32.primaryAssembly_oh100/;' Public_RNA-seq_QC/parameter_files/parameters.csv
+    sed -i 's;onekgGenomeFasta,${resDir}/${genomeBuild}/indices/human_g1k_v${human_g1k_vers}.fasta;onekgGenomeFasta,${resDir}//ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/GRCh38.primary_assembly.genome.fa;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;rRnaIntervalList,${resDir}//picard-tools/Ensembl${ensemblVersion}/${genomeLatSpecies}.${genomeGrchBuild}.${ensemblVersion}.rrna.interval_list;rRnaIntervalList,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_32/gencode.v32.primary_assembly.annotation.collapsedGenes.rRNA.interval_list;' Public_RNA-seq_QC/parameter_files/parameters.csv
+
     sed -i 's;genomeBuild,b37;genomeBuild,b38;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;genomeGrchBuild,GRCh37;genomeGrchBuild,GRCh38;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;human_g1k_vers,37;human_g1k_vers,38;' Public_RNA-seq_QC/parameter_files/parameters.csv
     sed -i 's;ensemblVersion,75;ensemblVersion,?;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    sed -i 's;STARindex,${resDir}/ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_24/STAR/${starVersion}/;STARindex,${resDir}/UMCG/STAR_index/gencode_32/STAR_genome_GRCh38_gencode.v32.primaryAssembly_oh100/;' Public_RNA-seq_QC/parameter_files/parameters.csv
 
     HOSTNAME=$(hostname)
     if [ "$HOSTNAME" = "gearshift" ];
     then
         echo "Change some parameters specifically for gearshift because different versions of tools are installed there"
-        sed -i s';picardVersion,2.18.26-Java-1.8.0_74;picardVersion,2.20.5-Java-11-LTS;' Public_RNA-seq_QC/parameter_files/parameters.csv
-        sed -i s';iolibVersion,1.14.6-foss-2015b;iolibVersion,1.14.11-GCCcore-7.3.0;' Public_RNA-seq_QC/parameter_files/parameters.csv
-        sed -i s';samtoolsVersion,1.5-foss-2015b;samtoolsVersion,1.9-GCCcore-7.3.0;' Public_RNA-seq_QC/parameter_files/parameters.csv
+        sed -i 's;picardVersion,2.18.26-Java-1.8.0_74;picardVersion,2.20.5-Java-11-LTS;' Public_RNA-seq_QC/parameter_files/parameters.csv
+        sed -i 's;iolibVersion,1.14.6-foss-2018b;iolibVersion,1.14.11-GCCcore-7.3.0;' Public_RNA-seq_QC/parameter_files/parameters.csv
+        sed -i 's;samtoolsVersion,1.5-foss-2018b;samtoolsVersion,1.5-GCCcore-7.3.0;' Public_RNA-seq_QC/parameter_files/parameters.csv
+        sed -i 's;Java-1.7.0_80;Java-11-LTS;' Public_RNA-seq_QC/parameter_files/parameters.csv
+        sed -i 's;RVersion,3.2.1-foss-2018b;RVersion,3.6.1-foss-2018b-bare;' Public_RNA-seq_QC/parameter_files/parameters.csv
     fi
 
 }
 
-make_samplesheets(){
-    # Convert samplesheets provided by cohorts to Molgens Compute samplesheets (with sample names, location of input files, project name)
-    # Because the samplesheet provided by the cohorts is always in different formats, each cohort has a separate script to convert it.
 
+make_samplesheets(){
+    # TODO: added -s option for giving samplesheet as input, but currently most cohorts still have hardcoded paths.
+    #       same for newly added option -r
+    # Have to update this
     # Make the samplesheets. How the samplesheet is made is dependent om the cohort
     echo "Making samplesheets..."
     rm Public_RNA-seq_QC/samplesheet1.csv
     mkdir -p Public_RNA-seq_QC/samplesheets/
 
-    samplesheet_script_dir=$script_dir/samplesheet_scripts/samplesheets_for_cramFile_input/
+    samplesheet_script_dir=$script_dir/samplesheet_scripts/
     if [[ "$cohort" == "TargetALS" ]];
     then
-        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $samplesheet \
-                                                                     $cramdir \
-                                                                     $project_dir/results/fastq/
+        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/../sample_annotation/UMG-Target_ALS_RNA_Clinical_Data_06122018.txt \
+                                                                    $project_dir/../data/ \
+                                                                     Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.
 
+        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/../sample_annotation/RNA_Metadata_TALS_2_5July2018.txt \
+                                                                     $project_dir/../data/ \
+                                                                     Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.samplesheet5july2018_
+
+        # give this an extra prefix because tehre is double data in this file and the Clinical_Data file. Since jobs have already been run for the
+        # Clinical_Data file, I don't want those to be overwritten by jobs based on RNA_Metadata. Have to check afterwards by hand which are double
+        python $samplesheet_script_dir/make_samplesheet_TargetALS.py $project_dir/../sample_annotation/Target_ALS_RNA_Metadata_03062019.txt \
+                                                                     $project_dir/../data/ \
+                                                                     Public_RNA-seq_QC/samplesheets/samplesheet_TargetALS_RNA.03062019_
     elif [[ "$cohort" == "CMC" ]];
     then
-        # The sameplesheet that is given as input is the samplesheet that is donwloaded from CMC
-        # this is converted to molgenis compute samplesheet
-        python $samplesheet_script_dir/make_samplesheet_CMC.py $samplesheet \
-                                                               $cramdir \
-                                                               $project_dir/results/fastq/
+        python $samplesheet_script_dir/make_samplesheet_CMC.py /groups/umcg-biogen/$tmpdir/input/CMC/CMC_RNAseq_samplesheet.txt \
+                                                                /groups/umcg-biogen/$tmpdir/input/CMC/pipelines/results/fastq/
     elif [[ "$cohort" == "CMC_HBCC" ]];
     then
-        python $samplesheet_script_dir/make_samplesheet_CMC_HBCC.py  $samplesheet \
-                                                                     $cramdir \
-                                                                     $project_dir/results/fastq/
+        # here RNAseqDir is the directory containing the BAM files, did not want to make an extra variable for it
+        echo "python $samplesheet_script_dir/make_samplesheet_CMC_HBCC.py $samplesheet $RNAseqDir $project_dir/results/fastq/ $project_dir"
+        python $samplesheet_script_dir/make_samplesheet_CMC_HBCC.py $samplesheet $RNAseqDir $project_dir/results/fastq/
     elif [[ "$cohort" == "Braineac" ]];
     then
-        python $samplesheet_script_dir/make_samplesheet_Braineac.py $samplesheet  \
-                                                                    $cramdir \
-                                                                    $project_dir/results/fastq/ \
-                                                                    /groups/umcg-biogen/tmp03/input/rawdata/ucl-upload-biogen/data/original_fastq_files.txt
+        python $samplesheet_script_dir/make_samplesheet_Braineac.py /groups/umcg-biogen/$tmpdir/input/ucl-upload-biogen/data/fastq/ \
+                                                                    data/original_fastq_files.txt \
+                                                                    SampleInfoBiogen.csv
     elif [[ "$cohort" == "Brainseq" ]];
     then
-        python $samplesheet_script_dir/make_samplesheet_Brainseq.py $samplesheet \
-                                                                    $cramdir \
-                                                                    $project_dir/results/fastq
+        python $samplesheet_script_dir/make_samplesheet_Brainseq.py /groups/umcg-biogen/$tmpdir/input/rawdata/Brainseq/RNAseq_merged/ \
+                                                                    /groups/umcg-biogen/$tmpdir/input/rawdata/Brainseq/phenotype_data/phenotypeFile_LIBD_szControl.csv
     elif [[ "$cohort" == "NABEC" ]];
     then
-        python $samplesheet_script_dir/make_samplesheet_NABEC.py $samplesheet \
-                                                                 $cramdir \
-                                                                 $project_dir/results/fastq
+        python $samplesheet_script_dir/make_samplesheet_NABEC.py /groups/umcg-biogen/$tmpdir/input/rawdata/NABEC/phenotypes/NABEC_phenotypes.txt /groups/umcg-biogen/$tmpdir/input/rawdata/NABEC/fastq/
     elif [[ "$cohort" == "BipSeq" ]];
     then
         # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
         # samplesheet can be downloaded from Synapse
-        python $samplesheet_script_dir/make_samplesheet_BipSeq.py $samplesheet \
-                                                                  $cramdir \
-                                                                  $project_dir/results/fastq
+        python $samplesheet_script_dir/make_samplesheet_BipSeq.py /groups/umcg-biogen/tmp04/input/rawdata/psychEncode/metadata/BipSeq/LIBD-JHU_BipSeq_R01MH105898_Metadata_RNAseq_DLPFC_Limbic.csv \
+                                                                  /groups/umcg-biogen/tmp04/input/rawdata/psychEncode/RNAseq/BipSeq/DLPFC_merged/
     elif [[ "$cohort" == "BrainGVEx" ]];
     then
         # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
         # samplesheet can be downloaded from Synapse
-        python $samplesheet_script_dir/make_samplesheet_BrainGVEx.py $samplesheet \
-                                                                     $cramdir \
-                                                                     $project_dir/results/fastq
-    elif [[ "$cohort" == "MayoCBE" ]];
-    then
-        # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
-        # samplesheet can be downloaded from Synapse
-        python $samplesheet_script_dir/make_samplesheet_MayoCBE.py $samplesheet \
-                                                                     $cramdir \
-                                                                     $project_dir/results/fastq
+        python $samplesheet_script_dir/make_samplesheet_BrainGVEx.py /groups/umcg-biogen/tmp04/input/rawdata/psychEncode/metadata/BrainGVEX/UIC-UChicago-U01MH103340_BrainGVEX_RNAseqMetadata_August2016Release.csv \
+                                                                     /groups/umcg-biogen/tmp04/input/rawdata/psychEncode/RNAseq/BrainGVEX/merged
     elif [[ "$cohort" == "EpiGABA" ]];
     then
         # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
@@ -235,27 +236,30 @@ make_samplesheets(){
     then
         # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
         # samplesheet can be downloaded from Synapse
-        python $samplesheet_script_dir/make_samplesheet_UCLA_ASD.py  $samplesheet \
-                                                                     $cramdir \
-                                                                     $project_dir/results/fastq
-    elif [[ "$cohort" == "GTEx" ]];
-    then
-        # psychEncode has multiple datasets, easiest is to have separate script for creating samplesheet
-        # samplesheet can be downloaded from Synapse
-        python $samplesheet_script_dir/make_samplesheet_GTEx.py $samplesheet \
-                                                                    $cramdir \
-                                                                    $project_dir/results/fastq
+        python $samplesheet_script_dir/make_samplesheet_UCLA_ASD.py $samplesheet \
+                                                                    $RNAseqDir
     elif [[ "$cohort" == "MSBB" ]];
     then
         python $samplesheet_script_dir/make_samplesheet_MSBB.py $samplesheet \
-                                                                 $cramdir \
-                                                                 $project_dir/results/fastq
+                                                                $RNAseqDir
+    elif [[ "$cohort" == "MayoCBE" ]];
+    then
+        python $samplesheet_script_dir/make_samplesheet_MayoCBE.py $samplesheet \
+                                                                $RNAseqDir
+    elif [[ "$cohort" == "MayoTCX" ]];
+    then
+        python $samplesheet_script_dir/make_samplesheet_MayoTCX.py $samplesheet \
+                                                                $RNAseqDir
+    elif [[ "$cohort" == "ROSMAP" ]];
+    then
+        python $samplesheet_script_dir/make_samplesheet_ROSMAP.py $samplesheet \
+                                                                $RNAseqDir
     elif [[ "$cohort" == "ENA" ]];
     then
         echo "ERROR: need to get genotypes as well for the ENA samples. Because the pipeline needs to be set up quite differently, use make_alignmentQuantificationAndGenotype_pipeline.sh instead"
         exit 1;
     else
-        echo "ERROR: No samplesheet code written for cohort: $cohort"
+        echo "No code written for cohort $cohort"
         exit 1;
     fi
 }
@@ -272,14 +276,6 @@ change_prepare_scripts(){
     sed -i "s;-rundir /groups/umcg-wijmenga/tmp04/umcg-ndeklein/rundirs/QC/;-rundir ${project_dir}/alignment//alignmentDir;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
     sed -i "s;/groups/umcg-wijmenga/tmp04/umcg-ndeklein/samplesheets/;${project_dir}/Public_RNA-seq_QC/samplesheets/;" Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
 
-
-    HOSTNAME=$(hostname)
-    if [ ! "$HOSTNAME" = "gearshift" ];
-    then
-        sed -i 's;Molgenis-Compute/v16.04.1-Java-11-LTS;Molgenis-Compute/v16.04.1-Java-1.8.0_45;' Public_RNA-seq_QC/prepare_Public_RNA-seq_QC.sh
-    fi
-
-
     # Do specific changes per samplesheet batch
     mkdir Public_RNA-seq_QC/prepare_scripts/
     for samplesheet in `ls Public_RNA-seq_QC/samplesheets/samplesheet*txt`;
@@ -292,6 +288,7 @@ change_prepare_scripts(){
         sed -i "s;alignmentDir;$name;" Public_RNA-seq_QC/prepare_scripts/prepare_Public_RNA-seq_QC.$name.sh
     done
 }
+
 
 make_pipeline_scripts(){
     # Make the pipeline scripts using Molgenis Compute
@@ -309,6 +306,7 @@ make_pipeline_scripts(){
 
 }
 
+
 cohort_specific_steps(){
     # Collection of cohort specific steps
     echo "Running cohort specific steps..."
@@ -318,29 +316,24 @@ cohort_specific_steps(){
 #    rsync -P STARMappingTwoPass.sh Public_RNA-seq_QC/protocols/
 #   echo "STARMappingTwoPass,../protocols/STARMappingTwoPass.sh,CreateCramFiles" >> Public_RNA-seq_QC/workflows/workflowSTAR.csv
         echo "TargetALS specific methods..."
-        # the project structure is different for TargetALS, so change (after changing directory, see project structure)
-        for prepare_script in Public_RNA-seq_QC/prepare_scripts/*;
-        do
-            sed -i 's;-rundir /groups/umcg-biogen/tmp04/biogen/input/TargetALS/;-rundir /groups/umcg-biogen/tmp04/biogen/input/TargetALS/pipelines/DEXSEQ_test;' $prepare_script
-        done
+
         # same also for resultsdir
         sed -i 's;projectDir,${root}/${group}/${tmp}/biogen/input/TargetALS/results/;projectDir,${root}/${group}/${tmp}/biogen/input/TargetALS/pipelines/results/DEXSEQ_test;' Public_RNA-seq_QC/parameter_files/parameters.csv
-    fi
 
-    # since now we will convert cram to fastq for all datasets, comment this out
-#    if [[ "$cohort" == "CMC_HBCC" ]];
-#    then
-#        rsync -P $script_dir/modified_protocols/ConvertBamToFastq.sh Public_RNA-seq_QC/protocols/
-#        sed -i '2iConvertBamToFastq,../protocols/ConvertBamToFastq.sh,' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-#        sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,ConvertBamToFastq;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-#        sed -i 's;FastQC,../protocols/Fastqc.sh,;FastQC,../protocols/Fastqc.sh,ConvertBamToFastq;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
-#    fi
+    fi
+    if [[ "$cohort" == "CMC_HBCC" ]];
+    then
+        rsync -P $script_dir/modified_protocols/ConvertBamToFastq.sh Public_RNA-seq_QC/protocols/
+        sed -i '2iConvertBamToFastq,../protocols/ConvertBamToFastq.sh,' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+        sed -i 's;STARMapping,../protocols/STARMapping.sh,;STARMapping,../protocols/STARMapping.sh,ConvertBamToFastq;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+        sed -i 's;FastQC,../protocols/Fastqc.sh,;FastQC,../protocols/Fastqc.sh,ConvertBamToFastq;' Public_RNA-seq_QC/workflows/workflowSTAR.csv
+    fi
 }
 
 parse_commandline(){
     # Parse the command line arguments
     echo "Parsing commandline..."
-    echo "$#"
+
     # Check to see if at least one argument is given
     if [ $# -eq 0 ]
     then
@@ -363,8 +356,8 @@ parse_commandline(){
             -s | --samplesheet )    shift
                                     samplesheet=$1
                                     ;;
-            -r | --cramdir )        shift
-                                    cramdir=$1
+            -r | --RNAseqDir )      shift
+                                    RNAseqDir=$1
                                     ;;
             -h | --help )           usage
                                     exit
@@ -379,6 +372,12 @@ parse_commandline(){
     echo "Project directory = $project_dir"
 
     # if -z tests if variable is empty. Make sure the relevant variables are set
+    if [ -z "$RNAseqDir" ];
+    then
+        echo "ERROR: -r/--RNAseqDir not set!"
+        usage
+        exit 1;
+    fi
     if [ -z "$cohort" ];
     then
         echo "ERROR: -c/--cohort not set!"
@@ -397,12 +396,6 @@ parse_commandline(){
         usagae
         exit 1;
     fi
-    if [ -z "$cramdir" ];
-    then
-        echo "ERROR: -r/--cramdir not set!"
-        usagae
-        exit 1;
-    fi
     if [ -z "$samplesheet" ];
     then
         echo "ERROR: -s/--samplesheet not set!"
@@ -412,14 +405,7 @@ parse_commandline(){
     echo "Making pipeline..."
 }
 
-main "$@"
-
-##### Note: Below commented code is how it used to run. However, $BASH_SOURCE is made empty after module load Python so can not use this. #####
-####        instead just use main, as above                                                                                               #####
-
-#[[ ${BASH_SOURCE[0]} = "$0" ]] -> main does not run when this script is sourced
+# [[ ${BASH_SOURCE[0]} = "$0" ]] -> main does not run when this script is sourced
 # main "$@" -> Send the arguments to the main function (this way project flow can be at top)
 # exit -> safeguard against the file being modified while it is interpreted
-#[[ ${BASH_SOURCE[0]} = "$0" ]] && main "$@"; exit;
-
-###############################################################################################################################################
+main "$@"

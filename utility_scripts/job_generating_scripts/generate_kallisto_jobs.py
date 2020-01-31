@@ -12,7 +12,9 @@ parser.add_argument('kallisto_index', help='Kallisto index file location')
 
 args = parser.parse_args()
 
-cram_files = glob.glob(args.cram_base_directory+'/**/*.cram', recursive=True)+glob.glob(args.cram_base_directory+'/**/*.bam', recursive=True)
+cram_files = glob.glob(args.cram_base_directory+'/**/*.cram', recursive=True)#+glob.glob(args.cram_base_directory+'/**/*.bam', recursive=True)
+print('exluding dirs with no_patch_chromosomes in it')
+cram_files = [x for x in cram_files if 'no_patch_chromosomes' in x]
 print('found ',len(cram_files),'cram and bam files')
 sys.stdout.flush()
 
@@ -65,6 +67,7 @@ def make_jobs(cram_files, template):
             raise RuntimeError('Study not set')
 
         jobs_dir = job_base_dir + '/'+study+'/'
+        print(jobs_dir)
         if not os.path.exists(jobs_dir):
             os.makedirs(jobs_dir)
         if study == 'MSBB':
@@ -93,10 +96,7 @@ def make_jobs(cram_files, template):
         new_template = new_template.replace('REPLACEBAM', cram.replace('cram','bam'))
         new_template = new_template.replace('REPLACEINDEX',args.kallisto_index)
 
-        if not os.path.exists(jobs_dir+'/'+study+'/'):
-            os.makedirs(jobs_dir+'/'+study+'/')
-
-        with open(jobs_dir+'/'+study+'/'+sample+'.sh','w') as out:
+        with open(jobs_dir+'/'+sample+'.sh','w') as out:
             out.write(new_template)
         prev_study = study
 

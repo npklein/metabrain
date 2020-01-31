@@ -327,7 +327,7 @@ print_command_arguments(){
                     sleep 300
                 done
                 echo "Finished!"
-                grep AUC ${type}_$(basename ${f%.txt}).out | cut -f2,7,11,13 > ${outfile%.txt}.AUC.txt;
+                grep AUC ${type}_$(basename ${f%.txt}).out | cut -f2,7,11,13 >> ${outfile%.txt}.AUC.txt;
                 cd -
             done
         fi
