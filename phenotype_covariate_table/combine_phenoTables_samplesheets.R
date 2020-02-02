@@ -1,25 +1,67 @@
-
+#!/usr/bin/env Rscript
 
 # Get all the different covariate/samplesheet/phenotype files and merge them all together
 # while harmonizing column names
 options(warn=2)
 library(data.table)
 library(plyr)
+library(optparse)
+
+initial.options <- commandArgs(trailingOnly = FALSE)
+file.arg.name <- "--file="
+script.name <- sub(file.arg.name, "", initial.options[grep(file.arg.name, initial.options)])
+script.basename <- dirname(script.name)
+pwd <- getwd()
+setwd(script.basename)
 source('parse_samplesheets.R')
 source('utility.R')
 source('parse_QC_metrics.R')
 source('column_info.R')
+setwd(pwd)
+
+test <- function(){
+  # This function is only here for development so that I can more easily test interactively in Rstudio
+  opt <- list()
+  input_dir <- '/Users/NPK/UMCG/projects/biogen/cohorts/'
+  opt$QcBaseDir <- input_dir
+  opt$metadataDir <- paste0(input_dir,'/joined_analysis/phenotype_QC_and_covariates_table/all_cohort_metadata')
+  opt$outputdir <- paste0(input_dir,'/joined_analysis/phenotype_QC_and_covariates_table')
+  return(opt)
+}
+
 
 ##### main program functions ######
 main <- function(){
-  #opt <- get_options()
+  opt <- get_options()
   # (un)comment depending on if it is an interactive test run
-  opt <- test()
+  #opt <- test()
   
   all_pheno_covariate_data <- combine_all_data(opt)
 
   write_output(opt$outputdir, all_pheno_covariate_data)
 }
+
+
+get_options <- function(){
+  # Get command line arguments 
+  option_list = list(
+    make_option(c('-r', '--QcBaseDir'), type='character', default=getwd(), 
+                help='Path to RNAseq multiQC data (base directory that contains all subdirs)', 
+                metavar='character'),
+    make_option(c('-o', '--outputdir'), type='character', default=getwd(), 
+                help='Directory to write output to', 
+                metavar='character'),
+    make_option(c('-m', '--metadataDir'), type='character', default=getwd(), 
+                help='Directory containing metadata of all cohorts', 
+                metavar='character')
+  );
+  
+  opt_parser = OptionParser(option_list=option_list);
+  opt = parse_args(opt_parser);
+  return(opt)
+}
+
+
 
 combine_all_data <- function(opt){
   # first read in samplesheet data. This should theoretically contain all info on IDs that can be used to parse later files
@@ -84,6 +126,6 @@ write_output <- function(outputdir, combined_metrics){
 
 # runs only when script is run by itself, similar to Python's if __name__ == __main__
 if (sys.nframe() == 0){
-  main(eqtlGen_replication, ld_scores_file, fdr_threshold)
+  main()
 }
 
