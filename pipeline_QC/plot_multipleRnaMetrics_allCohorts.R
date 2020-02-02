@@ -21,7 +21,6 @@ option_list = list(
               help="phenotype data for NABEC", metavar="character")
   
 ); 
-
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
@@ -35,6 +34,8 @@ test <- function(){
 }
 # comment out when not testing
 #opt <- test()
+dir.create(file.path(opt$output,'figures/' ), showWarnings = FALSE)
+dir.create(file.path(paste0(opt$output,'/figures/'), "QC_figures_separate/" ), showWarnings = FALSE)
 
 
 print(paste('Searching for input files in: ', opt$input))
@@ -349,8 +350,8 @@ if(sum(!is.na(CombinedMetricsWithFastQC$PCT_PF_READS_ALIGNED) & CombinedMetricsW
 CombinedMetricsWithFastQC <- CombinedMetricsWithFastQC[!duplicated(CombinedMetricsWithFastQC$Sample),]
 
 
-filtered_samples_file <- paste0(opt$output,"/",sys.date(),"-samplesToFilter-",opt$freeze,".txt")
-write.table(all_cohorts[all_cohorts$FILTER=='YES',]$Sample, filtered_samples_file, quote=F, sep="\t", row.names=F)
+filtered_samples_file <- paste0(opt$output,"/",Sys.Date(),"-samplesToFilter-",opt$freeze,".txt")
+write.table(CombinedMetricsWithFastQC[CombinedMetricsWithFastQC$FILTER=='YES',]$Sample, filtered_samples_file, quote=F, sep="\t", row.names=F)
 print(paste0("Written samples to filer to ",filtered_samples_file))
 
 
@@ -521,4 +522,4 @@ plot_with_pca_outliers <- function(){
 }
 #plot_with_pca_outliers()
 #####
-write.table(all_cohorts,file=paste0(opt$output,'/',Sys.Date(),'-',opt$freeze,'.TMM.Covariates.txt'),quote=F, row.names=T, sep='\t')
+write.table(CombinedMetricsWithFastQC,file=paste0(opt$output,'/',Sys.Date(),'-',opt$freeze,'.TMM.Covariates.txt'),quote=F, row.names=T, sep='\t')
