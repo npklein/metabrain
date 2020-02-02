@@ -1,6 +1,6 @@
 # TODO: this code still extracts the cohort info from the path instead of from the samplesheet info, has to be
 library(data.table)
-source('Utility.R')
+source('utility.R')
 library(stringr)
 
 combine_QC_metrics <- function(opt){
