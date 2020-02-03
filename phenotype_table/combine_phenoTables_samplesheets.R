@@ -109,12 +109,12 @@ write_output <- function(outputdir, combined_metrics){
     
   }
   
-  outfile <- paste0(outputdir,'/',Sys.Date(),'brain.phenotype_QC_covariates.txt')
+  outfile <- paste0(outputdir,'/',Sys.Date(),'.brain.phenotypes.txt')
   write.table(combined_metrics, outfile, quote=F, sep='\t', row.names=F)
   print(paste('Written to',outfile))
   
   column_info <- get_column_info(combined_metrics)
-  outfile <- paste0(outputdir,'/',Sys.Date(),'brain.phenotype_QC_covariates.columnDescription.txt')
+  outfile <- paste0(outputdir,'/',Sys.Date(),'.brain.phenotypes_columnDescription.txt')
   write.table(column_info, outfile, quote=F, sep='\t', row.names=F)
   print(paste('Written to',outfile))
 }
