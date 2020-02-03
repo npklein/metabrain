@@ -138,7 +138,7 @@ get_column_info <- function(phenotype_data){
   
   #colnames(info) <- c('Column name', 'Description', 'Column type','encoding','Total_NotAvailable',
   #                    'AMP-AD', 'Braineac', 'Brainseq', 'CMC', 'ENA', 'GTEx', 'NABEC', 'TargetALS')
-  
+  phenotype_data <- phenotype_data[,colnames(phenotype_data) != 'column_to_keep']  
   columns_not_in <- colnames(phenotype_data)[!colnames(phenotype_data) %in% info$colname]
   if(length(columns_not_in) > 0){
     print(columns_not_in)
