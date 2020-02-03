@@ -18,7 +18,9 @@ option_list = list(
   make_option(c("-f", "--freeze"), type="character", default=NULL,
               help="freeze version, e.g. 2 or freeze2dot1", metavar="character"),
   make_option(c("-n", "--NABEC_pheno"), type="character", default=NULL,
-              help="phenotype data for NABEC", metavar="character")
+              help="phenotype data for NABEC", metavar="character"),
+  make_option(c("-a", "--plot_all"), type="character", default="TRUE",
+              help="if set as false, don't make all the plots", metavar="character")
   
 ); 
 opt_parser = OptionParser(option_list=option_list);
@@ -101,7 +103,7 @@ for(f in RnaMetrics_multiQC_files){
   RnaMetrics_qc$cohort <- cohort
   RnaMetrics_qc$SAMPLE <- NULL
   RnaMetrics_qc$study <- NA
-  if(cohort == 'ENA'){
+ if(cohort == 'ENA'){
     pattern <- ".*/data/(.*)_batch[0-9]+.*"
     RnaMetrics_qc$study <- sub(pattern, "\\1", f)
   }
@@ -183,7 +185,6 @@ FastQC_multiQC_files <- list.files(path=opt$input,
                                    recursive = TRUE,
                                    full.names=T)
 FastQC_multiQC_files <- FastQC_multiQC_files[!grepl("BPD", FastQC_multiQC_files)]
-
 FastQC_qc_all <- data.frame()
 for(f in FastQC_multiQC_files){
   FastQC_qc <- fread(f)
@@ -195,14 +196,14 @@ for(f in FastQC_multiQC_files){
 FastQC_qc_all <- data.frame(FastQC_qc_all)
 FastQC_qc_all$Sample <- gsub('.cram','',FastQC_qc_all$Sample)
 
-FastQC_qc_all_R1 <- FastQC_qc_all[grepl('*_R1$|*\\.R1$|*_1$', FastQC_qc_all$Sample),]
-FastQC_qc_all_R1$Sample <- gsub('*_R1$|*\\.R1$|*_1$','',FastQC_qc_all_R1$Sample)
-FastQC_qc_all_R2 <- FastQC_qc_all[grepl('*_R2$|*\\.R2$|*_2$', FastQC_qc_all$Sample),]
-FastQC_qc_all_R2$Sample <- gsub('*_R2$|*\\.R2$|*_2$','',FastQC_qc_all_R2$Sample)
+FastQC_qc_all_R1 <- FastQC_qc_all[grepl('*_R1$|*\\.R1$|*_1$|*\\.r1$', FastQC_qc_all$Sample),]
+FastQC_qc_all_R1$Sample <- gsub('*_R1$|*\\.R1$|*_1$|*\\.r1$','',FastQC_qc_all_R1$Sample)
+FastQC_qc_all_R2 <- FastQC_qc_all[grepl('*_R2$|*\\.R2$|*_2$|*\\.r2$', FastQC_qc_all$Sample),]
+FastQC_qc_all_R2$Sample <- gsub('*_R2$|*\\.R2$|*_2$|*\\.r2$','',FastQC_qc_all_R2$Sample)
 
 # everything that is leftover is single end, save as R1
-single_end <- FastQC_qc_all[!grepl('*_R1$|*\\.R1$|*_1$', FastQC_qc_all$Sample),]
-single_end <- single_end[!grepl('*_R2$|*\\.R2$|*_2$', single_end$Sample),]
+single_end <- FastQC_qc_all[!grepl('*_R1$|*\\.R1$|*_1$|*\\.r1$', FastQC_qc_all$Sample),]
+single_end <- single_end[!grepl('*_R2$|*\\.R2$|*_2$|*\\.r2', single_end$Sample),]
 FastQC_qc_all_R1 <- rbind(FastQC_qc_all_R1, single_end)
 
 # fill.x = True because single end sample are only in R1
@@ -334,14 +335,6 @@ if(sum(!is.na(CombinedMetricsWithFastQC$PCT_PF_READS_ALIGNED) & CombinedMetricsW
 }
 
 
-# these are wrong in the expression table, but since we don't want to rewrite that one change it here
-#CombinedMetricsWithFastQC[CombinedMetricsWithFastQC$Sample=='UMB5176_ba41_42_22',]$Sample <- 'UMB5176_ba41.42.22'
-#CombinedMetricsWithFastQC[CombinedMetricsWithFastQC$Sample=='AN03345_ba41_42_22',]$Sample <- 'AN03345_ba41.42.22'
-#CombinedMetricsWithFastQC[CombinedMetricsWithFastQC$Sample=='UMB1376_ba41_42_22',]$Sample <- 'UMB1376_ba41.42.22'
-#CombinedMetricsWithFastQC[CombinedMetricsWithFastQC$Sample=='AN15088_ba41_42_22',]$Sample <- 'AN15088_ba41.42.22'
-#CombinedMetricsWithFastQC[CombinedMetricsWithFastQC$Sample=='UMB4337_ba41_42_22',]$Sample <- 'UMB4337_ba41.42.22'
-#CombinedMetricsWithFastQC[CombinedMetricsWithFastQC$Sample=='AN11864_ba41_42_22',]$Sample <- 'AN11864_ba41.42.22'
-
 # sample should have been merged but resequenced sample didn't get transfered to us until the first one was already processed.
 # only keep cov. data for teh correct one
 
@@ -454,18 +447,21 @@ filter_columns <-  c("PCT_CODING_BASES","PCT_PF_READS_ALIGNED")
 columns_to_plot <- columns_to_plot[!columns_to_plot %in% filter_columns]
 columns_to_plot <- c(filter_columns, columns_to_plot)
 
-print('start plotting')
-pdf(paste0(opt$output,'/figures/all_MultiMetrics_QC_plots.pdf'), width=8, height=8)
-for(column in columns_to_plot){
-  if(column == "sampleID"){
-    next
-  }
-  print(column)
-  p <- QC_plotter(CombinedMetricsWithFastQC, column, FALSE)
-  ggsave(paste0(opt$output,'/figures/QC_figures_separate/',column,'.png'), width=12, height = 8, plot=p)
-  print(p)
+if(opt$plot_all == "TRUE"){
+    print('start plotting')
+ 
+   pdf(paste0(opt$output,'/figures/all_MultiMetrics_QC_plots.pdf'), width=8, height=8)
+    for(column in columns_to_plot){
+      if(column == "sampleID"){
+        next
+      }
+      print(column)
+      p <- QC_plotter(CombinedMetricsWithFastQC, column, FALSE)
+      ggsave(paste0(opt$output,'/figures/QC_figures_separate/',column,'.png'), width=12, height = 8, plot=p)
+      print(p)
+    }
+    dev.off()
 }
-dev.off()
 
 colourCount = length(unique(CombinedMetricsWithFastQC$cohort))
 getPalette = colorRampPalette(brewer.pal(8, "Dark2"))
@@ -520,4 +516,5 @@ plot_with_pca_outliers <- function(){
 }
 #plot_with_pca_outliers()
 #####
-write.table(CombinedMetricsWithFastQC,file=paste0(opt$output,'/',Sys.Date(),'-',opt$freeze,'.TMM.Covariates.txt'),quote=F, row.names=T, sep='\t')
+write.table(CombinedMetricsWithFastQC,file=paste0(opt$output,'/',Sys.Date(),'-',opt$freeze,'.TMM.Covariates.txt'),quote=F, 
+    row.names=FALSE, sep='\t')

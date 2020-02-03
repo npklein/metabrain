@@ -23,11 +23,8 @@ parse_samplesheet_files <- function(opt){
                  BipSeq,CMC_HBCC)){
       merged_samplesheets <- rbind(merged_samplesheets, df, fill=T)
   }
-  
   # remove some columns that are easier to remove now than for specific cohorts
-  
   merged_samplesheets <- harmonize_and_clean_col_values(merged_samplesheets)
-  
   return(merged_samplesheets)
 }
 

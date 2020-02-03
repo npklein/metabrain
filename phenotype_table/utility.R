@@ -25,17 +25,7 @@ get_options <- function(){
   opt = parse_args(opt_parser);
   return(opt)
 }
-test <- function(){
-  # This function is only here for development so that I can more easily test interactively in Rstudio
-  opt <- list()
-  input_dir <- '/Users/NPK/UMCG/projects/biogen/cohorts/'
-  opt$QcBaseDir <- input_dir
-  opt$metadataDir <- paste0(input_dir,'/joined_analysis/phenotype_QC_and_covariates_table/input/all_cohort_metadata')
-  opt$outputdir <- paste0(input_dir,'/joined_analysis/phenotype_QC_and_covariates_table/output/')
-  opt$sample_IDs <- paste0(input_dir,'/joined_analysis/phenotype_QC_and_covariates_table/input/2019-04-11-Freeze2.TMM.SampleFilter.SampleSelection.ProbesWithZeroVarianceRemoved.QuantileNormalized.Log2Transformed.PCAOverSamplesEigenvectors-pc1to4-nonoutliers-forcovariates.txt')
-  opt$genotype_IDs_dir <- paste0(input_dir,'/joined_analysis/phenotype_QC_and_covariates_table/input/genotypeIndividuals/')
-  return(opt)
-}
+
 same_rows <- function(df, list_of_df){
   # helper function testing if all df haave same number of rows
   for(df2 in list_of_df){
@@ -95,6 +85,13 @@ parse_rnaseq_ID_from_fullName <- function(){
 }
 
 change_rows_if_na <- function(dt, column_to_keep, column_to_merge_into, overwrite=F, no_delete = c()){
+  # What somtimes happens with the merging of files is that there are multiple columns that should be the same
+  # e.g. pH.x and pH.y (should be pH), or Daily Smoking and Smoking Per Day (should be Smoking).
+  # This function takes 1+ columns in column_to_merge_into (e.g. pH.x and pH.y) and merges them into column_to_keep (e.g. pH)
+  # Before it does this, it checks that the values in column_to_keep are NA. The reason for this is that if for example
+  # a dataset has a column Smoking and a column Smoking Per Day, we don't want to overwrite Smoking with the Smoking Per Day value
+  # This is a consequence of different cohorts having slightly different definitions which we would like to combine
+
   # Check if column_to_keep is NA, if so loop over columns in column_to_merge_into and try to itteratively fill it
   if(!is.data.table(dt)){
     stop('Error: input to change_rows_if_na has to be data.table')
@@ -108,14 +105,17 @@ change_rows_if_na <- function(dt, column_to_keep, column_to_merge_into, overwrit
       stop('multiple column not NA, implement this first')
     }
   }
-  
+  # pH column had trouble with converting implicitly when running on the cluster (works without this if statement on my laptop)
+  # Because it will warn about type conversion. Therefore, set warning lower for this loop
+  options(warn=0)
   for(column_name in column_to_merge_into){
     
     # Get the rows where column_to_keep == NA
     rows_na <- which(is.na(dt[,..column_to_keep]) | dt[,..column_to_keep] == '')
     # Then fill in with the value of the next column in the loop (might be NA, but doesn't matter). Do this for all columns to merge
-    dt[rows_na, (column_to_keep) := dt[rows_na,][[column_name]]]
+    dt[rows_na, column_to_keep := dt[rows_na,][[column_name]]]
   }
+  options(warn=2)
   # Then delete all columns that were merged into the column_to_keep that are not in no_delete
   column_to_delete <- column_to_merge_into[!column_to_merge_into %in% no_delete]
   if(length(column_to_delete) > 0){
@@ -179,7 +179,6 @@ convert_to_broad_region <- function(dt){
   
   return(dt)
 }
-  
   
   
 harmonize_and_clean_col_values <- function(merged_samplesheets){
@@ -253,6 +252,7 @@ harmonize_and_clean_col_values <- function(merged_samplesheets){
     change_rows_if_na(merged_samplesheets_fixed_columns, 'libraryPrep',c('LibraryPrep','LibraryKit','Prep'),overwrite=T)
     merged_samplesheets_fixed_columns[grepl('Not Available|Unknown|?', pH), pH := NA]
     merged_samplesheets_fixed_columns[,pH := as.numeric(pH)]
+
     change_rows_if_na(merged_samplesheets_fixed_columns, 'pH',c('pH.x','pH.y'),overwrite=T)
     merged_samplesheets_fixed_columns[grepl('?', `PMI_(in_hours)`), `PMI_(in_hours)` := NA]
     merged_samplesheets_fixed_columns[,`PMI_(in_hours)` := as.numeric(`PMI_(in_hours)`)]
