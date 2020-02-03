@@ -6,6 +6,7 @@ library("dplyr")
 library(stringr)
 library("optparse")
 library(RColorBrewer)
+library(tidyr)
 
 # Get command line arguments 
 option_list = list(
@@ -119,7 +120,6 @@ if('TargetALS' %in% RnaMetric_qc_all$cohort){
 ######
 
 ##### tmp plot for debug
-library(tidyr)
 #RnaMetrics_qc$Sample <- NULL
 #ggplot(gather(RnaMetrics_qc), aes(value)) + 
 #  geom_histogram(bins = 10) + 
@@ -188,13 +188,18 @@ FastQC_multiQC_files <- FastQC_multiQC_files[!grepl("BPD", FastQC_multiQC_files)
 FastQC_qc_all <- data.frame()
 for(f in FastQC_multiQC_files){
   FastQC_qc <- fread(f)
-
+  if(grepl("MSBB",f)){
+    # in MSBB there are resequenced samples and ssamples where the resequenced samples have been merged
+    # with the original samples. We are using the merged ones, so remove the rest
+    FastQC_qc <- FastQC_qc[!(grepl('esequen', FastQC_qc$Filename) & !grepl('merged', FastQC_qc$Filename)),]
+  }
   FastQC_qc$cohort <- get_cohort_from_path(f)
   FastQC_qc_all <- rbind(FastQC_qc_all, FastQC_qc, fill=T)
 }
 # Because FastQC gives results per fastq file instead of per sample, adjust the names and merge them together
 FastQC_qc_all <- data.frame(FastQC_qc_all)
 FastQC_qc_all$Sample <- gsub('.cram','',FastQC_qc_all$Sample)
+
 
 FastQC_qc_all_R1 <- FastQC_qc_all[grepl('*_R1$|*\\.R1$|*_1$|*\\.r1$', FastQC_qc_all$Sample),]
 FastQC_qc_all_R1$Sample <- gsub('*_R1$|*\\.R1$|*_1$|*\\.r1$','',FastQC_qc_all_R1$Sample)
