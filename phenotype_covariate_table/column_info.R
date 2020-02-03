@@ -110,7 +110,8 @@ get_column_info <- function(phenotype_data){
   info <- add_info(info, 'IQ','IQ','SampleInfo')
   info <- add_info(info, 'IQ.notes','IQ notes','SampleInfo')
   info <- add_info(info, 'Pyschiatric.Medications','Yes/No History of psychriatic medications','SampleInfo')
-
+  info <- add_info(info, 'FSIQ','Full Scale Intelligence Quotient','SampleInfo')
+  
   
   info <- add_info(info, 'ADI.R.A..cut.off.10.','ADI-R A - score > 10 for autism','SampleInfo')
   info <- add_info(info, 'ADI.R.B..NV..cut.off.7.','ADI-R B - for nonverbal individuals - score > 7 for autism','SampleInfo')
