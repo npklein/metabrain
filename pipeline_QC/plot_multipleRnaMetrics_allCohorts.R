@@ -26,10 +26,8 @@ opt = parse_args(opt_parser);
 
 test <- function(){
   opt <- list()
-  opt$input <- "/Users/NPK/UMCG/projects/biogen/cohorts/"
-  opt$output <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/QC"
-  opt$pcaOutliers <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/QC/rna-pcaoutliers.txt"
-  opt$NABEC_pheno <- "/Users/NPK/UMCG/projects/biogen/cohorts/NABEC/phenotypes/NABEC_phenotypes.txt"
+  opt$input <- getwd()
+  opt$output <- getwd()
   return(opt)
 }
 # comment out when not testing
