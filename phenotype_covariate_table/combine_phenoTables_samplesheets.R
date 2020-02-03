@@ -22,10 +22,11 @@ setwd(pwd)
 test <- function(){
   # This function is only here for development so that I can more easily test interactively in Rstudio
   opt <- list()
-  input_dir <- '/Users/NPK/UMCG/projects/biogen/cohorts/'
-  opt$QcBaseDir <- input_dir
-  opt$metadataDir <- paste0(input_dir,'/joined_analysis/phenotype_QC_and_covariates_table/all_cohort_metadata')
-  opt$outputdir <- paste0(input_dir,'/joined_analysis/phenotype_QC_and_covariates_table')
+  input_dir <- '/Users/NPK/Downloads/tmp/'
+  opt$QcBaseDir <- paste0(input_dir,'/2020-01-31-alignmentQC/')
+  opt$metadataDir <- paste0(input_dir,'/2020-02-02-all-cohort-metadata/')
+  opt$outputdir <- "/Users/NPK/Downloads/tmp/"
+  opt$sample_IDs <- paste0(input_dir,'2020-02-02-expression-samples-after-alignmentQC-removal.txt')
   return(opt)
 }
 
@@ -51,6 +52,7 @@ get_options <- function(){
     make_option(c('-o', '--outputdir'), type='character', default=getwd(), 
                 help='Directory to write output to', 
                 metavar='character'),
+    make_option(c('s','--sampleDir'), type='character'),
     make_option(c('-m', '--metadataDir'), type='character', default=getwd(), 
                 help='Directory containing metadata of all cohorts', 
                 metavar='character')
@@ -66,8 +68,8 @@ get_options <- function(){
 combine_all_data <- function(opt){
   # first read in samplesheet data. This should theoretically contain all info on IDs that can be used to parse later files
   all_samplesheet_data<- parse_samplesheet_files(opt)
-  sum(names(all_samplesheet_data) == 'rnaseq_id')
-  # QC metrics are already in different script, comment out for now and check if is necesarry to add in here later
+
+    # QC metrics are already in different script, comment out for now and check if is necesarry to add in here later
   #all_qc_metrics <- combine_QC_metrics(opt)
   # remove cohort because this is in the samplesheet data
   #all_qc_metrics$cohort <- NULL
@@ -85,10 +87,20 @@ combine_all_data <- function(opt){
   return(all_pheno_covariate_data)
 }
 check_if_all_samples_included <- function(opt, dt){
-  samples <- fread(opt$sample_IDs,header=F)
-  samples[!samples$V1 %in% all_pheno_covariate_data$rnaseq_id]$V1
+  expression_samples <- fread(opt$sample_IDs,header=F)
+  expression_samples$V1 <- gsub('_mergedWithResequenced','',expression_samples$V1)
+  s_not_found <- expression_samples[!expression_samples$V1 %in% all_pheno_covariate_data$rnaseq_id]$V1
   
-  all_pheno_covariate_data[grepl('AN04479_BA7',rnaseq_id),]$rnaseq_id
+
+  all_pheno_covariate_data[(grepl('481_120514',all_pheno_covariate_data$rnaseq_id)),]$cohort
+  if(length(s_not_found)>0){
+    cat(paste0(length(s_not_found)," samples not found"))
+    cat("heaD() of samples not found:\n")
+    cat(head(s_not_found))
+    cat("\n")
+    stop("Not all samples were found in QC/covariate table")
+  }
+  else{cat("All samples found")}
 }
 
 write_output <- function(outputdir, combined_metrics){
@@ -97,7 +109,8 @@ write_output <- function(outputdir, combined_metrics){
   colnames(combined_metrics) <- gsub('%','perc', colnames(combined_metrics))
   # Rename some columns
   
-  combined_metrics <- combined_metrics[, colSums(is.na(combined_metrics)) != nrow(combined_metrics)]
+  combined_metrics <-   Filter(function(x)!all(is.na(x)), combined_metrics)
+
   
   
   # Change the order of columns so that identifiers are first
