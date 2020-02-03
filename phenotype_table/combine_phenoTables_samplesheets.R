@@ -15,7 +15,6 @@ pwd <- getwd()
 setwd(script.basename)
 source('parse_samplesheets.R')
 source('utility.R')
-source('parse_QC_metrics.R')
 source('column_info.R')
 setwd(pwd)
 
@@ -52,7 +51,8 @@ get_options <- function(){
     make_option(c('-o', '--outputdir'), type='character', default=getwd(), 
                 help='Directory to write output to', 
                 metavar='character'),
-    make_option(c('s','--sampleDir'), type='character'),
+    make_option(c('-s','--sample_IDs'), type='character',
+                  help='File with newline separated list of samples that should be included in the phenotype table'),
     make_option(c('-m', '--metadataDir'), type='character', default=getwd(), 
                 help='Directory containing metadata of all cohorts', 
                 metavar='character')
@@ -67,26 +67,15 @@ get_options <- function(){
 
 combine_all_data <- function(opt){
   # first read in samplesheet data. This should theoretically contain all info on IDs that can be used to parse later files
-  all_samplesheet_data<- parse_samplesheet_files(opt)
-
-    # QC metrics are already in different script, comment out for now and check if is necesarry to add in here later
-  #all_qc_metrics <- combine_QC_metrics(opt)
-  # remove cohort because this is in the samplesheet data
-  #all_qc_metrics$cohort <- NULL
+  all_samplesheet_data <- parse_samplesheet_files(opt)
+  change_rows_if_na(all_samplesheet_data, 'genotype_id',c('individualID','Individual_ID'),no_delete = c('individualID'))
+  change_rows_if_na(all_samplesheet_data, 'individualID',c('genotype_id'),no_delete = c('genotype_id'))
   
-  #all_samplesheet_data <- data.frame(all_samplesheet_data)
-
-  #all_pheno_covariate_data <- merge(all_samplesheet_data,all_qc_metrics, by='rnaseq_id',fill.x=T)
-  all_pheno_covariate_data <- all_samplesheet_data
-
-  change_rows_if_na(all_pheno_covariate_data, 'genotype_id',c('individualID','Individual_ID'),no_delete = c('individualID'))
-  change_rows_if_na(all_pheno_covariate_data, 'individualID',c('genotype_id'),no_delete = c('genotype_id'))
+  check_if_all_samples_included(opt, all_samplesheet_data)
   
-  check_if_all_samples_included(opt, all_pheno_covariate_data)
-  
-  return(all_pheno_covariate_data)
+  return(all_samplesheet_data)
 }
-check_if_all_samples_included <- function(opt, dt){
+check_if_all_samples_included <- function(opt, all_pheno_covariate_data){
   expression_samples <- fread(opt$sample_IDs,header=F)
   expression_samples$V1 <- gsub('_mergedWithResequenced','',expression_samples$V1)
   s_not_found <- expression_samples[!expression_samples$V1 %in% all_pheno_covariate_data$rnaseq_id]$V1
@@ -120,12 +109,12 @@ write_output <- function(outputdir, combined_metrics){
     
   }
   
-  outfile <- paste0(outputdir,'/brain.phenotype_QC_covariates.txt')
+  outfile <- paste0(outputdir,'/',Sys.Date(),'.brain.phenotypes.txt')
   write.table(combined_metrics, outfile, quote=F, sep='\t', row.names=F)
   print(paste('Written to',outfile))
   
   column_info <- get_column_info(combined_metrics)
-  outfile <- paste0(outputdir,'/brain.phenotype_QC_covariates.columnDescription.txt')
+  outfile <- paste0(outputdir,'/',Sys.Date(),'.brain.phenotypes_columnDescription.txt')
   write.table(column_info, outfile, quote=F, sep='\t', row.names=F)
   print(paste('Written to',outfile))
 }
