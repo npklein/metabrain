@@ -111,7 +111,7 @@ change_rows_if_na <- function(dt, column_to_keep, column_to_merge_into, overwrit
   for(column_name in column_to_merge_into){
     
     # Get the rows where column_to_keep == NA
-    rows_na <- which(is.na(dt[,..column_to_keep]) | dt[,..column_to_keep] == '')
+    rows_na <- which(is.na(dt[,..column_name]) | dt[,..column_name] == '')
     # Then fill in with the value of the next column in the loop (might be NA, but doesn't matter). Do this for all columns to merge
     dt[rows_na, column_to_keep := dt[rows_na,][[column_name]]]
   }
