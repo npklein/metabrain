@@ -116,6 +116,7 @@ for(f in RnaMetrics_multiQC_files){
 }
 RnaMetric_qc_all <- data.frame(RnaMetric_qc_all)
 RnaMetric_qc_all$Sample <- gsub('.cram','',RnaMetric_qc_all$Sample)
+
 RnaMetric_qc_all[RnaMetric_qc_all$cohort!='BrainGVEx',]$Sample <- gsub('-','.',RnaMetric_qc_all[RnaMetric_qc_all$cohort!='BrainGVEx',]$Sample)
 
 if('TargetALS' %in% RnaMetric_qc_all$cohort){
@@ -145,12 +146,15 @@ for(f in MultipleMetrics_multiQC_files){
 }
 MultipleMetric_qc_all <- data.frame(MultipleMetric_qc_all)
 MultipleMetric_qc_all$Sample <- gsub('.cram','',MultipleMetric_qc_all$Sample)
-MultipleMetric_qc_all[RnaMetric_qc_all$cohort!='BrainGVEx',]$Sample <- gsub('-','_',MultipleMetric_qc_all[RnaMetric_qc_all$cohort!='BrainGVEx',]$Sample)
+MultipleMetric_qc_all[MultipleMetric_qc_all$cohort=='UCLA_ASD',]$Sample <- gsub('-','.',MultipleMetric_qc_all[MultipleMetric_qc_all$cohort=='UCLA_ASD',]$Sample)
+
+MultipleMetric_qc_all[MultipleMetric_qc_all$cohort!='BrainGVEx',]$Sample <- gsub('-','_',MultipleMetric_qc_all[MultipleMetric_qc_all$cohort!='BrainGVEx',]$Sample)
 
 if('TargetALS' %in% MultipleMetric_qc_all$cohort){
   MultipleMetric_qc_all[MultipleMetric_qc_all$cohort=="TargetALS",]$Sample <- str_match(MultipleMetric_qc_all[MultipleMetric_qc_all$cohort=="TargetALS",]$Sample , ".*(HRA_[0-9]+)")[, 2]
 }
 ####### 
+
 
 ###### Read star QC #####
 print('Reading star QC files')
@@ -234,7 +238,6 @@ if('Brainseq' %in% FastQC_qc_all_merged$cohort){
                                                                             }))
 }
 
-
 ####### 
 
 
@@ -246,13 +249,26 @@ RnaMetric_qc_all[grepl('PCT', colnames(RnaMetric_qc_all))] <- RnaMetric_qc_all[g
 
 
 
+CombinedMetrics <- merge(RnaMetric_qc_all, MultipleMetric_qc_all, by=c('Sample','cohort'),fill=T)
+CombinedMetrics$READ_GROUP <- CombinedMetrics$READ_GROUP.x
+CombinedMetrics$READ_GROUP.x <- NULL
+CombinedMetrics$READ_GROUP.y <- NULL
+CombinedMetrics$PF_ALIGNED_BASES <- CombinedMetrics$PF_ALIGNED_BASES.x
+CombinedMetrics$PF_ALIGNED_BASES.x <- NULL
+CombinedMetrics$PF_ALIGNED_BASES.y <- NULL
+CombinedMetrics$library <- CombinedMetrics$library.x
+CombinedMetrics$library.x <- NULL
+CombinedMetrics$library.y <- NULL
 
-CombinedMetrics <- merge(RnaMetric_qc_all, MultipleMetric_qc_all, by=c('Sample','cohort',
-                                                                       'PF_ALIGNED_BASES',
-                                                                       'LIBRARY',
-                                                                       'READ_GROUP','PF_ALIGNED_BASES'),fill=T)
+CombinedMetrics[CombinedMetrics$cohort=="MayoCBE",][grepl('1105_CER',  CombinedMetrics[RnaMetric_qc_all$cohort=="MayoCBE",]$Sample),c('Sample','cohort')]
+
 CombinedMetrics <- merge(CombinedMetrics, STAR_qc_all, by=c('Sample','cohort'), all = TRUE)
 CombinedMetrics$SampleFull <- CombinedMetrics$Sample
+
+
+STAR_qc_all[STAR_qc_all$cohort=="MayoCBE",][grepl('1105_CER',  STAR_qc_all[STAR_qc_all$cohort=="MayoCBE",]$Sample),]
+
+
 
 if('Braineac' %in% CombinedMetrics$cohort){
     CombinedMetrics[CombinedMetrics$cohort=="Braineac",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="Braineac",]$Sample, ".*(A653.*)")[, 2]
@@ -284,8 +300,9 @@ if('BipSeq' %in% CombinedMetrics$cohort){
 if('UCLA_ASD' %in% CombinedMetrics$cohort){
   CombinedMetrics[CombinedMetrics$cohort=="UCLA_ASD",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="UCLA_ASD",]$Sample,"[aA-zZ]+[0-9]+_(.+)")[, 2]
   FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="UCLA_ASD" & grepl('-',FastQC_qc_all_merged$Sample),]$Sample <- gsub('-','.', FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="UCLA_ASD" & grepl('-',FastQC_qc_all_merged$Sample),]$Sample)
-  
 }
+
+
 if('CMC_HBCC' %in% CombinedMetrics$cohort){
   CombinedMetrics[CombinedMetrics$cohort=="CMC_HBCC",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="CMC_HBCC",]$Sample,"individualID.*_specimenID.(.*)")[, 2]
   
@@ -304,27 +321,27 @@ if('MayoCBE' %in% CombinedMetrics$cohort){
 }
 
 if('MSBB' %in% CombinedMetrics$cohort){
-  CombinedMetrics[CombinedMetrics$cohort=="MSBB",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="MSBB",]$Sample,"^AMPAD_MSSM_[0-9]+_(.*)")[, 2]
+  merged_sampeles <- gsub('_mergedWithResequenced','',CombinedMetrics[grepl('_mergedWithResequenced',CombinedMetrics$Sample),]$Sample)
+  MSBB_to_remove <- CombinedMetrics[grepl(paste(merged_sampeles,collapse="|"), CombinedMetrics$Sample),]$Sample
+  MSBB_to_remove <- MSBB_to_remove[!grepl('merged',MSBB_to_remove)]
+  CombinedMetrics <- CombinedMetrics[!CombinedMetrics$Sample %in% MSBB_to_remove,]
   
-  # remove resequenced samples, keep only merged. There are 3 versions:
-  # <samplename>, <samplename>_resequenced, and <samplename>_mergedWithResequenced". This removes the first two
-  samples_to_remove <- CombinedMetrics$Sample[grepl('_resequenced',CombinedMetrics$Sample)]
-  CombinedMetrics <- CombinedMetrics[!CombinedMetrics$Sample %in% samples_to_remove,]
-  samples_to_remove <- gsub( '_resequenced','',samples_to_remove)
-  CombinedMetrics <- CombinedMetrics[!CombinedMetrics$Sample %in% samples_to_remove,]
-  CombinedMetrics$Sample <- gsub('.accepted_hits.sort.coord.combined','',CombinedMetrics$Sample)
+  CombinedMetrics[CombinedMetrics$cohort=="MSBB",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="MSBB",]$Sample,"^AMPAD_MSSM_[0-9]+_(.*)")[, 2]
+  CombinedMetrics[CombinedMetrics$cohort=="MSBB",]$Sample <- gsub('_mergedWithResequenced','',CombinedMetrics[CombinedMetrics$cohort=="MSBB",]$Sample)
+  
   FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="MSBB",]$Sample <- gsub('.accepted_hits.sort.coord.combined','',FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="MSBB",]$Sample)
   
-  CombinedMetrics[grepl('mergedWithResequenced',CombinedMetrics$Sample),]$Sample <- gsub('_mergedWithResequenced','',CombinedMetrics[grepl('mergedWithResequenced',CombinedMetrics$Sample),]$Sample)
 }
 
 
 if('ROSMAP' %in% CombinedMetrics$cohort){
   CombinedMetrics[CombinedMetrics$cohort=="ROSMAP",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="ROSMAP",]$Sample,"^(.*_.*)_.*_.*")[, 2]
 }
+FastQC_qc_all_merged[grepl('hB_RNA_10492',FastQC_qc_all_merged$Sample),]
 
 
 CombinedMetricsWithFastQC <- merge(CombinedMetrics, FastQC_qc_all_merged, by=c('Sample','cohort'), all = TRUE)
+CombinedMetricsWithFastQC <- CombinedMetricsWithFastQC[CombinedMetricsWithFastQC$Sample!='1271_TCX',] 
 
 ######
 
@@ -528,6 +545,7 @@ plot_with_pca_outliers <- function(){
 samples$V1 <- as.character(samples$V1)
 missing <- samples$V1[!samples$V1 %in% CombinedMetricsWithFastQC$Sample]
 missing <- missing[!grepl('_resequenced', missing)]
+missing <- missing[!grepl('merged', missing)]
 if(length(missing) > 0){
     cat("Missing samples:\n")
     print(missing)
