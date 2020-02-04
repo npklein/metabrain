@@ -33,6 +33,8 @@ test <- function(){
   opt <- list()
   opt$input <- getwd()
   opt$output <- getwd()
+  opt$expression_samples <- '2020-02-03-all-expression-samples.txt'
+  opt$plot_all="FALSE"
   return(opt)
 }
 # comment out when not testing
@@ -114,7 +116,7 @@ for(f in RnaMetrics_multiQC_files){
 }
 RnaMetric_qc_all <- data.frame(RnaMetric_qc_all)
 RnaMetric_qc_all$Sample <- gsub('.cram','',RnaMetric_qc_all$Sample)
-RnaMetric_qc_all$Sample <- gsub('-','_',RnaMetric_qc_all$Sample)
+RnaMetric_qc_all$Sample <- gsub('-','.',RnaMetric_qc_all$Sample)
 
 if('TargetALS' %in% RnaMetric_qc_all$cohort){
   RnaMetric_qc_all[RnaMetric_qc_all$cohort=="TargetALS",]$Sample <- str_match(RnaMetric_qc_all[RnaMetric_qc_all$cohort=="TargetALS",]$Sample , ".*(HRA_[0-9]+)")[, 2]
@@ -166,7 +168,7 @@ for(f in STAR_multiQC_files){
 }
 STAR_qc_all <- data.frame(STAR_qc_all)
 STAR_qc_all$Sample <- gsub('.cram','',STAR_qc_all$Sample)
-STAR_qc_all$Sample <- gsub('-','_',STAR_qc_all$Sample)
+STAR_qc_all$Sample <- gsub('-','.',STAR_qc_all$Sample)
 
 if('TargetALS' %in% STAR_qc_all$cohort){
   STAR_qc_all[STAR_qc_all$cohort=="TargetALS",]$Sample <- str_match(STAR_qc_all[STAR_qc_all$cohort=="TargetALS",]$Sample , ".*(HRA_[0-9]+)")[, 2]
@@ -217,7 +219,7 @@ FastQC_qc_all_merged <- FastQC_qc_all_merged[ !duplicated(FastQC_qc_all_merged$S
 
 # TargetALS sample naming is different between FastQC and picard results, change them here to make them match later
 if('TargetALS' %in% FastQC_qc_all_merged$cohort){
-    FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- gsub('-','_',FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample )
+    FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- gsub('-','.',FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample )
     FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- str_match(FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample , ".*(HRA_[0-9]+)")[, 2]
     FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample <- gsub('-b38','',FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="TargetALS",]$Sample)
 }
@@ -521,8 +523,9 @@ plot_with_pca_outliers <- function(){
   }
 }
 
-print(head(samples$V1))
+samples$V1 <- as.character(samples$V1)
 missing <- samples$V1[!samples$V1 %in% CombinedMetricsWithFastQC$Sample]
+missing <- missing[!grepl('_resequenced', missing)]
 if(length(missing) > 0){
     cat("Missing samples:\n")
     print(missing)
