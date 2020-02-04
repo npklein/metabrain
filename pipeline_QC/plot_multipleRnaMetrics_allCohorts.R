@@ -247,7 +247,6 @@ RnaMetric_qc_all[grepl('PCT', colnames(RnaMetric_qc_all))] <- RnaMetric_qc_all[g
 
 
 
-
 CombinedMetrics <- merge(RnaMetric_qc_all, MultipleMetric_qc_all, by=c('Sample','cohort',
                                                                        'PF_ALIGNED_BASES',
                                                                        'LIBRARY',
@@ -284,6 +283,7 @@ if('BipSeq' %in% CombinedMetrics$cohort){
 
 if('UCLA_ASD' %in% CombinedMetrics$cohort){
   CombinedMetrics[CombinedMetrics$cohort=="UCLA_ASD",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="UCLA_ASD",]$Sample,"[aA-zZ]+[0-9]+_(.+)")[, 2]
+  FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="UCLA_ASD" & grepl('-',FastQC_qc_all_merged$Sample),]$Sample <- gsub('-','.', FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="UCLA_ASD" & grepl('-',FastQC_qc_all_merged$Sample),]$Sample)
   
 }
 if('CMC_HBCC' %in% CombinedMetrics$cohort){
@@ -314,12 +314,15 @@ if('MSBB' %in% CombinedMetrics$cohort){
   CombinedMetrics <- CombinedMetrics[!CombinedMetrics$Sample %in% samples_to_remove,]
   CombinedMetrics$Sample <- gsub('.accepted_hits.sort.coord.combined','',CombinedMetrics$Sample)
   FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="MSBB",]$Sample <- gsub('.accepted_hits.sort.coord.combined','',FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="MSBB",]$Sample)
+  
+  CombinedMetrics[grepl('mergedWithResequenced',CombinedMetrics$Sample),]$Sample <- gsub('_mergedWithResequenced','',CombinedMetrics[grepl('mergedWithResequenced',CombinedMetrics$Sample),]$Sample)
 }
 
 
 if('ROSMAP' %in% CombinedMetrics$cohort){
   CombinedMetrics[CombinedMetrics$cohort=="ROSMAP",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="ROSMAP",]$Sample,"^(.*_.*)_.*_.*")[, 2]
 }
+
 
 CombinedMetricsWithFastQC <- merge(CombinedMetrics, FastQC_qc_all_merged, by=c('Sample','cohort'), all = TRUE)
 
