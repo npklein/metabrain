@@ -6,6 +6,7 @@ library("dplyr")
 library(stringr)
 library("optparse")
 library(RColorBrewer)
+library(tidyr)
 
 # Get command line arguments 
 option_list = list(
@@ -30,10 +31,8 @@ opt = parse_args(opt_parser);
 
 test <- function(){
   opt <- list()
-  opt$input <- "/Users/NPK/UMCG/projects/biogen/cohorts/"
-  opt$output <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/QC"
-  opt$pcaOutliers <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/QC/rna-pcaoutliers.txt"
-  opt$NABEC_pheno <- "/Users/NPK/UMCG/projects/biogen/cohorts/NABEC/phenotypes/NABEC_phenotypes.txt"
+  opt$input <- getwd()
+  opt$output <- getwd()
   return(opt)
 }
 # comment out when not testing
@@ -100,14 +99,13 @@ for(f in RnaMetrics_multiQC_files){
   cohort <- get_cohort_from_path(f)
   if(cohort == 'ENA'){
     if(!grepl('multiQC_alignment',  f)) { next }
-  }
-  else{print(f)
+  }else{print(f)
     print(cohort)}
   
   RnaMetrics_qc <- fread(f)
   RnaMetrics_qc$cohort <- cohort
   RnaMetrics_qc$SAMPLE <- NULL
-  RnaMetrics_qc$study <- NA
+  RnaMetrics_qc$study <- ''
  if(cohort == 'ENA'){
     pattern <- ".*/data/(.*)_batch[0-9]+.*"
     RnaMetrics_qc$study <- sub(pattern, "\\1", f)
@@ -122,14 +120,6 @@ if('TargetALS' %in% RnaMetric_qc_all$cohort){
   RnaMetric_qc_all[RnaMetric_qc_all$cohort=="TargetALS",]$Sample <- str_match(RnaMetric_qc_all[RnaMetric_qc_all$cohort=="TargetALS",]$Sample , ".*(HRA_[0-9]+)")[, 2]
 }
 ######
-
-##### tmp plot for debug
-library(tidyr)
-#RnaMetrics_qc$Sample <- NULL
-#ggplot(gather(RnaMetrics_qc), aes(value)) + 
-#  geom_histogram(bins = 10) + 
-#  facet_wrap(~key, scales = 'free_x')
-#####
 
 ###### Read MultiMetrics QC #####
 print('Readin MultipleMetrics files')
@@ -193,13 +183,18 @@ FastQC_multiQC_files <- FastQC_multiQC_files[!grepl("BPD", FastQC_multiQC_files)
 FastQC_qc_all <- data.frame()
 for(f in FastQC_multiQC_files){
   FastQC_qc <- fread(f)
-
+  if(grepl("MSBB",f)){
+    # in MSBB there are resequenced samples and ssamples where the resequenced samples have been merged
+    # with the original samples. We are using the merged ones, so remove the rest
+    FastQC_qc <- FastQC_qc[!(grepl('esequen', FastQC_qc$Filename) & !grepl('merged', FastQC_qc$Filename)),]
+  }
   FastQC_qc$cohort <- get_cohort_from_path(f)
   FastQC_qc_all <- rbind(FastQC_qc_all, FastQC_qc, fill=T)
 }
 # Because FastQC gives results per fastq file instead of per sample, adjust the names and merge them together
 FastQC_qc_all <- data.frame(FastQC_qc_all)
 FastQC_qc_all$Sample <- gsub('.cram','',FastQC_qc_all$Sample)
+
 
 FastQC_qc_all_R1 <- FastQC_qc_all[grepl('*_R1$|*\\.R1$|*_1$|*\\.r1$', FastQC_qc_all$Sample),]
 FastQC_qc_all_R1$Sample <- gsub('*_R1$|*\\.R1$|*_1$|*\\.r1$','',FastQC_qc_all_R1$Sample)
@@ -303,6 +298,7 @@ if('MayoTCX' %in% CombinedMetrics$cohort){
 
 if('MayoCBE' %in% CombinedMetrics$cohort){
   CombinedMetrics[CombinedMetrics$cohort=="MayoCBE",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="MayoCBE",]$Sample,"^([0-9]+_CER)_[0-9]+_CER")[, 2]
+  FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="MayoCBE",]$Sample <- str_match(FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="MayoCBE",]$Sample,"^([0-9]+_CER)*")[, 2]
 }
 
 if('MSBB' %in% CombinedMetrics$cohort){
@@ -315,9 +311,13 @@ if('MSBB' %in% CombinedMetrics$cohort){
   samples_to_remove <- gsub( '_resequenced','',samples_to_remove)
   CombinedMetrics <- CombinedMetrics[!CombinedMetrics$Sample %in% samples_to_remove,]
   CombinedMetrics$Sample <- gsub('.accepted_hits.sort.coord.combined','',CombinedMetrics$Sample)
+  FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="MSBB",]$Sample <- gsub('.accepted_hits.sort.coord.combined','',FastQC_qc_all_merged[FastQC_qc_all_merged$cohort=="MSBB",]$Sample)
 }
 
 
+if('ROSMAP' %in% CombinedMetrics$cohort){
+  CombinedMetrics[CombinedMetrics$cohort=="ROSMAP",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="ROSMAP",]$Sample,"^(.*_.*)_.*_.*")[, 2]
+}
 
 CombinedMetricsWithFastQC <- merge(CombinedMetrics, FastQC_qc_all_merged, by=c('Sample','cohort'), all = TRUE)
 
