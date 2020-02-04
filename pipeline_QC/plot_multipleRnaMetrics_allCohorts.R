@@ -116,7 +116,7 @@ for(f in RnaMetrics_multiQC_files){
 }
 RnaMetric_qc_all <- data.frame(RnaMetric_qc_all)
 RnaMetric_qc_all$Sample <- gsub('.cram','',RnaMetric_qc_all$Sample)
-RnaMetric_qc_all$Sample <- gsub('-','.',RnaMetric_qc_all$Sample)
+RnaMetric_qc_all[RnaMetric_qc_all$cohort!='BrainGVEx',]$Sample <- gsub('-','.',RnaMetric_qc_all[RnaMetric_qc_all$cohort!='BrainGVEx',]$Sample)
 
 if('TargetALS' %in% RnaMetric_qc_all$cohort){
   RnaMetric_qc_all[RnaMetric_qc_all$cohort=="TargetALS",]$Sample <- str_match(RnaMetric_qc_all[RnaMetric_qc_all$cohort=="TargetALS",]$Sample , ".*(HRA_[0-9]+)")[, 2]
@@ -145,7 +145,7 @@ for(f in MultipleMetrics_multiQC_files){
 }
 MultipleMetric_qc_all <- data.frame(MultipleMetric_qc_all)
 MultipleMetric_qc_all$Sample <- gsub('.cram','',MultipleMetric_qc_all$Sample)
-MultipleMetric_qc_all$Sample <- gsub('-','_',MultipleMetric_qc_all$Sample)
+MultipleMetric_qc_all[RnaMetric_qc_all$cohort!='BrainGVEx',]$Sample <- gsub('-','_',MultipleMetric_qc_all[RnaMetric_qc_all$cohort!='BrainGVEx',]$Sample)
 
 if('TargetALS' %in% MultipleMetric_qc_all$cohort){
   MultipleMetric_qc_all[MultipleMetric_qc_all$cohort=="TargetALS",]$Sample <- str_match(MultipleMetric_qc_all[MultipleMetric_qc_all$cohort=="TargetALS",]$Sample , ".*(HRA_[0-9]+)")[, 2]
@@ -168,7 +168,7 @@ for(f in STAR_multiQC_files){
 }
 STAR_qc_all <- data.frame(STAR_qc_all)
 STAR_qc_all$Sample <- gsub('.cram','',STAR_qc_all$Sample)
-STAR_qc_all$Sample <- gsub('-','.',STAR_qc_all$Sample)
+STAR_qc_all[RnaMetric_qc_all$cohort!='BrainGVEx',]$Sample <- gsub('-','.',STAR_qc_all[RnaMetric_qc_all$cohort!='BrainGVEx',]$Sample)
 
 if('TargetALS' %in% STAR_qc_all$cohort){
   STAR_qc_all[STAR_qc_all$cohort=="TargetALS",]$Sample <- str_match(STAR_qc_all[STAR_qc_all$cohort=="TargetALS",]$Sample , ".*(HRA_[0-9]+)")[, 2]
@@ -522,7 +522,6 @@ plot_with_pca_outliers <- function(){
       dev.off()
   }
 }
-
 samples$V1 <- as.character(samples$V1)
 missing <- samples$V1[!samples$V1 %in% CombinedMetricsWithFastQC$Sample]
 missing <- missing[!grepl('_resequenced', missing)]
