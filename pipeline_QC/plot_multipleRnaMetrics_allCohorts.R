@@ -20,7 +20,9 @@ option_list = list(
   make_option(c("-n", "--NABEC_pheno"), type="character", default=NULL,
               help="phenotype data for NABEC", metavar="character"),
   make_option(c("-a", "--plot_all"), type="character", default="TRUE",
-              help="if set as false, don't make all the plots", metavar="character")
+              help="if set as false, don't make all the plots", metavar="character"),
+  make_option(c("-s", "--expression_samples"), type="character",
+              help="File with expression samples", metavar="character")
   
 ); 
 opt_parser = OptionParser(option_list=option_list);
@@ -39,6 +41,7 @@ test <- function(){
 dir.create(file.path(opt$output,'figures/' ), showWarnings = FALSE)
 dir.create(file.path(paste0(opt$output,'/figures/'), "QC_figures_separate/" ), showWarnings = FALSE)
 
+samples <- read.table(opt$expression_samples, header=F)
 
 print(paste('Searching for input files in: ', opt$input))
 if(!is.null(opt$pcaOutliers)){
@@ -311,6 +314,7 @@ if('MSBB' %in% CombinedMetrics$cohort){
   CombinedMetrics <- CombinedMetrics[!CombinedMetrics$Sample %in% samples_to_remove,]
   samples_to_remove <- gsub( '_resequenced','',samples_to_remove)
   CombinedMetrics <- CombinedMetrics[!CombinedMetrics$Sample %in% samples_to_remove,]
+  CombinedMetrics$Sample <- gsub('.accepted_hits.sort.coord.combined','',CombinedMetrics$Sample)
 }
 
 
@@ -516,7 +520,13 @@ plot_with_pca_outliers <- function(){
       dev.off()
   }
 }
-#plot_with_pca_outliers()
-#####
+
+print(head(samples$V1))
+missing <- samples$V1[!samples$V1 %in% CombinedMetricsWithFastQC$Sample]
+if(length(missing) > 0){
+    cat("Missing samples:\n")
+    print(missing)
+    cat("\n")
+}
 write.table(CombinedMetricsWithFastQC,file=paste0(opt$output,'/',Sys.Date(),'-',opt$freeze,'.TMM.Covariates.txt'),quote=F, 
     row.names=FALSE, sep='\t')
