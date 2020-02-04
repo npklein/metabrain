@@ -107,15 +107,13 @@ change_rows_if_na <- function(dt, column_to_keep, column_to_merge_into, overwrit
   }
   # pH column had trouble with converting implicitly when running on the cluster (works without this if statement on my laptop)
   # Because it will warn about type conversion. Therefore, set warning lower for this loop
-  options(warn=0)
+  dt[,(column_to_keep)] <- ""
   for(column_name in column_to_merge_into){
-    
     # Get the rows where column_to_keep == NA
-    rows_na <- which(is.na(dt[,..column_name]) | dt[,..column_name] == '')
+    rows_na <- which(is.na(dt[,..column_to_keep]) | dt[,..column_to_keep]=='')
     # Then fill in with the value of the next column in the loop (might be NA, but doesn't matter). Do this for all columns to merge
-    dt[rows_na, column_to_keep := dt[rows_na,][[column_name]]]
+    dt[rows_na, (column_to_keep) := dt[rows_na,][[column_name]]]
   }
-  options(warn=2)
   # Then delete all columns that were merged into the column_to_keep that are not in no_delete
   column_to_delete <- column_to_merge_into[!column_to_merge_into %in% no_delete]
   if(length(column_to_delete) > 0){
@@ -183,6 +181,7 @@ convert_to_broad_region <- function(dt){
   
 harmonize_and_clean_col_values <- function(merged_samplesheets){
     merged_samplesheets_fixed_columns <- copy(merged_samplesheets)
+    options(warn=0)
     ##### Remove some columns by name and all columns that have only NA values ####
     merged_samplesheets_fixed_columns[,c('Ethnicity','Race','race','RACE.inferred','Ancestry','Flowcell',
                                          'spanish','V47','V48','WGS_Source_Tissue_Type','organ','nucleicAcidSource',
@@ -210,30 +209,30 @@ harmonize_and_clean_col_values <- function(merged_samplesheets){
     change_rows_if_na(merged_samplesheets_fixed_columns,'BrodmannArea',c("Brodmann_Area","BroadmannArea","brodmannArea"))
     merged_samplesheets_fixed_columns <- fix_broadman_area(merged_samplesheets_fixed_columns)
     merged_samplesheets_fixed_columns$SpecificBrainRegion <- ''
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'SpecificBrainRegion',
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'SpecificBrainRegion',
                       c('BrainRegion','Brain_region','tissue','Tissue','organism_part','body_site','body_site_annotations','Sample Source','BrodmannArea'),
                       overwrite=T,
                       no_delete=c('BrodmannArea'))
     merged_samplesheets_fixed_columns <- convert_to_broad_region(merged_samplesheets_fixed_columns)
     
     ##### merge similar columns ####
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'SequencingPlatform',c('Instrument','platform','Platform','instrument_platform'),overwrite=T)
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'SequencingPlatform',c('Instrument','platform','Platform','instrument_platform'),overwrite=T)
     setnames(merged_samplesheets_fixed_columns, old=c('SequencingPlatform'),new=c('RnaSequencingPlatform'))
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'Diagnosis',c('Diagnosis.x','Diagnosis.y','Dx','Subject Group'))
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'Diagnosis',c('Diagnosis.x','Diagnosis.y','Dx','Subject Group'))
     
     ##### Diagnosis ####
-    merged_samplesheets_fixed_columns[Diagnosis=='Other Neurological Disorders' | Diagnosis == 'Other MND', Diagnosis := `Subject Group Subcategories`]
-    merged_samplesheets_fixed_columns[Diagnosis=='SCZ' | Diagnosis == 'Schizo', Diagnosis := 'Schizophrenia']
-    merged_samplesheets_fixed_columns[Diagnosis=='AD' | Diagnosis=='Alzheimer\'s Disease (AD)', Diagnosis := 'Alzheimer disease']
-    merged_samplesheets_fixed_columns[Diagnosis=='AFF', Diagnosis := 'Affective Disorder']
-    merged_samplesheets_fixed_columns[Diagnosis=='BP', Diagnosis := 'Bipolar']
-    merged_samplesheets_fixed_columns[Diagnosis=='ASD', Diagnosis := 'Autism Spectrum Disorder']
-    merged_samplesheets_fixed_columns[Diagnosis=='BP (not BP)' | Diagnosis==T | Diagnosis=='undetermined', Diagnosis := NA]
-    merged_samplesheets_fixed_columns[Diagnosis=='PSP', Diagnosis := 'Progressive Supranuclear Palsy']
-    merged_samplesheets_fixed_columns[Diagnosis=='ALS Spectrum MND, Other Neurological Disorders', Diagnosis := 'ALS Spectrum MND and Other Neurological Disorders']
-    merged_samplesheets_fixed_columns[Diagnosis=='Control', Diagnosis := 'Non-Neurological Control']
-    merged_samplesheets_fixed_columns[Diagnosis=='ALS Spectrum MND and Other Neurological Disorders', Diagnosis := 'ALS Spectrum MND']
-    merged_samplesheets_fixed_columns[Diagnosis=='Pre-fALS, Other Neurological Disorders', Diagnosis := 'Pre-fALS']
+    merged_samplesheets_fixed_columns <- merged_samplesheets_fixed_columns[Diagnosis=='Other Neurological Disorders' | Diagnosis == 'Other MND', Diagnosis := `Subject Group Subcategories`]
+    merged_samplesheets_fixed_columns <- merged_samplesheets_fixed_columns[Diagnosis=='SCZ' | Diagnosis == 'Schizo', Diagnosis := 'Schizophrenia']
+    merged_samplesheets_fixed_columns <- merged_samplesheets_fixed_columns[Diagnosis=='AD' | Diagnosis=='Alzheimer\'s Disease (AD)', Diagnosis := 'Alzheimer disease']
+    merged_samplesheets_fixed_columns <- merged_samplesheets_fixed_columns[Diagnosis=='AFF', Diagnosis := 'Affective Disorder']
+    merged_samplesheets_fixed_columns <- merged_samplesheets_fixed_columns[Diagnosis=='BP', Diagnosis := 'Bipolar']
+    merged_samplesheets_fixed_columns <- merged_samplesheets_fixed_columns[Diagnosis=='ASD', Diagnosis := 'Autism Spectrum Disorder']
+    merged_samplesheets_fixed_columns <- merged_samplesheets_fixed_columns[Diagnosis=='BP (not BP)' | Diagnosis==T | Diagnosis=='undetermined', Diagnosis := NA]
+    merged_samplesheets_fixed_columns <- merged_samplesheets_fixed_columns[Diagnosis=='PSP', Diagnosis := 'Progressive Supranuclear Palsy']
+    merged_samplesheets_fixed_columns <- merged_samplesheets_fixed_columns[Diagnosis=='ALS Spectrum MND, Other Neurological Disorders', Diagnosis := 'ALS Spectrum MND and Other Neurological Disorders']
+    merged_samplesheets_fixed_columns <- merged_samplesheets_fixed_columns[Diagnosis=='Control', Diagnosis := 'Non-Neurological Control']
+    merged_samplesheets_fixed_columns <- merged_samplesheets_fixed_columns[Diagnosis=='ALS Spectrum MND and Other Neurological Disorders', Diagnosis := 'ALS Spectrum MND']
+    merged_samplesheets_fixed_columns <- merged_samplesheets_fixed_columns[Diagnosis=='Pre-fALS, Other Neurological Disorders', Diagnosis := 'Pre-fALS']
     
     # There is sometimes overlap between subcategories and subcategory, get those out
     setnames(merged_samplesheets_fixed_columns, old = c('Subject Group Subcategories'), new = c('OtherDiagnosis'))
