@@ -22,7 +22,7 @@ main <- function(){
 get_options <- function(){
   # Get command line arguments 
   option_list = list(
-    make_option(c("-p", "--PCA"), type="character", default=getwd(), 
+    make_option(c("-p", "--PCA"), type="character", 
                 help="path to file with PCAs (it is assumed to be a table with first column sample name, rest columns PC scores)", metavar="character"),
     make_option(c("-o", "--output"), type="character", default=getwd(),
                 help="path to output dir (needs to exist and contain a figures/ subdir)", metavar="character"),
