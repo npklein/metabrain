@@ -28,9 +28,15 @@ get_options <- function(){
                 help="path to file with PCAs", metavar="character"),
     make_option(c("-o", "--output"), type="character", default=getwd(),
                 help="path to output dir (needs to exist and contain a figures/ subdir)", metavar="character"),
-    make_option(c("-a", "--annotation"), type="character", default=NULL,
-                help="Directory that contains annotation files of the samples (e.g. brain region/batch/etc)", 
-                metavar="character")
+    make_option(c("-c", "--covariates"), type="character", default=NULL,
+                help="Table with technical covariates", 
+                metavar="character"),
+    make_option(c("-p", "--phenotype"), type="character", default=NULL,
+                help="Phenotype table", 
+                metavar="character"),
+    make_option(c("-n", "--numberOfPcaToPlot"), type="character", default=2,
+                help="The number of PCAs to plot (default: 2)", 
+                metavar="integer")
   ); 
   
   opt_parser = OptionParser(option_list=option_list);
@@ -41,10 +47,12 @@ get_options <- function(){
 test <- function(){
   # This function is only here for development so that I can more easily test interactively in Rstudio
   options <- list()
-  input_dir <- '/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/expression_PCA/'
-  options$PCA <- paste0(input_dir,"TargetALs_Braineac_CMC_MayoCBE_MayoTCX_MSSM_ROSMAP_GTEx.ENA.TMM.ProbesWithZeroVarianceRemoved.QuantileNormalized.Log2Transformed.ProbesCentered.SamplesZTransformed.PCAOverSamplesEigenvectors.txt.gz")
+  input_dir <- '/Users/NPK/UMCG/git_projects/brain_eQTL/expression_PCA/'
+  options$PCA <- paste0(input_dir,"pc1_2.txt")
   options$output <- input_dir
   options$annotation <- paste0(input_dir,'2019-03-06-ENA-annotation/')
+  options$phenotype <- '2020-02-03.brain.phenotypes.txt'
+  options$numberOfPcaToPlot <- 2
   return(options)
 }
 
@@ -54,7 +62,7 @@ annotate_PCs <- function(options){
   #rna_annotation <- fread(paste0(options$annotation,'/rna-tissue.annot.txt'), header=F)
   #rna_dataset <- fread(paste0(options$annotation,'/rna-dataset.annot.txt'),header=F)
   
-  phenotable <- fread('/Users/NPK/UMCG/projects/biogen/cohorts//joined_analysis/phenotype_QC_and_covariates_table/output//brain.phenotype_QC_covariates.txt')
+  phenotable <- fread(options$phenotype)
   
   #genotype <- fread(paste0(options$annotation,'rna-genotype.annot.txt'),header=F)
   #colnames(rna_annotation) <- c('sample','region')
@@ -63,7 +71,7 @@ annotate_PCs <- function(options){
   rownames(PCs) <- PCs$X.
   PCs$X. <- NULL
 
-  PCs <- PCs[1:10]
+  PCs <- PCs[1:(options$numberOfPcaToPlot+1)]
   #PCs$region <- rna_annotation[match(rownames(PCs), rna_annotation$sample),]$region
   #PCs$cohort <- rna_dataset[match(rownames(PCs), rna_dataset$V1),]$V2
   #PCs[grepl('SRR',rownames(PCs)),]$region <- 'Brain'
