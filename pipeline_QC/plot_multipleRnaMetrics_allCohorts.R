@@ -260,10 +260,8 @@ CombinedMetrics$library <- CombinedMetrics$library.x
 CombinedMetrics$library.x <- NULL
 CombinedMetrics$library.y <- NULL
 
-CombinedMetrics[CombinedMetrics$cohort=="MayoCBE",][grepl('1105_CER',  CombinedMetrics[RnaMetric_qc_all$cohort=="MayoCBE",]$Sample),c('Sample','cohort')]
 
 CombinedMetrics <- merge(CombinedMetrics, STAR_qc_all, by=c('Sample','cohort'), all = TRUE)
-CombinedMetrics$SampleFull <- CombinedMetrics$Sample
 
 
 STAR_qc_all[STAR_qc_all$cohort=="MayoCBE",][grepl('1105_CER',  STAR_qc_all[STAR_qc_all$cohort=="MayoCBE",]$Sample),]
