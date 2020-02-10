@@ -31,7 +31,9 @@ for sample in samples:
     individual_id = sample.split('<<>>')[1].replace('/','_')
     R1 = args.fastq_dir+sample_name+'.R1.fastq.gz'
     R2 = args.fastq_dir+sample_name+'.R2.fastq.gz'
-    cram = sample_name+'_'+individual_id+'.cram'
+    cram = args.cram_dir+'/'+individual_id+'_'+sample_name+'.cram'
+    if not os.path.exists(cram):
+        raise RuntimeError(cram+' does not exist')
     # make batches of size 25
     if number_of_samples % 25 == 0:
         if out:

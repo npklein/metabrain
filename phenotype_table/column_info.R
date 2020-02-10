@@ -65,7 +65,6 @@ get_column_info <- function(phenotype_data){
   info <- add_info(info, 'individualID','ID that corresponds to the individual.','SampleInfo')
   info <- add_info(info, 'genotype_id','ID that corresponds to the ID in the genotype file that we use.','SampleInfo')
   info <- add_info(info, 'SpecificBrainRegion','Specific brain region.','SampleInfo')
-  info <- add_info(info, 'SpecificBrainRegion','Specific brain region.','SampleInfo')
   info <- add_info(info, 'apoe_genotype','apolipoprotein E (APOE)','SampleInfo','22 E2E2; 23 E2E3; 24; E2E4; 33; E3E3; 34 E3E4; 44 E4E4')
   info <- add_info(info, 'BrodmannArea','Brodmann area from which RNAseq sample is taken','SampleInfo')
   info <- add_info(info, 'Hemisphere','Hemisphere dissected','SampleInfo')
@@ -110,7 +109,8 @@ get_column_info <- function(phenotype_data){
   info <- add_info(info, 'IQ','IQ','SampleInfo')
   info <- add_info(info, 'IQ.notes','IQ notes','SampleInfo')
   info <- add_info(info, 'Pyschiatric.Medications','Yes/No History of psychriatic medications','SampleInfo')
-
+  info <- add_info(info, 'FSIQ','Full Scale Intelligence Quotient','SampleInfo')
+  
   
   info <- add_info(info, 'ADI.R.A..cut.off.10.','ADI-R A - score > 10 for autism','SampleInfo')
   info <- add_info(info, 'ADI.R.B..NV..cut.off.7.','ADI-R B - for nonverbal individuals - score > 7 for autism','SampleInfo')
@@ -137,7 +137,7 @@ get_column_info <- function(phenotype_data){
   
   #colnames(info) <- c('Column name', 'Description', 'Column type','encoding','Total_NotAvailable',
   #                    'AMP-AD', 'Braineac', 'Brainseq', 'CMC', 'ENA', 'GTEx', 'NABEC', 'TargetALS')
-  
+  phenotype_data <- phenotype_data[,colnames(phenotype_data) != 'column_to_keep']  
   columns_not_in <- colnames(phenotype_data)[!colnames(phenotype_data) %in% info$colname]
   if(length(columns_not_in) > 0){
     print(columns_not_in)

@@ -5,6 +5,7 @@ library(gridExtra)
 library(matrixStats)
 library(plyr)
 library(data.table)
+library(stringr)
 # Get command line arguments 
 option_list = list(
   make_option(c("-c", "--cisQTLs"), type="character",
@@ -22,33 +23,38 @@ option_list = list(
   make_option(c("-z", "--ensemble_IDs"), type="character",
               help="Path to file with ensembl IDS", metavar="character"),
   make_option(c("-b", "--biosExpression"), type="character",
-              help="Path to file expression data from BIOS", metavar="character")
-  
+              help="Path to file expression data from BIOS", metavar="character"),
+  make_option(c("-z", "--eqtlGenBins"), type="character",
+              help="Path to file with binned data from eqtlGen", metavar="character"),
+  make_option(c("-g", "--gtf"), type="character",
+              help="GTF file", metavar="character")
 ); 
 
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
 opt <- list()
-#opt$cisQTLs <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/eQTLProbesFDR0.05-ProbeLevel.CIS.txt.gz"
-#opt$transQTLs <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/eQTLProbesFDR0.05-ProbeLevel.TRANS.txt.gz"
-#opt$expression <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/MERGED_RNA_MATRIX.SampleSelection.ProbesWithZeroVarianceRemoved.QuantileNormalized.Log2Transformed.MEAN_AND_SD.txt"
-#opt$proteinCodingGenes <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/protein_coding_genes_ensembl84.txt"
-#opt$pLI <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/fordist_cleaned_exac_r03_march16_z_pli_rec_null_data.txt"
-#opt$out_path <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/figures/"
-#opt$ensemble_IDs <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/ensembl_transcript_gene_IDs.txt"
-#opt$biosExpression <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/gene_read_counts_BIOS_and_LLD_passQC.tsv.SampleSelection.ProbesWithZeroVarianceRemoved.TMM.txt.gz"
-
+opt$cisQTLs <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/eQTLProbesFDR0.05-ProbeLevel.CIS.txt.gz"
+opt$transQTLs <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/eQTLProbesFDR0.05-ProbeLevel.TRANS.txt.gz"
+opt$expression <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/2019-04-11-Freeze2.TMM.SampleFilter.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.mean_and_sd.txt"
+opt$proteinCodingGenes <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/protein_coding_genes_ensembl84.txt"
+opt$pLI <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/fordist_cleaned_exac_r03_march16_z_pli_rec_null_data.txt"
+opt$out_path <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/figures/freeze2/"
+opt$ensemble_IDs <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/ensembl_transcript_gene_IDs.txt"
+opt$biosExpression <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/gene_read_counts_BIOS_and_LLD_passQC.tsv.SampleSelection.ProbesWithZeroVarianceRemoved.TMM.txt.gz"
+opt$eqtlGenBins <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/BIOS_expression_summary_bins_20180515.txt"
+opt$gtf <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/gencode.v24.chr_patch_hapl_scaff.annotation.genesOnly.gtf"
 ##### read in data ####
 cis_qtl <- read.table(gzfile(opt$cisQTLs), header=T, sep='\t')
 trans_qtl <- read.table(gzfile(opt$transQTLs), header=T, sep='\t')
-protein_coding_genes <- read.table(opt$proteinCodingGenes, sep='\t', header=T)
+protein_coding_genes <- read.table(opt$proteinCodingGenes, sep='\t', header=F)
 pLI <- read.table(opt$pLI, sep='\t', header=T)
 ensemble_IDs <- fread(opt$ensemble_IDs)
 BIOS_expression <- data.frame(fread(opt$biosExpression))
 expression <- read.table(opt$expression, header=T, sep='\t', row.names=1)
-
-
+eqtlGen_bins <- fread(opt$eqtlGenBins )
+gtf <- fread(opt$gtf, header = F)
+gtf$gene_id <- str_match(gtf$V9, 'gene_id "(ENSG.+?)"')[,2]
 # make sure all are FDR < 0.05
 cis_qtl <- cis_qtl[cis_qtl$FDR < 0.05,]
 trans_qtl <- trans_qtl[trans_qtl$FDR < 0.05,]
@@ -59,18 +65,42 @@ cis_qtl$ProbeName <- sapply(strsplit(as.character(cis_qtl$ProbeName),"\\."), `[`
 trans_qtl$ProbeName <- sapply(strsplit(as.character(trans_qtl$ProbeName),"\\."), `[`, 1)
 
 # select only protein coding genes
-expression_protCoding <- expression[rownames(expression) %in% protein_coding_genes$Ensembl.Gene.ID,]
-cis_qtl_protCoding <- cis_qtl[cis_qtl$ProbeName %in% protein_coding_genes$Ensembl.Gene.ID,]
-trans_qtl_protCoding <- trans_qtl[trans_qtl$ProbeName %in% protein_coding_genes$Ensembl.Gene.ID,]
+gtf_only_autosomal <- gtf[gtf$V1 %in% c('chr1','chr2','chr3','chr4','chr5','chr6','chr7','chr8',
+                                        'chr9','chr10','chr11','chr12','chr13','chr14','chr15',
+                                        'chr16','chr17','chr18','chr19','chr20','chr21','chr22')]
+gtf_only_autosomal$gene_id <- gsub('\\.[0-9]+','', gtf_only_autosomal$gene_id)
+expression_protCoding <- expression[rownames(expression) %in% protein_coding_genes$V1,]
+cis_qtl_protCoding <- cis_qtl[cis_qtl$ProbeName %in% protein_coding_genes$V1,]
+trans_qtl_protCoding <- trans_qtl[trans_qtl$ProbeName %in% protein_coding_genes$V1,]
+expression_protCoding_autosomal <- expression_protCoding[rownames(expression_protCoding) %in% gtf_only_autosomal$gene_id,]
+
+# select eQTLgen genes
+expression_eqtlGen_genes <- expression[rownames(expression) %in% eqtlGen_bins$ENSG,]
 #####
 
+
 ##### make expression bins #####
+
 expression$expression_bin <- cut_number(expression$mean_expression, 10)
 expression_protCoding$expression_bin <- cut_number(expression_protCoding$mean_expression, 10)
-expression_protCoding$expression_bin_order = mapvalues(expression_protCoding$expression_bin, 
-                                                        c("[0.00778,0.774]", "(0.774,2.86]", "(2.86,4.89]","(4.89,6.69]","(6.69,7.86]",
-                                                          "(7.86,8.7]","(8.7,9.39]","(9.39,10.1]","(10.1,10.9]","(10.9,19.3]"), c(1, 2, 3,4,5,6,7,8,9,10))
+expression_protCoding$expression_bin_order <- mapvalues(expression_protCoding$expression_bin, 
+                                                        c("[4.75e-05,0.666]","(0.666,2.37]","(2.37,4.61]","(4.61,6.45]","(6.45,7.61]","(7.61,8.44]",
+                                                          "(8.44,9.15]","(9.15,9.84]","(9.84,10.7]","(10.7,18.2]"),
+                                                        c(1, 2, 3,4,5,6,7,8,9,10))
+expression_eqtlGen_genes$expression_bin <- cut_number(expression_eqtlGen_genes$mean_expression, 10)
+expression_eqtlGen_genes$expression_bin_order <- mapvalues(expression_eqtlGen_genes$expression_bin, 
+                                                           c("[8.35e-05,1.53]","(1.53,2.92]","(2.92,4.47]","(4.47,6.11]","(6.11,7.39]","(7.39,8.29]",
+                                                             "(8.29,9.04]","(9.04,9.75]","(9.75,10.6]","(10.6,18.2]"),
+                                                           c(1, 2, 3,4,5,6,7,8,9,10))
+expression_eqtlGen_genes$expression_bin_order_eqtlgen <- eqtlGen_bins[match(rownames(expression_eqtlGen_genes), eqtlGen_bins$ENSG),]$cis_exp_mean_bin
+expression_eqtlGen_genes$expression_bin_order <- gsub('bin','',expression_eqtlGen_genes$expression_bin_order_eqtlgen)
 
+
+expression_protCoding_autosomal$expression_bin <- cut_number(expression_protCoding_autosomal$mean_expression, 10)
+expression_protCoding_autosomal$expression_bin_order <- mapvalues(expression_protCoding_autosomal$expression_bin, 
+                                                           c("[4.75e-05,0.77]","(0.77,2.5]","(2.5,4.7]","(4.7,6.51]","(6.51,7.65]","(7.65,8.47]","(8.47,9.17]",
+                                                             "(9.17,9.85]","(9.85,10.7]","(10.7,16]"),
+                                                           c(1, 2, 3,4,5,6,7,8,9,10))
 #### For BIOS, calcualte mean expression and SD per gene ####
 rownames(BIOS_expression) <- BIOS_expression$V1
 BIOS_expression$V1 <- NULL
@@ -78,25 +108,25 @@ BIOS_expression_matrix <- BIOS_expression
 BIOS_expression_matrix[BIOS_expression_matrix < 0] <- 0
 BIOS_expression_matrix <- data.frame(BIOS_expression_matrix)
 rownames(BIOS_expression_matrix) <- rownames(BIOS_expression)
+BIOS_expression_matrix_log2 <- log2(BIOS_expression_matrix+1)
 
 
-
-BIOS_expression_mean <- rowMeans(BIOS_expression_matrix)
-BIOS_expression_sd <- rowSds(as.matrix(BIOS_expression_matrix)) # same result as before.
+BIOS_expression_mean <- rowMeans(BIOS_expression_matrix_log2)
+BIOS_expression_sd <- rowSds(as.matrix(BIOS_expression_matrix_log2)) # same result as before.
 BIOS_expression_mean_and_sd <- data.frame(BIOS_expression_mean, BIOS_expression_sd)
 colnames(BIOS_expression_mean_and_sd) <- c('mean_expression','SD')
 BIOS_expression_mean_and_sd$expression_bin <- cut_number(BIOS_expression_mean_and_sd$mean_expression, 10)
 BIOS_expression_mean_and_sd$expression_bin_order = mapvalues(BIOS_expression_mean_and_sd$expression_bin, 
-                                                             c("[0,0.00049]","(0.00049,0.0014]","(0.0014,0.00365]","(0.00365,0.0122]","(0.0122,0.0547]","(0.0547,0.348]",
-                                                               "(0.348,2.1]","(2.1,5.71]","(5.71,8.59]", "(8.59,17.2]" ),
+                                                             c("[0.000114,0.00183]","(0.00183,0.00503]","(0.00503,0.0157]","(0.0157,0.0559]","(0.0559,0.197]",
+                                                               "(0.197,0.717]","(0.717,2.4]","(2.4,5.74]","(5.74,8.59]","(8.59,17.2]"),
                                                              c(1, 2, 3,4,5,6,7,8,9,10))
 ####
 get_gene_per_bin <- function(expression){
   # per expression bin calculate the proportion of cis/trans eQTLs and get info such as pLI and length per bin
   gene_per_bin <- data.frame()
   gene_lengths_per_bin <- data.frame()
-  for(bin in sort(unique(expression$expression_bin))){
-    expression_current_bin <- expression[expression$expression_bin==bin,]
+  for(bin in sort(unique(expression$expression_bin_order))){
+    expression_current_bin <- expression[expression$expression_bin_order==bin,]
     genes_current_bin <- rownames(expression_current_bin)
     n_genes <- length(genes_current_bin)
     n_cis_QTL <- sum(genes_current_bin %in% cis_qtl$ProbeName)
@@ -104,20 +134,26 @@ get_gene_per_bin <- function(expression){
   
     mean_sd_cis <- round(mean(expression_current_bin[rownames(expression_current_bin) %in% cis_qtl$ProbeName,]$SD),2)
     mean_sd_not_cis <- round(mean(expression_current_bin[!rownames(expression_current_bin) %in% cis_qtl$ProbeName,]$SD),2)
-  
-    gene_lengths <- protein_coding_genes[match(rownames(expression_current_bin), protein_coding_genes$Ensembl.Gene.ID),]
-    is_cis_qtl <- gene_lengths$Ensembl.Gene.ID %in% cis_qtl$ProbeName
-    is_trans_qtl <- gene_lengths$Ensembl.Gene.ID %in% trans_qtl$ProbeName
-  
+    
+    
+    gene_lengths <- protein_coding_genes[match(rownames(expression_current_bin), protein_coding_genes$V1),]
+    gene_lengths <- data.frame(V1=gene_lengths, gene_length=0)
+    is_cis_qtl <- gene_lengths$V1 %in% cis_qtl$ProbeName
+    is_trans_qtl <- gene_lengths$V1 %in% trans_qtl$ProbeName
+    
     pLI$transcript <- gsub('\\.[0-9]+$','',pLI$transcript)
     pLI$gene <- ensemble_IDs[match(pLI$transcript, ensemble_IDs$`Transcript stable ID`),]$`Gene stable ID`
-    df <- data.frame('bin'=bin, 'length'=gene_lengths$Transcript.length..including.UTRs.and.CDS.,
-                   'is_cis_qtl'=is_cis_qtl,'is_trans_qtl'=is_trans_qtl,'gene'=gene_lengths$Ensembl.Gene.ID,
-                   'expression'=expression_current_bin[gene_lengths$Ensembl.Gene.ID,]$mean_expression,
-                   'sd'=expression_current_bin[gene_lengths$Ensembl.Gene.ID,]$mean_expression,
-                   'pLI'=pLI[match(gene_lengths$Ensembl.Gene.ID, pLI$gene),]$pLI)
+    df <- data.frame('bin'=expression_current_bin$expression_bin, 
+                     'bin_number'=expression_current_bin$expression_bin_order,
+                     'length'=gene_lengths$gene_length,
+                     'is_cis_qtl'=is_cis_qtl,
+                     'is_trans_qtl'=is_trans_qtl,
+                     'gene'=gene_lengths$V1,
+                     'expression'=expression_current_bin[gene_lengths$V1,]$mean_expression,
+                     'sd'=expression_current_bin[gene_lengths$V1,]$mean_expression,
+                     'pLI'=pLI[match(gene_lengths$V1, pLI$gene),]$pLI)
     gene_lengths_per_bin <- rbind(gene_lengths_per_bin, df)
-  
+    
     df <- data.frame('n_genes'=c((n_cis_QTL/n_genes)*100, 
                                (n_trans_QTL/n_genes)*100, 
                                ((n_genes-n_cis_QTL)/n_genes)*100, 
@@ -133,7 +169,8 @@ get_gene_per_bin <- function(expression){
 
 bin_results_protCoding<- get_gene_per_bin(expression_protCoding)
 bin_results<- get_gene_per_bin(expression)
-
+bin_results_eqtlGenGenes <- get_gene_per_bin(expression_eqtlGen_genes)
+bin_results_protCoding_autosomal <- get_gene_per_bin(expression_protCoding_autosomal)
 #####
  
 make_plots <- function(gene_per_bin, gene_lengths_per_bin, out_dir){
@@ -154,18 +191,21 @@ make_plots <- function(gene_per_bin, gene_lengths_per_bin, out_dir){
   ggsave(paste0(out_dir,'proportion_of_QTL_per_bin.png'),width=8, height=5)  
   
   
+  gene_per_bin$bin <- factor(gene_per_bin$bin, levels=c('not_tested_in_cis','1','2','3','4','5','6','7','8','9','10'))
   ggplot(gene_per_bin[gene_per_bin$qtl_type=='cis',], aes(bin, n_genes, fill=genes_are_QTL))+
-    geom_bar(stat='identity')+
-    scale_fill_manual(values=c('grey95','lightblue'))+
-    theme_pubr(base_size=18)+ 
-    guides(fill=FALSE)+
-    xlab('Average brain gene expression')+
-    ylab('Proportion of genes showing cis-eQTL effect')+
-    scale_y_continuous(breaks=c(0,10,20,30,40,50,60,70,80,90,100),
-                       labels=c('0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'))+
-    theme(axis.text= element_text(colour='grey70'))+
-    scale_x_discrete(breaks = c('[0.00778,0.774]','(10.9,19.3]'),
-                     labels=c('low','high'))
+        geom_bar(stat='identity')+
+        scale_fill_manual(values=c('grey95','lightblue'))+
+        theme_pubr(base_size=18)+ 
+        guides(fill=FALSE)+
+        xlab('Average brain gene expression')+
+        ylab('Proportion of genes showing cis-eQTL effect')+
+        scale_y_continuous(breaks=c(0,10,20,30,40,50,60,70,80,90,100),
+                         labels=c('0%','10%','20%','30%','40%','50%','60%','70%','80%','90%','100%'))+
+        theme(axis.text= element_text(colour='grey70'),
+              axis.text.x = element_text(angle = 90))#+))+
+
+    #scale_x_discrete(breaks = c('[0.00778,0.774]','(10.9,19.3]'),
+    #                 labels=c('low','high'))
   ggsave(paste0(out_dir,'proportion_of_QTL_per_bin_only_cis.png'),width=8, height=5)  
   
   ####
@@ -238,6 +278,8 @@ make_plots <- function(gene_per_bin, gene_lengths_per_bin, out_dir){
 
 make_plots(bin_results_protCoding$gene_per_bin, bin_results_protCoding$gene_lengths_per_bin, paste0(opt$out_path,'proteinCoding/'))
 make_plots(bin_results$gene_per_bin, bin_results$gene_lengths_per_bin, paste0(opt$out_path,'all/'))
+make_plots(bin_results_eqtlGenGenes$gene_per_bin, bin_results_eqtlGenGenes$gene_lengths_per_bin, paste0(opt$out_path,'eqtlGen_genes/'))
+make_plots(bin_results_protCoding_autosomal$gene_per_bin, bin_results_protCoding_autosomal$gene_lengths_per_bin, paste0(opt$out_path,'proteinCoding_autosomal/'))
 
 expression_protCoding$name <- 'MetaBrain'
 BIOS_expression_mean_and_sd$name <- 'BIOS'
@@ -252,4 +294,7 @@ ggplot(expression_metaBrain_bios, aes(expression_bin_order, mean_expression,fill
   theme_bw(base_size=18)+
   xlab('Expression bin')
 ggsave(paste0(opt$out_path, 'proteinCoding/mean_comparison.png'),width=8, height=8)
+
+
+write.table(bin_results_eqtlGenGenes$gene_lengths_per_bin, file='2019-06-05-metabrain-eQTLgenGenes-bins.txt',sep='\t',quote=F,row.names=F)
 
