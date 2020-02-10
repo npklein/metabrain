@@ -65,7 +65,6 @@ get_column_info <- function(phenotype_data){
   info <- add_info(info, 'individualID','ID that corresponds to the individual.','SampleInfo')
   info <- add_info(info, 'genotype_id','ID that corresponds to the ID in the genotype file that we use.','SampleInfo')
   info <- add_info(info, 'SpecificBrainRegion','Specific brain region.','SampleInfo')
-  info <- add_info(info, 'SpecificBrainRegion','Specific brain region.','SampleInfo')
   info <- add_info(info, 'apoe_genotype','apolipoprotein E (APOE)','SampleInfo','22 E2E2; 23 E2E3; 24; E2E4; 33; E3E3; 34 E3E4; 44 E4E4')
   info <- add_info(info, 'BrodmannArea','Brodmann area from which RNAseq sample is taken','SampleInfo')
   info <- add_info(info, 'Hemisphere','Hemisphere dissected','SampleInfo')
