@@ -11,7 +11,7 @@ library(RColorBrewer)
 main <- function(){
   options <- get_options()
   # (un)comment depending on if it is an interactive test run
-  options <- test()
+  # options <- test()
   PCs <- annotate_PCs(options)
   
   PCs[which(PCs$age_death=='90+'),]$age_death <- '90'
@@ -31,12 +31,11 @@ get_options <- function(){
     make_option(c("-c", "--covariates"), type="character", default=NULL,
                 help="Table with technical covariates", 
                 metavar="character"),
-    make_option(c("-p", "--phenotype"), type="character", default=NULL,
+    make_option(c("-f", "--phenotype"), type="character", default=NULL,
                 help="Phenotype table", 
                 metavar="character"),
-    make_option(c("-n", "--numberOfPcaToPlot"), type="character", default=2,
-                help="The number of PCAs to plot (default: 2)", 
-                metavar="integer")
+    make_option(c("-n", "--numberOfPcaToPlot"), type="numeric", default=2,
+                help="The number of PCAs to plot (default: 2)")
   ); 
   
   opt_parser = OptionParser(option_list=option_list);
@@ -71,7 +70,10 @@ annotate_PCs <- function(options){
   rownames(PCs) <- PCs$X.
   PCs$X. <- NULL
 
-  PCs <- PCs[1:(options$numberOfPcaToPlot+1)]
+  print(paste("Number of pcs to plot",options$numberOfPcaToPlot))
+  # +1 because first col is name
+  nPCs <- options$numberOfPcaToPlot+1
+  # PCs <- PCs[1:nPCs]
   #PCs$region <- rna_annotation[match(rownames(PCs), rna_annotation$sample),]$region
   #PCs$cohort <- rna_dataset[match(rownames(PCs), rna_dataset$V1),]$V2
   #PCs[grepl('SRR',rownames(PCs)),]$region <- 'Brain'
