@@ -31,7 +31,7 @@ def make_jobs(cram_files, template):
             continue
         study = None
         if 'AMP_AD' in cram:
-            study = cram.split('/')[-2]
+            study = cram.split('/')[-4]
         elif 'CMC_HBCC' in cram:
             study = 'CMC_HBCC'
         elif 'BipSeq' in cram:
