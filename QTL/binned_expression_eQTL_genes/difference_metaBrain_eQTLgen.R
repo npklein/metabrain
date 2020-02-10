@@ -19,7 +19,7 @@ opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
 opt <- list()
-opt$MetaBrain <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/2019-06-05-metabrain-proteinCoding-bins.txt"
+opt$MetaBrain <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/2019-06-05-metabrain-eQTLgenGenes-bins.txt"
 opt$eqtlGen <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/binned_expression_eQTL_genes/data/BIOS_expression_summary_bins_20180515.txt"
 
 
@@ -56,3 +56,5 @@ diff_per_bin_combined$diff <- diff_per_bin_combined$metaBrain_ratio-diff_per_bin
 ggplot(diff_per_bin, aes(x=bin, y=ratio, fill=dataset))+
   geom_bar(stat='identity', position = 'dodge')+
   theme_bw(base_size = 16)
+
+diff_per_bin_combined

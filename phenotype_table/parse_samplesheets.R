@@ -23,11 +23,8 @@ parse_samplesheet_files <- function(opt){
                  BipSeq,CMC_HBCC)){
       merged_samplesheets <- rbind(merged_samplesheets, df, fill=T)
   }
-  
   # remove some columns that are easier to remove now than for specific cohorts
-  
   merged_samplesheets <- harmonize_and_clean_col_values(merged_samplesheets)
-  
   return(merged_samplesheets)
 }
 
@@ -228,6 +225,10 @@ parse_Brainseq <- function(opt){
 parse_CMC <- function(opt){
   CMC_clinical <- fread(paste0(opt$metadataDir,'/CMC/CMC-CMC_HBCC_clinical_.csv'))
   colnames(CMC_clinical) <- gsub(' ','_',colnames(CMC_clinical))
+  
+  # Remove CMC_HBCC samples, they are in separate file
+  CMC_clinical <- CMC_clinical[!grepl('CMC_HBCC',CMC_clinical$Individual_ID),]
+  
   CMC_rnaseq <- fread(paste0(opt$metadataDir,'/CMC/CMC_Human_DLPFC_rnaSeq.csv'))
   
   # This table does not seem to add much

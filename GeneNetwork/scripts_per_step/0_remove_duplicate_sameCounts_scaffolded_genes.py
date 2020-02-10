@@ -43,7 +43,7 @@ accepted_chr = set(['1','10','11','12','13','14','15','16','17','18','19','2','2
 
 
 
-expr_set = {}
+expr_set = set()
 genes_to_filter = set([])
 print('start first read of file to find duplicate expression')
 gene_on_scaffold = 0
@@ -74,7 +74,7 @@ with openfile(args.expression_file,'rt') as input_file:
 
         all_expression = '_'.join(spl_line[1:])
         if all_expression not in expr_set:
-            expr_set[all_expression] = set(gene)
+            expr_set.add(all_expression)
         else:
             genes_to_filter.add(gene)
 
