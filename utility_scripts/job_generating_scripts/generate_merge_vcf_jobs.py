@@ -71,12 +71,12 @@ echo "## "$(date)" ##  $0 Done "
 to_merge = ''
 # Read in the VCFs to merge
 with open(args.list_of_vcfs) as input_file:
-    for line in input_file
+    for line in input_file:
         if len(line.strip()) == 0:
             continue
         to_merge += ' --variant '+line.strip()
 
-outfile = args.jobs_dir+'MergeGvcfs_chr'+chr+'.sh'
+outfile = args.jobs_dir+'MergeGvcfs_chr'+args.chr+'.sh'
 with open(outfile,'w') as out:
     new_template = template.replace('REPLACECHROMOSOME',args.chr)
     new_template = new_template.replace('REPLACEOUTDIR',args.outdir)
