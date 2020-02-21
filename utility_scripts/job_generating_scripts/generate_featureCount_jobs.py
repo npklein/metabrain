@@ -69,6 +69,8 @@ def make_jobs(template):
             study = 'Braineac'
         elif 'Brainseq' in cram:
             study = 'Brainseq'
+        elif 'ENA' in cram:
+            study = 'ENA'
         if not study:
             print(cram)
             raise RuntimeError('Study not set')
@@ -167,7 +169,7 @@ rsync -vP $TMPOUT* REPLACEOUT/exon.countFraction/
 echo "Start metaExon.countAll"
 mkdir -p REPLACEOUT/metaExon.countAll
 TMPOUT=$TMPDIR/REPLACENAME.metaExon.countAll.txt
-featureCounts -f -C -s 0 -p -t exonic_part -g gene_id -O \\
+featureCounts -f -C -s 0 -p -t exon -g gene_id -O \\
     -a REPLACEMETAEXONGTF \\
     -o $TMPOUT \\
     $INPUTBAM
@@ -177,7 +179,7 @@ rsync -vP $TMPOUT* REPLACEOUT/metaExon.countAll/
 echo "Start metaExon.countFraction"
 mkdir -p REPLACEOUT/metaExon.countFraction
 TMPOUT=$TMPDIR/REPLACENAME.metaExon.countFraction.txt
-featureCounts -f -C -s 0 -p -t exonic_part -g gene_id -O --fraction \\
+featureCounts -f -C -s 0 -p -t exon -g gene_id -O --fraction \\
     -a REPLACEMETAEXONGTF \\
     -o $TMPOUT \\
     $INPUTBAM
