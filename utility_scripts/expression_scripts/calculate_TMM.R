@@ -28,7 +28,12 @@ samplePerc <- 0.01 # args[3] # (0.01)
 counts <- data.frame(fread(paste0('gunzip -c ', countsFile),check.names=FALSE), row.names = 1)
 
 counts_features <- counts[!rownames(counts) %in% c('N_unmapped','N_noFeature','N_multimapping',
-                                                                       'N_ambiguous'),]
+                                                                       'N_ambiguous',
+                                                    '__no_feature',
+                                                    '__ambiguous',
+                                                    '__too_low_aQual',
+                                                    '__not_aligned',
+                                                    '__alignment_not_unique'),]
 
 
 
