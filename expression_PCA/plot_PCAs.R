@@ -10,14 +10,24 @@ library(RColorBrewer)
 
 main <- function(){
   options <- get_options()
+  if (!dir.exists(paste0(options$output,'/figures/'))){
+    dir.create(paste0(options$output,'/figures/'))
+  }
+  if (!dir.exists(paste0(options$output,'/figures/all_pca/'))){
+    dir.create(paste0(options$output,'/figures/all_pca/'))
+  }
   # (un)comment depending on if it is an interactive test run
   # options <- test()
   PCs <- annotate_PCs(options)
   
-  PCs[which(PCs$age_death=='90+'),]$age_death <- '90'
-  PCs$age_death <- as.numeric(PCs$age_death)
-  PCs$PMI_.in_hours. <- as.numeric(PCs$PMI_.in_hours.)
-  PCs$RIN <- as.numeric(PCs$RIN)
+  if('90+' %in% PCs$age_death){
+      PCs[which(PCs$age_death=='90+'),]$age_death <- '90'
+    PCs$age_death <- as.numeric(PCs$age_death)
+  }
+
+  
+#  PCs$PMI_.in_hours. <- as.numeric(PCs$PMI_.in_hours.)
+#  PCs$RIN <- as.numeric(PCs$RIN)
   plot_PCAs(PCs, options)
 }
 
@@ -57,14 +67,10 @@ test <- function(){
 
 annotate_PCs <- function(options){
   PCs <- fread(options$PCA)
-
-  #rna_annotation <- fread(paste0(options$annotation,'/rna-tissue.annot.txt'), header=F)
-  #rna_dataset <- fread(paste0(options$annotation,'/rna-dataset.annot.txt'),header=F)
-  
+  nPCs <- options$numberOfPcaToPlot+1
+ 
+  PCs <- PCs[,1:nPCs]
   phenotable <- fread(options$phenotype)
-  
-  #genotype <- fread(paste0(options$annotation,'rna-genotype.annot.txt'),header=F)
-  #colnames(rna_annotation) <- c('sample','region')
 
   PCs <- data.frame(PCs)
   rownames(PCs) <- PCs$X.
@@ -72,14 +78,6 @@ annotate_PCs <- function(options){
 
   print(paste("Number of pcs to plot",options$numberOfPcaToPlot))
   # +1 because first col is name
-  nPCs <- options$numberOfPcaToPlot+1
-  # PCs <- PCs[1:nPCs]
-  #PCs$region <- rna_annotation[match(rownames(PCs), rna_annotation$sample),]$region
-  #PCs$cohort <- rna_dataset[match(rownames(PCs), rna_dataset$V1),]$V2
-  #PCs[grepl('SRR',rownames(PCs)),]$region <- 'Brain'
-
-  #PCs$region <- factor(PCs$region)
-  #PCs$cohort <- factor(PCs$cohort)
   PCs$SampleFull <- rownames(PCs)
   
   PCs_with_pheno <- merge(PCs, phenotable, by='SampleFull', all.x=T)
@@ -127,20 +125,19 @@ plot_PCAs <- function(PCs, options){
   
   PCs <- PCs[,colSums(is.na(PCs))<nrow(PCs)]
   
-  PCs_subset <- PCs[12:length(colnames(PCs))]
-  PCs_subset <- PCs_subset[!colnames(PCs_subset) %in% c('individualIdentifier.inferred','genotype_id','projid','Flowcell','study','msex',
-                                                        'cohort','rnaseq_id')]
+  PCs <- PCs[!colnames(PCs) %in% c('individualIdentifier.inferred','genotype_id','projid','Flowcell','study','msex',
+                                                        'cohort','rnaseq_id','SampleFull','Sample')]
   columns_in_front <- c('MEDIAN_5PRIME_BIAS_alignment', 'MEDIAN_3PRIME_BIAS_alignment', 'PCT_PF_READS_ALIGNED_alignment','total_reads')
   for(c in columns_in_front){
-    if(c %in% colnames(PCs_subset)){
-      PCs_subset <- PCs_subset[c(c, setdiff(names(PCs_subset), c))]
+    if(c %in% colnames(PCs)){
+      PCs <- PCs[c(c, setdiff(names(PCs), c))]
     }
     
   }
   
-  pdf(paste0(options$output,'figures/all_pca.pdf'),width=12, height=8, onefile = TRUE)
+  pdf(paste0(options$output,'/figures/all_pca.pdf'),width=12, height=8, onefile = TRUE)
   # read-length, read-depth, percentage mapped reads 
-  for(column in colnames(PCs_subset)){
+  for(column in colnames(PCs)){
     if(nrow(PCs)/sum(is.na(PCs[[column]])) < 1){
       print(paste('skip',column))
       next
