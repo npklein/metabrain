@@ -44,6 +44,8 @@ def make_jobs(template):
             continue
         study = None
         if 'AMP_AD' in cram:
+            if 'tmp03' in cram:
+                continue
             study = cram.split('/')[-2]
         elif 'CMC_HBCC' in cram:
             study = 'CMC_HBCC'
@@ -114,7 +116,7 @@ template = '''#!/bin/bash
 #SBATCH --job-name=featureCounts_REPLACENAME
 #SBATCH --output=REPLACENAME.out
 #SBATCH --error=REPLACENAME.err
-#SBATCH --time=06:00:00
+#SBATCH --time=23:59:00
 #SBATCH --cpus-per-task 1
 #SBATCH --mem 8gb
 #SBATCH --nodes 1
