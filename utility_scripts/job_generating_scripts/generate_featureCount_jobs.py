@@ -76,6 +76,8 @@ def make_jobs(template):
             study = 'Braineac'
         elif 'Brainseq' in cram:
             study = 'Brainseq'
+        elif 'ENA' in cram:
+            study = 'ENA'
         if not study:
             print(cram)
             raise RuntimeError('Study not set')
@@ -120,7 +122,7 @@ template = '''#!/bin/bash
 #SBATCH --job-name=featureCounts_REPLACENAME
 #SBATCH --output=REPLACENAME.out
 #SBATCH --error=REPLACENAME.err
-#SBATCH --time=06:00:00
+#SBATCH --time=23:59:00
 #SBATCH --cpus-per-task 1
 #SBATCH --mem 8gb
 #SBATCH --nodes 1
@@ -176,7 +178,7 @@ rsync -vP $TMPOUT* REPLACEOUT/exon.countFraction/
 echo "Start metaExon.countAll"
 mkdir -p REPLACEOUT/metaExon.countAll
 TMPOUT=$TMPDIR/REPLACENAME.metaExon.countAll.txt
-featureCounts -f -C -s 0 -p -t exonic_part -g gene_id -O \\
+featureCounts -f -C -s 0 -p -t exon -g gene_id -O \\
     -a REPLACEMETAEXONGTF \\
     -o $TMPOUT \\
     $INPUTBAM
@@ -186,7 +188,7 @@ rsync -vP $TMPOUT* REPLACEOUT/metaExon.countAll/
 echo "Start metaExon.countFraction"
 mkdir -p REPLACEOUT/metaExon.countFraction
 TMPOUT=$TMPDIR/REPLACENAME.metaExon.countFraction.txt
-featureCounts -f -C -s 0 -p -t exonic_part -g gene_id -O --fraction \\
+featureCounts -f -C -s 0 -p -t exon -g gene_id -O --fraction \\
     -a REPLACEMETAEXONGTF \\
     -o $TMPOUT \\
     $INPUTBAM
