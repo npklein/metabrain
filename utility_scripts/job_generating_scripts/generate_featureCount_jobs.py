@@ -8,6 +8,7 @@ parser.add_argument('jobs_directory', help='Directory to write jobs to')
 parser.add_argument('output_directory', help='Outputdir to write results to')
 parser.add_argument('ref_gtf', help='Reference gtf file location')
 parser.add_argument('ref_meta_gtf', help='Reference gtf file location')
+parser.add_argument('-q','--qos', help='QOS to use', default='regular')
 #parser.add_argument('--extra_options', help='Extra options to give to featurecounts (e.g. -O --fraction',
 #                     nargs='+')
 #parser.add_argument('feature_type', help='Feature type to count (e.g. exon or transcript)')
@@ -43,8 +44,14 @@ def make_jobs(template):
         if not cram.endswith('.cram') and not cram.endswith('.bam') or '/BPD/' in cram:
             continue
         study = None
-        if 'AMP_AD' in cram:
-            study = cram.split('/')[-2]
+        if 'ROSMAP' in cram:
+            study = 'ROSMAP'
+        elif 'MSBB' in cram:
+            study = 'MSBB'
+        elif 'MayoTCX' in cram:
+            study = 'MayoTCX'
+        elif 'MayoCBE' in cram:
+            study = 'MayoCBE'
         elif 'CMC_HBCC' in cram:
             study = 'CMC_HBCC'
         elif 'BipSeq' in cram:
@@ -101,6 +108,7 @@ def make_jobs(template):
         new_template = new_template.replace('REPLACEBAM', cram.replace('cram','bam'))
         new_template = new_template.replace('REPLACEGTF',args.ref_gtf)
         new_template = new_template.replace('REPLACEMETAEXONGTF',args.ref_meta_gtf)
+        new_template = new_template.replace('REPLACEQOS',args.qos)
 #        new_template = new_template.replace('REPLACEFEATURETYPE',args.feature_type)
 #        new_template = new_template.replace('REPLACEEXTRAOPTIONS',extra_options)
         with open(jobs_dir+'/'+sample+'.sh','w') as out:
@@ -116,11 +124,12 @@ template = '''#!/bin/bash
 #SBATCH --cpus-per-task 1
 #SBATCH --mem 8gb
 #SBATCH --nodes 1
+#SBATCH --qos=REPLACEQOS
 
 set -e
 set -u
 
-module load Subread/1.6.4-foss-2015b
+module load Subread/1.6.4-foss-2018b
 module load SAMtools
 
 if [[ "$REPLACECRAM" == *cram ]];
@@ -223,3 +232,4 @@ fi
 
 
 make_jobs(template)
+print('jobs written to '+job_base_dir)
