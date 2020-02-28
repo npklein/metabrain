@@ -102,7 +102,7 @@ def make_jobs(template):
         new_template = template.replace('REPLACENAME', sample)
         new_template = new_template.replace('REPLACEOUT', outdir+'/'+study+'/')
         new_template = new_template.replace('REPLACECRAM', cram)
-        new_template = new_template.replace('REPLACEBAM', cram.replace('cram','bam'))
+        new_template = new_template.replace('REPLACEBAM', cram.replace('cram','.sorted.bam'))
         new_template = new_template.replace('REPLACEGTF',args.ref_gtf)
         new_template = new_template.replace('REPLACEMETAEXONGTF',args.ref_meta_gtf)
 #        new_template = new_template.replace('REPLACEFEATURETYPE',args.feature_type)
@@ -118,7 +118,7 @@ template = '''#!/bin/bash
 #SBATCH --error=REPLACENAME.err
 #SBATCH --time=23:59:00
 #SBATCH --cpus-per-task 1
-#SBATCH --mem 8gb
+#SBATCH --mem 16gb
 #SBATCH --nodes 1
 
 set -e
@@ -129,13 +129,14 @@ module load SAMtools
 
 if [[ "$REPLACECRAM" == *cram ]];
 then
-    echo "converting cram to bam"
-    samtools view -hb REPLACECRAM > $TMPDIR/$(basename REPLACEBAM)
+    echo "converting cram to name sorted bam"
+    samtools sort -n REPLACECRAM | samtools view -hb  > $TMPDIR/$(basename REPLACEBAM)
     INPUTBAM=$TMPDIR/$(basename REPLACEBAM)
 else
     echo "Input file is already in bam format, not conversion needed"
     INPUTBAM=REPLACECRAM
 fi
+
 
 echo "Using $INPUTBAM as input file"
 
