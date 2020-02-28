@@ -8,6 +8,7 @@ parser.add_argument('jobs_directory', help='Directory to write jobs to')
 parser.add_argument('output_directory', help='Outputdir to write results to')
 parser.add_argument('ref_gtf', help='Reference gtf file location')
 parser.add_argument('ref_meta_gtf', help='Reference gtf file location')
+parser.add_argument('-r','--ref_fasta', help='Reference fasta')
 parser.add_argument('-q','--qos', help='QOS to use', default='regular')
 #parser.add_argument('--extra_options', help='Extra options to give to featurecounts (e.g. -O --fraction',
 #                     nargs='+')
@@ -27,7 +28,7 @@ args = parser.parse_args()
 #else:
 #    extra_options = ''
 
-cram_files = glob.glob(args.cram_base_directory+'/**/*.cram', recursive=True)+glob.glob(args.cram_base_directory+'/**/*.bam', recursive=True)
+cram_files = glob.glob(args.cram_base_directory+'/**/*.cram', recursive=True)#+glob.glob(args.cram_base_directory+'/**/*.bam', recursive=True)
 print('found ',len(cram_files),'cram and bam files')
 
 outdir = args.output_directory
@@ -106,6 +107,7 @@ def make_jobs(template):
             raise RuntimeError('Unknown study: '+study)
         new_template = template.replace('REPLACENAME', sample)
         new_template = new_template.replace('REPLACEOUT', outdir+'/'+study+'/')
+        new_template = new_template.replace('REPLACEREFFASTA', args.ref_fasta)
         new_template = new_template.replace('REPLACECRAM', cram)
         new_template = new_template.replace('REPLACEBAM', cram.replace('cram','bam'))
         new_template = new_template.replace('REPLACEGTF',args.ref_gtf)
@@ -137,7 +139,7 @@ module load SAMtools
 if [[ "$REPLACECRAM" == *cram ]];
 then
     echo "converting cram to bam"
-    samtools view -hb REPLACECRAM > $TMPDIR/$(basename REPLACEBAM)
+    samtools view -T REPLACEREFFASTA -hb REPLACECRAM > $TMPDIR/$(basename REPLACEBAM)
     INPUTBAM=$TMPDIR/$(basename REPLACEBAM)
 else
     echo "Input file is already in bam format, not conversion needed"

@@ -8,6 +8,9 @@ parser.add_argument('cram_base_directory', help='Directory with cramFiles')
 parser.add_argument('jobs_directory', help='Directory to write jobs to')
 parser.add_argument('output_directory', help='Outputdir to write results to')
 parser.add_argument('kallisto_index', help='Kallisto index file location')
+parser.add_argument('reference', help='Reference file that was used to make cram file')
+parser.add_argument('-k','--kallisto_version', help='Version of kallisto to use',default='0.43.1-foss-2015b')
+parser.add_argument('-q','--qos', help='QOS to use',default='regular')
 parser.add_argument('-s','--string_to_ignore', help='If string in filename, ignore the file. e.g. -p AMP-AD ignores all files with AMP-AD in file path')
 
 
@@ -45,7 +48,14 @@ def make_jobs(cram_files, template):
             continue
         study = None
         if 'AMP_AD' in cram:
-            study = cram.split('/')[-4]
+            if 'MayoTCX' in cram:
+                study='MayoTCX'
+            elif 'MSBB' in cram:
+                study='MSBB'
+            elif 'MayoCBE' in cram:
+                study='MayoCBE'
+            elif 'ROSMAP' in cram:
+                study='ROSMAP'
         elif 'CMC_HBCC' in cram:
             study = 'CMC_HBCC'
         elif 'BipSeq' in cram:
@@ -106,6 +116,9 @@ def make_jobs(cram_files, template):
         new_template = new_template.replace('REPLACECRAM', cram)
         new_template = new_template.replace('REPLACEBAM', cram.replace('cram','bam'))
         new_template = new_template.replace('REPLACEINDEX',args.kallisto_index)
+        new_template = new_template.replace('REPLACEKALLISTOVERSION',args.kallisto_version)
+        new_template = new_template.replace('REPLACEREFERENCE',args.reference)
+        new_template = new_template.replace('REPLACEQOS',args.qos)
 
         with open(jobs_dir+'/'+sample+'.sh','w') as out:
             out.write(new_template)
@@ -120,17 +133,20 @@ template = '''#!/bin/bash
 #SBATCH --cpus-per-task 4
 #SBATCH --mem 16gb
 #SBATCH --nodes 1
+#SBATCH --qos=REPLACEQOS
 
 set -e
 set -u
 
-module load Kallisto/0.43.1-foss-2015b
+module load kallisto/REPLACEKALLISTOVERSION
 module load SAMtools
 
 if [[ "$REPLACECRAM" == *cram ]];
 then
     echo "converting cram to bam"
-    samtools view -hb REPLACECRAM > $TMPDIR/$(basename REPLACEBAM)
+    samtools view -hb \\
+                  -T REPLACEREFERENCE \\
+                   REPLACECRAM > $TMPDIR/$(basename REPLACEBAM)
     INPUTBAM=$TMPDIR/$(basename REPLACEBAM)
 else
     echo "Input file is already in bam format, not conversion needed"
