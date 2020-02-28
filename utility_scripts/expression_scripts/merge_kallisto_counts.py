@@ -1,3 +1,4 @@
+import os 
 import sys
 import glob
 import argparse
@@ -15,8 +16,14 @@ parser.add_argument('--threads', help='Number of threads', default=1)
 
 args = parser.parse_args()
 
+
+if not os.path.isdir(args.kallisto_base_path):
+    raise RuntimeError(args.kallisto_base_path+' does not exist')
+
+
 transcript_to_gene = {}
-print('read gtf file')
+print('read gtf file', flush=True)
+
 with open(args.gtf) as input_file:
     for line in input_file:
         if 'transcript_id' in line:
@@ -24,7 +31,7 @@ with open(args.gtf) as input_file:
             transcript_id = info.split('transcript_id "')[1].split('"')[0].split('.')[0]
             gene_id = info.split('gene_id "')[1].split('"')[0]
             transcript_to_gene[transcript_id] = gene_id
-print('done')
+print('done', flush=True)
 
 def openfile(filename, mode='rt'):
     if filename.endswith('.gz'):
@@ -33,17 +40,19 @@ def openfile(filename, mode='rt'):
         return open(filename, mode)
 
 def main():
-    print('start search for abundance.tsv in '+ args.kallisto_base_path)
+    print('start search for abundance.tsv in '+ args.kallisto_base_path, flush=True)
     kallisto_files = glob.glob(args.kallisto_base_path+'/**/abundance.tsv', recursive=True)
 
+    print('found',len(kallisto_files),' kallisto files', flush=True)
+    
     # dict to sum transcript coutns per gene per sample
     estimated_counts_per_gene = {}
-    print('loop over all kallisto files to get list of sample names')
+    print('loop over all kallisto files to get list of sample names', flush=True)
     sys.stdout.flush()
     for f in kallisto_files:
         sample = f.split('/')[-2]
         estimated_counts_per_gene[sample] = {}
-    print('done')
+    print('done', flush=True)
     sys.stdout.flush()
     # get a set of genes (all files have the same list so only need to read 1 file)
     set_of_genes = set([])
@@ -54,14 +63,14 @@ def main():
             line = line.split('\t')
             set_of_genes.add(transcript_to_gene[line[0].split('.')[0]])
             set_of_transcripts.add(line[0].split('.')[0])
-    print('start map')
+    print('start map', flush=True)
     sys.stdout.flush()
     # parallel process kallisto files. Per sample 1 thread
-    print('starting',args.threads,'processes')
+    print('starting',args.threads,'processes', flush=True)
     with Pool(int(args.threads)) as pool:
         kallisto_data = pool.map(parse_kallisto_files, kallisto_files)
     
-    print('Done reading kallisto file, start writing output matrix')
+    print('Done reading kallisto file, start writing output matrix', flush=True)
     sys.stdout.flush()
 
     with openfile(args.outfile_geneCounts,'wt') as out_geneCounts:
@@ -116,8 +125,8 @@ def parse_kallisto_files(kallisto_abundance_file):
                 tpm = line[4]
                 transcript = line[0].split('.')[0]
             except IndexError:
-                print('ERROR!! Line does not have enough value for: '+kallisto_abundance_file)
-                print(line)
+                print('ERROR!! Line does not have enough value for: '+kallisto_abundance_file, flush=True)
+                print(line, flush=True)
                 raise
             gene = transcript_to_gene[transcript]
             if gene in estimated_counts_per_gene:
