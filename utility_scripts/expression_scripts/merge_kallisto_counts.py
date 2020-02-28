@@ -33,6 +33,7 @@ def openfile(filename, mode='rt'):
         return open(filename, mode)
 
 def main():
+    print('start search for abundance.tsv in '+ args.kallisto_base_path)
     kallisto_files = glob.glob(args.kallisto_base_path+'/**/abundance.tsv', recursive=True)
 
     # dict to sum transcript coutns per gene per sample
