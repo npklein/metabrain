@@ -1,10 +1,10 @@
-import os 
+import os
 import sys
 import glob
 import argparse
 from multiprocessing import Pool
 import gzip
-
+from pathlib import Path
 parser = argparse.ArgumentParser(description='Merge multiple kallisto count files into a matrix.')
 parser.add_argument('kallisto_base_path', help='base path from where to search for kallisto abundance.tsv files')
 parser.add_argument('gtf', help='GTF file containing mapping of transcript ID to gene ID')
@@ -15,6 +15,18 @@ parser.add_argument('--threads', help='Number of threads', default=1)
 
 
 args = parser.parse_args()
+
+geneCounts_dir = os.path.dirname(args.outfile_geneCounts)
+if len(geneCounts_dir) > 0:
+    Path(geneCounts_dir).mkdir(parents=True, exist_ok=True)
+
+transcriptTPM_dir = os.path.dirname(args.outfile_transcriptTPMs)
+if len(transcriptTPM_dir) > 0:
+    Path(transcriptTPM_dir).mkdir(parents=True, exist_ok=True)
+
+transcriptCounts_dir = os.path.dirname(args.outfile_transcriptCounts)
+if len(transcriptCounts_dir) > 0:
+    Path(transcriptCounts_dir).mkdir(parents=True, exist_ok=True)
 
 
 if not os.path.isdir(args.kallisto_base_path):
