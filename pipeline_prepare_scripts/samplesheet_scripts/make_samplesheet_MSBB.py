@@ -51,10 +51,11 @@ with open(args.samplesheet) as input_file:
             out.write('internalId,project,sampleName,reads1FqGz,reads2FqGz\n')
     
         out.write(sample_id+',MSBB,'+individual_id+','+fastq1+','+fastq2+'\n')
-
+        if index == 0:
+            with open(args.samplesheet_dir+'samplesheet_MSBB_RNA.mergedSamples.txt','w') as out_reseq:
+                out_reseq.write('internalId,project,sampleName,reads1FqGz,reads2FqGz\n')
         if sample_id.endswith('_resequenced'):
             with open(args.samplesheet_dir+'samplesheet_MSBB_RNA.mergedSamples.txt','a') as out_reseq:
-                out_reseq.write('internalId,project,sampleName,reads1FqGz,reads2FqGz\n')
                 fastq1 = fastq1.replace('_resequenced','').replace('.fastq.gz','.mergedWithResequenced.fastq.gz')
                 if not os.path.exists(fastq1):
                     print(fastq1+' does not exist')

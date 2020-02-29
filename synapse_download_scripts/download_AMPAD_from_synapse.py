@@ -16,10 +16,10 @@ syn.login(user,password)
 
 
 print('Sync AMP-AD')
-download_MSBB = True
-download_MAYOTCX = True
+download_MSBB = False
+download_MAYOTCX = False
 download_MAYOCBE = True
-download_ROSMAP = True
+download_ROSMAP = False
 download_all = True
 
 # STAR MSBB
@@ -43,6 +43,8 @@ if download_MSBB:
 if download_MAYOCBE:
     # fastq
     files = synapseutils.syncFromSynapse(syn, 'syn8612213', path = 'fastq/MayoCBE/')
+    #BAM
+#    files = synapseutils.syncFromSynapse(syn, 'syn8540821', path = 'BAMs/MayoCBE/')
 
 
     # STAR MAYO
