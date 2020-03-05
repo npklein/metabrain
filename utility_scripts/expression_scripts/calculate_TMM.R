@@ -29,7 +29,23 @@ counts <- data.frame(fread(paste0('gunzip -c ', countsFile),check.names=FALSE), 
 
 counts_features <- counts[!rownames(counts) %in% c('N_unmapped','N_noFeature','N_multimapping',
                                                                        'N_ambiguous'),]
+                                                                       'N_ambiguous',
+                                                    '__no_feature',
+                                                    '__ambiguous',
+                                                    '__too_low_aQual',
+                                                    '__not_aligned',
+                                                    '__alignment_not_unique'),]
 
+
+
+sum_sample_count <- colSums(counts_features)
+sum_sample_count_0 <- names(sum_sample_count[sum_sample_count==0])
+if(length(sum_sample_count_0) > 0){
+    cat("Some samples without counts:\n")
+    cat(sum_sample_count_0)
+    cat("\n")
+    stop()
+}
 
 
 D <- DGEList(counts=counts_features)

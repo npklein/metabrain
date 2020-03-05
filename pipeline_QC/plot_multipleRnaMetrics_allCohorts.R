@@ -109,7 +109,7 @@ for(f in RnaMetrics_multiQC_files){
   RnaMetrics_qc$SAMPLE <- NULL
   RnaMetrics_qc$study <- ''
  if(cohort == 'ENA'){
-    pattern <- ".*/data/(.*)_batch[0-9]+.*"
+    pattern <- ".*/multiqc_data/ENA/(.*)_batch[0-9]+.*"
     RnaMetrics_qc$study <- sub(pattern, "\\1", f)
   }
   RnaMetric_qc_all <- rbind(RnaMetric_qc_all, RnaMetrics_qc)
