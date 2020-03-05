@@ -2,7 +2,7 @@
 
 # Get all the different covariate/samplesheet/phenotype files and merge them all together
 # while harmonizing column names
-options(warn=2)
+options(warn=1)
 library(data.table)
 library(plyr)
 library(optparse)
@@ -21,11 +21,11 @@ setwd(pwd)
 test <- function(){
   # This function is only here for development so that I can more easily test interactively in Rstudio
   opt <- list()
-  input_dir <- '/Users/NPK/Downloads/tmp/'
+  input_dir <- '/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/2019-11-06-freeze2dot1/2020-01-31-alignmentQC-technicalCovariates'
   opt$QcBaseDir <- paste0(input_dir,'/2020-01-31-alignmentQC/')
   opt$metadataDir <- paste0(input_dir,'/2020-02-02-all-cohort-metadata/')
-  opt$outputdir <- "/Users/NPK/Downloads/tmp/"
-  opt$sample_IDs <- paste0(input_dir,'2020-02-02-expression-samples-after-alignmentQC-removal.txt')
+  opt$outputdir <- "/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/2019-11-06-freeze2dot1/2020-02-03-phenotype-table/"
+  opt$sample_IDs <- paste0('/Users/NPK/UMCG/projects/biogen/cohorts/joined_analysis/2019-11-06-freeze2dot1/2020-01-31-expression-tables/2020-01-31-step4-sample-removal-by-PCA/2020-01-31-step2-second-round-PCA-on-expression/2020-02-10-second-round-includedExpressionSamples.txt')
   return(opt)
 }
 
@@ -37,7 +37,13 @@ main <- function(){
   #opt <- test()
   
   all_pheno_covariate_data <- combine_all_data(opt)
-
+  if(length(table(all_pheno_covariate_data$rnaseq_id)[table(all_pheno_covariate_data$rnaseq_id)>1])>0){
+    print(table(all_pheno_covariate_data$rnaseq_id)[table(all_pheno_covariate_data$rnaseq_id)>1])
+    stop("Some IDs are in double, has to be fixed")
+  }
+  if(sum(is.na(all_pheno_covariate_data$MetaCohort)>0)){
+    stop("MetaCohort is NA for some samples, this should not happen")
+  }
   write_output(opt$outputdir, all_pheno_covariate_data)
 }
 
@@ -68,8 +74,8 @@ get_options <- function(){
 combine_all_data <- function(opt){
   # first read in samplesheet data. This should theoretically contain all info on IDs that can be used to parse later files
   all_samplesheet_data <- parse_samplesheet_files(opt)
-  change_rows_if_na(all_samplesheet_data, 'genotype_id',c('individualID','Individual_ID'),no_delete = c('individualID'))
-  change_rows_if_na(all_samplesheet_data, 'individualID',c('genotype_id'),no_delete = c('genotype_id'))
+  all_samplesheet_data <- change_rows_if_na(all_samplesheet_data, 'genotype_id',c('individualID','Individual_ID'),no_delete = c('individualID'))
+  all_samplesheet_data <- change_rows_if_na(all_samplesheet_data, 'individualID',c('genotype_id'),no_delete = c('genotype_id'))
   
   check_if_all_samples_included(opt, all_samplesheet_data)
   
@@ -103,7 +109,7 @@ write_output <- function(outputdir, combined_metrics){
   
   
   # Change the order of columns so that identifiers are first
-  change_order <- c('cohort','SampleFull')
+  change_order <- c('SampleFull','rnaseq_id','MetaCohort','cohort','BroadBrainRegion','SpecificBrainRegion')
   for(c in change_order){
     setcolorder(combined_metrics, c(c, setdiff(names(combined_metrics), c)))
     
