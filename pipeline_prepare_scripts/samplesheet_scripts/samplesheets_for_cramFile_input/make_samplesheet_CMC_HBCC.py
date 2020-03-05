@@ -40,8 +40,8 @@ with open(args.samplesheet) as input_file:
 
         cram = args.cram_dir+'/individualID.'+individual_id+'_specimenID.'+sample_id+'.cram'
         if not os.path.exists(cram):
-            print(cram+' does not exist')
-#            raise RuntimeError(cram+' does not exist')
+#            print(cram+' does not exist')
+            raise RuntimeError(cram+' does not exist')
 
         samples_per_batch[batch].append([fastq_path, sample_id, cram])
 
