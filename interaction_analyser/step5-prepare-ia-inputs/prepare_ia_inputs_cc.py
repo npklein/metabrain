@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-File:         prepare_ia_inputs.py
+File:         prepare_ia_inputs_cc.py
 Created:      2020/03/04
-Last Changed:
+Last Changed: 2020/03/05
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -33,7 +33,7 @@ import pandas as pd
 
 
 # Metadata.
-__program__ = "Prepare Interaction Analyser Inputs"
+__program__ = "Prepare Interaction Analyser Inputs (Complete Case)"
 __author__ = "M. Vochteloo"
 __license__ = "GPLv3"
 __version__ = 1.0
@@ -66,8 +66,8 @@ class Main:
         self.exclude = exclude
         self.eqtl_ia = eqtl_ia
 
-        self.cc_dir = os.path.join(os.getcwd(), 'output', 'complete_case')
-        self.binary_dir = os.path.join(os.getcwd(), 'output', 'binary')
+        self.cc_dir = os.path.join(os.getcwd(), 'output_cc', 'complete_case')
+        self.binary_dir = os.path.join(os.getcwd(), 'output_cc', 'binary')
 
         for dir in [self.cc_dir, self.binary_dir]:
             if not os.path.exists(dir):
@@ -153,12 +153,13 @@ class Main:
         """
         # Create mask for the samples we are interested in.
         sample_mask = pd.Series(True, index=geno_df.columns)
-        for cohort in exclude:
-            # Get the samples of that cohort.
-            samples = cov_df.loc[cohort, :].copy()
-            samples = samples.to_frame()
-            sub_mask = samples[cohort] == 0
-            sample_mask = (sample_mask & sub_mask)
+        if exclude is not None:
+            for cohort in exclude:
+                # Get the samples of that cohort.
+                samples = cov_df.loc[cohort, :].copy()
+                samples = samples.to_frame()
+                sub_mask = samples[cohort] == 0
+                sample_mask = (sample_mask & sub_mask)
 
         sample_counts = sample_mask.value_counts()
         including_samples = sample_counts[True]
@@ -238,7 +239,8 @@ if __name__ == "__main__":
                            "step6-interaction-analyser",
                            "eQTLInteractionAnalyser-1.2-SNAPSHOT-jar-with-dependencies.jar")
 
-    EXCLUDE = ["ENA-EU"]
+    #EXCLUDE = ["ENA-EU"]
+    EXCLUDE = None
 
     # Start the program.
     MAIN = Main(geno_file=GENOTYPE,
