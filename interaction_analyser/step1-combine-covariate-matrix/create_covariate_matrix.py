@@ -3,7 +3,7 @@
 """
 File:         create_covariate_matrix.py
 Created:      2020/02/25
-Last Changed: 2020/03/03
+Last Changed: 2020/03/09
 Author:       M.Vochteloo
 
 Copyright (C) 2019 M.Vochteloo
@@ -26,6 +26,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 import os
 
 # Third party imports.
+import numpy as np
 import pandas as pd
 
 # Local application imports.
@@ -49,8 +50,8 @@ class Main:
     Main class of the program.
     """
 
-    def __init__(self, cov_file, tech_covs, cohorts, pheno_file, gender_col,
-                 eig_file, n_comps, out_filename):
+    def __init__(self, cov_file, tech_covs, cohorts, pheno_file, eig_file,
+                 n_comps, out_filename):
         """
         The initializer for the main class.
 
@@ -58,7 +59,6 @@ class Main:
         :param tech_covs: list, the technical coviarates columns
         :param cohorts: list, the cohorts columns.
         :param pheno_file: string, the phenotype data input file.
-        :param gender_col: list, the phenotype columns of interest.
         :param eig_file: string, the eigenvectors data input file.
         :param n_comps: int, the number of components to include.
         :param out_filename: string, the output filename.
@@ -67,7 +67,6 @@ class Main:
         self.tech_covs = tech_covs
         self.cohorts = cohorts
         self.pheno_file = pheno_file
-        self.gender_col = gender_col
         self.eig_file = eig_file
         self.n_comps = n_comps
         outdir = os.path.join(os.getcwd(), 'output')
@@ -86,7 +85,6 @@ class Main:
         print("  > Technical covariate columns: {}".format(self.tech_covs))
         print("  > Cohort columns: {}".format(self.cohorts))
         print("  > Phenotype input file: {}".format(self.pheno_file))
-        print("  > Gender column: {}".format(self.gender_col))
         print("  > Eigenvectors input file: {}".format(self.eig_file))
         print("  > N components to include: {}".format(self.n_comps))
         print("  > Output path: {}".format(self.outpath))
@@ -117,9 +115,13 @@ class Main:
         print("Loading phenotype matrix.")
         pheno_df = pd.read_csv(self.pheno_file, sep="\t", header=0, index_col=4,
                                low_memory=False)
-        pheno_df = pheno_df.loc[:, [self.gender_col]]
-        pheno_df = pheno_df.replace({self.gender_col: {"M": 0, "F": 1}})
-        print("\tShape: {}".format(pheno_df.shape))
+        pheno_df = pheno_df.loc[:, ["Gender", "sex.by.expression"]]
+        pheno_df.replace("no expression available", np.nan, inplace=True)
+        pheno_df["GENDER"] = pheno_df['sex.by.expression'].combine_first(pheno_df['Gender'])
+        gender_df = pheno_df["GENDER"].to_frame()
+        del pheno_df
+        gender_df = gender_df.replace({"GENDER": {"M": 0, "F": 1, np.nan: -1}})
+        print("\tShape: {}".format(gender_df.shape))
 
         # read the eigenvectors file.
         print("Loading eigenvectors matrix.")
@@ -132,11 +134,15 @@ class Main:
         print("Merging matrices.")
         tmp_df1 = tech_cov_df.merge(cohorts_df, left_index=True,
                                     right_index=True)
-        tmp_df2 = tmp_df1.merge(pheno_df, left_index=True, right_index=True)
+        tmp_df2 = tmp_df1.merge(gender_df, left_index=True, right_index=True)
         merged_df = tmp_df2.merge(eigen_df, left_index=True, right_index=True)
         del tmp_df1, tmp_df2
         # print(merged_df.iloc[0, :])
         print("\tShape: {}".format(merged_df.shape))
+
+        with pd.option_context('display.max_rows', None, 'display.max_columns',
+                               None):  # more options can be specified also
+            print(merged_df.loc["AN11864_ba41.42.22"])
 
         # post process the matrix.
         print("Post-process covariate matrix.")
@@ -227,7 +233,6 @@ if __name__ == "__main__":
                 tech_covs=TECHNICAL_COVS,
                 cohorts=COHORTS,
                 pheno_file=PHENOTYPE,
-                gender_col=GENDER_COLUMN,
                 eig_file=EIGENVECTORS,
                 n_comps=NUM_OF_COMPONENTS,
                 out_filename=OUT_FILENAME)

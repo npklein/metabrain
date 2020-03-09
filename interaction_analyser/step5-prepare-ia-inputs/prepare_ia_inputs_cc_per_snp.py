@@ -3,7 +3,7 @@
 """
 File:         prepare_ia_inputs_cc_per_snp.py
 Created:      2020/03/05
-Last Changed:
+Last Changed: 2020/03/09
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -240,7 +240,7 @@ class Main:
         cohort_counts = {}
         for cohort in self.cohorts:
             samples_in_cohort = cov_df.loc[
-                cohort, cov_df.loc[cohort] == 1].index.to_list()
+                cohort, (cov_df.loc[cohort] == 1) | (cov_df.loc[cohort] == "1")].index.to_list()
             cohort_counts[cohort] = len(samples_in_cohort)
             for sample in samples_in_cohort:
                 translate_dict[sample] = cohort
@@ -291,8 +291,6 @@ class Main:
                 for sample in samples:
                     if sample in translate_dict.keys():
                         cohorts_list.append(translate_dict[sample])
-                    else:
-                        cohorts_list.append('UNKNOWN')
                 new_group = Group(new_group_id, samples, cohorts_list)
                 new_group.add_eqtl(new_eqtl)
                 groups.append(new_group)
@@ -324,8 +322,7 @@ class Main:
         # Create group dataframes.
         group_counts = pd.DataFrame(0,
                                     index=['total'] + list(range(new_group_id)),
-                                    columns=['n_eqtls', 'n_samples',
-                                             'UNKNOWN'] + self.cohorts)
+                                    columns=['n_eqtls', 'n_samples'] + self.cohorts)
         group_counts.index.name = "GroupName"
         for cohort, count in cohort_counts.items():
             group_counts.at['total', cohort] = count
@@ -429,7 +426,7 @@ class Main:
         print("Plotting distribution.")
         fig, ax = plt.subplots()
         sns.set_style("darkgrid", {"axes.facecolor": ".9"})
-        g = sns.distplot(df[['complete']], ax=ax, bins=25)
+        g = sns.distplot(df[['present']], ax=ax, bins=25)
         g.set_title('Number of eQTLs per sample size')
         g.set_ylabel('Frequency',
                      fontsize=8,
