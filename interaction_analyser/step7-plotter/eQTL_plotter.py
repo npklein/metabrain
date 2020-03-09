@@ -29,6 +29,7 @@ import os
 import pandas as pd
 import seaborn as sns
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -183,11 +184,12 @@ class Main:
 
         # Start plotting.
         # Plot heatmap of the interaction matrix.
+        print("Creating z-score barplot.")
+        self.plot_sum_zscores(inter_df, inter_zscore_outdir)
+        print("Creating z-scores distribution plot per covariance.")
+        self.plot_distributions(inter_df, inter_zscore_outdir)
         print("Creating z-scores clustermap.")
         self.plot_heatmap(inter_df, inter_zscore_outdir)
-        print("Creating distribution plot.")
-        self.plot_distributions(inter_df, inter_zscore_outdir)
-
         return
         # Plot eQTLS.
         color_map = self.create_color_map()
@@ -272,17 +274,6 @@ class Main:
         return color_map
 
     @staticmethod
-    def plot_heatmap(df, outdir):
-        sns.set(color_codes=True)
-        g = sns.clustermap(df, center=0, cmap="RdBu_r",
-                           yticklabels=True, xticklabels=False,
-                           figsize=(12, (.2*(len(df.index)))))
-        plt.setp(g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_ymajorticklabels(),
-                                              fontsize=5))
-        g.fig.suptitle('Interaction Z-Scores Matrix')
-        g.savefig(os.path.join(outdir, "zscores_heatmap.png"))
-
-    @staticmethod
     def plot_distributions(df, outdir):
         sns.set(style="ticks", color_codes=True)
         z_score_cutoff = st.norm.ppf(0.05 / (df.shape[0] * df.shape[1]) / 2)
@@ -292,10 +283,62 @@ class Main:
                           sharey=False)
         g.map(sns.distplot, 'value')
         g.map(plt.axvline, x=z_score_cutoff, ls='--', c='red')
-        g.map(plt.axvline, x=-1*z_score_cutoff, ls='--', c='red')
+        g.map(plt.axvline, x=-1 * z_score_cutoff, ls='--', c='red')
         g.set_titles('{col_name}')
         plt.tight_layout()
-        g.savefig(os.path.join(outdir, "cov_z_score_distributions.png"))
+        g.savefig(os.path.join(outdir, "cov_zscore_distributions.png"))
+
+    @staticmethod
+    def plot_sum_zscores(df, outdir, top=10):
+        df = df.pow(2)
+        sums = df.sum(axis=1).to_frame().reset_index()
+        sums.columns = ["index", "counts"]
+        sums.sort_values(by=['counts'], ascending=False, inplace=True)
+
+        sns.set()
+        fig, ax = plt.subplots(figsize=(11.7, 8.27))
+        g = sns.barplot(x="index", y="counts", data=sums, palette="Blues_d")
+        g.set_title('Top Covariates')
+        g.set_ylabel('sum(z-score^2)',
+                     fontsize=8,
+                     fontweight='bold')
+        g.set_xlabel('covariate',
+                     fontsize=8,
+                     fontweight='bold')
+        ax.tick_params(labelsize=5)
+        ax.set_xticks(range(len(sums.index)))
+        ax.set_xticklabels(sums["index"], rotation=90)
+        plt.tight_layout()
+        fig.savefig(os.path.join(outdir, "cov_zscores_barplot.png"))
+
+        subset = sums.iloc[0:10, :]
+        sns.set()
+        fig, ax = plt.subplots(figsize=(11.7, 8.27))
+        g = sns.barplot(x="index", y="counts", data=subset, palette="Blues_d")
+        g.set_title('Top Covariates')
+        g.set_ylabel('sum(z-score^2)',
+                     fontsize=8,
+                     fontweight='bold')
+        g.set_xlabel('covariate',
+                     fontsize=8,
+                     fontweight='bold')
+        ax.tick_params(labelsize=10)
+        ax.set_xticks(range(len(subset.index)))
+        ax.set_xticklabels(subset["index"], rotation=90)
+        plt.tight_layout()
+        fig.savefig(os.path.join(outdir, "cov_zscores_barplot_top.png"))
+
+    @staticmethod
+    def plot_heatmap(df, outdir):
+        sns.set(color_codes=True)
+        g = sns.clustermap(df, center=0, cmap="RdBu_r",
+                           yticklabels=True, xticklabels=False,
+                           figsize=(12, (.2 * (len(df.index)))))
+        plt.setp(
+            g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_ymajorticklabels(),
+                                         fontsize=5))
+        g.fig.suptitle('Interaction Z-Scores Matrix')
+        g.savefig(os.path.join(outdir, "zscores_heatmap.png"))
 
     @staticmethod
     def plot_eqtl_effect(snp_name, probe_name, hgnc_name, eqtl_type, df,
@@ -368,15 +411,15 @@ class Main:
 if __name__ == "__main__":
     # Define main variables.
     INDIR = os.path.join(os.path.sep, "groups", "umcg-biogen", "tmp03",
-                            "output", "2019-11-06-FreezeTwoDotOne",
-                            "2020-03-03-interaction-analyser",
-                            "step5-prepare-ia-inputs", "output_p_snp",
-                            "groups")
+                         "output", "2019-11-06-FreezeTwoDotOne",
+                         "2020-03-03-interaction-analyser",
+                         "step5-prepare-ia-inputs", "output_p_snp",
+                         "groups")
 
     INTER_INDIR = os.path.join(os.path.sep, "groups", "umcg-biogen", "tmp03",
-                            "output", "2019-11-06-FreezeTwoDotOne",
-                            "2020-03-03-interaction-analyser",
-                            "step6-interaction-analyser", "output")
+                               "output", "2019-11-06-FreezeTwoDotOne",
+                               "2020-03-03-interaction-analyser",
+                               "step6-interaction-analyser", "output")
 
     for GROUP_NAME in next(os.walk(INDIR))[1]:
         GROUP_INDIR = os.path.join(INDIR, GROUP_NAME)

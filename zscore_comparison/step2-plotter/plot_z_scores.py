@@ -86,6 +86,11 @@ class Main:
             data["overal_z_score"],
             data["z_score_estimate"])
 
+        # # Subset the weird cases.
+        # tmp = data.sort_values(by=['z_score_estimate'], ascending=False)
+        # print(tmp.iloc[0:10, :])
+        # exit()
+
         # Add colors.
         data["hue"] = "#2C7BB6"
         data.loc[data["flipped"], "hue"] = "#000000"
@@ -105,7 +110,7 @@ class Main:
         print("Plotting z-scores.")
         fig, ax = plt.subplots()
         sns.set_style("darkgrid", {"axes.facecolor": ".9"})
-        g = sns.regplot(x="overal_z_score", y="z_score_estimate",
+        g = sns.regplot(x="z_score_estimate", y="overal_z_score",
                         data=data,
                         scatter_kws={'facecolors': data['hue'],
                                      'edgecolor': data['hue'],
