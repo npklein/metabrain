@@ -51,23 +51,23 @@ class Main:
     Main class of the program.
     """
 
-    def __init__(self, cov_file, gte_file, eqtl_file, geno_file, expr_file,
+    def __init__(self, gte_file, eqtl_file, cov_file, geno_file, expr_file,
                  masked):
         """
         Initializer method for the main class.
 
-        :param cov_file: string, the covariates data input file..
         :param gte_file: string, the translation file for the samples.
         :param eqtl_file: string, the file containing the eQTL effects of
-                          interest + also acts as translation file
+                          interest + also acts as translation file.
+        :param cov_file: string, the covariates data input file.
         :param geno_file: string, the genotype data input file.
         :param expr_file: string, the expression data input file.
         :param masked: boolean, whether or not to mask the rows / columns of
                        the output matrices.
         """
-        self.cov_file = cov_file
         self.gte_file = gte_file
         self.eqtl_file = eqtl_file
+        self.cov_file = cov_file
         self.geno_file = geno_file
         self.expr_file = expr_file
         self.masked = masked
@@ -89,9 +89,9 @@ class Main:
         """
         # Print arguments.
         print("Arguments:")
-        print("  > Covariate input file: {}".format(self.cov_file))
         print("  > GTE input  file: {}".format(self.gte_file))
         print("  > eQTL input file: {}".format(self.eqtl_file))
+        print("  > Covariate input file: {}".format(self.cov_file))
         print("  > Genotype input file: {}".format(self.geno_file))
         print("  > Expression input file: {}".format(self.expr_file))
         print("  > Masking SNP's / samples: {}".format(self.masked))
@@ -139,7 +139,6 @@ class Main:
         # Load the covariate data frame.
         print("Loading covariate matrix.")
         cov_df = pd.read_csv(self.cov_file, sep="\t", header=0, index_col=0)
-        cov_df.index.name = '-'
         print("\tShape: {}".format(cov_df.shape))
 
         # Construct the covariate translation data frame.
@@ -367,28 +366,28 @@ class CommandLineArguments:
 
 
 if __name__ == "__main__":
-    # Step 1 data.
-    COVARIATE = os.path.join(os.path.sep, "groups", "umcg-biogen", "tmp03",
-                             "output", "2019-11-06-FreezeTwoDotOne",
-                             "2020-03-03-interaction-analyser",
-                             "step1-combine-covariate-matrix", "output",
-                             "covariates-cortex-withMD-withGender-with50PCs.txt.gz")
-
-    # Step 2 data.
+    # Step 0 data.
     GTE = os.path.join(os.path.sep, "groups", "umcg-biogen", "tmp03",
                        "output", "2019-11-06-FreezeTwoDotOne",
                        "2020-03-03-interaction-analyser",
-                       "step2-combine-GTE-files", "output",
+                       "step0-combine-GTE-files", "output",
                        "GTE_combined.txt.gz")
 
-    # Step 3 data.
+    # Step 1 data.
     EQTLS = os.path.join(os.path.sep, "groups", "umcg-biogen", "tmp03",
                          "output", "2019-11-06-FreezeTwoDotOne",
                          "2020-03-03-interaction-analyser",
-                         "step3-combine-eQTLprobe-files", "output",
+                         "step1-combine-eQTLprobe-files", "output",
                          "eQTLProbesFDR0.05-ProbeLevel_combined.txt.gz")
 
-    # Load other data.
+    # Step 3 data.
+    COVARIATE = os.path.join(os.path.sep, "groups", "umcg-biogen", "tmp03",
+                             "output", "2019-11-06-FreezeTwoDotOne",
+                             "2020-03-03-interaction-analyser",
+                             "step3-combine-covariate-matrix", "output",
+                             "covariates-cortex.txt.gz")
+
+    # Other data sources.
     GENOTYPE = os.path.join(os.path.sep, "groups", "umcg-biogen",
                             "tmp03", "output",
                             "2019-11-06-FreezeTwoDotOne",
@@ -414,9 +413,9 @@ if __name__ == "__main__":
     MASKED = CMA.get_argument("masked")
 
     # Start the program.
-    MAIN = Main(cov_file=COVARIATE,
-                gte_file=GTE,
+    MAIN = Main(gte_file=GTE,
                 eqtl_file=EQTLS,
+                cov_file=COVARIATE,
                 geno_file=GENOTYPE,
                 expr_file=EXPRESSION,
                 masked=MASKED)

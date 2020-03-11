@@ -3,7 +3,7 @@
 """
 File:         eQTL_plotter.py
 Created:      2020/02/26
-Last Changed: 2020/03/05
+Last Changed: 2020/03/10
 Author:       M.Vochteloo
 
 Copyright (C) 2019 M.Vochteloo
@@ -32,6 +32,7 @@ import matplotlib
 
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from scipy import stats
 from colour import Color
 import scipy.stats as st
@@ -73,7 +74,7 @@ class Main:
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
 
-    def start(self, nrows=None):
+    def start(self, nrows=1):
         """
         Main method for the main class. Does all the work.
 
@@ -113,66 +114,66 @@ class Main:
         if not os.path.exists(inter_path):
             inter_path = inter_path + '.gz'
 
-        # # Load the eQTL file.
-        # print("Loading eQTL matrix.")
-        # eqtl_df = pd.read_csv(eqtl_path, sep="\t", header=0, nrows=nrows)
-        # eqtl_df.index = eqtl_df["SNPName"]
-        # eqtl_df.index.name = "SNPName"
-        # nrows = eqtl_df.shape[0]
-        # print("\tShape: {}".format(eqtl_df.shape))
-        #
-        # # Load the genotype matrix file.
-        # print("Loading genotype matrix.")
-        # geno_df = pd.read_csv(geno_path, sep="\t", header=0, index_col=0,
-        #                       nrows=nrows)
-        # geno_df.index.name = "SNPName"
-        # print("\tShape: {}".format(geno_df.shape))
-        #
-        # # Load the alleles
-        # print("Loading alleles matrix.")
-        # allele_df = pd.read_csv(allele_path, sep="\t", header=0,
-        #                         index_col=0, nrows=nrows)
-        # allele_df.index.name = "SNPName"
-        # print("\tShape: {}".format(allele_df.shape))
-        #
-        # # Load the expression matrix file.
-        # print("Loading expression matrix.")
-        # expr_df = pd.read_csv(expr_path, sep="\t", header=0, index_col=0,
-        #                       nrows=nrows)
-        # expr_df.index.name = "SNPName"
-        # print("\tShape: {}".format(expr_df.shape))
-        #
-        # # Load the covariance matrix file.
-        # print("Loading covariance matrix.")
-        # cov_df = pd.read_csv(cov_path, sep="\t", header=0, index_col=0)
-        # print("\tShape: {}".format(expr_df.shape))
+        # Load the eQTL file.
+        print("Loading eQTL matrix.")
+        eqtl_df = pd.read_csv(eqtl_path, sep="\t", header=0, nrows=nrows)
+        eqtl_df.index = eqtl_df["SNPName"]
+        eqtl_df.index.name = "SNPName"
+        nrows = eqtl_df.shape[0]
+        print("\tShape: {}".format(eqtl_df.shape))
+
+        # Load the genotype matrix file.
+        print("Loading genotype matrix.")
+        geno_df = pd.read_csv(geno_path, sep="\t", header=0, index_col=0,
+                              nrows=nrows)
+        geno_df.index.name = "SNPName"
+        print("\tShape: {}".format(geno_df.shape))
+
+        # Load the alleles
+        print("Loading alleles matrix.")
+        allele_df = pd.read_csv(allele_path, sep="\t", header=0,
+                                index_col=0, nrows=nrows)
+        allele_df.index.name = "SNPName"
+        print("\tShape: {}".format(allele_df.shape))
+
+        # Load the expression matrix file.
+        print("Loading expression matrix.")
+        expr_df = pd.read_csv(expr_path, sep="\t", header=0, index_col=0,
+                              nrows=nrows)
+        expr_df.index.name = "SNPName"
+        print("\tShape: {}".format(expr_df.shape))
+
+        # Load the covariance matrix file.
+        print("Loading covariance matrix.")
+        cov_df = pd.read_csv(cov_path, sep="\t", header=0, index_col=0)
+        print("\tShape: {}".format(expr_df.shape))
 
         # Load the interaction matrix file.
         print("Loading interaction matrix.")
         inter_df = pd.read_csv(inter_path, sep="\t", header=0, index_col=0)
         print("\tShape: {}".format(inter_df.shape))
-        #
-        # # Check if shape is identical.
-        # if (eqtl_df.shape[0] != geno_df.shape[0]) or \
-        #         (eqtl_df.shape[0] != expr_df.shape[0]):
-        #     print("Input matrices rows are not identical length.")
-        #     return
-        # if geno_df.shape != expr_df.shape:
-        #     print("Genotype and expression matrices are not identical shape.")
-        #     return
-        #
-        # # Check if SNP order is identical.
-        # if not (eqtl_df.index.identical(geno_df.index)) or \
-        #         not (eqtl_df.index.identical(expr_df.index)) or \
-        #         not (eqtl_df.index.identical(allele_df.index)):
-        #     print("Order of SNP's are not identical.")
-        #     return
-        #
-        # # Check if sample order is identical.
-        # if not (geno_df.columns.identical(expr_df.columns)) or \
-        #         not (geno_df.columns.identical(cov_df.columns)):
-        #     print("Order of samples are not identical.")
-        #     return
+
+        # Check if shape is identical.
+        if (eqtl_df.shape[0] != geno_df.shape[0]) or \
+                (eqtl_df.shape[0] != expr_df.shape[0]):
+            print("Input matrices rows are not identical length.")
+            return
+        if geno_df.shape != expr_df.shape:
+            print("Genotype and expression matrices are not identical shape.")
+            return
+
+        # Check if SNP order is identical.
+        if not (eqtl_df.index.identical(geno_df.index)) or \
+                not (eqtl_df.index.identical(expr_df.index)) or \
+                not (eqtl_df.index.identical(allele_df.index)):
+            print("Order of SNP's are not identical.")
+            return
+
+        # Check if sample order is identical.
+        if not (geno_df.columns.identical(expr_df.columns)) or \
+                not (geno_df.columns.identical(cov_df.columns)):
+            print("Order of samples are not identical.")
+            return
 
         # Prepare output directories.
         simple_eqtl_outdir = os.path.join(self.outdir, "simple_eqtl")
@@ -182,17 +183,22 @@ class Main:
             if not os.path.exists(dir):
                 os.makedirs(dir)
 
+        # Calculate the z-score cutoff.
+        z_score_cutoff = st.norm.ppf(
+            0.05 / (inter_df.shape[0] * inter_df.shape[1]) / 2)
+
         # Start plotting.
-        # Plot heatmap of the interaction matrix.
-        print("Creating z-score barplot.")
-        self.plot_sum_zscores(inter_df, inter_zscore_outdir)
-        print("Creating z-scores distribution plot per covariance.")
-        self.plot_distributions(inter_df, inter_zscore_outdir)
-        print("Creating z-scores clustermap.")
-        self.plot_heatmap(inter_df, inter_zscore_outdir)
-        return
+
+        # # Plot heatmap of the interaction matrix.
+        # print("Creating z-score barplot.")
+        # self.plot_sum_zscores(inter_df, inter_zscore_outdir)
+        # print("Creating z-scores distribution plot per covariance.")
+        # self.plot_distributions(inter_df, z_score_cutoff, inter_zscore_outdir)
+        # print("Creating z-scores clustermap.")
+        # self.plot_heatmap(inter_df, inter_zscore_outdir)
+
         # Plot eQTLS.
-        color_map = self.create_color_map()
+        group_color_map, value_color_map = self.create_color_map()
         i = 0
         for index, row in eqtl_df.iterrows():
             if i == "SNPName":
@@ -241,21 +247,50 @@ class Main:
                 # correct.
                 data["genotype"] = 2.0 - data["genotype"]
                 data["group"] = 2.0 - data["group"]
+            allele_map = {0.0: "{}/{}".format(first_allele, first_allele),
+                          1.0: "{}/{}".format(first_allele, second_allele),
+                          2.0: "{}/{}".format(second_allele, second_allele)}
+            data["alleles"] = data["group"].map(allele_map)
 
-            # Check if the SNP has an interaction effect.
-            interaction_effect = inter_df.iloc[i, :].to_frame()
+            # Add the color.
+            data["round_geno"] = data["genotype"].round(2)
+            data["value_hue"] = data["round_geno"].map(value_color_map)
+            data["group_hue"] = data["group"].map(group_color_map)
+            data.drop(["round_geno"], axis=1, inplace=True)
 
             # Plot a simple eQTL effect.
             self.plot_eqtl_effect(snp_name, probe_name, hgnc_name, eqtl_type,
                                   data, minor_allele, minor_allele_frequency,
-                                  first_allele, second_allele, color_map,
+                                  first_allele, second_allele,
                                   simple_eqtl_outdir)
 
-            # Plot an interaction eQTL effect.
-            self.plot_interaction_eqtl_effect(snp_name, probe_name, hgnc_name,
-                                              eqtl_type, data,
-                                              interaction_effect,
-                                              inter_eqtl_outdir)
+            # Check if the SNP has an interaction effect.
+            interaction_effect = inter_df.iloc[:, i].to_frame()
+            interaction_effect.columns = ["zscore"]
+            interaction_effect = interaction_effect.loc[
+                                 interaction_effect["zscore"].abs() >= abs(
+                                     z_score_cutoff), :]
+            interaction_effect = interaction_effect.reindex(
+                interaction_effect["zscore"].abs().sort_values(
+                    ascending=False).index)
+
+            # Prepare output directory.
+            if len(interaction_effect.index) > 0:
+                eqtl_interaction_outdir = os.path.join(inter_eqtl_outdir,
+                                                       snp_name)
+                if not os.path.exists(eqtl_interaction_outdir):
+                    os.makedirs(eqtl_interaction_outdir)
+
+                for index, (row,) in interaction_effect.iterrows():
+                    eqtl_data = data.copy()
+                    cov_data = cov_df.loc[index].to_frame()
+                    eqtl_data = eqtl_data.merge(cov_data, left_index=True,
+                                                right_index=True)
+                    self.plot_interaction_eqtl_effect(snp_name, probe_name,
+                                                      hgnc_name,
+                                                      eqtl_type, eqtl_data,
+                                                      index, row,
+                                                      eqtl_interaction_outdir)
 
             i += 1
 
@@ -263,20 +298,21 @@ class Main:
     def create_color_map():
         """
         """
-        palette = list(Color("#ABDCA2").range_to(Color("#FFFFFF"), 50)) + \
-                  list(Color("#FFFFFF").range_to(Color("#89A3D1"), 50)) + \
-                  list(Color("#89A3D1").range_to(Color("#FFFFFF"), 50)) + \
-                  list(Color("#FFFFFF").range_to(Color("#F08C72"), 51))
+        palette = list(Color("#ABDCA2").range_to(Color("#CBE9C5"), 50)) + \
+                  list(Color("#B1C2E1").range_to(Color("#89A3D1"), 50)) + \
+                  list(Color("#89A3D1").range_to(Color("#B1C2E1"), 50)) + \
+                  list(Color("#F6BCAD").range_to(Color("#F08C72"), 51))
         colors = [str(x).upper() for x in palette]
         values = [x / 100 for x in list(range(201))]
-        color_map = pd.DataFrame({"value": values,
-                                  "hue": colors})
-        return color_map
+        group_color_map = {0.0: "#ABDCA2", 1.0: "#89A3D1", 2.0: "#F08C72"}
+        value_color_map = {}
+        for val, col in zip(values, colors):
+            value_color_map[val] = col
+        return group_color_map, value_color_map
 
     @staticmethod
-    def plot_distributions(df, outdir):
+    def plot_distributions(df, z_score_cutoff, outdir):
         sns.set(style="ticks", color_codes=True)
-        z_score_cutoff = st.norm.ppf(0.05 / (df.shape[0] * df.shape[1]) / 2)
         df = df.T
         dfm = df.melt(var_name='columns')
         g = sns.FacetGrid(dfm, col='columns', col_wrap=10, sharex=False,
@@ -287,6 +323,7 @@ class Main:
         g.set_titles('{col_name}')
         plt.tight_layout()
         g.savefig(os.path.join(outdir, "cov_zscore_distributions.png"))
+        plt.close()
 
     @staticmethod
     def plot_sum_zscores(df, outdir, top=10):
@@ -298,20 +335,28 @@ class Main:
         sns.set()
         fig, ax = plt.subplots(figsize=(11.7, 8.27))
         g = sns.barplot(x="index", y="counts", data=sums, palette="Blues_d")
-        g.set_title('Top Covariates')
+        g.text(0.5, 1.05,
+               'Top Covariates',
+               fontsize=16, weight='bold', ha='center', va='bottom',
+               transform=ax.transAxes)
+        g.text(0.5, 1.02,
+               '',
+               fontsize=12, alpha=0.75, ha='center', va='bottom',
+               transform=ax.transAxes)
         g.set_ylabel('sum(z-score^2)',
-                     fontsize=8,
+                     fontsize=12,
                      fontweight='bold')
         g.set_xlabel('covariate',
-                     fontsize=8,
+                     fontsize=12,
                      fontweight='bold')
         ax.tick_params(labelsize=5)
         ax.set_xticks(range(len(sums.index)))
         ax.set_xticklabels(sums["index"], rotation=90)
         plt.tight_layout()
         fig.savefig(os.path.join(outdir, "cov_zscores_barplot.png"))
+        plt.close()
 
-        subset = sums.iloc[0:10, :]
+        subset = sums.iloc[:top, :]
         sns.set()
         fig, ax = plt.subplots(figsize=(11.7, 8.27))
         g = sns.barplot(x="index", y="counts", data=subset, palette="Blues_d")
@@ -327,6 +372,7 @@ class Main:
         ax.set_xticklabels(subset["index"], rotation=90)
         plt.tight_layout()
         fig.savefig(os.path.join(outdir, "cov_zscores_barplot_top.png"))
+        plt.close()
 
     @staticmethod
     def plot_heatmap(df, outdir):
@@ -339,11 +385,12 @@ class Main:
                                          fontsize=5))
         g.fig.suptitle('Interaction Z-Scores Matrix')
         g.savefig(os.path.join(outdir, "zscores_heatmap.png"))
+        plt.close()
 
     @staticmethod
     def plot_eqtl_effect(snp_name, probe_name, hgnc_name, eqtl_type, df,
                          minor_allele, minor_allele_frequency, first_allele,
-                         second_allele, color_map, outdir):
+                         second_allele, outdir):
         """
         """
         # Calculate the correlation.
@@ -351,17 +398,14 @@ class Main:
             df["genotype"],
             df["expression"])
 
-        # Set the color.
-        df["round_geno"] = df["genotype"].round(2)
-        df = df.merge(color_map, left_on="round_geno", right_on="value")
-
         # Prepare the figure.
-        fig, ax = plt.subplots()
+        sns.set()
         sns.set_style("darkgrid", {"axes.facecolor": ".9"})
+        fig, ax = plt.subplots()
 
         # Plot the scatter / box plot.
         sns.regplot(x="genotype", y="expression", data=df,
-                    scatter_kws={'facecolors': df['hue']},
+                    scatter_kws={'facecolors': df['value_hue']},
                     line_kws={"color": "#D7191C"},
                     ax=ax
                     )
@@ -378,18 +422,25 @@ class Main:
         ax.set_xticklabels(["{}/{}".format(first_allele, first_allele),
                             "{}/{}".format(first_allele, second_allele),
                             "{}/{}".format(second_allele, second_allele)])
-        ax.set_title('{} {}-eQTL (Pearson r = {:.2f}, '
-                     'p = {:.2e})'.format(hgnc_name,
-                                          eqtl_type,
-                                          r_value,
-                                          p_value))
+        ax.text(0.5, 1.05,
+                '{} {}-eQTL (Pearson r = {:.2f}, '
+                'p = {:.2e})'.format(hgnc_name,
+                                     eqtl_type,
+                                     r_value,
+                                     p_value),
+                fontsize=16, weight='bold', ha='center', va='bottom',
+                transform=ax.transAxes)
+        ax.text(0.5, 1.02,
+                '',
+                fontsize=12, alpha=0.75, ha='center', va='bottom',
+                transform=ax.transAxes)
         ax.set_ylabel('{} expression'.format(hgnc_name),
-                      fontsize=8,
+                      fontsize=12,
                       fontweight='bold')
         ax.set_xlabel('SNP {} [minor: {}: {:.2f}'.format(snp_name,
                                                          minor_allele,
                                                          minor_allele_frequency),
-                      fontsize=8,
+                      fontsize=12,
                       fontweight='bold')
 
         # Show.
@@ -399,13 +450,72 @@ class Main:
         fig.savefig(os.path.join(outdir, "{}_{}_{}.png".format(snp_name,
                                                                probe_name,
                                                                hgnc_name)))
+        plt.close()
 
     @staticmethod
     def plot_interaction_eqtl_effect(snp_name, probe_name, hgnc_name,
-                                     eqtl_type, df, i_effect,
-                                     inter_eqtl_outdi):
-        print(i_effect)
-        exit()
+                                     eqtl_type, df, cov_name, zscore,
+                                     outdir):
+        # calculate axis limits.
+        min = df["expression"].min() * 1.1
+        max = df["expression"].max() * 1.5
+
+        sns.set(rc={'figure.figsize': (12, 9)})
+        sns.set_style("ticks")
+        fig, ax = plt.subplots()
+        sns.despine(fig=fig, ax=ax)
+
+        for i, allele in enumerate(df["alleles"].unique()):
+            # Calculate the correlation.
+            subset = df.loc[df["alleles"] == allele, :].copy()
+            coef, p = stats.spearmanr(subset["expression"], subset[cov_name])
+            color = subset["group_hue"][0]
+
+            # Plot.
+            sns.regplot(x=cov_name, y="expression", data=subset,
+                        scatter_kws={'facecolors': subset['value_hue'],
+                                     'edgecolors': subset['group_hue']},
+                        line_kws={"color": color},
+                        ax=ax
+                        )
+
+            # Add the text.
+            ax.set(ylim=(min, max))
+            ax.annotate(
+                '{}: r = {:.2e}, p = {:.2e}'.format(allele, coef, p),
+                xy=(0.03, 0.94 - ((i / 100) * 3)),
+                xycoords=ax.transAxes,
+                color=color,
+                fontsize=12,
+                fontweight='bold')
+
+        ax.text(0.5, 1.05,
+                '{} {}-eQTL Interaction with {} '
+                '[z-score: {:.2f}]'.format(hgnc_name,
+                                           eqtl_type,
+                                           cov_name,
+                                           zscore),
+                fontsize=16, weight='bold', ha='center', va='bottom',
+                transform=ax.transAxes)
+        ax.text(0.5, 1.02,
+                'SNPName: {}    ProbeName:{}'.format(snp_name, probe_name),
+                fontsize=12, alpha=0.75, ha='center', va='bottom',
+                transform=ax.transAxes)
+
+        ax.set_ylabel('{} ({}) expression'.format(probe_name, hgnc_name),
+                      fontsize=12,
+                      fontweight='bold')
+        ax.set_xlabel(cov_name,
+                      fontsize=12,
+                      fontweight='bold')
+
+        # Safe the plot.
+        plt.tight_layout()
+        fig.savefig(os.path.join(outdir, "{}_{}_{}_{}.png".format(snp_name,
+                                                                  probe_name,
+                                                                  hgnc_name,
+                                                                  cov_name)))
+        plt.close()
 
 
 if __name__ == "__main__":
@@ -416,12 +526,15 @@ if __name__ == "__main__":
                          "step5-prepare-ia-inputs", "output_p_snp",
                          "groups")
 
-    INTER_INDIR = os.path.join(os.path.sep, "groups", "umcg-biogen", "tmp03",
+    INTER_INDIR = os.path.join(os.path.sep, "groups", "umcg-biogen",
+                               "tmp03",
                                "output", "2019-11-06-FreezeTwoDotOne",
                                "2020-03-03-interaction-analyser",
                                "step6-interaction-analyser", "output")
 
     for GROUP_NAME in next(os.walk(INDIR))[1]:
+        if GROUP_NAME != "group_11":
+            continue
         GROUP_INDIR = os.path.join(INDIR, GROUP_NAME)
         GROUP_INTER_INDIR = os.path.join(INTER_INDIR, GROUP_NAME)
 
