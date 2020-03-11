@@ -51,7 +51,7 @@ class Main:
     """
 
     def __init__(self, cov_file, tech_covs, cohorts, pheno_file, eig_file,
-                 n_comps, out_filename):
+                 n_comps, cov_corr_eig_file, marker_file, out_filename):
         """
         The initializer for the main class.
 
@@ -61,6 +61,9 @@ class Main:
         :param pheno_file: string, the phenotype data input file.
         :param eig_file: string, the eigenvectors data input file.
         :param n_comps: int, the number of components to include.
+        :param cov_corr_eig_file: string, the princaple components before
+                                 covariate correction input file.
+        :param marker_file: string, the marker genes expression input file.
         :param out_filename: string, the output filename.
         """
         self.cov_file = cov_file
@@ -69,6 +72,8 @@ class Main:
         self.pheno_file = pheno_file
         self.eig_file = eig_file
         self.n_comps = n_comps
+        self.cov_corr_eig_file = cov_corr_eig_file
+        self.marker_file = marker_file
         outdir = os.path.join(os.getcwd(), 'output')
         self.outpath = os.path.join(outdir, out_filename)
 
@@ -87,6 +92,8 @@ class Main:
         print("  > Phenotype input file: {}".format(self.pheno_file))
         print("  > Eigenvectors input file: {}".format(self.eig_file))
         print("  > N components to include: {}".format(self.n_comps))
+        print("  > Eigenvectors before cov. correction input file: {}".format(self.cov_corr_eig_file))
+        print("  > Marker genes input file: {}".format(self.marker_file))
         print("  > Output path: {}".format(self.outpath))
         print("")
 
@@ -117,10 +124,11 @@ class Main:
                                low_memory=False)
         pheno_df = pheno_df.loc[:, ["Gender", "sex.by.expression"]]
         pheno_df.replace("no expression available", np.nan, inplace=True)
-        pheno_df["GENDER"] = pheno_df['sex.by.expression'].combine_first(pheno_df['Gender'])
-        gender_df = pheno_df["GENDER"].to_frame()
+        pheno_df["SEX"] = pheno_df['sex.by.expression'].combine_first(
+            pheno_df['Gender'])
+        gender_df = pheno_df["SEX"].to_frame()
         del pheno_df
-        gender_df = gender_df.replace({"GENDER": {"M": 0, "F": 1, np.nan: -1}})
+        gender_df = gender_df.replace({"SEX": {"M": 0, "F": 1, np.nan: -1}})
         print("\tShape: {}".format(gender_df.shape))
 
         # read the eigenvectors file.
@@ -130,24 +138,37 @@ class Main:
                    ["Comp{}".format(x) for x in range(1, self.n_comps + 1)]]
         print("\tShape: {}".format(eigen_df.shape))
 
+        # read the eigenvectors before covariate correction file.
+        print("Loading eigenvectors before cov. correction matrix.")
+        cov_cor_df = pd.read_csv(self.cov_corr_eig_file, sep="\t", header=0,
+                                 index_col=0)
+        cov_cor_df.columns = ["PC1-before-cov-correction", "PC2-before-cov-correction"]
+        print("\tShape: {}".format(cov_cor_df.shape))
+
+        # read the marker genes expression file.
+        print("Loading marker genes matrix.")
+        marker_df = pd.read_csv(self.marker_file, sep="\t", header=0,
+                                index_col=0)
+        marker_df = marker_df.T
+        print("\tShape: {}".format(marker_df.shape))
+
         # merge.
         print("Merging matrices.")
         tmp_df1 = tech_cov_df.merge(cohorts_df, left_index=True,
                                     right_index=True)
         tmp_df2 = tmp_df1.merge(gender_df, left_index=True, right_index=True)
-        merged_df = tmp_df2.merge(eigen_df, left_index=True, right_index=True)
-        del tmp_df1, tmp_df2
+        tmp_df3 = tmp_df2.merge(eigen_df, left_index=True, right_index=True)
+        tmp_df4 = tmp_df3.merge(cov_cor_df, left_index=True, right_index=True)
+        merged_df = tmp_df4.merge(marker_df, left_index=True, right_index=True)
+        del tmp_df1, tmp_df2, tmp_df3, tmp_df4
         # print(merged_df.iloc[0, :])
         print("\tShape: {}".format(merged_df.shape))
-
-        with pd.option_context('display.max_rows', None, 'display.max_columns',
-                               None):  # more options can be specified also
-            print(merged_df.loc["AN11864_ba41.42.22"])
 
         # post process the matrix.
         print("Post-process covariate matrix.")
         merged_df = merged_df.T
         merged_df.index = merged_df.index.set_names(['Sample'])
+        merged_df.index.name = "-"
         print("\tShape: {}".format(merged_df.shape))
 
         # write outfile.
@@ -225,8 +246,23 @@ if __name__ == "__main__":
 
     NUM_OF_COMPONENTS = 50
 
-    OUT_FILENAME = "covariates-cortex-withMD-withGender-with{}PCs.txt.gz".format(
-        NUM_OF_COMPONENTS)
+    COV_CORR_EIGENVECTORS = os.path.join(os.path.sep, "groups", "umcg-biogen",
+                                         "tmp03",
+                                         "output",
+                                         "2019-11-06-FreezeTwoDotOne",
+                                         "2020-01-31-expression-tables",
+                                         "2020-01-31-step4-sample-removal-by-PCA",
+                                         "2020-01-31-step2-second-round-PCA-on-expression",
+                                         "pc1_2.txt")
+
+    MARKERS = os.path.join(os.path.sep, "groups", "umcg-biogen", "tmp03",
+                         "output", "2019-11-06-FreezeTwoDotOne",
+                         "2020-03-03-interaction-analyser",
+                         "step2-marker-genes", "output",
+                         "marker_genes.txt.gz")
+
+
+    OUT_FILENAME = "covariates-cortex.txt.gz"
 
     # Start the program.
     MAIN = Main(cov_file=COVARIATES,
@@ -235,5 +271,7 @@ if __name__ == "__main__":
                 pheno_file=PHENOTYPE,
                 eig_file=EIGENVECTORS,
                 n_comps=NUM_OF_COMPONENTS,
+                cov_corr_eig_file=COV_CORR_EIGENVECTORS,
+                marker_file=MARKERS,
                 out_filename=OUT_FILENAME)
     MAIN.start()

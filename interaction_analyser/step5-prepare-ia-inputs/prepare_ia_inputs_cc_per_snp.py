@@ -3,7 +3,7 @@
 """
 File:         prepare_ia_inputs_cc_per_snp.py
 Created:      2020/03/05
-Last Changed: 2020/03/09
+Last Changed: 2020/03/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -532,7 +532,7 @@ if __name__ == "__main__":
     EQTLS = os.path.join(os.path.sep, "groups", "umcg-biogen", "tmp03",
                          "output", "2019-11-06-FreezeTwoDotOne",
                          "2020-03-03-interaction-analyser",
-                         "step3-combine-eQTLprobe-files", "output",
+                         "step1-combine-eQTLprobe-files", "output",
                          "eQTLProbesFDR0.05-ProbeLevel_combined.txt.gz")
 
     EQTL_IA = os.path.join(os.path.sep, "groups", "umcg-biogen",
