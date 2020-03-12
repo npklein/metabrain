@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-File:         combine_GTE_files.py
+File:         combine_gte_files.py
 Created:      2020/02/25
 Last Changed: 2020/03/03
 Author:       M.Vochteloo
