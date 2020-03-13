@@ -1,7 +1,7 @@
 """
 File:         create_groups.py
 Created:      2020/03/12
-Last Changed:
+Last Changed: 2020/03/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -31,12 +31,13 @@ from src.df_utilities import save_dataframe
 
 
 class CreateGroups:
-    def __init__(self, settings, geno_df, alleles_df, expr_df, cov_df,
+    def __init__(self, settings, eqtl_df, geno_df, alleles_df, expr_df, cov_df,
                  groups_file, force, outdir):
         """
         The initializer for the class.
 
         :param settings: string, the settings.
+        :param eqtl_df: DataFrame, the eQTL probes data.
         :param geno_df: DataFrame, the genotype data.
         :param alleles_df: DataFrame, the alleles data.
         :param expr_df: DataFrame, the expression data.
@@ -45,6 +46,7 @@ class CreateGroups:
         :param force: boolean, whether or not to force the step to redo.
         :param outdir: string, the output directory.
         """
+        self.eqtl_df = eqtl_df
         self.geno_df = geno_df
         self.alleles_df = alleles_df
         self.expr_df = expr_df
@@ -52,7 +54,6 @@ class CreateGroups:
         self.force = force
 
         # Load the groups.
-        groups_data = []
         with open(groups_file, "rb") as f:
             groups_data = pickle.load(f)
 
@@ -73,10 +74,15 @@ class CreateGroups:
     def start(self):
         print("Starting creating group files.")
         for group, group_id in zip(self.groups, self.group_ids):
-            # Crete the group dir.
+            print("Working on group: {}.".format(group_id))
+
+            # Create the group dir.
             group_dir = os.path.join(self.outdir, group_id)
+            prepare_output_dir(group_dir)
 
             # Define the output names.
+            eqtl_outpath = os.path.join(group_dir,
+                                        "eqtl_table.txt.gz")
             geno_outpath = os.path.join(group_dir,
                                         "genotype_table.txt.gz")
             alleles_outpath = os.path.join(group_dir,
@@ -84,34 +90,40 @@ class CreateGroups:
             expr_outpath = os.path.join(group_dir,
                                         "expression_table.txt.gz")
             cov_outpath = os.path.join(group_dir,
-                                       "covariates-cortex.txt.gz")
+                                       "covariates_table.txt.gz")
 
             # Get the group indices.
             snp_mask = group.get_snp_indices()
             sample_mask = group.get_sample_indices()
 
-            # Check if output file exist.
+            # Check if output file exist, if not, create it.
+            if not check_file_exists(eqtl_outpath) or self.force:
+                print("\tGrouping the eQTL matrix.")
+                group_eqtl = self.eqtl_df.iloc[snp_mask, :].copy()
+                save_dataframe(outpath=eqtl_outpath, df=group_eqtl,
+                               index=False, header=True)
+
             if not check_file_exists(geno_outpath) or self.force:
-                # Subset the data.
+                print("\tGrouping the genotype matrix.")
                 group_geno = self.geno_df.iloc[snp_mask, sample_mask].copy()
                 save_dataframe(outpath=geno_outpath, df=group_geno,
                                index=True, header=True)
 
             if not check_file_exists(alleles_outpath) or self.force:
-                # Subset the data.
-                group_alleles = self.alleles_df.iloc[snp_mask, sample_mask].copy()
+                print("\tGrouping the alleles matrix.")
+                group_alleles = self.alleles_df.iloc[snp_mask, :].copy()
                 save_dataframe(outpath=alleles_outpath, df=group_alleles,
-                               index=True, header=True)
+                               index=False, header=True)
 
             if not check_file_exists(expr_outpath) or self.force:
-                # Subset the data.
+                print("\tGrouping the expression matrix.")
                 group_expr = self.expr_df.iloc[snp_mask, sample_mask].copy()
                 save_dataframe(outpath=expr_outpath, df=group_expr,
                                index=True, header=True)
 
             if not check_file_exists(cov_outpath) or self.force:
-                # Subset the data.
-                group_cov = self.cov_df.iloc[snp_mask, sample_mask].copy()
+                print("\tGrouping the covariate matrix.")
+                group_cov = self.cov_df.iloc[:, sample_mask].copy()
                 save_dataframe(outpath=cov_outpath, df=group_cov,
                                index=True, header=True)
 

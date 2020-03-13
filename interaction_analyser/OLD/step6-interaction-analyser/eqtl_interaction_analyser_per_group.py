@@ -58,7 +58,7 @@ class Main:
         self.indir = indir
         self.eqtl_ia = eqtl_ia
 
-        self.outdir = os.path.join(os.getcwd(), 'output')
+        self.outdir = os.path.join(os.getcwd(), 'output_w_corr')
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
 
@@ -86,25 +86,55 @@ class Main:
             # create the eqtl filename.
             eqtl_file = os.path.join(group_indir, 'eqtl_table.txt.gz')
 
+            # define the covariates to correct for.
+            tech_covs = [
+                "PCT_MRNA_BASES",
+                "PCT_INTRONIC_BASES",
+                "MEDIAN_3PRIME_BIAS",
+                "PCT_USABLE_BASES",
+                "PCT_INTERGENIC_BASES",
+                "PCT_UTR_BASES",
+                "PCT_READS_ALIGNED_IN_PAIRS",
+                "PCT_CHIMERAS",
+                "PF_READS_IMPROPER_PAIRS",
+                "PF_HQ_ALIGNED_Q20_BASES",
+                "PF_HQ_ALIGNED_BASES",
+                "PCT_PF_READS_IMPROPER_PAIRS",
+                "PF_READS_ALIGNED",
+                "avg_mapped_read_length",
+                "avg_input_read_length",
+                "uniquely_mapped",
+                "total_reads",
+                "Total.Sequences_R1",
+                "MDS1",
+                "MDS2",
+                "MDS3",
+                "MDS4"
+            ]
+
             # execute the program.
             command = 'java -jar {} -input {} -output {} -eqtls {} ' \
                       '-maxcov 1 ' \
                       '-noNormalization ' \
-                      '-nnoCovNormalization'.format(self.eqtl_ia, group_indir, group_outdir, eqtl_file)
+                      '-nnoCovNormalization ' \
+                      '-cov {}'.format(self.eqtl_ia, group_indir,
+                                       group_outdir, eqtl_file,
+                                       ",".join(tech_covs))
             print("\t{}".format(command))
             os.system(command)
 
 
-
 if __name__ == "__main__":
-    INDIR = os.path.join(os.path.sep, "groups", "umcg-biogen", "tmp03",
+    INDIR = os.path.join(os.path.sep, "groups", "umcg-biogen",
+                         "tmp03",
                          "output", "2019-11-06-FreezeTwoDotOne",
                          "2020-03-03-interaction-analyser",
                          "step5-prepare-ia-inputs", "output_p_snp",
                          "groups")
 
     EQTL_IA = os.path.join(os.path.sep, "groups", "umcg-biogen",
-                           "tmp03", "output", "2019-11-06-FreezeTwoDotOne",
+                           "tmp03", "output",
+                           "2019-11-06-FreezeTwoDotOne",
                            "2020-03-03-interaction-analyser",
                            "step6-interaction-analyser",
                            "eQTLInteractionAnalyser-1.2-SNAPSHOT-jar-with-dependencies.jar")

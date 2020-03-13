@@ -2,8 +2,8 @@
 
 """
 File:         visualiser.py
-Created:      2020/03/12
-Last Changed: 2020/03/13
+Created:      2020/03/13
+Last Changed:
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -31,7 +31,7 @@ from src.main import Main
 from src.cmd_line_arguments import CommandLineArguments
 
 # Metadata
-__program__ = "Matrix Preparation"
+__program__ = "Analyse Interactions"
 __author__ = "Martijn Vochteloo"
 __maintainer__ = "Martijn Vochteloo"
 __email__ = "m.vochteloo@st.hanze.nl"
@@ -49,11 +49,11 @@ if __name__ == '__main__':
                                version=__version__,
                                description=__description__)
     SETTINGS_FILE = CLA.get_argument("settings")
-    FORCE_STEPS = CLA.get_argument("force_steps")
+    FORCE = CLA.get_argument("force")
     OUTDIR = CLA.get_argument("outdir")
 
     # Start the program.
     PROGRAM = Main(settings_file=SETTINGS_FILE,
-                   force_steps=FORCE_STEPS,
+                   force=FORCE,
                    outdir=OUTDIR)
     PROGRAM.start()

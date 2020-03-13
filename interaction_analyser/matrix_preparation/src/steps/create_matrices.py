@@ -1,7 +1,7 @@
 """
 File:         create_matrices.py
 Created:      2020/03/12
-Last Changed:
+Last Changed: 2020/03/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -57,9 +57,6 @@ class CreateMatrices:
         self.eqtl_df = eqtl_df
         self.force = force
 
-        # Developer option.
-        self.nrows = 50
-
         # Prepare an output directories.
         self.outdir = os.path.join(outdir, 'create_matrices')
         prepare_output_dir(self.outdir)
@@ -79,27 +76,28 @@ class CreateMatrices:
         if check_file_exists(self.geno_outpath) and \
                 check_file_exists(self.alleles_outpath) and \
                 check_file_exists(self.expr_outpath) and \
+                check_file_exists(self.markers_outpath) and \
+                check_file_exists(self.group_outpath) and \
                 not self.force:
             print("Skipping step.")
             return
 
         # Remove the output files.
-        for outfile in [self.geno_outpath, self.alleles_outpath, self.expr_outpath]:
+        for outfile in [self.geno_outpath, self.alleles_outpath, self.expr_outpath,
+                        self.markers_outpath, self.group_outpath]:
             if os.path.isfile(outfile):
                 os.remove(outfile)
 
         # Load the genotype matrix file.
         print("Loading genotype matrix.")
-        geno_df = load_dataframe(self.geno_file, header=0, index_col=0,
-                                 nrows=self.nrows)
+        geno_df = load_dataframe(self.geno_file, header=0, index_col=0)
         allele_df = geno_df.loc[:, ["Alleles", "MinorAllele"]].copy()
         geno_df = geno_df.rename(columns=self.sample_dict)
         geno_df = geno_df[self.sample_order]
 
         # Load the expression matrix file.
         print("Loading expression matrix.")
-        expr_df = load_dataframe(self.expr_file, header=0, index_col=0,
-                                 nrows=self.nrows)
+        expr_df = load_dataframe(self.expr_file, header=0, index_col=0)
         expr_df = expr_df.rename(columns=self.sample_dict)
         expr_df = expr_df[self.sample_order]
 
@@ -107,7 +105,7 @@ class CreateMatrices:
         print("Constructing matrices.")
         geno_str_buffer = ["-" + "\t" + "\t".join(self.sample_order) + "\n"]
         expr_str_buffer = ["-" + "\t" + "\t".join(self.sample_order) + "\n"]
-        allele_str_buffer = ["-" + "\t" "\t".join(list(allele_df.columns)) + "\n"]
+        allele_str_buffer = ["-" + "\t" + "\t".join(list(allele_df.columns)) + "\n"]
         marker_str_buffer = ["-" + "\t" + "\t".join(self.sample_order) + "\n"]
 
         groups = []
@@ -137,8 +135,8 @@ class CreateMatrices:
             hgnc_name = row["HGNCName"]
 
             # Used for development.
-            snp_name = "10:100145864:rs4919426:T_C"
-            probe_name = "ENSG00000000003.15"
+            # snp_name = "10:100145864:rs4919426:T_C"
+            # probe_name = "ENSG00000000003.15"
             # End used for development.
 
             # Get the genotype.
@@ -177,7 +175,9 @@ class CreateMatrices:
             for celltype, marker_genes in self.marker_dict.items():
                 for marker_gene in marker_genes:
                     if marker_gene == hgnc_name:
-                        marker_str_buffer.append(expr_str)
+                        marker_str = celltype + "_" + marker_gene + "\t" + \
+                                     "\t".join(expression.iloc[0, :].astype(str).values) + "\n"
+                        marker_str_buffer.append(marker_str)
 
             # Create an eQTL object.
             new_eqtl = Eqtl(snp_name, i, genotype, expression)
@@ -217,8 +217,12 @@ class CreateMatrices:
             self.write_buffer(self.markers_outpath, marker_str_buffer)
 
         # Pickle the groups.
+        print("Writing group pickle file.")
         with open(self.group_outpath, "wb") as f:
             pickle.dump(groups, f)
+
+        # Remove old dataframes.
+        del geno_df, expr_df
 
     @staticmethod
     def write_buffer(filename, buffer):
@@ -238,6 +242,16 @@ class CreateMatrices:
             for line in buffer:
                 f.write(line.encode())
         f.close()
+
+    def clear_variables(self):
+        self.geno_file = None
+        self.expr_file = None
+        self.marker_dict = None
+        self.gte_df = None
+        self.sample_dict = None
+        self.sample_order = None
+        self.eqtl_df = None
+        self.force = None
 
     def get_geno_outpath(self):
         return self.geno_outpath

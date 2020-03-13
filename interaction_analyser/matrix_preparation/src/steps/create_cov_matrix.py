@@ -23,6 +23,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 import os
 
 # Third party imports.
+from functools import reduce
 import numpy as np
 import pandas as pd
 
@@ -32,29 +33,31 @@ from src.df_utilities import load_dataframe, save_dataframe
 
 
 class CreateCovMatrix:
-    def __init__(self, settings, marker_file, force, outdir):
+    def __init__(self, settings, marker_file, sample_order, force, outdir):
         """
         The initializer for the class.
 
         :param settings: string, the settings.
         :param marker_file: string, path to the marker file.
+        :param sample_order: list, order of samples.
         :param force: boolean, whether or not to force the step to redo.
         :param outdir: string, the output directory.
         """
         self.cov_file = settings["covariate_datafile"]
-        self.tech_covs = settings["technical_covariates"]
+        self.cov_exclude = settings["covariate_exclude"]
         self.cohorts = settings["cohorts"]
         self.pheno_file = settings["phenotype_datafile"]
         self.eig_file = settings["eigenvectors_datafile"]
         self.n_eigen = settings["num_eigenvectors"]
         self.eig_bef_cov_corr_file = settings["eigenvectors_before_cov_corr_datafile"]
         self.marker_file = marker_file
+        self.sample_order = sample_order
         self.force = force
 
         # Prepare an output directories.
         self.outdir = os.path.join(outdir, 'create_cov_matrix')
         prepare_output_dir(self.outdir)
-        self.outpath = os.path.join(self.outdir, "covariates-cortex.txt.gz")
+        self.outpath = os.path.join(self.outdir, "covariates_table.txt.gz")
 
         # Variables.
         self.covariates = None
@@ -77,11 +80,8 @@ class CreateCovMatrix:
         # read the covariates file.
         print("Loading covariate matrix.")
         cov_df = load_dataframe(inpath=self.cov_file, header=0, index_col=0)
-
-        # filter technical covariates and the cohorts out.
-        tech_cov_df = cov_df.loc[:, self.tech_covs]
         cohorts_df = cov_df.loc[:, self.cohorts]
-        del cov_df
+        cov_df = cov_df.drop(self.cohorts + self.cov_exclude, axis=1)
 
         # validate the cohorts.
         print("Validating cohorts.")
@@ -98,6 +98,9 @@ class CreateCovMatrix:
         print("Loading phenotype matrix.")
         pheno_df = load_dataframe(inpath=self.pheno_file, header=0,
                                   index_col=4, low_memory=False)
+
+        # Combine the two gender columns, keep 'sex.by.expression' as main
+        # gender ans use 'Gender' when no information is available.
         pheno_df = pheno_df.loc[:, ["Gender", "sex.by.expression"]]
         pheno_df.replace("no expression available", np.nan, inplace=True)
         pheno_df["SEX"] = pheno_df['sex.by.expression'].combine_first(
@@ -119,31 +122,40 @@ class CreateCovMatrix:
         # read the marker genes expression file.
         print("Loading marker genes matrix.")
         marker_df = load_dataframe(self.marker_file, header=0, index_col=0)
+        marker_df.sort_index(inplace=True)
+        marker_df.drop_duplicates(inplace=True)
         marker_df = marker_df.T
 
         # merge.
         print("Merging matrices.")
-        tmp_df1 = tech_cov_df.merge(cohorts_df, left_index=True,
-                                    right_index=True)
-        tmp_df2 = tmp_df1.merge(gender_df, left_index=True, right_index=True)
-        tmp_df3 = tmp_df2.merge(eigen_df, left_index=True, right_index=True)
-        tmp_df4 = tmp_df3.merge(cov_cor_df, left_index=True, right_index=True)
-        merged_df = tmp_df4.merge(marker_df, left_index=True, right_index=True)
-        del tmp_df1, tmp_df2, tmp_df3, tmp_df4
-        print("\tShape: {}".format(merged_df.shape))
+        comb_cov = reduce(lambda left, right: pd.merge(left, right, left_index=True, right_index=True),
+                          [cov_df, cohorts_df, gender_df, eigen_df, cov_cor_df, marker_df])
+        comb_cov = comb_cov.T
+        comb_cov = comb_cov[self.sample_order]
+        comb_cov.index = comb_cov.index.set_names(['Sample'])
+        comb_cov.index.name = "-"
+        print("\tShape: {}".format(comb_cov.shape))
 
-        # post process the matrix.
-        print("Post-process covariate matrix.")
-        merged_df = merged_df.T
-        merged_df.index = merged_df.index.set_names(['Sample'])
-        merged_df.index.name = "-"
-        print("\tShape: {}".format(merged_df.shape))
+        # Remove old dataframes.
+        del cov_df, cohorts_df, gender_df, eigen_df, cov_cor_df, marker_df
 
-        return merged_df
+        return comb_cov
 
     def save(self):
         save_dataframe(df=self.covariates, outpath=self.outpath,
                        index=True, header=True)
+
+    def clear_variables(self):
+        self.cov_file = None
+        self.cov_exclude = None
+        self.cohorts = None
+        self.pheno_file = None
+        self.eig_file = None
+        self.n_eigen = None
+        self.eig_bef_cov_corr_file = None
+        self.marker_file = None
+        self.sample_order = None
+        self.force = None
 
     def get_covariates(self):
         return self.covariates
@@ -157,7 +169,7 @@ class CreateCovMatrix:
     def print_arguments(self):
         print("Arguments:")
         print("  > Covariates input file: {}".format(self.cov_file))
-        print("  > Technical covariates: {}".format(self.tech_covs))
+        print("  > Covariate exludes: {}".format(self.cov_exclude))
         print("  > Cohorts: {}".format(self.cohorts))
         print("  > Phenotype input file: {}".format(self.pheno_file))
         print("  > Eigenvectors input file: {}".format(self.eig_file))

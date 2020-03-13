@@ -30,7 +30,7 @@ import numpy as np
 
 class Group:
     def __init__(self, id, samples):
-        self.id = id
+        self.id = "group_{}".format(id)
         self.samples = samples
 
         self.snp_indices = np.array([], dtype=np.int16)

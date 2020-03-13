@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/12
-Last Changed:
+Last Changed: 2020/03/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -43,12 +43,13 @@ class Main:
     Main: this class is the main class that calls all other functionality.
     """
 
-    def __init__(self, settings_file, force_steps):
+    def __init__(self, settings_file, force_steps, outdir):
         """
         Initializer of the class.
 
         :param settings_file: string, the name of the settings file.
         :param force_steps: list, the names of the steps to force to redo.
+        :param outdir: string, the name of the base output directory.
         """
         # Load the LocalSettings singelton class.
         self.settings = LocalSettings(settings_file)
@@ -57,7 +58,7 @@ class Main:
         self.force_dict = self.create_force_dict(force_steps)
 
         # Prepare an output directory.
-        self.outdir = os.path.join(get_project_root_dir(), 'output')
+        self.outdir = os.path.join(get_project_root_dir(), outdir)
         prepare_output_dir(self.outdir)
 
     @staticmethod
@@ -90,6 +91,7 @@ class Main:
             force=self.force_dict['combine_gte_files'],
             outdir=self.outdir)
         cgtef.start()
+        cgtef.clear_variables()
 
         # Step2. Combine eQTL probes files.
         print("\n### STEP2 ###\n")
@@ -98,6 +100,7 @@ class Main:
             force=self.force_dict['combine_eqtlprobes'],
             outdir=self.outdir)
         cepf.start()
+        cepf.clear_variables()
 
         # Step3. Create the ordered unmasked matrices.
         print("\n### STEP3 ###\n")
@@ -110,28 +113,41 @@ class Main:
             force=self.force_dict['create_matrices'],
             outdir=self.outdir)
         cm.start()
+        cm.clear_variables()
 
         # Step4. Create the covariance matrix.
         print("\n### STEP4 ###\n")
         ccm = CreateCovMatrix(
-            settings=self.settings.get_setting('create_matrices'),
+            settings=self.settings.get_setting('create_cov_matrix'),
             marker_file=cm.get_markers_outpath(),
-            force=self.force_dict['create_matrices'],
+            sample_order=cgtef.get_sample_order(),
+            force=self.force_dict['create_cov_matrix'],
             outdir=self.outdir)
         ccm.start()
+        ccm.clear_variables()
 
         # Load the complete dataframes.
-        print("\n### LOADING DATAFRAMES ###\n")
+        print("\n### LOADING SORTED DATAFRAMES ###\n")
+        print("Extracting eQTL dataframe.")
+        eqtl_df = cepf.get_eqtlprobes()
+        print("Loading genotype dataframe.")
         geno_df = load_dataframe(cm.get_geno_outpath(),
-                                 header=True,
-                                 index_col=True)
+                                 header=0,
+                                 index_col=0)
+        print("Loading alleles dataframe.")
         alleles_df = load_dataframe(cm.get_alleles_outpath(),
-                                    header=True,
-                                    index_col=True)
+                                    header=0,
+                                    index_col=0)
+        print("Loading expression dataframe.")
         expr_df = load_dataframe(cm.get_expr_outpath(),
-                                 header=True,
-                                 index_col=True)
+                                 header=0,
+                                 index_col=0)
+        print("Extracting covariates dataframe.")
         cov_df = ccm.get_covariates()
+
+        # Validate the matrices.
+        print("Validating matrices.")
+        self.validate(eqtl_df.copy(), geno_df, alleles_df, expr_df, cov_df)
 
         # Step5. Create the masked matrices.
         print("\n### STEP5 ###\n")
@@ -141,22 +157,43 @@ class Main:
             alleles_df=alleles_df.copy(),
             expr_df=expr_df.copy(),
             cov_df=cov_df.copy(),
-            sample_dict_masked=cgtef.get_sample_dict(),
-            eqtl_dict_masked=cepf.get_eqtl_dict_masked(),
             force=self.force_dict['mask_matrices'],
             outdir=self.outdir)
         cmm.start()
+        del cmm
 
         # Step 6. Create the group matrices.
         print("\n### STEP6 ###\n")
         cg = CreateGroups(
             settings=self.settings.get_setting('create_groups'),
-            geno_df=geno_df.copy(),
-            alleles_df=alleles_df.copy(),
-            expr_df=expr_df.copy(),
-            cov_df=cov_df.copy(),
+            eqtl_df=eqtl_df,
+            geno_df=geno_df,
+            alleles_df=alleles_df,
+            expr_df=expr_df,
+            cov_df=cov_df,
             groups_file=cm.get_group_outpath(),
             force=self.force_dict['create_groups'],
             outdir=self.outdir)
         cg.start()
+        del cg
 
+    @staticmethod
+    def validate(eqtl_df, geno_df, alleles_df, expr_df, cov_df):
+        # Set the index of the eQTL for comparison.
+        eqtl_df.index = eqtl_df["SNPName"]
+        eqtl_df.index.name = "-"
+
+        # Check if row order is identical.
+        if not (eqtl_df.index.identical(geno_df.index)) or \
+                not (eqtl_df.index.identical(expr_df.index)) or \
+                not (eqtl_df.index.identical(alleles_df.index)):
+            print("Row order is not identical.")
+            exit()
+
+        # Check if sample order is identical.
+        if not (geno_df.columns.identical(expr_df.columns)) or \
+                not (geno_df.columns.identical(cov_df.columns)):
+            print("Order of samples are not identical.")
+            exit()
+
+        print("\tValid.")

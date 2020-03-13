@@ -1,0 +1,28 @@
+{
+  "input_dir": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-interaction-analyser/matrix_preparation/output/create_groups/group_11/",
+  "technical_covariates": [
+                "PCT_MRNA_BASES",
+                "PCT_INTRONIC_BASES",
+                "MEDIAN_3PRIME_BIAS",
+                "PCT_USABLE_BASES",
+                "PCT_INTERGENIC_BASES",
+                "PCT_UTR_BASES",
+                "PCT_READS_ALIGNED_IN_PAIRS",
+                "PCT_CHIMERAS",
+                "PF_READS_IMPROPER_PAIRS",
+                "PF_HQ_ALIGNED_Q20_BASES",
+                "PF_HQ_ALIGNED_BASES",
+                "PCT_PF_READS_IMPROPER_PAIRS",
+                "PF_READS_ALIGNED",
+                "avg_mapped_read_length",
+                "avg_input_read_length",
+                "uniquely_mapped",
+                "total_reads",
+                "Total.Sequences_R1",
+                "MDS1",
+                "MDS2",
+                "MDS3",
+                "MDS4"
+            ],
+  "eQTLInteractionAnalyser": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-03-interaction-analyser/step6-interaction-analyser/eQTLInteractionAnalyser-1.2-SNAPSHOT-jar-with-dependencies.jar"
+}
