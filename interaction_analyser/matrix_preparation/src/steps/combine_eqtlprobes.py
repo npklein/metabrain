@@ -52,7 +52,6 @@ class CombineEQTLProbes:
 
         # Declare variables.
         self.eqtl_probes = None
-        self.eqtl_dict_masked = None
 
     def start(self):
         print("Starting combining eQTL probe files.")
@@ -66,11 +65,7 @@ class CombineEQTLProbes:
         else:
             # Load each GTE file.
             self.eqtl_probes = self.combine_files()
-            self.eqtl_probes["MaskedName"] = ["SNP_" + str(x) for x in range(self.eqtl_probes.shape[0])]
             self.save()
-
-        # Construct eQTL translate dict.
-        self.eqtl_dict_masked = self.create_eqtl_dict()
 
     def combine_files(self):
         combined = None
@@ -92,26 +87,18 @@ class CombineEQTLProbes:
         save_dataframe(df=self.eqtl_probes, outpath=self.outpath,
                        index=False, header=True)
 
-    def create_eqtl_dict(self):
-        eqtl_dict = {}
-
-        for _, row in self.eqtl_probes.iterrows():
-            snp_name = row["SNPName"]
-            probe_name = row["ProbeName"]
-            masked_name = row["MaskedName"]
-            if snp_name not in eqtl_dict.keys():
-                eqtl_dict["{}_{}".format(snp_name, probe_name)] = masked_name
-
-        return eqtl_dict
+    def clear_variables(self):
+        self.indir = None
+        self.iter_dirname = None
+        self.n_iterations = None
+        self.in_filename = None
+        self.force = None
 
     def get_outpath(self):
         return self.outpath
 
     def get_eqtlprobes(self):
         return self.eqtl_probes
-
-    def get_eqtl_dict_masked(self):
-        return self.eqtl_dict_masked
 
     def print_arguments(self):
         print("Arguments:")

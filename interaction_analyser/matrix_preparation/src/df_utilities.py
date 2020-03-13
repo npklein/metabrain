@@ -1,7 +1,7 @@
 """
 File:         df_utilities.py
 Created:      2020/03/12
-Last Changed:
+Last Changed: 2020/03/13
 Author(s):    M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -26,15 +26,14 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 import pandas as pd
 
 # Local application imports.
-from src.utilities import get_file_name
+from src.utilities import get_basename
 
 
-def load_dataframe(inpath, header, index_col, sep="\t", nrows=None,
-                   low_memory=True):
+def load_dataframe(inpath, header, index_col, sep="\t", low_memory=True):
     df = pd.read_csv(inpath, sep=sep, header=header, index_col=index_col,
-                     nrows=nrows, low_memory=low_memory)
-    print("Loaded dataframe: {} with shape: {}".format(get_file_name(inpath),
-                                                       df.shape))
+                     low_memory=low_memory)
+    print("\tLoaded dataframe: {} with shape: {}".format(get_basename(inpath),
+                                                         df.shape))
     return df
 
 
@@ -45,5 +44,5 @@ def save_dataframe(df, outpath, header, index, sep="\t"):
 
     df.to_csv(outpath, sep=sep, index=index, header=header,
               compression=compression)
-    print("Saved dataframe: {} with shape: {}".format(get_file_name(outpath),
-                                                      df.shape))
+    print("\tSaved dataframe: {} with shape: {}".format(get_basename(outpath),
+                                                        df.shape))

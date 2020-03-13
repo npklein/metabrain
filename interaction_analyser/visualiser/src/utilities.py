@@ -1,6 +1,6 @@
 """
 File:         utilities.py
-Created:      2020/03/12
+Created:      2020/03/13
 Last Changed:
 Author(s):    M.Vochteloo
 
@@ -59,6 +59,25 @@ def get_basename(file_path):
     return os.path.basename(file_path)
 
 
+def get_filename(file_path):
+    """
+    Method to get the file_name of a file_path
+    :param file_path: str
+    :return: str
+    """
+    return os.path.basename(file_path).split(".")[0]
+
+
+def get_extension(file_path):
+    """
+    Method to get the extension of a file_path.
+
+    :param file_path: string, the complete file path.
+    :return: string, the extension of the file.
+    """
+    return "." + ".".join(os.path.basename(file_path).split(".")[1:])
+
+
 def prepare_output_dir(out_dir):
     """
     Method to create a directory if it does not exist.
@@ -67,3 +86,28 @@ def prepare_output_dir(out_dir):
     """
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
+
+
+def p_value_to_symbol(p_value):
+    """
+    Method for translating a p-value to a symbol.
+
+    :param p_value: float, the input p-value.
+    :return: string, the symbol corresponding to the p-value.
+    """
+    output = ""
+    try:
+        if p_value > 0.05:
+            output = "NS"
+        elif 0.05 >= p_value > 0.01:
+            output = "*"
+        elif 0.01 >= p_value > 0.001:
+            output = "**"
+        elif 0.001 >= p_value > 0.0001:
+            output = "***"
+        elif p_value <= 0.0001:
+            output = "****"
+    except TypeError:
+        pass
+
+    return output

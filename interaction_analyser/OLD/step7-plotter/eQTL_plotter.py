@@ -68,7 +68,7 @@ class Main:
         """
         self.indir = normal_indir
         self.inter_indir = inter_indir
-        self.outdir = os.path.join(os.getcwd(), 'plots')
+        self.outdir = os.path.join(os.getcwd(), 'plots_wo_corr')
         if group_name is not None:
             self.outdir = os.path.join(self.outdir, group_name)
         if not os.path.exists(self.outdir):
@@ -189,13 +189,13 @@ class Main:
 
         # Start plotting.
 
-        # # Plot heatmap of the interaction matrix.
-        # print("Creating z-score barplot.")
-        # self.plot_sum_zscores(inter_df, inter_zscore_outdir)
-        # print("Creating z-scores distribution plot per covariance.")
-        # self.plot_distributions(inter_df, z_score_cutoff, inter_zscore_outdir)
-        # print("Creating z-scores clustermap.")
-        # self.plot_heatmap(inter_df, inter_zscore_outdir)
+        # Plot heatmap of the interaction matrix.
+        print("Creating z-score barplot.")
+        self.plot_sum_zscores(inter_df, inter_zscore_outdir)
+        print("Creating z-scores distribution plot per covariance.")
+        self.plot_distributions(inter_df, z_score_cutoff, inter_zscore_outdir)
+        print("Creating z-scores clustermap.")
+        self.plot_heatmap(inter_df, inter_zscore_outdir)
 
         # Plot eQTLS.
         group_color_map, value_color_map = self.create_color_map()
@@ -530,7 +530,7 @@ if __name__ == "__main__":
                                "tmp03",
                                "output", "2019-11-06-FreezeTwoDotOne",
                                "2020-03-03-interaction-analyser",
-                               "step6-interaction-analyser", "output")
+                               "step6-interaction-analyser", "output_wo_corr")
 
     for GROUP_NAME in next(os.walk(INDIR))[1]:
         if GROUP_NAME != "group_11":

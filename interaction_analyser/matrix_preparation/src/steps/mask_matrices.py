@@ -1,7 +1,7 @@
 """
 File:         mask_matrices.py
 Created:      2020/03/12
-Last Changed:
+Last Changed: 2020/03/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -23,7 +23,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 import os
 
 # Third party imports.
-
+import pandas as pd
 
 # Local application imports.
 from src.utilities import prepare_output_dir, check_file_exists
@@ -32,7 +32,7 @@ from src.df_utilities import save_dataframe
 
 class MaskMatrices:
     def __init__(self, settings, geno_df, alleles_df, expr_df, cov_df,
-                 sample_dict_masked, eqtl_dict_masked, force, outdir):
+                 force, outdir):
         """
         The initializer for the class.
 
@@ -41,10 +41,6 @@ class MaskMatrices:
         :param alleles_df: DataFrame, the alleles data.
         :param expr_df: DataFrame, the expression data.
         :param cov_df: DataFrame, the covariate data.
-        :param sample_dict_masked: dictionary, map the column index to masked
-                                   names.
-        :param eqtl_dict_masked: dictionary, map the row index to masked
-                                 names.
         :param marker_file: string, path to the marker file.
         :param force: boolean, whether or not to force the step to redo.
         :param outdir: string, the output directory.
@@ -53,18 +49,19 @@ class MaskMatrices:
         self.alleles_df = alleles_df
         self.expr_df = expr_df
         self.cov_df = cov_df
-        self.sample_dict_masked = sample_dict_masked
-        self.eqtl_dict_masked = eqtl_dict_masked
         self.force = force
-
-        # Developer option.
-        self.nrows = 50
 
         # Prepare an output directories.
         self.outdir = os.path.join(outdir, 'mask_matrices')
         prepare_output_dir(self.outdir)
 
         # Define the output names.
+        self.eqtl_translate_outpath = os.path.join(self.outdir,
+                                                   "eqtl_translate_table.txt.gz")
+        self.sample_translate_outpath = os.path.join(self.outdir,
+                                                     "sample_translate_table.txt.gz")
+        self.cov_translate_outpath = os.path.join(self.outdir,
+                                                  "cov_translate_table.txt.gz")
         self.geno_outpath = os.path.join(self.outdir, "genotype_table.txt.gz")
         self.alleles_outpath = os.path.join(self.outdir,
                                             "genotype_alleles.txt.gz")
@@ -72,32 +69,66 @@ class MaskMatrices:
         self.cov_outpath = os.path.join(self.outdir, "covariates-cortex.txt.gz")
 
     def start(self):
-        print("Starting creating covariate file.")
+        print("Starting creating masked files.")
         self.print_arguments()
 
-        # Check if output file exist.
+        # Get the sizes.
+        (n_eqtls, n_samples) = self.geno_df.shape
+        n_covs = self.cov_df.shape[0]
+
+        # Create masks.
+        eqtl_mask = ["eqtl_" + str(x) for x in range(n_eqtls)]
+        sample_mask = ["sample_" + str(x) for x in range(n_samples)]
+        cov_mask = ["cov_" + str(x) for x in range(n_covs)]
+
+        # Create translate dicts.
+        print("Creating translation files.")
+        if not check_file_exists(self.eqtl_translate_outpath) or self.force:
+            eqtl_translate = pd.DataFrame({'unmasked': list(self.geno_df.index),
+                                           'masked': eqtl_mask})
+            save_dataframe(outpath=self.eqtl_translate_outpath,
+                           df=eqtl_translate,
+                           index=False, header=True)
+            del eqtl_translate
+
+        if not check_file_exists(self.sample_translate_outpath) or self.force:
+            sample_translate = pd.DataFrame(
+                {'unmasked': list(self.geno_df.columns),
+                 'masked': sample_mask})
+            save_dataframe(outpath=self.sample_translate_outpath,
+                           df=sample_translate,
+                           index=False, header=True)
+            del sample_translate
+
+        if not check_file_exists(self.cov_translate_outpath) or self.force:
+            cov_translate = pd.DataFrame({'unmasked': list(self.cov_df.index),
+                                          'masked': cov_mask})
+            save_dataframe(outpath=self.cov_translate_outpath, df=cov_translate,
+                           index=False, header=True)
+            del cov_translate
+
+        # Start masking the dataframes.
+        print("Start masking files.")
         if not check_file_exists(self.geno_outpath) or self.force:
-            self.geno_df = self.geno_df.rename(index=self.eqtl_dict_masked,
-                                               columns=self.sample_dict_masked)
+            self.geno_df.index = eqtl_mask
+            self.geno_df.columns = sample_mask
             save_dataframe(outpath=self.geno_outpath, df=self.geno_df,
                            index=True, header=True)
 
         if not check_file_exists(self.alleles_outpath) or self.force:
-            self.alleles_df = self.alleles_df.rename(
-                index=self.eqtl_dict_masked,
-                columns=self.sample_dict_masked)
+            self.alleles_df.index = eqtl_mask
             save_dataframe(outpath=self.alleles_outpath, df=self.alleles_df,
                            index=True, header=True)
 
         if not check_file_exists(self.expr_outpath) or self.force:
-            self.expr_df = self.expr_df.rename(index=self.eqtl_dict_masked,
-                                               columns=self.sample_dict_masked)
+            self.expr_df.index = eqtl_mask
+            self.expr_df.columns = sample_mask
             save_dataframe(outpath=self.expr_outpath, df=self.expr_df,
                            index=True, header=True)
 
         if not check_file_exists(self.cov_outpath) or self.force:
-            self.cov_df = self.cov_df.rename(index=self.eqtl_dict_masked,
-                                             columns=self.sample_dict_masked)
+            self.cov_df.index = cov_mask
+            self.cov_df.columns = sample_mask
             save_dataframe(outpath=self.cov_outpath, df=self.cov_df,
                            index=True, header=True)
 

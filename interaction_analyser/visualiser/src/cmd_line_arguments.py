@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
-Created:      2020/03/12
-Last Changed: 2020/03/13
+Created:      2020/03/13
+Last Changed:
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -72,22 +72,10 @@ class CommandLineArguments:
                             type=str,
                             default="default_settings",
                             help="The settings input file.")
-        parser.add_argument("-f",
-                            "--force_steps",
-                            nargs="+",
-                            type=str,
-                            default=None,
-                            choices=["all", "combine_gte_files",
-                                     "combine_eqtlprobes",
-                                     "create_matrices",
-                                     "create_cov_matrix",
-                                     "mask_matrices",
-                                     "create_groups"],
-                            help="The steps to force the program to redo.")
         parser.add_argument("-o",
                             "--outdir",
                             type=str,
-                            default="output",
+                            required=True,
                             help="The output directory name.")
 
         return parser
