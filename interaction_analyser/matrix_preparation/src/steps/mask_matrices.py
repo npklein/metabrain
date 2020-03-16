@@ -1,7 +1,7 @@
 """
 File:         mask_matrices.py
 Created:      2020/03/12
-Last Changed: 2020/03/13
+Last Changed: 2020/03/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -90,6 +90,8 @@ class MaskMatrices:
                            df=eqtl_translate,
                            index=False, header=True)
             del eqtl_translate
+        else:
+            print("Skipping eQTLs translate table.")
 
         if not check_file_exists(self.sample_translate_outpath) or self.force:
             sample_translate = pd.DataFrame(
@@ -99,6 +101,8 @@ class MaskMatrices:
                            df=sample_translate,
                            index=False, header=True)
             del sample_translate
+        else:
+            print("Skipping sample translate table.")
 
         if not check_file_exists(self.cov_translate_outpath) or self.force:
             cov_translate = pd.DataFrame({'unmasked': list(self.cov_df.index),
@@ -106,6 +110,8 @@ class MaskMatrices:
             save_dataframe(outpath=self.cov_translate_outpath, df=cov_translate,
                            index=False, header=True)
             del cov_translate
+        else:
+            print("Skipping covariates translate table.")
 
         # Start masking the dataframes.
         print("Start masking files.")
@@ -114,23 +120,31 @@ class MaskMatrices:
             self.geno_df.columns = sample_mask
             save_dataframe(outpath=self.geno_outpath, df=self.geno_df,
                            index=True, header=True)
+        else:
+            print("Skipping genotype table.")
 
         if not check_file_exists(self.alleles_outpath) or self.force:
             self.alleles_df.index = eqtl_mask
             save_dataframe(outpath=self.alleles_outpath, df=self.alleles_df,
                            index=True, header=True)
+        else:
+            print("Skipping genotype alleles tables.")
 
         if not check_file_exists(self.expr_outpath) or self.force:
             self.expr_df.index = eqtl_mask
             self.expr_df.columns = sample_mask
             save_dataframe(outpath=self.expr_outpath, df=self.expr_df,
                            index=True, header=True)
+        else:
+            print("Skipping expression table.")
 
         if not check_file_exists(self.cov_outpath) or self.force:
             self.cov_df.index = cov_mask
             self.cov_df.columns = sample_mask
             save_dataframe(outpath=self.cov_outpath, df=self.cov_df,
                            index=True, header=True)
+        else:
+            print("Skipping covariates table.")
 
     def print_arguments(self):
         print("Arguments:")

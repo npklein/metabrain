@@ -1,7 +1,7 @@
 """
 File:         df_utilities.py
-Created:      2020/03/12
-Last Changed: 2020/03/13
+Created:      2020/03/16
+Last Changed:
 Author(s):    M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -36,14 +36,3 @@ def load_dataframe(inpath, header, index_col, sep="\t", low_memory=True,
     print("\tLoaded dataframe: {} with shape: {}".format(get_basename(inpath),
                                                          df.shape))
     return df
-
-
-def save_dataframe(df, outpath, header, index, sep="\t"):
-    compression = 'infer'
-    if outpath.endswith('.gz'):
-        compression = 'gzip'
-
-    df.to_csv(outpath, sep=sep, index=index, header=header,
-              compression=compression)
-    print("\tSaved dataframe: {} with shape: {}".format(get_basename(outpath),
-                                                        df.shape))

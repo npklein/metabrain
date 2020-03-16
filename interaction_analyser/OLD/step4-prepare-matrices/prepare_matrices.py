@@ -109,6 +109,7 @@ class Main:
         for outfile in [geno_outfile, expr_outfile, cov_outfile,
                         allele_outfile]:
             if os.path.isfile(outfile):
+                print("Removing file: {}.".format(outfile))
                 os.remove(outfile)
 
         # Create the sample translation data frame.

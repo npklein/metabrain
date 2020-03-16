@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/12
-Last Changed: 2020/03/13
+Last Changed: 2020/03/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -36,6 +36,7 @@ from src.steps.create_matrices import CreateMatrices
 from src.steps.create_cov_matrix import CreateCovMatrix
 from src.steps.mask_matrices import MaskMatrices
 from src.steps.create_groups import CreateGroups
+from src.steps.create_regression_matrix import CreateRegressionMatrix
 
 
 class Main:
@@ -49,7 +50,6 @@ class Main:
 
         :param settings_file: string, the name of the settings file.
         :param force_steps: list, the names of the steps to force to redo.
-        :param outdir: string, the name of the base output directory.
         """
         # Load the LocalSettings singelton class.
         self.settings = LocalSettings(settings_file)
@@ -65,7 +65,8 @@ class Main:
     def create_force_dict(force_steps):
         force_dict = {'combine_gte_files': False, 'combine_eqtlprobes': False,
                       'create_matrices': False, 'create_cov_matrix': False,
-                      'mask_matrices': False, 'create_groups': False}
+                      'mask_matrices': False, 'create_groups': False,
+                      'create_regression_matrix': False}
         if force_steps is None or len(force_steps) == 0:
             return force_dict
 
@@ -138,6 +139,7 @@ class Main:
         alleles_df = load_dataframe(cm.get_alleles_outpath(),
                                     header=0,
                                     index_col=0)
+        print(alleles_df)
         print("Loading expression dataframe.")
         expr_df = load_dataframe(cm.get_expr_outpath(),
                                  header=0,
@@ -166,16 +168,29 @@ class Main:
         print("\n### STEP6 ###\n")
         cg = CreateGroups(
             settings=self.settings.get_setting('create_groups'),
-            eqtl_df=eqtl_df,
-            geno_df=geno_df,
-            alleles_df=alleles_df,
-            expr_df=expr_df,
-            cov_df=cov_df,
+            eqtl_df=eqtl_df.copy(),
+            geno_df=geno_df.copy(),
+            alleles_df=alleles_df.copy(),
+            expr_df=expr_df.copy(),
+            cov_df=cov_df.copy(),
             groups_file=cm.get_group_outpath(),
             force=self.force_dict['create_groups'],
             outdir=self.outdir)
         cg.start()
         del cg
+
+        # Step 6. Create the regression matrices.
+        print("\n### STEP6 ###\n")
+        crm = CreateRegressionMatrix(
+            settings=self.settings.get_setting('create_regression_matrix'),
+            eqtl_df=eqtl_df.copy(),
+            geno_df=geno_df.copy(),
+            alleles_df=alleles_df.copy(),
+            expr_df=expr_df.copy(),
+            force=self.force_dict['create_regression_matrix'],
+            outdir=self.outdir)
+        crm.start()
+        del crm
 
     @staticmethod
     def validate(eqtl_df, geno_df, alleles_df, expr_df, cov_df):

@@ -1,7 +1,7 @@
 """
 File:         create_matrices.py
 Created:      2020/03/12
-Last Changed: 2020/03/13
+Last Changed: 2020/03/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -86,6 +86,7 @@ class CreateMatrices:
         for outfile in [self.geno_outpath, self.alleles_outpath, self.expr_outpath,
                         self.markers_outpath, self.group_outpath]:
             if os.path.isfile(outfile):
+                print("Removing file: {}.".format(outfile))
                 os.remove(outfile)
 
         # Load the genotype matrix file.

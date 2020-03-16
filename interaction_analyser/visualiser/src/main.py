@@ -29,6 +29,12 @@ import os
 # Local application imports.
 from src.utilities import get_project_root_dir, prepare_output_dir
 from src.local_settings import LocalSettings
+from src.objects.dataset import Dataset
+from src.figures.simple_eqtl_effect import SimpleeQTLEffect
+from src.figures.inter_zscore_bars import InterZscoreBars
+from src.figures.inter_zscore_dist import InterZscoreDist
+from src.figures.inter_zscore_clustermap import InterZscoreClusterMap
+from src.figures.interaction_eqtl_effect import InteractioneQTLEffect
 
 
 class Main:
@@ -36,19 +42,22 @@ class Main:
     Main: this class is the main class that calls all other functionality.
     """
 
-    def __init__(self, settings_file, outdir):
+    def __init__(self, settings_file, plots):
         """
         Initializer of the class.
 
         :param settings_file: string, the name of the settings file.
-        :param force_steps: list, the names of the steps to force to redo.
-        :param outdir: string, the name of the base output directory.
+        :param plots: list, the names of the plots to create.
         """
         # Load the LocalSettings singelton class.
         self.settings = LocalSettings(settings_file)
 
+        # Load the variables.
+        self.plots = plots
+
         # Prepare an output directory.
-        self.outdir = os.path.join(get_project_root_dir(), outdir)
+        self.outdir = os.path.join(get_project_root_dir(),
+                                   self.settings.get_setting('output_dir'))
         prepare_output_dir(self.outdir)
 
     def start(self):
@@ -58,7 +67,47 @@ class Main:
         print("Starting visualiser.")
         self.print_arguments()
 
+        # Create the dataset object.
+        ds = Dataset(settings=self.settings)
+
+        # Figure 1: a simple eQTL effect.
+        print("\n### SIMPLE EQTL EFFECT ###\n")
+        if ('simple_eqtl_effect' in self.plots) or ('all' in self.plots):
+            sef = SimpleeQTLEffect(dataset=ds,
+                                   outdir=self.outdir)
+            sef.start()
+            del sef
+
+        print("\n### INTERACTION Z-SCORE BARPLOT ###\n")
+        if ('inter_zscore_bars' in self.plots) or ('all' in self.plots):
+            izb = InterZscoreBars(dataset=ds,
+                                  outdir=self.outdir)
+            izb.start()
+            del izb
+
+        print("\n### INTERACTION Z-SCORE DISTRIBUTION PLOT ###\n")
+        if ('inter_zscore_dist' in self.plots) or ('all' in self.plots):
+            izd = InterZscoreDist(dataset=ds,
+                                  outdir=self.outdir)
+            izd.start()
+            del izd
+
+        print("\n### INTERACTION Z-SCORE CLUSTERMAP ###\n")
+        if ('inter_zscore_clustermap' in self.plots) or ('all' in self.plots):
+            izcp = InterZscoreClusterMap(dataset=ds,
+                                         outdir=self.outdir)
+            izcp.start()
+            del izcp
+
+        print("\n### INTERACTION EQTL EFFECT ###\n")
+        if ('interaction_eqtl_effect' in self.plots) or ('all' in self.plots):
+            ief = InteractioneQTLEffect(dataset=ds,
+                                        outdir=self.outdir)
+            ief.start()
+            del ief
+
     def print_arguments(self):
         print("Arguments:")
         print("  > Output directory: {}".format(self.outdir))
+        print("  > Plots: {}".format(self.plots))
         print("")

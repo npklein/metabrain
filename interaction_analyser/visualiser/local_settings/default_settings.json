@@ -1,2 +1,10 @@
 {
+  "output_dir": "group_11",
+  "eqtl_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-interaction-analyser/matrix_preparation/output/create_groups/group_11/eqtl_table.txt.gz",
+  "genotype_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-interaction-analyser/matrix_preparation/output/create_groups/group_11/genotype_table.txt.gz",
+  "alleles_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-interaction-analyser/matrix_preparation/output/create_groups/group_11/genotype_alleles.txt.gz",
+  "expression_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-interaction-analyser/matrix_preparation/output/create_groups/group_11/expression_table.txt.gz",
+  "covariate_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-interaction-analyser/matrix_preparation/output/create_groups/group_11/covariates_table.txt.gz",
+  "interaction_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-interaction-analyser/analyse_interactions/group_11/output/InteractionZScoresMatrix-40Covariates.txt",
+  "nrows": 1
 }

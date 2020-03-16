@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/13
-Last Changed:
+Last Changed: 2020/03/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -71,15 +71,12 @@ class CommandLineArguments:
                             "--settings",
                             type=str,
                             default="default_settings",
-                            help="The settings input file.")
+                            help="The settings input file (without '.json'), "
+                                 "default: 'default_settings'.")
         parser.add_argument("-force",
                             action='store_true',
-                            help="Force the program to redo all steps.")
-        parser.add_argument("-o",
-                            "--outdir",
-                            type=str,
-                            required=True,
-                            help="The output directory name.")
+                            help="Force the program to redo all steps, "
+                                 "default: False.")
 
         return parser
 

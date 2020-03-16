@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-File:         visualiser.py
+File:         eqtl_visualiser.py
 Created:      2020/03/12
 Last Changed: 2020/03/13
 Author:       M.Vochteloo

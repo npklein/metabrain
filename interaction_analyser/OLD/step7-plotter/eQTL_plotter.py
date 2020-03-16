@@ -68,7 +68,7 @@ class Main:
         """
         self.indir = normal_indir
         self.inter_indir = inter_indir
-        self.outdir = os.path.join(os.getcwd(), 'plots_wo_corr')
+        self.outdir = os.path.join(os.getcwd(), 'plots_w_corr')
         if group_name is not None:
             self.outdir = os.path.join(self.outdir, group_name)
         if not os.path.exists(self.outdir):
@@ -105,75 +105,83 @@ class Main:
         if not os.path.exists(expr_path):
             expr_path = expr_path + '.gz'
 
-        cov_path = os.path.join(self.indir, 'covariate_table.txt')
+        cov_path = os.path.join(self.indir, 'covariates_table.txt')
         if not os.path.exists(cov_path):
             cov_path = cov_path + '.gz'
 
         inter_path = os.path.join(self.inter_indir,
-                                  'InteractionZScoresMatrix-0Covariates.txt')
-        if not os.path.exists(inter_path):
-            inter_path = inter_path + '.gz'
+                                  'InteractionZScoresMatrix-22Covariates.txt')
+        inter_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-interaction-analyser/analyse_interactions/group_11/output/InteractionZScoresMatrix-40Covariates.txt"
 
-        # Load the eQTL file.
-        print("Loading eQTL matrix.")
-        eqtl_df = pd.read_csv(eqtl_path, sep="\t", header=0, nrows=nrows)
-        eqtl_df.index = eqtl_df["SNPName"]
-        eqtl_df.index.name = "SNPName"
-        nrows = eqtl_df.shape[0]
-        print("\tShape: {}".format(eqtl_df.shape))
-
-        # Load the genotype matrix file.
-        print("Loading genotype matrix.")
-        geno_df = pd.read_csv(geno_path, sep="\t", header=0, index_col=0,
-                              nrows=nrows)
-        geno_df.index.name = "SNPName"
-        print("\tShape: {}".format(geno_df.shape))
-
-        # Load the alleles
-        print("Loading alleles matrix.")
-        allele_df = pd.read_csv(allele_path, sep="\t", header=0,
-                                index_col=0, nrows=nrows)
-        allele_df.index.name = "SNPName"
-        print("\tShape: {}".format(allele_df.shape))
-
-        # Load the expression matrix file.
-        print("Loading expression matrix.")
-        expr_df = pd.read_csv(expr_path, sep="\t", header=0, index_col=0,
-                              nrows=nrows)
-        expr_df.index.name = "SNPName"
-        print("\tShape: {}".format(expr_df.shape))
-
-        # Load the covariance matrix file.
-        print("Loading covariance matrix.")
-        cov_df = pd.read_csv(cov_path, sep="\t", header=0, index_col=0)
-        print("\tShape: {}".format(expr_df.shape))
+        # if not os.path.exists(inter_path):
+        #     inter_path = inter_path + '.gz'
+        #
+        # # Load the eQTL file.
+        # print("Loading eQTL matrix.")
+        # eqtl_df = pd.read_csv(eqtl_path, sep="\t", header=0, nrows=nrows)
+        # eqtl_df.index = eqtl_df["SNPName"]
+        # eqtl_df.index.name = "SNPName"
+        # nrows = eqtl_df.shape[0]
+        # print(eqtl_df)
+        # print("\tShape: {}".format(eqtl_df.shape))
+        #
+        # # Load the genotype matrix file.
+        # print("Loading genotype matrix.")
+        # geno_df = pd.read_csv(geno_path, sep="\t", header=0, index_col=0,
+        #                       nrows=nrows)
+        # geno_df.index.name = "SNPName"
+        # print(geno_df)
+        # print("\tShape: {}".format(geno_df.shape))
+        #
+        # # Load the alleles
+        # print("Loading alleles matrix.")
+        # allele_df = pd.read_csv(allele_path, sep="\t", header=0,
+        #                         index_col=0, nrows=nrows)
+        # allele_df.index.name = "SNPName"
+        # print(allele_df)
+        # print("\tShape: {}".format(allele_df.shape))
+        #
+        # # Load the expression matrix file.
+        # print("Loading expression matrix.")
+        # expr_df = pd.read_csv(expr_path, sep="\t", header=0, index_col=0,
+        #                       nrows=nrows)
+        # expr_df.index.name = "SNPName"
+        # print(expr_df)
+        # print("\tShape: {}".format(expr_df.shape))
+        #
+        # # Load the covariance matrix file.
+        # print("Loading covariance matrix.")
+        # cov_df = pd.read_csv(cov_path, sep="\t", header=0, index_col=0)
+        # print(cov_df)
+        # print("\tShape: {}".format(expr_df.shape))
 
         # Load the interaction matrix file.
         print("Loading interaction matrix.")
         inter_df = pd.read_csv(inter_path, sep="\t", header=0, index_col=0)
+        print(inter_df)
         print("\tShape: {}".format(inter_df.shape))
-
-        # Check if shape is identical.
-        if (eqtl_df.shape[0] != geno_df.shape[0]) or \
-                (eqtl_df.shape[0] != expr_df.shape[0]):
-            print("Input matrices rows are not identical length.")
-            return
-        if geno_df.shape != expr_df.shape:
-            print("Genotype and expression matrices are not identical shape.")
-            return
-
-        # Check if SNP order is identical.
-        if not (eqtl_df.index.identical(geno_df.index)) or \
-                not (eqtl_df.index.identical(expr_df.index)) or \
-                not (eqtl_df.index.identical(allele_df.index)):
-            print("Order of SNP's are not identical.")
-            return
-
-        # Check if sample order is identical.
-        if not (geno_df.columns.identical(expr_df.columns)) or \
-                not (geno_df.columns.identical(cov_df.columns)):
-            print("Order of samples are not identical.")
-            return
+        #
+        # # Check if shape is identical.
+        # if (eqtl_df.shape[0] != geno_df.shape[0]) or \
+        #         (eqtl_df.shape[0] != expr_df.shape[0]):
+        #     print("Input matrices rows are not identical length.")
+        #     return
+        # if geno_df.shape != expr_df.shape:
+        #     print("Genotype and expression matrices are not identical shape.")
+        #     return
+        #
+        # # Check if SNP order is identical.
+        # if not (eqtl_df.index.identical(geno_df.index)) or \
+        #         not (eqtl_df.index.identical(expr_df.index)) or \
+        #         not (eqtl_df.index.identical(allele_df.index)):
+        #     print("Order of SNP's are not identical.")
+        #     return
+        #
+        # # Check if sample order is identical.
+        # if not (geno_df.columns.identical(expr_df.columns)) or \
+        #         not (geno_df.columns.identical(cov_df.columns)):
+        #     print("Order of samples are not identical.")
+        #     return
 
         # Prepare output directories.
         simple_eqtl_outdir = os.path.join(self.outdir, "simple_eqtl")
@@ -196,6 +204,8 @@ class Main:
         self.plot_distributions(inter_df, z_score_cutoff, inter_zscore_outdir)
         print("Creating z-scores clustermap.")
         self.plot_heatmap(inter_df, inter_zscore_outdir)
+
+        exit()
 
         # Plot eQTLS.
         group_color_map, value_color_map = self.create_color_map()
@@ -520,17 +530,27 @@ class Main:
 
 if __name__ == "__main__":
     # Define main variables.
+    # INDIR = os.path.join(os.path.sep, "groups", "umcg-biogen", "tmp03",
+    #                      "output", "2019-11-06-FreezeTwoDotOne",
+    #                      "2020-03-03-interaction-analyser",
+    #                      "step5-prepare-ia-inputs", "output_p_snp",
+    #                      "groups")
+    #
+    # INTER_INDIR = os.path.join(os.path.sep, "groups", "umcg-biogen",
+    #                            "tmp03",
+    #                            "output", "2019-11-06-FreezeTwoDotOne",
+    #                            "2020-03-03-interaction-analyser",
+    #                            "step6-interaction-analyser", "output_wo_corr")
+
     INDIR = os.path.join(os.path.sep, "groups", "umcg-biogen", "tmp03",
                          "output", "2019-11-06-FreezeTwoDotOne",
-                         "2020-03-03-interaction-analyser",
-                         "step5-prepare-ia-inputs", "output_p_snp",
-                         "groups")
+                         "2020-12-03-interaction-analyser",
+                         "matrix_preparation", "output", "create_groups")
 
-    INTER_INDIR = os.path.join(os.path.sep, "groups", "umcg-biogen",
-                               "tmp03",
+    INTER_INDIR = os.path.join(os.path.sep, "groups", "umcg-biogen", "tmp03",
                                "output", "2019-11-06-FreezeTwoDotOne",
-                               "2020-03-03-interaction-analyser",
-                               "step6-interaction-analyser", "output_wo_corr")
+                               "2020-12-03-interaction-analyser",
+                               "analyse_interactions", "group_11", "output")
 
     for GROUP_NAME in next(os.walk(INDIR))[1]:
         if GROUP_NAME != "group_11":
