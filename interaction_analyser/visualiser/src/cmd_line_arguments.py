@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/13
-Last Changed:
+Last Changed: 2020/03/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -71,12 +71,20 @@ class CommandLineArguments:
                             "--settings",
                             type=str,
                             default="default_settings",
-                            help="The settings input file.")
-        parser.add_argument("-o",
-                            "--outdir",
+                            help="The settings input file (without '.json'), "
+                                 "default: 'default_settings'.")
+        parser.add_argument("-p",
+                            "--plots",
+                            nargs="+",
                             type=str,
-                            required=True,
-                            help="The output directory name.")
+                            default=["all"],
+                            choices=["simple_eqtl_effect",
+                                     "inter_zscore_bars",
+                                     "inter_zscore_dist",
+                                     "inter_zscore_clustermap",
+                                     "interaction_eqtl_effect"],
+                            help="The figures to be created, "
+                                 "default: 'all'.")
 
         return parser
 

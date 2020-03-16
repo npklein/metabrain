@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/12
-Last Changed: 2020/03/13
+Last Changed: 2020/03/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -71,7 +71,8 @@ class CommandLineArguments:
                             "--settings",
                             type=str,
                             default="default_settings",
-                            help="The settings input file.")
+                            help="The settings input file (without '.json'), "
+                                 "default: 'default_settings'.")
         parser.add_argument("-f",
                             "--force_steps",
                             nargs="+",
@@ -82,13 +83,16 @@ class CommandLineArguments:
                                      "create_matrices",
                                      "create_cov_matrix",
                                      "mask_matrices",
-                                     "create_groups"],
-                            help="The steps to force the program to redo.")
+                                     "create_groups",
+                                     "create_regression_matrix"],
+                            help="The steps to force the program to redo, "
+                                 "default: None.")
         parser.add_argument("-o",
                             "--outdir",
                             type=str,
                             default="output",
-                            help="The output directory name.")
+                            help="The output directory name, "
+                                 "default: 'output'.")
 
         return parser
 

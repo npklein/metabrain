@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-File:         visualiser.py
+File:         eqtl_visualiser.py
 Created:      2020/03/13
 Last Changed:
 Author:       M.Vochteloo
@@ -50,10 +50,8 @@ if __name__ == '__main__':
                                description=__description__)
     SETTINGS_FILE = CLA.get_argument("settings")
     FORCE = CLA.get_argument("force")
-    OUTDIR = CLA.get_argument("outdir")
 
     # Start the program.
     PROGRAM = Main(settings_file=SETTINGS_FILE,
-                   force=FORCE,
-                   outdir=OUTDIR)
+                   force=FORCE)
     PROGRAM.start()

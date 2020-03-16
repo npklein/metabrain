@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/13
-Last Changed:
+Last Changed: 2020/03/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -38,13 +38,12 @@ class Main:
     Main: this class is the main class that calls all other functionality.
     """
 
-    def __init__(self, settings_file, force, outdir):
+    def __init__(self, settings_file, force):
         """
         Initializer of the class.
 
         :param settings_file: string, the name of the settings file.
         :param force: boolean, whether or not to force to redo each step.
-        :param outdir: string, the name of the base output directory.
         """
         # Load the LocalSettings singelton class.
         settings = LocalSettings(settings_file)
@@ -56,6 +55,7 @@ class Main:
         self.force = force
 
         # Prepare an output directory.
+        outdir = settings.get_setting('output_dir')
         self.ia_indir = os.path.join(get_project_root_dir(), outdir, 'input')
         prepare_output_dir(self.ia_indir)
         self.ia_outdir = os.path.join(get_project_root_dir(), outdir, 'output')
@@ -66,11 +66,6 @@ class Main:
         self.geno_inpath = os.path.join(self.indir, 'genotype_table.txt.gz')
         self.expr_inpath = os.path.join(self.indir, 'expression_table.txt.gz')
         self.cov_inpath = os.path.join(self.indir, 'covariates_table.txt.gz')
-
-        # Cleanup output directory.
-        self.cleanup(self.ia_outdir)
-        if self.force:
-            self.cleanup(self.ia_indir)
 
     def start(self):
         """
@@ -90,7 +85,8 @@ class Main:
 
             if not check_file_exists(file1) or \
                     not check_file_exists(file2) or \
-                    not check_file_exists(file3):
+                    not check_file_exists(file3) or \
+                    self.force:
                 # Uncompressing the input files.
                 print("Uncompressing / moving input files.\n")
                 geno_inpath = self.uncompress_and_move(self.geno_inpath)
@@ -111,13 +107,8 @@ class Main:
 
         # execute the program.
         print("\n### STEP3 ###\n")
-        print("Executing eQTLInteractionAnalyser.\n")
+        print("Executing the eQTLInteractionAnalyser.\n")
         self.execute(eqtl_inpath)
-
-        # remove the temporary files.
-        print("\n### STEP4 ###\n")
-        print("Removing uncompressed files.\n")
-        self.cleanup(self.ia_indir, '.txt')
 
     def uncompress_and_move(self, inpath):
         outpath = os.path.join(self.ia_indir, get_filename(inpath) + ".txt")
@@ -150,18 +141,6 @@ class Main:
                                    eqtl_inpath, self.tech_covs)
         print("\t{}".format(command))
         os.system(command)
-
-    @staticmethod
-    def cleanup(dir, extension=None):
-        if extension is None:
-            extension = ""
-        regex = "*" + extension
-
-        for path in glob.glob(os.path.join(dir, regex)):
-            if check_file_exists(path) and (
-                    extension is None or get_extension(path) == extension):
-                print("\r rm {}".format(path))
-                os.remove(path)
 
     def print_arguments(self):
         print("Arguments:")

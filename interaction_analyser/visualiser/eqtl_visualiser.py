@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-File:         visualiser.py
+File:         eqtl_visualiser.py
 Created:      2020/03/13
 Last Changed:
 Author:       M.Vochteloo
@@ -31,7 +31,7 @@ from src.main import Main
 from src.cmd_line_arguments import CommandLineArguments
 
 # Metadata
-__program__ = "Visualiser"
+__program__ = "eQTL Visualiser"
 __author__ = "Martijn Vochteloo"
 __maintainer__ = "Martijn Vochteloo"
 __email__ = "m.vochteloo@st.hanze.nl"
@@ -49,9 +49,8 @@ if __name__ == '__main__':
                                version=__version__,
                                description=__description__)
     SETTINGS_FILE = CLA.get_argument("settings")
-    OUTDIR = CLA.get_argument("outdir")
+    PLOTS = CLA.get_argument("plots")
 
     # Start the program.
-    PROGRAM = Main(settings_file=SETTINGS_FILE,
-                   outdir=OUTDIR)
+    PROGRAM = Main(settings_file=SETTINGS_FILE, plots=PLOTS)
     PROGRAM.start()

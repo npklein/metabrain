@@ -75,7 +75,7 @@
       "TargetALS-EUR",
       "UCLA_ASD-EUR"
     ],
-    "phenotype_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-02-03-phenotype-table/2020-03-03.brain.phenotypes.txt",
+    "phenotype_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-02-03-phenotype-table/2020-03-09.brain.phenotypes.txt",
     "eigenvectors_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-02-17-step5-remove-covariates-per-dataset/output-cortex/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.CovariatesRemovedOLS.PCAOverSamplesEigenvectors.txt.gz",
     "num_eigenvectors": 50,
     "eigenvectors_before_cov_corr_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-01-31-step4-sample-removal-by-PCA/2020-01-31-step2-second-round-PCA-on-expression/pc1_2.txt"
@@ -85,5 +85,8 @@
   "create_groups": {
     "min_eqtl_in_group": 1000,
     "min_samples_in_group": 1000
+  },
+  "create_regression_matrix": {
+
   }
 }

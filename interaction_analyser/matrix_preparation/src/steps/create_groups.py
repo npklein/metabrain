@@ -1,7 +1,7 @@
 """
 File:         create_groups.py
 Created:      2020/03/12
-Last Changed: 2020/03/13
+Last Changed: 2020/03/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -74,7 +74,7 @@ class CreateGroups:
     def start(self):
         print("Starting creating group files.")
         for group, group_id in zip(self.groups, self.group_ids):
-            print("Working on group: {}.".format(group_id))
+            print("Working on: {}.".format(group_id))
 
             # Create the group dir.
             group_dir = os.path.join(self.outdir, group_id)
@@ -111,9 +111,11 @@ class CreateGroups:
 
             if not check_file_exists(alleles_outpath) or self.force:
                 print("\tGrouping the alleles matrix.")
+                print(self.alleles_df)
                 group_alleles = self.alleles_df.iloc[snp_mask, :].copy()
+                print(group_alleles)
                 save_dataframe(outpath=alleles_outpath, df=group_alleles,
-                               index=False, header=True)
+                               index=True, header=True)
 
             if not check_file_exists(expr_outpath) or self.force:
                 print("\tGrouping the expression matrix.")
