@@ -37,7 +37,16 @@ class Dataset:
         self.expr_inpath = settings.get_setting("expression_datafile")
         self.cov_inpath = settings.get_setting("covariate_datafile")
         self.inter_inpath = settings.get_setting("interaction_datafile")
-        self.nrows = settings.get_setting("nrows")
+        nrows = settings.get_setting("nrows")
+        if not isinstance(nrows, int):
+            if isinstance(nrows, str) and (nrows == "" or
+                                           nrows.lower() == "all" or
+                                           nrows.lower() == "none"):
+                nrows = None
+            else:
+                print("Unexpected argument for nrows")
+                exit()
+        self.nrows = nrows
 
         # Declare empty variables.
         self.eqtl_df = None
@@ -122,13 +131,14 @@ class Dataset:
             exit()
 
         if self.inter_df is not None:
-            subset = self.inter_df.iloc[:, :self.nrows].copy()
-            for i, colname in enumerate(subset.columns):
-                for df in [self.eqtl_df, self.geno_df, self.alleles_df,
-                           self.expr_df]:
-                    if not colname.startswith(df.index[i]):
-                        print("Order of eQTLs is not identical (2).")
-                        exit()
-            del subset
+            for df in [self.eqtl_df, self.geno_df, self.alleles_df,
+                       self.expr_df]:
+                if df is not None:
+                    subset = self.inter_df.iloc[:, :self.nrows].copy()
+                    for i, colname in enumerate(subset.columns):
+                        if not colname.startswith(df.index[i]):
+                            print("Order of eQTLs is not identical (2).")
+                            exit()
+                    del subset
 
         print("\tValid.")

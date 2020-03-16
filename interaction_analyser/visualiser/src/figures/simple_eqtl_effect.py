@@ -25,6 +25,7 @@ import os
 # Third party imports.
 import seaborn as sns
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -115,7 +116,7 @@ class SimpleeQTLEffect:
             data.drop(["round_geno"], axis=1, inplace=True)
 
             # Plot a simple eQTL effect.
-            self.plot(snp_name, probe_name, hgnc_name, eqtl_type,
+            self.plot(i, snp_name, probe_name, hgnc_name, eqtl_type,
                       data, minor_allele, minor_allele_frequency,
                       first_allele, second_allele,
                       self.outdir)
@@ -139,7 +140,7 @@ class SimpleeQTLEffect:
         return group_color_map, value_color_map
 
     @staticmethod
-    def plot(snp_name, probe_name, hgnc_name, eqtl_type, df,
+    def plot(i, snp_name, probe_name, hgnc_name, eqtl_type, df,
              minor_allele, minor_allele_frequency, first_allele,
              second_allele, outdir):
         """
@@ -193,9 +194,10 @@ class SimpleeQTLEffect:
                       fontweight='bold')
 
         # Safe the plot.
-        fig.savefig(os.path.join(outdir, "{}_{}_{}.png".format(snp_name,
-                                                               probe_name,
-                                                               hgnc_name)))
+        fig.savefig(os.path.join(outdir, "{}_{}_{}_{}.png".format(i,
+                                                                  snp_name,
+                                                                  probe_name,
+                                                                  hgnc_name)))
         plt.close()
 
     def print_arguments(self):

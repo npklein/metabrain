@@ -82,7 +82,9 @@ class CommandLineArguments:
                                      "inter_zscore_bars",
                                      "inter_zscore_dist",
                                      "inter_zscore_clustermap",
-                                     "interaction_eqtl_effect"],
+                                     "inter_zscore_marker_genes",
+                                     "inter_eqtl_zscore_bars",
+                                     "inter_eqtl_effect"],
                             help="The figures to be created, "
                                  "default: 'all'.")
 

@@ -1,5 +1,5 @@
 """
-File:         interaction_eqtl_effect.py
+File:         inter_eqtl_effect.py
 Created:      2020/03/16
 Last Changed:
 Author:       M.Vochteloo
@@ -36,7 +36,7 @@ import scipy.stats as st
 from src.utilities import prepare_output_dir
 
 
-class InteractioneQTLEffect:
+class IntereQTLEffect:
     def __init__(self, dataset, outdir):
         """
         The initializer for the class.
@@ -44,7 +44,7 @@ class InteractioneQTLEffect:
         :param dataset: Dataset, the input data.
         :param outdir: string, the output directory.
         """
-        self.outdir = os.path.join(outdir, 'interaction_eqtl_effect')
+        self.outdir = os.path.join(outdir, 'inter_eqtl_effect')
         prepare_output_dir(self.outdir)
 
         # Extract the required data.
@@ -61,6 +61,10 @@ class InteractioneQTLEffect:
     def start(self):
         print("Plotting interaction eQTL plots.")
         self.print_arguments()
+
+        # Calculate the z-score cutoff.
+        z_score_cutoff = st.norm.ppf(
+            0.05 / (self.inter_df.shape[0] * self.inter_df.shape[1]) / 2)
 
         i = 0
         for index, row in self.eqtl_df.iterrows():
@@ -112,10 +116,6 @@ class InteractioneQTLEffect:
             data["group_hue"] = data["group"].map(self.group_color_map)
             data.drop(["round_geno"], axis=1, inplace=True)
 
-            # Calculate the z-score cutoff.
-            z_score_cutoff = st.norm.ppf(
-                0.05 / (self.inter_df.shape[0] * self.inter_df.shape[1]) / 2)
-
             # Check if the SNP has an interaction effect.
             interaction_effect = self.inter_df.iloc[:, i].to_frame()
             interaction_effect.columns = ["zscore"]
@@ -129,7 +129,8 @@ class InteractioneQTLEffect:
             # Prepare output directory.
             if len(interaction_effect.index) > 0:
                 eqtl_interaction_outdir = os.path.join(self.outdir,
-                                                       snp_name)
+                                                       "{}_{}".format(i,
+                                                                      snp_name))
                 if not os.path.exists(eqtl_interaction_outdir):
                     os.makedirs(eqtl_interaction_outdir)
 
@@ -219,14 +220,17 @@ class InteractioneQTLEffect:
 
         # Safe the plot.
         plt.tight_layout()
-        fig.savefig(os.path.join(outdir, "{}_{}_{}_{}.png".format(snp_name,
-                                                                  probe_name,
-                                                                  hgnc_name,
-                                                                  cov_name)))
+        fig.savefig(os.path.join(outdir,
+                                 "inter_eqtl_{}_{}_{}_{}.png".format(
+                                     snp_name,
+                                     probe_name,
+                                     hgnc_name,
+                                     cov_name)))
         plt.close()
 
     def print_arguments(self):
         print("Arguments:")
+        print("  > eQTL matrix shape: {}".format(self.eqtl_df.shape))
         print("  > Genotype matrix shape: {}".format(self.geno_df.shape))
         print("  > Alleles matrix shape: {}".format(self.alleles_df.shape))
         print("  > Expression matrix shape: {}".format(self.expr_df.shape))
