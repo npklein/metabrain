@@ -34,7 +34,9 @@ from src.figures.simple_eqtl_effect import SimpleeQTLEffect
 from src.figures.inter_zscore_bars import InterZscoreBars
 from src.figures.inter_zscore_dist import InterZscoreDist
 from src.figures.inter_zscore_clustermap import InterZscoreClusterMap
-from src.figures.interaction_eqtl_effect import InteractioneQTLEffect
+from src.figures.inter_eqtl_zscore_bars import IntereQTLZscoreBars
+from src.figures.inter_eqtl_effect import IntereQTLEffect
+from src.figures.inter_zscore_marker_genes import InterZscoreMarkerGenes
 
 
 class Main:
@@ -93,18 +95,32 @@ class Main:
             del izd
 
         print("\n### INTERACTION Z-SCORE CLUSTERMAP ###\n")
+        if ('inter_zscore_marker_genes' in self.plots) or ('all' in self.plots):
+            izmg = InterZscoreMarkerGenes(dataset=ds,
+                                          outdir=self.outdir)
+            izmg.start()
+            del izmg
+
+        print("\n### INTERACTION Z-SCORE CLUSTERMAP ###\n")
         if ('inter_zscore_clustermap' in self.plots) or ('all' in self.plots):
             izcp = InterZscoreClusterMap(dataset=ds,
                                          outdir=self.outdir)
             izcp.start()
             del izcp
 
+        print("\n### INTERACTION EQTL Z-SCORE BARS ###\n")
+        if ('inter_eqtl_zscore_bars' in self.plots) or ('all' in self.plots):
+            iezb = IntereQTLZscoreBars(dataset=ds,
+                                       outdir=self.outdir)
+            iezb.start()
+            del iezb
+
         print("\n### INTERACTION EQTL EFFECT ###\n")
-        if ('interaction_eqtl_effect' in self.plots) or ('all' in self.plots):
-            ief = InteractioneQTLEffect(dataset=ds,
-                                        outdir=self.outdir)
-            ief.start()
-            del ief
+        if ('inter_eqtl_effect' in self.plots) or ('all' in self.plots):
+            iee = IntereQTLEffect(dataset=ds,
+                                  outdir=self.outdir)
+            iee.start()
+            del iee
 
     def print_arguments(self):
         print("Arguments:")

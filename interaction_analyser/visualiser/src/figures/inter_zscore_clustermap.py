@@ -47,7 +47,7 @@ class InterZscoreClusterMap:
         self.inter_df = dataset.get_inter_df()
 
     def start(self):
-        print("Plotting interaction matrix z-scores as distribution plot.")
+        print("Plotting interaction matrix z-scores as cluster map.")
         self.print_arguments()
         self.plot(self.inter_df, self.outdir)
 
@@ -61,7 +61,7 @@ class InterZscoreClusterMap:
             g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_ymajorticklabels(),
                                          fontsize=5))
         g.fig.suptitle('Interaction Z-Scores Matrix')
-        g.savefig(os.path.join(outdir, "zscores_heatmap.png"))
+        g.savefig(os.path.join(outdir, "zscores_clustermap.png"))
         plt.close()
 
     def print_arguments(self):
