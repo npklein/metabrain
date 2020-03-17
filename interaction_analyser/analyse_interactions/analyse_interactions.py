@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-File:         eqtl_visualiser.py
+File:         analyse_interactions.py
 Created:      2020/03/13
-Last Changed:
+Last Changed: 2020/03/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo

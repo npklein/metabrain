@@ -1,7 +1,7 @@
 """
 File:         inter_zscore_clustermap.py
 Created:      2020/03/16
-Last Changed:
+Last Changed: 2020/03/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -61,6 +61,7 @@ class InterZscoreClusterMap:
             g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_ymajorticklabels(),
                                          fontsize=5))
         g.fig.suptitle('Interaction Z-Scores Matrix')
+        plt.tight_layout()
         g.savefig(os.path.join(outdir, "zscores_clustermap.png"))
         plt.close()
 

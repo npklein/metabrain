@@ -1,7 +1,7 @@
 """
 File:         dataset.py
 Created:      2020/03/16
-Last Changed:
+Last Changed: 2020/03/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -37,6 +37,8 @@ class Dataset:
         self.expr_inpath = settings.get_setting("expression_datafile")
         self.cov_inpath = settings.get_setting("covariate_datafile")
         self.inter_inpath = settings.get_setting("interaction_datafile")
+        self.marker_inpath = settings.get_setting("marker_genes_datafile")
+        self.celltypes = settings.get_setting("celltypes")
         nrows = settings.get_setting("nrows")
         if not isinstance(nrows, int):
             if isinstance(nrows, str) and (nrows == "" or
@@ -55,6 +57,10 @@ class Dataset:
         self.expr_df = None
         self.cov_df = None
         self.inter_df = None
+        self.marker_df = None
+
+    def get_celltypes(self):
+        return self.celltypes
 
     def get_eqtl_df(self):
         if self.eqtl_df is None:
@@ -109,6 +115,14 @@ class Dataset:
                                            index_col=0)
             self.validate()
         return self.inter_df
+
+    def get_marker_df(self):
+        if self.marker_df is None:
+            self.marker_df = load_dataframe(inpath=self.marker_inpath,
+                                            header=0,
+                                            index_col=0)
+            self.validate()
+        return self.marker_df
 
     def validate(self):
         dfs = [self.eqtl_df, self.geno_df, self.alleles_df, self.expr_df]

@@ -43,5 +43,6 @@
     "UCLA_ASD-EUR",
     "ENA-EU"
   ],
-  "eQTLInteractionAnalyser": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-03-interaction-analyser/step6-interaction-analyser/eQTLInteractionAnalyser-1.2-SNAPSHOT-jar-with-dependencies.jar"
+  "eQTLInteractionAnalyser": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-03-interaction-analyser/step6-interaction-analyser/eQTLInteractionAnalyser-1.2-SNAPSHOT-jar-with-dependencies.jar",
+  "celltypes": ["neurons", "oligodendrocytes", "endothelialcells", "microglia", "astrocytes"]
 }
