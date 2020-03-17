@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/13
-Last Changed: 2020/03/16
+Last Changed: 2020/03/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -84,7 +84,8 @@ class CommandLineArguments:
                                      "inter_zscore_clustermap",
                                      "inter_zscore_marker_genes",
                                      "inter_eqtl_zscore_bars",
-                                     "inter_eqtl_effect"],
+                                     "inter_eqtl_effect",
+                                     "inter_eqtl_effect_marker_genes"],
                             help="The figures to be created, "
                                  "default: 'all'.")
 

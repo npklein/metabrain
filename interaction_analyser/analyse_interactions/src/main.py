@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/13
-Last Changed: 2020/03/16
+Last Changed: 2020/03/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -26,11 +26,14 @@ import glob
 import os
 
 # Third party imports.
+import pandas as pd
+import scipy.stats as st
 
 # Local application imports.
 from src.utilities import get_project_root_dir, prepare_output_dir
 from src.local_settings import LocalSettings
 from src.utilities import get_extension, get_filename, check_file_exists
+from src.df_utilities import load_dataframe, save_dataframe
 
 
 class Main:
@@ -52,6 +55,7 @@ class Main:
         self.indir = settings.get_setting("input_dir")
         self.tech_covs = ' '.join(settings.get_setting("technical_covariates"))
         self.eqtl_ia = settings.get_setting("eQTLInteractionAnalyser")
+        self.celltypes = settings.get_setting("celltypes")
         self.force = force
 
         # Prepare an output directory.
@@ -102,13 +106,28 @@ class Main:
                 print("Skipping {} preparation.".format(filename))
 
         print("\n### STEP2 ###\n")
-        print("Uncompressing / moving the eQTL file.\n")
-        eqtl_inpath = self.uncompress_and_move(self.eqtl_inpath)
+        eqtl_inpath = os.path.join(self.ia_indir,
+                                   get_filename(self.eqtl_inpath) + ".txt")
+        if not check_file_exists(eqtl_inpath) or self.force:
+            print("Uncompressing / moving the eQTL file.\n")
+            eqtl_inpath = self.uncompress_and_move(self.eqtl_inpath)
+        else:
+            print("Skipping step.")
 
         # execute the program.
         print("\n### STEP3 ###\n")
-        print("Executing the eQTLInteractionAnalyser.\n")
-        self.execute(eqtl_inpath)
+        inter_files = glob.glob(
+            os.path.join(self.ia_outdir, "InteractionZScoresMatrix*"))
+        if len(inter_files) != 1 or self.force:
+            print("Executing the eQTLInteractionAnalyser.\n")
+            self.execute(eqtl_inpath)
+        else:
+            print("Skipping step.")
+
+        # perform eQTL interaction clustering on marker genes.
+        print("\n### STEP4 ###\n")
+        inter_inpath = glob.glob(os.path.join(self.ia_outdir, "InteractionZScoresMatrix*"))[0]
+        self.eqtl_celltype_mediated(inter_inpath)
 
     def uncompress_and_move(self, inpath):
         outpath = os.path.join(self.ia_indir, get_filename(inpath) + ".txt")
@@ -142,11 +161,85 @@ class Main:
         print("\t{}".format(command))
         os.system(command)
 
+    def eqtl_celltype_mediated(self, inter_inpath):
+        # Loading dataframes.
+        print("Loading interaction dataframe.")
+        inter_df = load_dataframe(inpath=inter_inpath,
+                                  header=0,
+                                  index_col=0)
+        inter_df = inter_df.T
+
+        print("Loading eQTL dataframe.")
+        eqtl_df = load_dataframe(inpath=self.eqtl_inpath,
+                                 header=0,
+                                 index_col=1)
+        eqtl_df = eqtl_df[["ProbeName", "HGNCName"]]
+
+        # Calculate the z-score cutoff.
+        z_score_cutoff = st.norm.ppf(
+            0.05 / (inter_df.shape[0] * inter_df.shape[1]))
+        gini_cutoff = 0.75
+
+        # Subset on the marker genes.
+        marker_cols = []
+        for colname in inter_df.columns:
+            if ("_" in colname) and (colname.split("_")[0] in self.celltypes):
+                marker_cols.append(colname)
+
+        marker_df = inter_df.loc[:, marker_cols]
+        del inter_df
+
+        # Create a gini dataframe grouped by celltype.
+        gini_df = marker_df.copy()
+        gini_df = gini_df.abs()
+        zscore_mask = list(gini_df.max(axis=1) >= abs(z_score_cutoff))
+        gini_df.columns = [x.split("_")[0] for x in gini_df.columns]
+        gini_df = gini_df.T.groupby(gini_df.columns).sum().T
+
+        # Calculate the gini impurity.
+        gini_values = gini_df.div(gini_df.sum(axis=1), axis=0).pow(2)
+        marker_df["gini_impurity"] = 1 - gini_values.sum(axis=1)
+        marker_df["eqtl_celltype"] = gini_values.idxmax(axis=1)
+
+        # Subset the marker df on gini impurity.
+        gini_mask = list(marker_df["gini_impurity"] <= gini_cutoff)
+        marker_df = marker_df.loc[zscore_mask and gini_mask, :]
+        marker_df.index.name = "-"
+        marker_df.reset_index(inplace=True)
+
+        # Subset the eQTL dataframe.
+        eqtl_df = eqtl_df.loc[zscore_mask and gini_mask, :]
+        eqtl_df.reset_index(inplace=True)
+
+        # Merge them together.
+        merged_df = pd.concat([marker_df, eqtl_df], axis=1)
+        merged_df = merged_df.sort_values(by=['eqtl_celltype', 'gini_impurity'])
+
+        # Save the dataframe.
+        save_dataframe(df=merged_df,
+                       outpath=os.path.join(self.ia_outdir,
+                                            "marker_table.txt.gz"),
+                       header=True,
+                       index=False)
+
+        # Save celltype eqtl's HGNC names.
+        print("Writing celltype mediated eQTL files.")
+        for celltype in marker_df['eqtl_celltype'].unique():
+            subset = merged_df.loc[merged_df['eqtl_celltype'] == celltype, :]
+            print("\tCelltype: {}\t{} genes".format(celltype, len(subset.index)))
+            if len(subset.index) > 0:
+                genes = ', '.join(subset['HGNCName'].to_list())
+                outfile = open(os.path.join(self.ia_outdir,
+                                            '{}.txt'.format(celltype)), "w")
+                outfile.write(genes)
+                outfile.close()
+
     def print_arguments(self):
         print("Arguments:")
         print("  > Input directory: {}".format(self.indir))
         print(
-            "  > eQTLInteractionAnalyser input directory: {}".format(self.ia_indir))
+            "  > eQTLInteractionAnalyser input directory: {}".format(
+                self.ia_indir))
         print("  > eQTLInteractionAnalyser output directory: {}".format(
             self.ia_outdir))
         print("  > Technical covariates: {}".format(self.tech_covs))

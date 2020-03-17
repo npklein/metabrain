@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/13
-Last Changed:
+Last Changed: 2020/03/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -35,8 +35,9 @@ from src.figures.inter_zscore_bars import InterZscoreBars
 from src.figures.inter_zscore_dist import InterZscoreDist
 from src.figures.inter_zscore_clustermap import InterZscoreClusterMap
 from src.figures.inter_eqtl_zscore_bars import IntereQTLZscoreBars
-from src.figures.inter_eqtl_effect import IntereQTLEffect
 from src.figures.inter_zscore_marker_genes import InterZscoreMarkerGenes
+from src.figures.inter_eqtl_effect import IntereQTLEffect
+from src.figures.inter_eqtl_effect_marker_genes import IntereQTLEffectMarkerGenes
 
 
 class Main:
@@ -121,6 +122,13 @@ class Main:
                                   outdir=self.outdir)
             iee.start()
             del iee
+
+        print("\n### INTERACTION EQTL EFFECT MARKER GENES ###\n")
+        if ('inter_eqtl_effect_marker_genes' in self.plots) or ('all' in self.plots):
+            ieemg = IntereQTLEffectMarkerGenes(dataset=ds,
+                                               outdir=self.outdir)
+            ieemg.start()
+            del ieemg
 
     def print_arguments(self):
         print("Arguments:")
