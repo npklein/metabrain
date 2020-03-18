@@ -52,18 +52,19 @@ pc_scores.to_csv(os.path.join(args.outdir, "pc-scores.txt"),sep='\t')
 
 
 print('Calculate cronbach alpha')
-def CronbachAlpha(itemscores):
-    itemscores = np.asarray(itemscores)
-    itemvars = itemscores.var(ddof=1)
-    tscores = itemscores.sum()
-    nitems = itemscores.size
-    print(tscores)
-    return nitems / (nitems-1.) * (1 - itemvars.sum() / tscores.var(ddof=1))
+def CronbachAlpha(pc_scores, eigenvectores):
+    n_samples = eigenvectores.shape[0]
+    # Calculates Cronbach's alpha values for each component
+    # Based on the cronbach alpha implementation in pca.cc of pca++
+    # Only works if evd was calculated on correlation matrix
+    print("NOTE! Cronbach alpha calculation is assuming that evd is done on correlation matrix")
+    eigenvector_sums = eigenvectores.sum(axis=1)
+    pc_var = pc_scores.var(axis=1)
+    alphas = (n_samples / (T) (n_samples - 1.0)) * (1.0 - eigenvector_sums / pc_var);
 
 eigenvalues = pd.DataFrame(eigenvalues, columns=['eigenvalues']).to_csv('eigenvalues.csv')
 
-for col in pc_scores.columns:
-    cronbach = CronbachAlpha(pc_scores[pc_scores.columns[0]])
-    print(cronbach)
+print(CronbachAlpha(eigenvalues))
+
 cronbach = pd.DataFrame(cronbach, columns=['cronbach']).to_csv('cronbach.csv')
 
