@@ -32,10 +32,10 @@ pca = PCA()
 now = datetime.now()
 dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
 
-print('Start PCA - '+dt_string)
+print('Start PCA - '+dt_string, flush=True)
 projected_data = pca.fit_transform(df.T)
 eigenvalues = pca.explained_variance_
-print('done')
+print('done', flush=True)
 components = pca.components_
 eigenvectors = pd.DataFrame(components.T)
 pc_scores = pd.DataFrame(projected_data)
@@ -53,15 +53,17 @@ pc_scores.to_csv(os.path.join(args.outdir, "pc-scores.txt"),sep='\t')
 
 print('Calculate cronbach alpha')
 def CronbachAlpha(itemscores):
-    itemscores = numpy.asarray(itemscores)
-    itemvars = itemscores.var(axis=1, ddof=1)
-    tscores = itemscores.sum(axis=0)
-    nitems = len(itemscores)
-
+    itemscores = np.asarray(itemscores)
+    itemvars = itemscores.var(ddof=1)
+    tscores = itemscores.sum()
+    nitems = itemscores.size
+    print(tscores)
     return nitems / (nitems-1.) * (1 - itemvars.sum() / tscores.var(ddof=1))
 
-eigenvalues.to_csv(os.path.join(args.outdir, "eigenvalues.txt"),sep='\t')
+eigenvalues = pd.DataFrame(eigenvalues, columns=['eigenvalues']).to_csv('eigenvalues.csv')
 
-cronbach = eigenvalues
-cronbach.to_csv(os.path.join(args.outdir, "cronbach.txt"),sep='\t')
+for col in pc_scores.columns:
+    cronbach = CronbachAlpha(pc_scores[pc_scores.columns[0]])
+    print(cronbach)
+cronbach = pd.DataFrame(cronbach, columns=['cronbach']).to_csv('cronbach.csv')
 
