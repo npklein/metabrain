@@ -5,6 +5,8 @@ import argparse
 from multiprocessing import Pool
 import gzip
 from pathlib import Path
+import sys
+
 parser = argparse.ArgumentParser(description='Merge multiple kallisto count files into a matrix.')
 parser.add_argument('kallisto_base_path', help='base path from where to search for kallisto abundance.tsv files')
 parser.add_argument('gtf', help='GTF file containing mapping of transcript ID to gene ID')
