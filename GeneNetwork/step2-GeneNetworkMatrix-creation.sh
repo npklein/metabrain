@@ -247,10 +247,12 @@ print_command_arguments(){
         sed -i "s;REPLACEOUTDIR;$output_dir/;" $output_dir/7_evd_on_correlation_matrix/7_evd_on_correlation.sh
         sed -i "s;REPLACETHREADS;$threads;" $output_dir/7_evd_on_correlation_matrix/7_evd_on_correlation.sh
         sed -i "s;REPLACECRONBACHCUTOFF;${cronbach_cutoff};" $output_dir/7_evd_on_correlation_matrix/7_evd_on_correlation.sh
-        cd $output_dir/7_PCA_on_correlation_matrix/
-        sbatch 7_PCA_on_correlation.sh
-        cd -
+        cd $output_dir/7_evd_on_correlation_matrix
+        echo "submit eigenvector decomposition to cluster. Can take a while. Will wait untill finished"
+        sbatch --wait 7_PCA_on_correlation.sh
         wait
+        echo "done"
+        cd -
     fi
 }
 
