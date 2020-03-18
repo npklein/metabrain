@@ -1,7 +1,7 @@
 """
 File:         inter_zscore_marker_genes.py
 Created:      2020/03/16
-Last Changed: 2020/03/17
+Last Changed: 2020/03/18
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -86,7 +86,7 @@ class InterZscoreMarkerGenes:
                            figsize=(12, 9))
         plt.setp(
             g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_ymajorticklabels(),
-                                         fontsize=5))
+                                         fontsize=10))
         g.fig.suptitle('Interaction Z-Scores Marker Genes Gini Impurity')
         g.savefig(os.path.join(outdir, "eqtl_zscores_marker_genes.png"))
         plt.close()
@@ -110,12 +110,12 @@ class InterZscoreMarkerGenes:
                fontsize=10, alpha=0.75, ha='center', va='bottom',
                transform=ax.transAxes)
         g.set_ylabel('counts',
-                     fontsize=12,
+                     fontsize=14,
                      fontweight='bold')
         g.set_xlabel('celltype',
-                     fontsize=12,
+                     fontsize=14,
                      fontweight='bold')
-        ax.tick_params(labelsize=12)
+        ax.tick_params(labelsize=14)
         ax.set_xticks(range(len(df.index)))
         ax.set_xticklabels(df["index"], rotation=45)
         plt.tight_layout()
@@ -131,7 +131,6 @@ class InterZscoreMarkerGenes:
         plt.setp(
             g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_ymajorticklabels(),
                                          fontsize=5))
-        print(list(g.ax_heatmap.get_ymajorticklabels()))
         plt.setp(
             g.ax_heatmap.set_xticklabels(g.ax_heatmap.get_xmajorticklabels(),
                                          fontsize=5))

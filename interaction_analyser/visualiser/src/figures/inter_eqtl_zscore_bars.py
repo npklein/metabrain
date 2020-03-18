@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_zscore_bars.py
 Created:      2020/03/16
-Last Changed:
+Last Changed: 2020/03/18
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -25,11 +25,8 @@ import os
 # Third party imports.
 import seaborn as sns
 import matplotlib
-
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from scipy import stats
-from colour import Color
 import scipy.stats as st
 
 # Local application imports.
@@ -48,6 +45,7 @@ class IntereQTLZscoreBars:
         prepare_output_dir(self.outdir)
 
         # Extract the required data.
+        print("Loading data")
         self.eqtl_df = dataset.get_eqtl_df()
         self.inter_df = dataset.get_inter_df()
 

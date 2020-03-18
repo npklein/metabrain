@@ -1,7 +1,7 @@
 """
 File:         simple_eqtl_effect.py
 Created:      2020/03/16
-Last Changed:
+Last Changed: 2020/03/18
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -25,7 +25,6 @@ import os
 # Third party imports.
 import seaborn as sns
 import matplotlib
-
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -47,6 +46,7 @@ class SimpleeQTLEffect:
         prepare_output_dir(self.outdir)
 
         # Extract the required data.
+        print("Loading data")
         self.eqtl_df = dataset.get_eqtl_df()
         self.geno_df = dataset.get_geno_df()
         self.expr_df = dataset.get_expr_df()
@@ -90,10 +90,8 @@ class SimpleeQTLEffect:
             minor_genotype = counts.idxmin()
 
             # Determine the minor allele frequency.
-            minor_counts = (counts[minor_genotype] * 2) + counts[1.0]
-            major_counts = (counts[2.0 - minor_genotype] * 2) + counts[1.0]
-            minor_allele_frequency = (minor_counts + major_counts) / (
-                    data.shape[0] * 2)
+            minor_allele_frequency = ((counts[minor_genotype] * 2) +
+                                      counts[1.0]) / (data.shape[0] * 2)
 
             # Flip the alleles.
             if ((minor_allele == first_allele) and not (
@@ -187,9 +185,9 @@ class SimpleeQTLEffect:
         ax.set_ylabel('{} expression'.format(hgnc_name),
                       fontsize=12,
                       fontweight='bold')
-        ax.set_xlabel('SNP {} [minor: {}: {:.2f}'.format(snp_name,
-                                                         minor_allele,
-                                                         minor_allele_frequency),
+        ax.set_xlabel('SNP {} [minor: {}: {:.2f}]'.format(snp_name,
+                                                          minor_allele,
+                                                          minor_allele_frequency),
                       fontsize=12,
                       fontweight='bold')
 

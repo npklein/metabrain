@@ -1,7 +1,7 @@
 """
 File:         inter_zscore_clustermap.py
 Created:      2020/03/16
-Last Changed: 2020/03/17
+Last Changed: 2020/03/18
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -44,6 +44,7 @@ class InterZscoreClusterMap:
         prepare_output_dir(self.outdir)
 
         # Extract the required data.
+        print("Loading data")
         self.inter_df = dataset.get_inter_df()
 
     def start(self):
@@ -59,7 +60,7 @@ class InterZscoreClusterMap:
                            figsize=(12, (.2 * (len(df.index)))))
         plt.setp(
             g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_ymajorticklabels(),
-                                         fontsize=5))
+                                         fontsize=10))
         g.fig.suptitle('Interaction Z-Scores Matrix')
         plt.tight_layout()
         g.savefig(os.path.join(outdir, "zscores_clustermap.png"))

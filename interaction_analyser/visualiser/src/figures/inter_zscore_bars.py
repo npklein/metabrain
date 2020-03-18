@@ -1,7 +1,7 @@
 """
 File:         inter_zscores_bars.py
 Created:      2020/03/16
-Last Changed:
+Last Changed: 2020/03/18
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -44,6 +44,7 @@ class InterZscoreBars:
         prepare_output_dir(self.outdir)
 
         # Extract the required data.
+        print("Loading data")
         self.inter_df = dataset.get_inter_df()
 
     def start(self):
@@ -61,7 +62,8 @@ class InterZscoreBars:
     def plot(df, outdir, top=10):
         sns.set(rc={'figure.figsize': (12, 9)})
         fig, ax = plt.subplots(figsize=(11.7, 8.27))
-        g = sns.barplot(x="index", y="counts", data=df, palette="Blues_d")
+        g = sns.barplot(x="counts", y="index", data=df, palette="Blues_d",
+                        orient="h")
         g.text(0.5, 1.05,
                'Top Covariates',
                fontsize=16, weight='bold', ha='center', va='bottom',
@@ -70,15 +72,15 @@ class InterZscoreBars:
                '',
                fontsize=12, alpha=0.75, ha='center', va='bottom',
                transform=ax.transAxes)
-        g.set_ylabel('sum(z-score^2)',
+        g.set_ylabel('covariate',
                      fontsize=12,
                      fontweight='bold')
-        g.set_xlabel('covariate',
+        g.set_xlabel('sum(z-score^2)',
                      fontsize=12,
                      fontweight='bold')
         ax.tick_params(labelsize=5)
-        ax.set_xticks(range(len(df.index)))
-        ax.set_xticklabels(df["index"], rotation=90)
+        ax.set_yticks(range(len(df.index)))
+        ax.set_yticklabels(df["index"])
         plt.tight_layout()
         fig.savefig(os.path.join(outdir, "cov_zscores_barplot.png"))
         plt.close()
@@ -86,17 +88,18 @@ class InterZscoreBars:
         subset = df.iloc[:top, :]
         sns.set()
         fig, ax = plt.subplots(figsize=(11.7, 8.27))
-        g = sns.barplot(x="index", y="counts", data=subset, palette="Blues_d")
+        g = sns.barplot(x="counts", y="index", data=subset, palette="Blues_d",
+                        orient="h")
         g.set_title('Top Covariates')
-        g.set_ylabel('sum(z-score^2)',
-                     fontsize=8,
+        g.set_ylabel('covariate',
+                     fontsize=14,
                      fontweight='bold')
-        g.set_xlabel('covariate',
-                     fontsize=8,
+        g.set_xlabel('sum(z-score^2)',
+                     fontsize=14,
                      fontweight='bold')
-        ax.tick_params(labelsize=10)
-        ax.set_xticks(range(len(subset.index)))
-        ax.set_xticklabels(subset["index"], rotation=90)
+        ax.tick_params(labelsize=14)
+        ax.set_yticks(range(len(subset.index)))
+        ax.set_yticklabels(subset["index"])
         plt.tight_layout()
         fig.savefig(os.path.join(outdir, "cov_zscores_barplot_top.png"))
         plt.close()

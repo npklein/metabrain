@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect_marker_genes.py
 Created:      2020/03/17
-Last Changed:
+Last Changed: 2020/03/18
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -30,10 +30,9 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy import stats
 from colour import Color
-import scipy.stats as st
 
 # Local application imports.
-from src.utilities import prepare_output_dir
+from src.utilities import prepare_output_dir, p_value_to_symbol
 
 
 class IntereQTLEffectMarkerGenes:
@@ -48,11 +47,13 @@ class IntereQTLEffectMarkerGenes:
         prepare_output_dir(self.outdir)
 
         # Extract the required data.
+        print("Loading data")
         self.eqtl_df = dataset.get_eqtl_df()
         self.geno_df = dataset.get_geno_df()
         self.expr_df = dataset.get_expr_df()
         self.alleles_df = dataset.get_alleles_df()
         self.cov_df = dataset.get_cov_df()
+        self.inter_df = dataset.get_inter_df()
         self.celltypes = dataset.get_celltypes()
 
         # Create color map.
@@ -75,7 +76,10 @@ class IntereQTLEffectMarkerGenes:
             snp_name = row["SNPName"]
             probe_name = row["ProbeName"]
             hgnc_name = row["HGNCName"]
-            eqtl_type = row["CisTrans"]
+
+            print("Working on: {}\t{}\t{}".format(snp_name,
+                                                  probe_name,
+                                                  hgnc_name))
 
             # Get the genotype / expression data.
             genotype = self.geno_df.iloc[i, :].T.to_frame()
@@ -119,11 +123,16 @@ class IntereQTLEffectMarkerGenes:
             data["group_hue"] = data["group"].map(self.group_color_map)
             data.drop(["round_geno"], axis=1, inplace=True)
 
-            # Get the covariates of the marker genes.
-            covariates = self.cov_df.loc[marker_indices, :]
+            # Get the interaction zscores
+            interaction_effect = self.inter_df.iloc[:, i].to_frame()
+            interaction_effect = interaction_effect.loc[marker_indices, :]
+            interaction_effect.columns = ["zscore"]
 
-            self.plot(snp_name, probe_name, hgnc_name, eqtl_type,
-                      data, covariates, self.celltypes, self.outdir)
+            # Get the covariates of the marker genes.
+            markers = self.cov_df.loc[marker_indices, :].T
+
+            self.plot(snp_name, probe_name, hgnc_name, data, markers,
+                      interaction_effect, self.celltypes, i, self.outdir)
 
             i += 1
 
@@ -144,13 +153,99 @@ class IntereQTLEffectMarkerGenes:
         return group_color_map, value_color_map
 
     @staticmethod
-    def plot(snp_name, probe_name, hgnc_name, eqtl_type, df, markers,
-             celltypes, outdir):
+    def plot(snp_name, probe_name, hgnc_name, data, markers,
+             zscores, celltypes, count, outdir):
         """
         """
-        print(celltypes)
-        print(df)
-        print(markers)
+        # Calculate number of rows / columns.
+        ncols = int(len(celltypes))
+        nrows = int(len(markers.columns) / len(celltypes))
+
+        sns.set(rc={'figure.figsize': (12 * ncols, 9 * nrows)})
+        sns.set_style("ticks")
+        fig = plt.figure()
+        grid = fig.add_gridspec(ncols=ncols,
+                                nrows=nrows)
+
+        # calculate axis limits.
+        min = data["expression"].min() * 1.1
+        max = data["expression"].max() * 1.5
+
+        # Plot the markers.
+        row_index = 0
+        col_index = 0
+        for cov_name in markers.columns:
+            # Creat the subplot.
+            ax = fig.add_subplot(grid[row_index, col_index])
+            sns.despine(fig=fig, ax=ax)
+
+            # Plot the groups.
+            for i, allele in enumerate(data["alleles"].unique()):
+                # Combine the data.
+                df = data.copy()
+                cov = markers.loc[:, cov_name]
+                df = df.merge(cov, left_index=True, right_index=True)
+                del cov
+
+                # Calculate the correlation.
+                subset = df.loc[df["alleles"] == allele, :].copy()
+                coef, p = stats.spearmanr(subset["expression"],
+                                          subset[cov_name])
+                color = subset["group_hue"][0]
+
+                # Plot.
+                sns.regplot(x=cov_name, y="expression", data=subset,
+                            scatter_kws={'facecolors': subset['value_hue'],
+                                         'edgecolors': subset['group_hue']},
+                            line_kws={"color": color},
+                            ax=ax
+                            )
+
+                # Add the text.
+                ax.set(ylim=(min, max))
+                ax.annotate(
+                    '{}: r = {:.2f}, p = {:.2e} [{}]'.format(allele, coef, p,
+                                                             p_value_to_symbol(p)),
+                    xy=(0.03, 0.94 - ((i / 100) * 3)),
+                    xycoords=ax.transAxes,
+                    color=color,
+                    fontsize=12,
+                    fontweight='bold')
+
+            ax.text(0.5, 1.05,
+                    'Celltype: {} Marker gene: {} '.format(
+                        cov_name.split("_")[0],
+                        cov_name.split("_")[1]),
+                    fontsize=16, weight='bold', ha='center', va='bottom',
+                    transform=ax.transAxes)
+            ax.text(0.5, 1.02,
+                    '[z-score: {:.2f}]'.format(zscores.at[cov_name, "zscore"]),
+                    fontsize=12, alpha=0.75, ha='center', va='bottom',
+                    transform=ax.transAxes)
+
+            ax.set_ylabel('{} ({}) expression'.format(probe_name, hgnc_name),
+                          fontsize=12,
+                          fontweight='bold')
+            ax.set_xlabel('{} expression'.format(cov_name.split("_")[1]),
+                          fontsize=12,
+                          fontweight='bold')
+
+            # Increment indices.
+            col_index += 1
+            if col_index == ncols:
+                col_index = 0
+                row_index += 1
+
+        # Safe the plot.
+        plt.tight_layout()
+        fig.savefig(os.path.join(outdir,
+                                 "{}_inter_eqtl_{}_{}_{}_all_markers.png".format(
+                                     count,
+                                     snp_name,
+                                     probe_name,
+                                     hgnc_name)))
+        plt.close()
+
 
     def print_arguments(self):
         print("Arguments:")
@@ -159,6 +254,7 @@ class IntereQTLEffectMarkerGenes:
         print("  > Alleles matrix shape: {}".format(self.alleles_df.shape))
         print("  > Expression matrix shape: {}".format(self.expr_df.shape))
         print("  > Covariate matrix shape: {}".format(self.cov_df.shape))
+        print("  > Interaction matrix shape: {}".format(self.inter_df.shape))
         print("  > Celltypes: {}".format(self.celltypes))
         print("  > Output directory: {}".format(self.outdir))
         print("")
