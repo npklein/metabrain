@@ -17,6 +17,7 @@ mkdir -p $output_dir/7_evd_on_correlation_matrix/
 # step 7. Run evd
  on correlation matrix
 cd $output_dir/7_evd_on_correlation_matrix
+
 python REPLACESCRIPTDIR/evd.py REPLACECORMATRIX REPLACECOVCORRECTEDEXPRESSION ./ --svd_solver REPLACESVDSOLVER
 
 n=0
