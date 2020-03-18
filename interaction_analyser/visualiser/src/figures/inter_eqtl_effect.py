@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect.py
 Created:      2020/03/16
-Last Changed:
+Last Changed: 2020/03/18
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -30,7 +30,6 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy import stats
 from colour import Color
-import scipy.stats as st
 
 # Local application imports.
 from src.utilities import prepare_output_dir
@@ -48,6 +47,7 @@ class IntereQTLEffect:
         prepare_output_dir(self.outdir)
 
         # Extract the required data.
+        print("Loading data")
         self.eqtl_df = dataset.get_eqtl_df()
         self.geno_df = dataset.get_geno_df()
         self.expr_df = dataset.get_expr_df()
@@ -63,7 +63,7 @@ class IntereQTLEffect:
         self.print_arguments()
 
         # Calculate the z-score cutoff.
-        z_score_cutoff = st.norm.ppf(
+        z_score_cutoff = stats.norm.ppf(
             0.05 / (self.inter_df.shape[0] * self.inter_df.shape[1]) / 2)
 
         i = 0
@@ -134,13 +134,16 @@ class IntereQTLEffect:
                 if not os.path.exists(eqtl_interaction_outdir):
                     os.makedirs(eqtl_interaction_outdir)
 
+                count = 0
                 for index, (row,) in interaction_effect.iterrows():
                     eqtl_data = data.copy()
                     cov_data = self.cov_df.loc[index].to_frame()
                     eqtl_data = eqtl_data.merge(cov_data, left_index=True,
                                                 right_index=True)
                     self.plot(snp_name, probe_name, hgnc_name, eqtl_type,
-                              eqtl_data, index, row, eqtl_interaction_outdir)
+                              eqtl_data, index, row, count,
+                              eqtl_interaction_outdir)
+                    count += 1
 
             i += 1
 
@@ -162,7 +165,7 @@ class IntereQTLEffect:
 
     @staticmethod
     def plot(snp_name, probe_name, hgnc_name, eqtl_type, df, cov_name, zscore,
-             outdir):
+             count, outdir):
         """
         """
         # calculate axis limits.
@@ -221,7 +224,8 @@ class IntereQTLEffect:
         # Safe the plot.
         plt.tight_layout()
         fig.savefig(os.path.join(outdir,
-                                 "inter_eqtl_{}_{}_{}_{}.png".format(
+                                 "{}_inter_eqtl_{}_{}_{}_{}.png".format(
+                                     count,
                                      snp_name,
                                      probe_name,
                                      hgnc_name,

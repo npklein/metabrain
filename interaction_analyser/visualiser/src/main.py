@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/13
-Last Changed: 2020/03/17
+Last Changed: 2020/03/18
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -38,6 +38,7 @@ from src.figures.inter_eqtl_zscore_bars import IntereQTLZscoreBars
 from src.figures.inter_zscore_marker_genes import InterZscoreMarkerGenes
 from src.figures.inter_eqtl_effect import IntereQTLEffect
 from src.figures.inter_eqtl_effect_marker_genes import IntereQTLEffectMarkerGenes
+from src.figures.inter_eqtl_effect_marker_vs_comp import IntereQTLEffectMarkerVSComp
 
 
 class Main:
@@ -74,61 +75,68 @@ class Main:
         ds = Dataset(settings=self.settings)
 
         # Figure 1: a simple eQTL effect.
-        print("\n### SIMPLE EQTL EFFECT ###\n")
         if ('simple_eqtl_effect' in self.plots) or ('all' in self.plots):
+            print("\n### SIMPLE EQTL EFFECT ###\n")
             sef = SimpleeQTLEffect(dataset=ds,
                                    outdir=self.outdir)
             sef.start()
             del sef
 
-        print("\n### INTERACTION Z-SCORE BARPLOT ###\n")
         if ('inter_zscore_bars' in self.plots) or ('all' in self.plots):
+            print("\n### INTERACTION Z-SCORE BARPLOT ###\n")
             izb = InterZscoreBars(dataset=ds,
                                   outdir=self.outdir)
             izb.start()
             del izb
 
-        print("\n### INTERACTION Z-SCORE DISTRIBUTION PLOT ###\n")
         if ('inter_zscore_dist' in self.plots) or ('all' in self.plots):
+            print("\n### INTERACTION Z-SCORE DISTRIBUTION PLOT ###\n")
             izd = InterZscoreDist(dataset=ds,
                                   outdir=self.outdir)
             izd.start()
             del izd
 
-        print("\n### INTERACTION Z-SCORE CLUSTERMAP ###\n")
         if ('inter_zscore_marker_genes' in self.plots) or ('all' in self.plots):
+            print("\n### INTERACTION Z-SCORE CLUSTERMAP ###\n")
             izmg = InterZscoreMarkerGenes(dataset=ds,
                                           outdir=self.outdir)
             izmg.start()
             del izmg
 
-        print("\n### INTERACTION Z-SCORE CLUSTERMAP ###\n")
         if ('inter_zscore_clustermap' in self.plots) or ('all' in self.plots):
+            print("\n### INTERACTION Z-SCORE CLUSTERMAP ###\n")
             izcp = InterZscoreClusterMap(dataset=ds,
                                          outdir=self.outdir)
             izcp.start()
             del izcp
 
-        print("\n### INTERACTION EQTL Z-SCORE BARS ###\n")
         if ('inter_eqtl_zscore_bars' in self.plots) or ('all' in self.plots):
+            print("\n### INTERACTION EQTL Z-SCORE BARS ###\n")
             iezb = IntereQTLZscoreBars(dataset=ds,
                                        outdir=self.outdir)
             iezb.start()
             del iezb
 
-        print("\n### INTERACTION EQTL EFFECT ###\n")
         if ('inter_eqtl_effect' in self.plots) or ('all' in self.plots):
+            print("\n### INTERACTION EQTL EFFECT ###\n")
             iee = IntereQTLEffect(dataset=ds,
                                   outdir=self.outdir)
             iee.start()
             del iee
 
-        print("\n### INTERACTION EQTL EFFECT MARKER GENES ###\n")
         if ('inter_eqtl_effect_marker_genes' in self.plots) or ('all' in self.plots):
+            print("\n### INTERACTION EQTL EFFECT MARKER GENES ###\n")
             ieemg = IntereQTLEffectMarkerGenes(dataset=ds,
                                                outdir=self.outdir)
             ieemg.start()
             del ieemg
+
+        if ('inter_eqtl_effect_marker_vs_comp' in self.plots) or ('all' in self.plots):
+            print("\n### INTERACTION EQTL EFFECT MARKER GENES VS COMPS ###\n")
+            ieemvc = IntereQTLEffectMarkerVSComp(dataset=ds,
+                                                 outdir=self.outdir)
+            ieemvc.start()
+            del ieemvc
 
     def print_arguments(self):
         print("Arguments:")
