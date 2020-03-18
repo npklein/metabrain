@@ -76,7 +76,7 @@ parse_commandline(){
             -j | --jardir )             shift
                                         jardir=$1
                                         ;;
-            -m | --memr )               shift
+            -m | --mem )                shift
                                         mem=$1
                                         ;;
             -h | --help )               usage
