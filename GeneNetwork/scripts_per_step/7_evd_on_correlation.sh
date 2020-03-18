@@ -16,8 +16,8 @@ mkdir -p $output_dir/7_PCA_on_correlation_matrix/
 
 # step 7. Run PCA on correlation matrix
 cd $output_dir/7_PCA_on_correlation_matrix
-/groups/umcg-wijmenga/tmp04/projects/2019-comethylationnetwork/tools/pcapp/pcaplusplusv2/pca evd REPLACECORMATRIX
-/groups/umcg-wijmenga/tmp04/projects/2019-comethylationnetwork/tools/pcapp/pcaplusplusv2/pca pc-scores correlation REPLACECOVCORRECTEDEXPRESSION eigenvectors.txt
+python REPLACESCRIPTDIR/evd.py REPLACECORMATRIX REPLACECOVCORRECTEDEXPRESSION ./ --svd_solver REPLACESVDSOLVER
+
 n=0
 while read line;
 do
