@@ -6,34 +6,46 @@ set -u
 
 project_dir=
 outdir=
-config_templates=
 jardir=
 expression_file=
+mem=
 main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
 
-    rsync -vP $config_templates/3_PCA_on_quantNormalizedData.json $project_dir/configs/
+    java -Xmx$mem -Xms$mem -jar $jardir/eqtl-mapping-pipeline.jar \
+        --mode normalize \
+        --in $expression_file \
+        --out $outdir \
+        --qqnorm \
+        --logtransform \
+        --adjustPCA \
+        --maxnrpcaremoved 0 \
+        --stepsizepcaremoval 0
 
-    sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/3_PCA_on_quantNormalizedData.json
-    sed -i "s;OUTPUTDIR;$outdir/;" $project_dir/configs/3_PCA_on_quantNormalizedData.json
+    zcat $outdir/*.QuantileNormalized.Log2Transformed.PCAOverSamplesEigenvectors.txt.gz | awk 'BEGIN {OFS="\t"} NR == 1 {print "Sample","Comp1","Comp2"} NR > 1 {print $1,$2,$3}' > $outdir/pc1_2.txt
 
-    mkdir -p $(dirname $outdir)
+R --vanilla << EOF
 
-    java -jar $jardir/RunV13.jar $project_dir/configs/3_PCA_on_quantNormalizedData.json
+    args = commandArgs(trailingOnly=TRUE)
+    pcs <- read.table("$outdir/pc1_2.txt", header=T, sep="\t")
+    png("$outdir/pca.png",width=300, height=300)
+    plot(pcs\$Comp1, pcs\$Comp2)
+    dev.off()
 
-
+EOF
+echo "PCA  wrtten to $outdir/pca.png"
 }
 
 usage(){
     # print the usage of the programme
     programname=$0
-    echo "usage: $programname -e expression_file -p project_directory -o output_dir"
+    echo "usage: $programname -e expression_file -p project_directory -o output_dir -m mem"
     echo "  -e      Expression file to remove duplciates from"
     echo "  -p      Base of the project_dir where config files will be written"
     echo "  -o      Output file that will be written"
-    echo "  -c      Dir with configuration template files"
-    echo "  -j      Location of V13 jar file"
+    echo "  -j      Location of eqtl-mapping-pipeline.jar"
+    echo "  -m      Memory to give to the eqtlgen jar file when running, will be appendended to -Xmx, so 8g will be java -jar -Xmx8g"
     echo "  -h      display help"
     exit 1
 }
@@ -63,6 +75,9 @@ parse_commandline(){
                                         ;;
             -j | --jardir )             shift
                                         jardir=$1
+                                        ;;
+            -m | --memr )               shift
+                                        mem=$1
                                         ;;
             -h | --help )               usage
                                         exit
@@ -99,9 +114,9 @@ parse_commandline(){
         usage
         exit 1;
     fi
-    if [ -z "$config_templates" ];
+    if [ -z "$mem" ];
     then
-        echo "ERROR: -c/--config_templates not set!"
+        echo "ERROR: -m/--mem not set!"
         usage
         exit 1;
     fi

@@ -39,9 +39,11 @@ def parse_gtf():
     return(gene_chr)
 gene_chr = parse_gtf()
 
-accepted_chr = set(['1','10','11','12','13','14','15','16','17','18','19','2','20','21','22','3','4','5','6','7','8','9','MT','X','Y'])
-
-
+accepted_chr_tmp = set(['1','10','11','12','13','14','15','16','17','18','19','2','20','21','22','3','4','5','6','7','8','9','MT','X','Y'])
+accepted_chr = set([])
+for chr in accepted_chr_tmp:
+    accepted_chr.add('chr'+chr)
+    accepted_chr.add(chr)
 
 expr_set = set()
 genes_to_filter = set([])
@@ -61,6 +63,10 @@ with openfile(args.expression_file,'rt') as input_file:
             gene_on_scaffold += 1
             continue
         all_on_scaffolds = True
+        if gene not in gene_chr:
+            gene = gene.split('.')[0]
+            if gene not in gene_chr:
+                raise RuntimeError('Input gene '+gene+' not in gtf '+args.gtf)
         for chr in gene_chr[gene]:
             if chr in accepted_chr:
                 all_on_scaffolds = False

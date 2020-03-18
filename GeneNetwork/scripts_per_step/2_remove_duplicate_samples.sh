@@ -6,8 +6,8 @@ set -u
 project_dir=
 outfile=
 config_templates=
-jardir=
 expression_file=
+github_dir=
 main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
@@ -18,19 +18,19 @@ main(){
     sed -i "s;REPLACEOUTPUT;$outfile;" $project_dir/configs/2_config_RemoveDuplicates.json
 
     mkdir -p $(dirname $outfile)
-    java -jar $jardir/RunV13.jar $project_dir/configs/2_config_RemoveDuplicates.json
+    java -jar $github_dir/RunV13.jar $project_dir/configs/2_config_RemoveDuplicates.json
 
 }
 
 usage(){
     # print the usage of the programme
     programname=$0
-    echo "usage: $programname -e expression_file -p project_directory -o output_dir"
+    echo "usage: $programname -e expression_file -p project_directory -o output_dir -g github_dir -c config_dir"
     echo "  -e      Expression file to remove duplciates from"
     echo "  -p      Base of the project_dir where config files will be written"
     echo "  -o      Output file that will be written"
     echo "  -c      Dir with configuration template files"
-    echo "  -j      Location of V13 jar file"
+    echo "  -g      Location of github directory brain_eQTL/GeneNetwork/"
     echo "  -h      display help"
     exit 1
 }
@@ -58,8 +58,8 @@ parse_commandline(){
             -c | --configs )        shift
                                     config_templates=$1
                                     ;;
-            -j | --jardir )         shift
-                                    jardir=$1
+            -g | --github_dir )     shift
+                                    github_dir=$1
                                     ;;
             -h | --help )           usage
                                     exit
@@ -90,9 +90,9 @@ parse_commandline(){
         usage
         exit 1;
     fi
-    if [ -z "$jardir" ];
+    if [ -z "$github_dir" ];
     then
-        echo "ERROR: -j/--jardir not set!"
+        echo "ERROR: -g/--github_dir not set!"
         usage
         exit 1;
     fi

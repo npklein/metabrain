@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=PCA
-#SBATCH --output=PCA.out
-#SBATCH --error=PCA.err
+#SBATCH --job-name=evd_on_correlation
+#SBATCH --output=7_evd_on_correlation.out
+#SBATCH --error=7_evd_on_correlationPCA.err
 #SBATCH --time=23:59:59
 #SBATCH --cpus-per-task REPLACETHREADS
 #SBATCH --mem 100gb
@@ -12,10 +12,11 @@ source REPLACEPCASETUP
 set -e
 set -u
 output_dir=REPLACEOUTDIR
-mkdir -p $output_dir/7_PCA_on_correlation_matrix/
+mkdir -p $output_dir/7_evd_on_correlation_matrix/
 
-# step 7. Run PCA on correlation matrix
-cd $output_dir/7_PCA_on_correlation_matrix
+# step 7. Run evd
+ on correlation matrix
+cd $output_dir/7_evd_on_correlation_matrix
 python REPLACESCRIPTDIR/evd.py REPLACECORMATRIX REPLACECOVCORRECTEDEXPRESSION ./ --svd_solver REPLACESVDSOLVER
 
 n=0

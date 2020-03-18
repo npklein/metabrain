@@ -7,9 +7,9 @@ set -u
 project_dir=
 outdir=
 config_templates=
-jardir=
 sample_file=
 expression_file=
+github_dir=
 main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
@@ -22,18 +22,18 @@ main(){
     sed -i "s;REPLACEINCLUDESAMPLES;$sample_file;" $project_dir/configs/1_config_SelectSamples.json
 
     mkdir -p $(dirname $outdir)
-    java -jar $jardir/RunV13.jar $project_dir/configs/1_config_SelectSamples.json
+    java -jar $github_dir/RunV13.jar $project_dir/configs/1_config_SelectSamples.json
 }
 
 usage(){
     # print the usage of the programme
     programname=$0
-    echo "usage: $programname -e expression_file -p project_directory -o output_dir"
+    echo "usage: $programname -e expression_file -p project_directory -o output_dir -s sample_file -g github_dir -c conf_templates"
     echo "  -e      Expression file to remove duplciates from"
     echo "  -p      Base of the project_dir where config files will be written"
     echo "  -o      Output file that will be written"
     echo "  -c      Dir with configuration template files"
-    echo "  -j      Location of V13 jar file"
+    echo "  -g      location of the github directory brain_eQTL/"
     echo "  -s      File with samples to analyze"
     echo "  -h      display help"
     exit 1
@@ -62,8 +62,8 @@ parse_commandline(){
             -c | --config_templates )   shift
                                         config_templates=$1
                                         ;;
-            -j | --jardir )             shift
-                                        jardir=$1
+            -g | --github_dir )             shift
+                                        github_dir=$1
                                         ;;
             -s | --sample_file )        shift
                                         sample_file=$1
@@ -97,9 +97,9 @@ parse_commandline(){
         usage
         exit 1;
     fi
-    if [ -z "$jardir" ];
+    if [ -z "$github_dir" ];
     then
-        echo "ERROR: -j/--jardir not set!"
+        echo "ERROR: -g/--github_dir not set!"
         usage
         exit 1;
     fi
