@@ -1,4 +1,4 @@
-
+import sys
 import os
 import pandas as pd
 import numpy as np
@@ -32,10 +32,12 @@ pca = PCA()
 now = datetime.now()
 dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
 
-print('Start PCA - '+dt_string, flush=True)
+print('Start PCA - '+dt_string)
+sys.stdout.flush()
 projected_data = pca.fit_transform(df.T)
 eigenvalues = pca.explained_variance_
-print('done', flush=True)
+print('done')
+sys.stdout.flush()
 components = pca.components_
 eigenvectors = pd.DataFrame(components.T)
 pc_scores = pd.DataFrame(projected_data)
@@ -51,20 +53,20 @@ eigenvectors.to_csv(os.path.join(args.outdir, "eigenvectors.txt"),sep='\t')
 pc_scores.to_csv(os.path.join(args.outdir, "pc-scores.txt"),sep='\t')
 
 
-print('Calculate cronbach alpha')
-def CronbachAlpha(pc_scores, eigenvectors):
-    n_samples = eigenvectors.shape[0]
-    # Calculates Cronbach's alpha values for each component
+#print('Calculate cronbach alpha')
+#def CronbachAlpha(pc_scores, eigenvectors):
+#    n_samples = eigenvectors.shape[0]
+#    # Calculates Cronbach's alpha values for each component
     # Based on the cronbach alpha implementation in pca.cc of pca++
     # Only works if evd was calculated on correlation matrix
-    print("NOTE! Cronbach alpha calculation is assuming that evd is done on correlation matrix")
-    eigenvector_sums = eigenvectors.sum(axis=0)
-    pc_var = pc_scores.var(axis=0)
-    alphas = (n_samples / (n_samples - 1.0)) * (1.0 - eigenvector_sums.values / pc_var.values)
-    return(alphas)
+#    print("NOTE! Cronbach alpha calculation is assuming that evd is done on correlation matrix")
+#    eigenvector_sums = eigenvectors.sum(axis=0)
+#    pc_var = pc_scores.var(axis=0)
+#    alphas = (n_samples / (n_samples - 1.0)) * (1.0 - eigenvector_sums.values / pc_var.values)
+#    return(alphas)
 
 eigenvalues = pd.DataFrame(eigenvalues, columns=['eigenvalues']).to_csv('eigenvalues.txt', index=False)
 
-cronbach = CronbachAlpha(pc_scores, eigenvectors)
-cronbach = pd.DataFrame(cronbach, columns=['cronbach']).to_csv('cronbach.txt', index=False)
+#cronbach = CronbachAlpha(pc_scores, eigenvectors)
+#cronbach = pd.DataFrame(cronbach, columns=['cronbach']).to_csv('cronbach.txt', index=False)
 
