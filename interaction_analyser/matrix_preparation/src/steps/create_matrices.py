@@ -1,7 +1,7 @@
 """
 File:         create_matrices.py
 Created:      2020/03/12
-Last Changed: 2020/03/16
+Last Changed: 2020/03/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -114,7 +114,7 @@ class CreateMatrices:
         n_snps = self.eqtl_df.shape[0]
         for i, row in self.eqtl_df.iterrows():
             if (i % 250 == 0) or (i == (n_snps - 1)):
-                print("\t Processing {}/{} "
+                print("\tProcessing {}/{} "
                       "[{:.2f}%]".format(i, n_snps, (100 / n_snps) * i))
 
                 # Write output files.

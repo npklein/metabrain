@@ -1,6 +1,12 @@
 {
-  "input_dir": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-interaction-analyser/matrix_preparation/output/create_groups/group_11/",
-  "output_dir": "group_11",
+  "input_dir": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-interaction-analyser/matrix_preparation/output/create_groups/",
+  "filenames": {
+    "eqtl": "eqtl_table",
+    "genotype": "genotype_table",
+    "expression": "expression_table",
+    "covariate": "covariates_table"
+  },
+  "output_dir": "output",
   "technical_covariates": [
     "PCT_MRNA_BASES",
     "PCT_INTRONIC_BASES",
