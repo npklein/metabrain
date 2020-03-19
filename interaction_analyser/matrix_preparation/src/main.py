@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/12
-Last Changed: 2020/03/16
+Last Changed: 2020/03/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -131,19 +131,22 @@ class Main:
         print("\n### LOADING SORTED DATAFRAMES ###\n")
         print("Extracting eQTL dataframe.")
         eqtl_df = cepf.get_eqtlprobes()
+
         print("Loading genotype dataframe.")
         geno_df = load_dataframe(cm.get_geno_outpath(),
                                  header=0,
                                  index_col=0)
+
         print("Loading alleles dataframe.")
         alleles_df = load_dataframe(cm.get_alleles_outpath(),
                                     header=0,
                                     index_col=0)
-        print(alleles_df)
+
         print("Loading expression dataframe.")
         expr_df = load_dataframe(cm.get_expr_outpath(),
                                  header=0,
                                  index_col=0)
+
         print("Extracting covariates dataframe.")
         cov_df = ccm.get_covariates()
 

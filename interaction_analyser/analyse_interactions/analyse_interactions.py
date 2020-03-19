@@ -3,7 +3,7 @@
 """
 File:         analyse_interactions.py
 Created:      2020/03/13
-Last Changed: 2020/03/17
+Last Changed: 2020/03/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -49,9 +49,13 @@ if __name__ == '__main__':
                                version=__version__,
                                description=__description__)
     SETTINGS_FILE = CLA.get_argument("settings")
+    GROUPS = CLA.get_argument("groups")
     FORCE = CLA.get_argument("force")
+    VERBOSE = CLA.get_argument("verbose")
 
     # Start the program.
     PROGRAM = Main(settings_file=SETTINGS_FILE,
-                   force=FORCE)
+                   groups=GROUPS,
+                   force=FORCE,
+                   verbose=VERBOSE)
     PROGRAM.start()

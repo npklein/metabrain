@@ -1,7 +1,7 @@
 """
 File:         create_groups.py
 Created:      2020/03/12
-Last Changed: 2020/03/16
+Last Changed: 2020/03/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -60,11 +60,26 @@ class CreateGroups:
         # Remove uninteresting groups.
         self.groups = []
         self.group_ids = []
+        incl_eqtls = 0
+        total_eqtls = 0
         for group in groups_data:
-            if (group.get_n_eqtls() >= settings["min_eqtl_in_group"]) and \
-                    (group.get_n_eqtls() >= settings["min_samples_in_group"]):
+            group_n_eqtls = group.get_n_eqtls()
+            total_eqtls += group_n_eqtls
+            if (group_n_eqtls >= settings["min_eqtl_in_group"]) and \
+                    (group.get_n_samples() >= settings["min_samples_in_group"]):
+                incl_eqtls += group_n_eqtls
                 self.groups.append(group)
                 self.group_ids.append(group.get_id())
+        print("Filter completed, {}/{} [{:.2f}%] of the groups "
+              "passed the threshold.".format(len(self.groups),
+                                             len(groups_data),
+                                             (100 / len(groups_data)) *
+                                             len(self.groups)))
+        print("Total eQTL's when combining groups: "
+              "{}/{} [{:.2f}%].".format(incl_eqtls,
+                                        total_eqtls,
+                                        (100 / total_eqtls) * incl_eqtls))
+        exit()
         del groups_data
 
         # Prepare an output directories.
@@ -72,15 +87,19 @@ class CreateGroups:
         prepare_output_dir(self.outdir)
 
     def start(self):
-        print("Starting creating group files.")
-        for group, group_id in zip(self.groups, self.group_ids):
-            print("Working on: {}.".format(group_id))
+        print("Creating groups.")
+        for i, (group, group_id) in enumerate(zip(self.groups, self.group_ids)):
+            print("\tWorking on: {:10s} [{}/{} "
+                  "{:.2f}%]".format(group_id, i + 1, len(group_indirs),
+                                    (100 / len(group_indirs)) * i + 1))
 
             # Create the group dir.
             group_dir = os.path.join(self.outdir, group_id)
             prepare_output_dir(group_dir)
 
             # Define the output names.
+            group_object = os.path.join(group_dir,
+                                        "group.pkl")
             eqtl_outpath = os.path.join(group_dir,
                                         "eqtl_table.txt.gz")
             geno_outpath = os.path.join(group_dir,
@@ -91,6 +110,11 @@ class CreateGroups:
                                         "expression_table.txt.gz")
             cov_outpath = os.path.join(group_dir,
                                        "covariates_table.txt.gz")
+
+            # Check if output file exist, if not, create it.
+            if not check_file_exists(group_object) or self.force:
+                with open(group_object, "wb") as f:
+                    pickle.dump(group, f)
 
             # Get the group indices.
             snp_mask = group.get_snp_indices()
@@ -111,9 +135,7 @@ class CreateGroups:
 
             if not check_file_exists(alleles_outpath) or self.force:
                 print("\tGrouping the alleles matrix.")
-                print(self.alleles_df)
                 group_alleles = self.alleles_df.iloc[snp_mask, :].copy()
-                print(group_alleles)
                 save_dataframe(outpath=alleles_outpath, df=group_alleles,
                                index=True, header=True)
 

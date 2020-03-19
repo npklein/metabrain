@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-File:         eqtl_visualiser.py
+File:         matrix_preparation.py
 Created:      2020/03/12
-Last Changed: 2020/03/13
+Last Changed: 2020/03/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo

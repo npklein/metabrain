@@ -1,7 +1,7 @@
 """
 File:         utilities.py
 Created:      2020/03/13
-Last Changed:
+Last Changed: 2020/03/19
 Author(s):    M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -46,7 +46,7 @@ def check_file_exists(file_path):
     :param file_path: string, the complete file path.
     :return: bool, True if file exists; False if not.
     """
-    return os.path.exists(file_path)
+    return os.path.exists(file_path) and os.path.isfile(file_path)
 
 
 def get_basename(file_path):
@@ -61,16 +61,35 @@ def get_basename(file_path):
 
 def get_filename(file_path):
     """
-    Method to get the file_name of a file_path
+    Method to get the file_name of a file path
     :param file_path: str
     :return: str
     """
     return os.path.basename(file_path).split(".")[0]
 
 
+def get_dirname(file_path):
+    """
+    Method to get the dir name of a file_path
+
+    :param file_path: string, the complete file path.
+    :return: string, the filename.
+    """
+    return os.path.dirname(file_path)
+
+
+def get_leaf_dir(file_path):
+    """
+    Method to get the last directory of a file path
+    :param file_path: str
+    :return: str
+    """
+    return os.path.basename(os.path.normpath(file_path))
+
+
 def get_extension(file_path):
     """
-    Method to get the extension of a file_path.
+    Method to get the extension of a file path.
 
     :param file_path: string, the complete file path.
     :return: string, the extension of the file.

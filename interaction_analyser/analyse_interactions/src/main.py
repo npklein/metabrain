@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/13
-Last Changed: 2020/03/17
+Last Changed: 2020/03/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -22,18 +22,17 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 
 # Standard imports.
 from __future__ import print_function
+import subprocess
 import glob
 import os
+import re
 
 # Third party imports.
-import pandas as pd
-import scipy.stats as st
 
 # Local application imports.
 from src.utilities import get_project_root_dir, prepare_output_dir
 from src.local_settings import LocalSettings
-from src.utilities import get_extension, get_filename, check_file_exists
-from src.df_utilities import load_dataframe, save_dataframe
+from src.utilities import get_leaf_dir, check_file_exists, get_basename
 
 
 class Main:
@@ -41,35 +40,38 @@ class Main:
     Main: this class is the main class that calls all other functionality.
     """
 
-    def __init__(self, settings_file, force):
+    def __init__(self, settings_file, groups, force, verbose):
         """
         Initializer of the class.
 
         :param settings_file: string, the name of the settings file.
+        :param groups: list, the names of groups to analyse.
         :param force: boolean, whether or not to force to redo each step.
+        :param verbose: boolean, whether or not to print each step.
         """
         # Load the LocalSettings singelton class.
         settings = LocalSettings(settings_file)
 
         # Safe arguments.
-        self.indir = settings.get_setting("input_dir")
+        self.indir = os.path.join(settings.get_setting("input_dir"))
+        self.group_indirs = glob.glob(os.path.join(self.indir, 'group_*'))
         self.tech_covs = ' '.join(settings.get_setting("technical_covariates"))
         self.eqtl_ia = settings.get_setting("eQTLInteractionAnalyser")
-        self.celltypes = settings.get_setting("celltypes")
+        self.groups = groups
         self.force = force
+        self.verbose = verbose
 
         # Prepare an output directory.
-        outdir = settings.get_setting('output_dir')
-        self.ia_indir = os.path.join(get_project_root_dir(), outdir, 'input')
-        prepare_output_dir(self.ia_indir)
-        self.ia_outdir = os.path.join(get_project_root_dir(), outdir, 'output')
-        prepare_output_dir(self.ia_outdir)
+        self.outdir = os.path.join(get_project_root_dir(),
+                                   settings.get_setting("output_dir"))
+        prepare_output_dir(self.outdir)
 
-        # Construct filenames.
-        self.eqtl_inpath = os.path.join(self.indir, 'eqtl_table.txt.gz')
-        self.geno_inpath = os.path.join(self.indir, 'genotype_table.txt.gz')
-        self.expr_inpath = os.path.join(self.indir, 'expression_table.txt.gz')
-        self.cov_inpath = os.path.join(self.indir, 'covariates_table.txt.gz')
+        # Prepare filenames.
+        filenames = settings.get_setting("filenames")
+        self.eqtl_filename = filenames["eqtl"]
+        self.geno_filename = filenames["genotype"]
+        self.expr_filename = filenames["expression"]
+        self.cov_filename = filenames["covariate"]
 
     def start(self):
         """
@@ -78,171 +80,156 @@ class Main:
         print("Starting interaction analyser.")
         self.print_arguments()
 
-        # EQTLInteractioAnalyser expected input.
-        print("\n### STEP1 ###\n")
-        expected_input = ["Genotypes", "Expression", "Covariates"]
-        for filename in expected_input:
-            file1 = os.path.join(self.ia_indir, filename + ".binary.dat")
-            file2 = os.path.join(self.ia_indir, filename + ".binary.rows.txt")
-            file3 = os.path.join(self.ia_indir,
-                                 filename + ".binary.columns.txt")
+        # Subtract the groups we are interested in.
+        group_indirs = []
+        if "all" in self.groups:
+            group_indirs = self.group_indirs
+        else:
+            for group_id in self.groups:
+                if re.match("^group_[0-9]+$", group_id):
+                    group_indir = os.path.join(self.indir, group_id)
+                    if group_indir in self.group_indirs:
+                        group_indirs.append(group_indir)
+                    else:
+                        print("Unexpected group_id: {}.".format(group_id))
 
-            if not check_file_exists(file1) or \
-                    not check_file_exists(file2) or \
-                    not check_file_exists(file3) or \
-                    self.force:
-                # Uncompressing the input files.
-                print("Uncompressing / moving input files.\n")
-                geno_inpath = self.uncompress_and_move(self.geno_inpath)
-                expr_inpath = self.uncompress_and_move(self.expr_inpath)
-                cov_inpath = self.uncompress_and_move(self.cov_inpath)
+        # Loop over the groups.
+        print("Performing interaction analyses.")
+        for i, group_indir in enumerate(group_indirs):
+            group_id = get_leaf_dir(group_indir)
+            print("\tWorking on: {:10s} [{}/{} "
+                  "{:.2f}%]".format(group_id, i + 1, len(group_indirs),
+                                    (100 / len(group_indirs)) * i + 1))
 
-                # Convert to binary.
-                print("Converting files to binary format.\n")
-                self.convert_to_binary(geno_inpath, 'Genotypes')
-                self.convert_to_binary(expr_inpath, 'Expression')
-                self.convert_to_binary(cov_inpath, 'Covariates')
+            # Prepare the input and output directories.
+            group_outdir = os.path.join(self.outdir, group_id)
+            ia_indir = os.path.join(group_outdir, 'input')
+            ia_outdir = os.path.join(group_outdir, 'output')
+            for outdir in [group_outdir, ia_indir, ia_outdir]:
+                prepare_output_dir(outdir)
+
+            # Prepare the EQTLInteractioAnalyser expected input.
+            self.print_string("\n### STEP1 ###\n")
+            expected_input = ["Genotypes", "Expression", "Covariates"]
+            filenames = [self.geno_filename, self.expr_filename,
+                         self.cov_filename]
+            for exp_ia_infile, filename in zip(expected_input, filenames):
+                # Check if the files alreadt exist.
+                file1 = os.path.join(ia_indir, exp_ia_infile + ".binary.dat")
+                file2 = os.path.join(ia_indir,
+                                     exp_ia_infile + ".binary.rows.txt")
+                file3 = os.path.join(ia_indir,
+                                     exp_ia_infile + ".binary.columns.txt")
+
+                if not check_file_exists(file1) or \
+                        not check_file_exists(file2) or \
+                        not check_file_exists(file3) or \
+                        self.force:
+                    self.print_string("\nPreparing {}.".format(filename))
+
+                    # Define the filenames.
+                    compr_file = os.path.join(self.indir, group_id,
+                                              filename + '.txt.gz')
+                    copy_file = os.path.join(ia_indir, filename + '.txt.gz')
+                    uncompr_file = os.path.join(ia_indir, filename + '.txt')
+                    bin_file = os.path.join(ia_indir, exp_ia_infile + ".binary")
+
+                    # Copy and decompressed the file.
+                    self.print_string("\nCopying the input files.")
+                    self.copy_file(compr_file, copy_file)
+                    self.print_string("\nDecompressing the input files.")
+                    self.decompress(copy_file)
+
+                    # Convert to binary.
+                    self.print_string("\nConverting files to binary format.")
+                    self.convert_to_binary(uncompr_file, bin_file)
+
+                    # Remove the uncompressed file.
+                    self.print_string("\nRemoving uncompressed files.")
+                    if check_file_exists(uncompr_file):
+                        self.print_string("\tos.remove({})".format(uncompr_file))
+                        os.remove(uncompr_file)
+                else:
+                    self.print_string("Skipping {} preparation.".format(filename))
+
+            # prepare the eQTL file.
+            self.print_string("\n### STEP2 ###\n")
+            eqtl_file = os.path.join(ia_indir, self.eqtl_filename + '.txt')
+            if not check_file_exists(eqtl_file) or self.force:
+                self.print_string("\nPreparing eQTL file.")
+                # Define the filenames.
+                compr_file = os.path.join(self.indir, group_id,
+                                          self.eqtl_filename + '.txt.gz')
+                copy_file = os.path.join(ia_indir, self.eqtl_filename + '.txt.gz')
+
+                # Copy and decompressed the file.
+                self.print_string("\nCopying the input files.")
+                self.copy_file(compr_file, copy_file)
+                self.print_string("\nDecompressing the input files.")
+                self.decompress(copy_file)
             else:
-                print("Skipping {} preparation.".format(filename))
+                self.print_string("Skipping eqtl preparation.")
 
-        print("\n### STEP2 ###\n")
-        eqtl_inpath = os.path.join(self.ia_indir,
-                                   get_filename(self.eqtl_inpath) + ".txt")
-        if not check_file_exists(eqtl_inpath) or self.force:
-            print("Uncompressing / moving the eQTL file.\n")
-            eqtl_inpath = self.uncompress_and_move(self.eqtl_inpath)
-        else:
-            print("Skipping step.")
+            # execute the program.
+            self.print_string("\n### STEP3 ###\n")
+            found = False
+            if not self.force:
+                regex = "^InteractionZScoresMatrix-[0-9]+Covariates.txt$"
+                for file in glob.glob(os.path.join(ia_outdir, "*")):
+                    if re.match(regex, get_basename(file)):
+                        found = True
+                        break
 
-        # execute the program.
-        print("\n### STEP3 ###\n")
-        inter_files = glob.glob(
-            os.path.join(self.ia_outdir, "InteractionZScoresMatrix*"))
-        if len(inter_files) != 1 or self.force:
-            print("Executing the eQTLInteractionAnalyser.\n")
-            self.execute(eqtl_inpath)
-        else:
-            print("Skipping step.")
+            if self.force or not found:
+                self.print_string("Executing the eQTLInteractionAnalyser.")
+                self.execute(ia_indir, ia_outdir, eqtl_file)
 
-        # perform eQTL interaction clustering on marker genes.
-        print("\n### STEP4 ###\n")
-        inter_inpath = glob.glob(os.path.join(self.ia_outdir, "InteractionZScoresMatrix*"))[0]
-        self.eqtl_celltype_mediated(inter_inpath)
+    def print_string(self, string):
+        if self.verbose:
+            print(string)
 
-    def uncompress_and_move(self, inpath):
-        outpath = os.path.join(self.ia_indir, get_filename(inpath) + ".txt")
+    def copy_file(self, inpath, outpath):
+        command = ['cp', inpath, outpath]
+        self.execute_command(command)
 
-        if get_extension(inpath) == '.txt.gz':
-            command = 'gunzip -c {} > {}'.format(inpath, outpath)
-            print("\t{}".format(command))
-            os.system(command)
-        else:
-            command = 'cp {} {}'.format(inpath, outpath)
-            print("\t{}".format(command))
-            os.system(command)
+    def decompress(self, inpath):
+        command = ['gunzip', inpath, '-f']
+        self.execute_command(command)
 
-        return outpath
+    def convert_to_binary(self, inpath, outpath):
+        command = ['java', '-jar', self.eqtl_ia,
+                   '--convertMatrix',
+                   '-i', inpath, '-o', outpath]
+        self.execute_command(command)
 
-    def convert_to_binary(self, inpath, out_filename):
-        outpath = os.path.join(self.ia_indir, out_filename + ".binary")
+    def execute(self, ia_indir, ia_outdir, eqtl_inpath):
+        command = ['java', '-jar', self.eqtl_ia,
+                   '-input', ia_indir, '-output', ia_outdir,
+                   '-eqtls', eqtl_inpath,
+                   '--maxcov', '1',
+                   '-noNormalization',
+                   '-noCovNormalization',
+                   '-cov', self.tech_covs]
+        self.execute_command(command)
 
-        command = 'java -jar {} --convertMatrix -i {} -o {}'.format(
-            self.eqtl_ia, inpath, outpath)
-        print("\t{}".format(command))
-        os.system(command)
-
-    def execute(self, eqtl_inpath):
-        command = 'java -jar {} -input {} -output {} -eqtls {} ' \
-                  '-maxcov 1 ' \
-                  '-noNormalization ' \
-                  '-nnoCovNormalization ' \
-                  '-cov {}'.format(self.eqtl_ia, self.ia_indir, self.ia_outdir,
-                                   eqtl_inpath, self.tech_covs)
-        print("\t{}".format(command))
-        os.system(command)
-
-    def eqtl_celltype_mediated(self, inter_inpath):
-        # Loading dataframes.
-        print("Loading interaction dataframe.")
-        inter_df = load_dataframe(inpath=inter_inpath,
-                                  header=0,
-                                  index_col=0)
-        inter_df = inter_df.T
-
-        print("Loading eQTL dataframe.")
-        eqtl_df = load_dataframe(inpath=self.eqtl_inpath,
-                                 header=0,
-                                 index_col=1)
-        eqtl_df = eqtl_df[["ProbeName", "HGNCName"]]
-
-        # Calculate the z-score cutoff.
-        z_score_cutoff = st.norm.ppf(
-            0.05 / (inter_df.shape[0] * inter_df.shape[1]))
-        gini_cutoff = 0.75
-
-        # Subset on the marker genes.
-        marker_cols = []
-        for colname in inter_df.columns:
-            if ("_" in colname) and (colname.split("_")[0] in self.celltypes):
-                marker_cols.append(colname)
-
-        marker_df = inter_df.loc[:, marker_cols]
-        del inter_df
-
-        # Create a gini dataframe grouped by celltype.
-        gini_df = marker_df.copy()
-        gini_df = gini_df.abs()
-        zscore_mask = list(gini_df.max(axis=1) >= abs(z_score_cutoff))
-        gini_df.columns = [x.split("_")[0] for x in gini_df.columns]
-        gini_df = gini_df.T.groupby(gini_df.columns).sum().T
-
-        # Calculate the gini impurity.
-        gini_values = gini_df.div(gini_df.sum(axis=1), axis=0).pow(2)
-        marker_df["gini_impurity"] = 1 - gini_values.sum(axis=1)
-        marker_df["eqtl_celltype"] = gini_values.idxmax(axis=1)
-
-        # Subset the marker df on gini impurity.
-        gini_mask = list(marker_df["gini_impurity"] <= gini_cutoff)
-        marker_df = marker_df.loc[zscore_mask and gini_mask, :]
-        marker_df.index.name = "-"
-        marker_df.reset_index(inplace=True)
-
-        # Subset the eQTL dataframe.
-        eqtl_df = eqtl_df.loc[zscore_mask and gini_mask, :]
-        eqtl_df.reset_index(inplace=True)
-
-        # Merge them together.
-        merged_df = pd.concat([marker_df, eqtl_df], axis=1)
-        merged_df = merged_df.sort_values(by=['eqtl_celltype', 'gini_impurity'])
-
-        # Save the dataframe.
-        save_dataframe(df=merged_df,
-                       outpath=os.path.join(self.ia_outdir,
-                                            "marker_table.txt.gz"),
-                       header=True,
-                       index=False)
-
-        # Save celltype eqtl's HGNC names.
-        print("Writing celltype mediated eQTL files.")
-        for celltype in marker_df['eqtl_celltype'].unique():
-            subset = merged_df.loc[merged_df['eqtl_celltype'] == celltype, :]
-            print("\tCelltype: {}\t{} genes".format(celltype, len(subset.index)))
-            if len(subset.index) > 0:
-                genes = ', '.join(subset['HGNCName'].to_list())
-                outfile = open(os.path.join(self.ia_outdir,
-                                            '{}.txt'.format(celltype)), "w")
-                outfile.write(genes)
-                outfile.close()
+    def execute_command(self, command):
+        self.print_string("{}".format(' '.join(command)))
+        output = subprocess.check_call(command,
+                                       stdout=open(os.devnull, 'w'),
+                                       stderr=subprocess.STDOUT)
+        if output != 0:
+            if not self.verbose:
+                print("{}".format(' '.join(command)))
+            print(output)
+            exit()
 
     def print_arguments(self):
         print("Arguments:")
         print("  > Input directory: {}".format(self.indir))
-        print(
-            "  > eQTLInteractionAnalyser input directory: {}".format(
-                self.ia_indir))
-        print("  > eQTLInteractionAnalyser output directory: {}".format(
-            self.ia_outdir))
+        print("  > Output directory: {}".format(self.indir))
         print("  > Technical covariates: {}".format(self.tech_covs))
         print("  > Interaction analyser: {}".format(self.eqtl_ia))
+        print("  > Groups: {}".format(self.groups))
         print("  > Force: {}".format(self.force))
+        print("  > Verbose: {}".format(self.verbose))
         print("")

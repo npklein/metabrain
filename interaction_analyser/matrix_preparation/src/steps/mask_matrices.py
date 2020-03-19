@@ -1,7 +1,7 @@
 """
 File:         mask_matrices.py
 Created:      2020/03/12
-Last Changed: 2020/03/16
+Last Changed: 2020/03/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -91,7 +91,7 @@ class MaskMatrices:
                            index=False, header=True)
             del eqtl_translate
         else:
-            print("Skipping eQTLs translate table.")
+            print("\tSkipping eQTLs translate table.")
 
         if not check_file_exists(self.sample_translate_outpath) or self.force:
             sample_translate = pd.DataFrame(
@@ -102,7 +102,7 @@ class MaskMatrices:
                            index=False, header=True)
             del sample_translate
         else:
-            print("Skipping sample translate table.")
+            print("\tSkipping sample translate table.")
 
         if not check_file_exists(self.cov_translate_outpath) or self.force:
             cov_translate = pd.DataFrame({'unmasked': list(self.cov_df.index),
@@ -111,7 +111,7 @@ class MaskMatrices:
                            index=False, header=True)
             del cov_translate
         else:
-            print("Skipping covariates translate table.")
+            print("\tSkipping covariates translate table.")
 
         # Start masking the dataframes.
         print("Start masking files.")
@@ -121,14 +121,14 @@ class MaskMatrices:
             save_dataframe(outpath=self.geno_outpath, df=self.geno_df,
                            index=True, header=True)
         else:
-            print("Skipping genotype table.")
+            print("\tSkipping genotype table.")
 
         if not check_file_exists(self.alleles_outpath) or self.force:
             self.alleles_df.index = eqtl_mask
             save_dataframe(outpath=self.alleles_outpath, df=self.alleles_df,
                            index=True, header=True)
         else:
-            print("Skipping genotype alleles tables.")
+            print("\tSkipping genotype alleles tables.")
 
         if not check_file_exists(self.expr_outpath) or self.force:
             self.expr_df.index = eqtl_mask
@@ -136,7 +136,7 @@ class MaskMatrices:
             save_dataframe(outpath=self.expr_outpath, df=self.expr_df,
                            index=True, header=True)
         else:
-            print("Skipping expression table.")
+            print("\tSkipping expression table.")
 
         if not check_file_exists(self.cov_outpath) or self.force:
             self.cov_df.index = cov_mask
@@ -144,7 +144,7 @@ class MaskMatrices:
             save_dataframe(outpath=self.cov_outpath, df=self.cov_df,
                            index=True, header=True)
         else:
-            print("Skipping covariates table.")
+            print("\tSkipping covariates table.")
 
     def print_arguments(self):
         print("Arguments:")

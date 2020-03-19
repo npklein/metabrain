@@ -1,7 +1,7 @@
 """
 File:         utilities.py
 Created:      2020/03/12
-Last Changed:
+Last Changed: 2020/03/19
 Author(s):    M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -46,7 +46,7 @@ def check_file_exists(file_path):
     :param file_path: string, the complete file path.
     :return: bool, True if file exists; False if not.
     """
-    return os.path.exists(file_path)
+    return os.path.exists(file_path) and os.path.isfile(file_path)
 
 
 def get_basename(file_path):
