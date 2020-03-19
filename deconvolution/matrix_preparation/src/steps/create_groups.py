@@ -79,7 +79,6 @@ class CreateGroups:
               "{}/{} [{:.2f}%].".format(incl_eqtls,
                                         total_eqtls,
                                         (100 / total_eqtls) * incl_eqtls))
-        exit()
         del groups_data
 
         # Prepare an output directories.
