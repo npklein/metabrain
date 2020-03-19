@@ -1,0 +1,14 @@
+{
+  "data_dir": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/matrix_preparation/output/create_matrices",
+  "groups_data_dir": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/matrix_preparation/output/create_groups/",
+  "inter_groups_dir": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/analyse_interactions/output",
+  "filenames": {
+    "object": "group",
+    "eqtl": "eqtl_table",
+    "genotype": "genotype_table",
+    "expression": "expression_table",
+    "covariate": "covariates_table",
+    "interaction": "^InteractionZScoresMatrix-[0-9]+Covariates.txt$"
+  },
+  "output_dir": "output"
+}
