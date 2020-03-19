@@ -23,12 +23,12 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Standard imports.
+import gzip
 import os
 
 # Third party imports.
 import pandas as pd
 from scipy import stats
-import gzip
 
 # Local application imports.
 
