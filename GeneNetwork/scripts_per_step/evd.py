@@ -62,9 +62,9 @@ def CronbachAlpha(pc_scores, eigenvectores):
     pc_var = pc_scores.var(axis=1)
     alphas = (n_samples / (T) (n_samples - 1.0)) * (1.0 - eigenvector_sums / pc_var);
 
-eigenvalues = pd.DataFrame(eigenvalues, columns=['eigenvalues']).to_csv('eigenvalues.csv')
+eigenvalues = pd.DataFrame(eigenvalues, columns=['eigenvalues']).to_csv('eigenvalues.csv', index=F)
 
 print(CronbachAlpha(eigenvalues))
 
-cronbach = pd.DataFrame(cronbach, columns=['cronbach']).to_csv('cronbach.csv')
+cronbach = pd.DataFrame(cronbach, columns=['cronbach']).to_csv('cronbach.csv', index=F)
 
