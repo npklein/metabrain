@@ -1,6 +1,6 @@
 """
 File:         local_settings.py
-Created:      2020/03/13
+Created:      2020/03/19
 Last Changed:
 Author:       M.Vochteloo
 
@@ -27,7 +27,6 @@ import os
 # Third party imports.
 
 # Local application imports.
-from src.utilities import get_project_root_dir
 
 
 class LocalSettings:
@@ -44,13 +43,13 @@ class LocalSettings:
             naming style (invalid-name)
             I respectfully disagree that this is a mistake.
         """
-        def __init__(self, settings_file):
+        def __init__(self, project_root, settings_file):
             """
             Initializer method for the LocalSettings class.
             """
             self.settings = None
-            self.settings_path = os.path.join(get_project_root_dir(),
-                                              'local_settings',
+            self.settings_path = os.path.join(project_root,
+                                              'settings',
                                               settings_file + ".json")
             self.load_settings()
 
@@ -76,7 +75,7 @@ class LocalSettings:
             """
             Method to return the value of a local_setting key.
 
-            :param setting_key: string, key in local_settings.
+            :param setting_key: string, key in settings.
             :return: str/dict, value of setting_key. If the key does not
                      exist; return None.
             """
@@ -106,7 +105,7 @@ class LocalSettings:
 
     instance = None
 
-    def __new__(cls, settings_file):
+    def __new__(cls, project_root, settings_file):
         """
         Class method that handels object creation. It is responsible for
         returning the LocalSettings class instance. If the instance is None
@@ -115,15 +114,17 @@ class LocalSettings:
         :return: instance
         """
         if not LocalSettings.instance:
-            LocalSettings.instance = LocalSettings.__LocalSettings(settings_file)
+            LocalSettings.instance = LocalSettings.__LocalSettings(project_root,
+                                                                   settings_file)
         return LocalSettings.instance
 
-    def __init__(self, settings_file):
+    def __init__(self, project_root, settings_file):
         """
         Initializer method setting the LocalSettings class instance.
         """
         if not LocalSettings.instance:
-            LocalSettings.instance = LocalSettings.__LocalSettings(settings_file)
+            LocalSettings.instance = LocalSettings.__LocalSettings(project_root,
+                                                                   settings_file)
 
     def __getattr__(self, name):
         """

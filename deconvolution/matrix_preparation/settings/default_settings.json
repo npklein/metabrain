@@ -1,0 +1,93 @@
+{
+  "output_dir": "output",
+  "combine_gte_files": {
+    "input_directory": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-02-18-eqtls/cortex-cis-EURandAFR-iterative",
+    "filename_regex": "GTE-*.txt"
+  },
+  "combine_eqtlprobes": {
+    "input_directory": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-02-18-eqtls/cortex-cis-EURandAFR-iterative",
+    "iteration_dirname": "Iteration",
+    "in_filename": "eQTLProbesFDR0.05-ProbeLevel.txt.gz",
+    "iterations": 4
+  },
+  "create_matrices": {
+    "genotype_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-02-18-eqtls/cortex-genotypedump-EURandAFR/GenotypeData.txt.gz",
+    "expression_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-02-17-step5-remove-covariates-per-dataset/output-cortex/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.CovariatesRemovedOLS.txt.gz",
+    "marker_dict": {
+      "neurons": [
+        "UCHL1",
+        "INA",
+        "SYT10",
+        "RELN",
+        "ELAVL3"
+      ],
+      "oligodendrocytes": [
+        "CA2",
+        "MOBP",
+        "ASPA",
+        "SOX10",
+        "OLIG2"
+      ],
+      "endothelialcells": [
+        "CD34",
+        "VWF",
+        "CXCL12",
+        "SHE",
+        "CAV1"
+      ],
+      "microglia": [
+        "AIF1",
+        "TLR2",
+        "CD14",
+        "CD68",
+        "IL1A"
+      ],
+      "astrocytes": [
+        "EGFR",
+        "FABP7",
+        "GJB6",
+        "CLU",
+        "MLC1"
+      ]
+    }
+  },
+  "create_cov_matrix": {
+    "covariate_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-02-17-step5-remove-covariates-per-dataset/2020-02-17-freeze2dot1.TMM.Covariates.withBrainRegion-noncategorical-variable.top20correlated-cortex-withMDS.txt.gz",
+    "covariate_exclude": [
+      "PCT_CODING_BASES",
+      "PF_HQ_ALIGNED_READS"
+    ],
+    "cohorts": [
+      "AMPAD-MSBB-V2-AFR",
+      "CMC-AFR",
+      "LIBD_1M-AFR",
+      "LIBD_h650-AFR",
+      "AMPAD-MAYO-V2-EUR",
+      "AMPAD-MSBB-V2-EUR",
+      "AMPAD-ROSMAP-V2-EUR",
+      "BrainGVEX-V2-EUR",
+      "CMC-EUR",
+      "GTEx-EUR",
+      "GVEx",
+      "LIBD_1M-EUR",
+      "LIBD_h650-EUR",
+      "NABEC-H550-EUR",
+      "NABEC-H610-EUR",
+      "TargetALS-EUR",
+      "UCLA_ASD-EUR"
+    ],
+    "phenotype_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-02-03-phenotype-table/2020-03-09.brain.phenotypes.txt",
+    "eigenvectors_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-02-17-step5-remove-covariates-per-dataset/output-cortex/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.CovariatesRemovedOLS.PCAOverSamplesEigenvectors.txt.gz",
+    "num_eigenvectors": 50,
+    "eigenvectors_before_cov_corr_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-01-31-step4-sample-removal-by-PCA/2020-01-31-step2-second-round-PCA-on-expression/pc1_2.txt"
+  },
+  "mask_matrices": {
+  },
+  "create_groups": {
+    "min_eqtl_in_group": 10,
+    "min_samples_in_group": 10
+  },
+  "create_regression_matrix": {
+
+  }
+}

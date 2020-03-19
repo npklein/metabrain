@@ -1,7 +1,7 @@
 """
 File:         df_utilities.py
-Created:      2020/03/12
-Last Changed: 2020/03/13
+Created:      2020/03/19
+Last Changed:
 Author(s):    M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -26,7 +26,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 import pandas as pd
 
 # Local application imports.
-from src.utilities import get_basename
+from .utilities import get_basename
 
 
 def load_dataframe(inpath, header, index_col, sep="\t", low_memory=True,
