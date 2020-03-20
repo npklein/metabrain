@@ -80,7 +80,7 @@ class Main:
         self.print_arguments()
 
         # Create the dataset object.
-        ds = Dataset(settings=self.settings, nrows=n_eqtls)
+        ds = Dataset(settings=self.settings, nrows=self.n_eqtls)
         if self.validate:
             ds.load_all()
 

@@ -67,7 +67,7 @@ class CommandLineArguments:
                             version="{} {}".format(self.program,
                                                    self.version),
                             help="show program's version number and exit")
-        parser.add_argument("-l",
+        parser.add_argument("-s",
                             "--settings",
                             type=str,
                             default="default_settings",
@@ -87,18 +87,19 @@ class CommandLineArguments:
                                      "inter_eqtl_effect",
                                      "inter_eqtl_effect_marker_genes",
                                      "inter_eqtl_effect_marker_vs_comp"],
-                            help="The figures to be created, "
+                            help="The name of the figures to be created, "
                                  "default: 'all'.")
         parser.add_argument("-n",
                             "--n_eqtls",
                             type=int,
                             default=1,
-                            help="The number of eQTLs to load, "
+                            help="The number of eQTLs to visualise, "
                                  "default: 1.")
         parser.add_argument("-validate",
                             action='store_true',
-                            help="Include steps and command prints, "
-                                 "default: False.")
+                            help="Validate that the input matrices match "
+                                 "with each other and then quit, default: "
+                                 "'False'.")
 
         return parser
 

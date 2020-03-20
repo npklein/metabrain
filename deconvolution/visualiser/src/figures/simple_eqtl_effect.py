@@ -59,6 +59,7 @@ class SimpleeQTLEffect:
         print("Plotting simple eQTL plots.")
         self.print_arguments()
 
+        print("Iterating over eQTLs.")
         for i, (index, row) in enumerate(self.eqtl_df.iterrows()):
             # Extract the usefull information from the row.
             snp_name = row["SNPName"]
@@ -175,7 +176,7 @@ class SimpleeQTLEffect:
                             "{}/{}".format(first_allele, second_allele),
                             "{}/{}".format(second_allele, second_allele)])
         ax.text(0.5, 1.05,
-                '{} {}-eQTL (r = {:.2e}, p = {:.2e})'.format(hgnc_name,
+                '{} {}-eQTL (r = {:.2f}, p = {:.2e})'.format(hgnc_name,
                                                              eqtl_type,
                                                              coef,
                                                              p),

@@ -91,8 +91,7 @@ class IntereQTLEffectMarkerVSComp:
         print("Average absolute spearman correlation per cell-type per comp:")
         with pd.option_context('display.max_rows', None,
                                'display.max_columns', None):
-            print(corr_df)
-            print(pval_df)
+            print(corr_df.round(3).astype('str') + ' [' + pval_df + ']')
 
         # Plot a clustermap of the average correlations.
         self.plot_clustermap(corr_df, pval_df, self.outdir)

@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/12
-Last Changed: 2020/03/16
+Last Changed: 2020/03/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -67,7 +67,7 @@ class CommandLineArguments:
                             version="{} {}".format(self.program,
                                                    self.version),
                             help="show program's version number and exit")
-        parser.add_argument("-l",
+        parser.add_argument("-s",
                             "--settings",
                             type=str,
                             default="default_settings",
