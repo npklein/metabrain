@@ -9,11 +9,11 @@ This program is developed in Pycharm 2019.3 (Professional Edition), performance 
 
 The program requires the following packages to be installed:  
 
- * pandas ([v0.24.2](https://github.com/pandas-dev/pandas); [BSD 3-Clause License](https://github.com/pandas-dev/pandas/blob/master/LICENSE))  
- * numpy ([v1.18.1](https://github.com/numpy/numpy/releases); [BSD License](https://www.numpy.org/license.html))  
+ * pandas ([v1.0.1](https://github.com/pandas-dev/pandas); [BSD 3-Clause License](https://github.com/pandas-dev/pandas/blob/master/LICENSE))  
+ * numpy ([v1.13.3](https://pypi.org/project/numpy/#history); [BSD License](https://www.numpy.org/license.html))  
  * scipy ([v1.4.1](https://docs.scipy.org/doc/scipy/reference/release.html); [BSD License](https://www.scipy.org/scipylib/license.html))  
- * matplotlib ([v3.0.3](https://github.com/matplotlib/matplotlib/releases); [BSD License](https://matplotlib.org/3.1.0/users/license.html))  
- * seaborn ([v0.9.1](https://github.com/mwaskom/seaborn); [BSD 3-Clause License](https://github.com/mwaskom/seaborn/blob/master/LICENSE))  
+ * matplotlib ([v3.1.3](https://github.com/matplotlib/matplotlib/releases); [BSD License](https://matplotlib.org/3.1.3/users/license.html))  
+ * seaborn ([v0.10.0](https://github.com/mwaskom/seaborn); [BSD 3-Clause License](https://github.com/mwaskom/seaborn/blob/master/LICENSE))  
  
 
 See 'Installing' on how to install these packages.

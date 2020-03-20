@@ -26,7 +26,7 @@ import os
 # Third party imports.
 
 # Local application imports.
-from general.utilities import prepare_output_dir, check_file_exists
+from general.utilities import prepare_output_dir, check_file_exists, get_basename
 from general.df_utilities import save_dataframe
 
 
@@ -58,39 +58,45 @@ class CreateGroups:
             groups_data = pickle.load(f)
 
         # Remove uninteresting groups.
-        self.groups = []
-        self.group_ids = []
-        incl_eqtls = 0
-        total_eqtls = 0
-        for group in groups_data:
-            group_n_eqtls = group.get_n_eqtls()
-            total_eqtls += group_n_eqtls
-            if (group_n_eqtls >= settings["min_eqtl_in_group"]) and \
-                    (group.get_n_samples() >= settings["min_samples_in_group"]):
-                incl_eqtls += group_n_eqtls
-                self.groups.append(group)
-                self.group_ids.append(group.get_id())
-        print("Filter completed, {}/{} [{:.2f}%] of the groups "
-              "passed the threshold.".format(len(self.groups),
-                                             len(groups_data),
-                                             (100 / len(groups_data)) *
-                                             len(self.groups)))
-        print("Total eQTL's when combining groups: "
-              "{}/{} [{:.2f}%].".format(incl_eqtls,
-                                        total_eqtls,
-                                        (100 / total_eqtls) * incl_eqtls))
+        self.groups = self.filter_groups(groups_data,
+                                         settings["min_eqtl_in_group"],
+                                         settings["min_samples_in_group"])
         del groups_data
 
         # Prepare an output directories.
         self.outdir = os.path.join(outdir, 'create_groups')
         prepare_output_dir(self.outdir)
 
+    @staticmethod
+    def filter_groups(groups_data, min_eqtl, min_samples):
+        groups = {}
+        incl_eqtls = 0
+        total_eqtls = 0
+        for group in groups_data:
+            group_n_eqtls = group.get_n_eqtls()
+            total_eqtls += group_n_eqtls
+            if (group_n_eqtls >= min_eqtl) and \
+                    (group.get_n_samples() >= min_samples):
+                incl_eqtls += group_n_eqtls
+                groups[group.get_id()] = group
+        print("Filter completed, {}/{} [{:.2f}%] of the groups "
+              "passed the threshold.".format(len(groups),
+                                             len(groups_data),
+                                             (100 / len(groups_data)) *
+                                             len(groups)))
+        print("Total eQTL's when combining groups: "
+              "{}/{} [{:.2f}%].".format(incl_eqtls,
+                                        total_eqtls,
+                                        (100 / total_eqtls) * incl_eqtls))
+
+        return groups
+
     def start(self):
         print("Creating groups.")
-        for i, (group, group_id) in enumerate(zip(self.groups, self.group_ids)):
-            print("\tWorking on: {:10s} [{}/{} "
-                  "{:.2f}%]".format(group_id, i + 1, len(self.group_ids),
-                                    (100 / len(self.group_ids)) * (i + 1)))
+        for i, (group_id, group_obj) in enumerate(self.groups.items()):
+            print("  Working on: {:10s} [{}/{} "
+                  "{:.2f}%]".format(group_id, i + 1, len(self.groups),
+                                    (100 / len(self.groups)) * (i + 1)))
 
             # Create the group dir.
             group_dir = os.path.join(self.outdir, group_id)
@@ -113,45 +119,44 @@ class CreateGroups:
             # Check if output file exist, if not, create it.
             if not check_file_exists(group_object) or self.force:
                 with open(group_object, "wb") as f:
-                    pickle.dump(group, f)
+                    pickle.dump(group_obj, f)
+                print("\tSaved group object: "
+                      "{}".format(get_basename(group_object)))
 
             # Get the group indices.
-            snp_mask = group.get_snp_indices()
-            sample_mask = group.get_sample_indices()
+            snp_mask = group_obj.get_snp_indices()
+            sample_mask = group_obj.get_sample_indices()
 
             # Check if output file exist, if not, create it.
             if not check_file_exists(eqtl_outpath) or self.force:
-                print("\tGrouping the eQTL matrix.")
                 group_eqtl = self.eqtl_df.iloc[snp_mask, :].copy()
                 save_dataframe(outpath=eqtl_outpath, df=group_eqtl,
                                index=False, header=True)
+                del group_eqtl
 
             if not check_file_exists(geno_outpath) or self.force:
-                print("\tGrouping the genotype matrix.")
                 group_geno = self.geno_df.iloc[snp_mask, sample_mask].copy()
                 save_dataframe(outpath=geno_outpath, df=group_geno,
                                index=True, header=True)
+                del group_geno
 
             if not check_file_exists(alleles_outpath) or self.force:
-                print("\tGrouping the alleles matrix.")
                 group_alleles = self.alleles_df.iloc[snp_mask, :].copy()
                 save_dataframe(outpath=alleles_outpath, df=group_alleles,
                                index=True, header=True)
+                del group_alleles
 
             if not check_file_exists(expr_outpath) or self.force:
-                print("\tGrouping the expression matrix.")
                 group_expr = self.expr_df.iloc[snp_mask, sample_mask].copy()
                 save_dataframe(outpath=expr_outpath, df=group_expr,
                                index=True, header=True)
+                del group_expr
 
             if not check_file_exists(cov_outpath) or self.force:
-                print("\tGrouping the covariate matrix.")
                 group_cov = self.cov_df.iloc[:, sample_mask].copy()
                 save_dataframe(outpath=cov_outpath, df=group_cov,
                                index=True, header=True)
-
-    def get_group_ids(self):
-        return self.group_ids
+                del group_cov
 
     def print_arguments(self):
         print("Arguments:")
