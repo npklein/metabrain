@@ -1,7 +1,7 @@
 """
 File:         simple_eqtl_effect.py
 Created:      2020/03/16
-Last Changed: 2020/03/18
+Last Changed: 2020/03/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -59,13 +59,18 @@ class SimpleeQTLEffect:
         print("Plotting simple eQTL plots.")
         self.print_arguments()
 
-        i = 0
-        for index, row in self.eqtl_df.iterrows():
+        for i, (index, row) in enumerate(self.eqtl_df.iterrows()):
             # Extract the usefull information from the row.
             snp_name = row["SNPName"]
             probe_name = row["ProbeName"]
             hgnc_name = row["HGNCName"]
             eqtl_type = row["CisTrans"]
+
+            print("\tWorking on: {}\t{}\t{} [{}/{} "
+                  "{:.2f}%]".format(snp_name, probe_name, hgnc_name,
+                                    i + 1,
+                                    self.eqtl_df.shape[0],
+                                    (100 / self.eqtl_df.shape[0]) * (i + 1)))
 
             # Get the genotype / expression data.
             genotype = self.geno_df.iloc[i, :].T.to_frame()
@@ -118,8 +123,6 @@ class SimpleeQTLEffect:
                       data, minor_allele, minor_allele_frequency,
                       first_allele, second_allele,
                       self.outdir)
-
-            i += 1
 
     @staticmethod
     def create_color_map():

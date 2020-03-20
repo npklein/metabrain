@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/13
-Last Changed: 2020/03/19
+Last Changed: 2020/03/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -107,9 +107,11 @@ class Main:
         print("Performing interaction analyses.")
         for i, group_indir in enumerate(self.group_indirs):
             group_id = get_leaf_dir(group_indir)
-            print("\tWorking on: {:10s} [{}/{} "
-                  "{:.2f}%]".format(group_id, i + 1, len(self.group_indirs),
-                                    (100 / len(self.group_indirs)) * i + 1))
+            print("\tWorking on: {:15s} [{}/{} "
+                  "{:.2f}%]".format(group_id,
+                                    i + 1,
+                                    len(self.group_indirs),
+                                    (100 / len(self.group_indirs)) * (i + 1)))
 
             # Prepare the input and output directories.
             group_outdir = os.path.join(self.outdir, group_id)

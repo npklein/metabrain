@@ -10,7 +10,5 @@
     "markers": "markers_table.txt.gz"
   },
   "celltypes": ["neurons", "oligodendrocytes", "endothelialcells", "microglia", "astrocytes"],
-  "nrows": 1,
-  "output_dir": "output",
-  "group_dir": "group_11"
+  "output_dir": "output"
 }
