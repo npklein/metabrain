@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect_marker_vs_comp.py
 Created:      2020/03/18
-Last Changed:
+Last Changed: 2020/03/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -20,10 +20,10 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Standard imports.
-from colour import Color
 import os
 
 # Third party imports.
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib
@@ -75,22 +75,27 @@ class IntereQTLEffectMarkerVSComp:
         self.inter_df = None
         self.cov_df = None
 
-        corr_df = pd.DataFrame(0.0,
-                               index=comp_indices, columns=self.celltypes)
-        for component in components_zscores.columns:
-            print("Plotting component: {}".format(component))
+        corr_df = pd.DataFrame(np.nan, index=comp_indices, columns=self.celltypes)
+        pval_df = pd.DataFrame('', index=comp_indices, columns=self.celltypes)
+        print("Plotting components")
+        for i, component in enumerate(components_zscores.columns):
+            print("\tWorking on: {:6s} [{}/{} "
+                  "{:.2f}%]".format(component, i + 1,
+                                    len(components_zscores.columns),
+                                    (100 / len(components_zscores.columns)) * i + 1))
             corr_df = self.plot_scatter_grid(components_zscores,
                                              markers_zscores, component,
                                              self.celltypes, self.color_map,
-                                             corr_df, self.outdir)
+                                             corr_df, pval_df, self.outdir)
 
-        print("Average absolute spearman correlation per celltype per comp:")
+        print("Average absolute spearman correlation per cell-type per comp:")
         with pd.option_context('display.max_rows', None,
                                'display.max_columns', None):
             print(corr_df)
+            print(pval_df)
 
         # Plot a clustermap of the average correlations.
-        self.plot_clustermap(corr_df, self.outdir)
+        self.plot_clustermap(corr_df, pval_df, self.outdir)
 
     def get_colormap(self):
         colors = ["#9b59b6", "#3498db", "#e74c3c", "#34495e",
@@ -99,7 +104,7 @@ class IntereQTLEffectMarkerVSComp:
 
     @staticmethod
     def plot_scatter_grid(components, markers, component, celltypes, color_map,
-                          corr_df,outdir):
+                          corr_df, pval_df, outdir):
         """
         """
         # Calculate number of rows / columns.
@@ -203,18 +208,20 @@ class IntereQTLEffectMarkerVSComp:
             avg_coef = total_coef / n
             avg_p = total_p / n
             corr_df.at[component, key] = avg_coef
+            pval_df.at[component, key] = p_value_to_symbol(avg_p)
 
         return corr_df
 
     @staticmethod
-    def plot_clustermap(df, outdir, size=0.15):
+    def plot_clustermap(corr_df, pval_df, outdir):
         sns.set(color_codes=True)
-        g = sns.clustermap(df, center=0, cmap="RdBu_r",
-                           col_cluster=False,
-                           vmin=0, vmax=1,
+        g = sns.clustermap(corr_df, center=0, cmap="RdBu_r",
+                           row_cluster=False, col_cluster=False,
                            yticklabels=True, xticklabels=True,
-                           figsize=((2 * len(df.columns)),
-                                    (0.25 * len(df.index))))
+                           vmin=0, vmax=1, annot=pval_df, fmt='',
+                           annot_kws={"size": 8, "color": "#808080"},
+                           figsize=((2 * len(corr_df.columns)),
+                                    (0.25 * len(corr_df.index))))
         plt.setp(
             g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_ymajorticklabels(),
                                          fontsize=12))

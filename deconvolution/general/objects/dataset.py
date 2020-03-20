@@ -1,7 +1,7 @@
 """
 File:         dataset.py
 Created:      2020/03/16
-Last Changed: 2020/03/19
+Last Changed: 2020/03/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -22,6 +22,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 
 # Standard imports.
 import itertools
+import os
 
 # Third party imports.
 
@@ -31,13 +32,15 @@ from general.df_utilities import load_dataframe
 
 class Dataset:
     def __init__(self, settings):
-        self.eqtl_inpath = settings.get_setting("eqtl_datafile")
-        self.geno_inpath = settings.get_setting("genotype_datafile")
-        self.alleles_inpath = settings.get_setting("alleles_datafile")
-        self.expr_inpath = settings.get_setting("expression_datafile")
-        self.cov_inpath = settings.get_setting("covariate_datafile")
-        self.inter_inpath = settings.get_setting("interaction_datafile")
-        self.marker_inpath = settings.get_setting("marker_genes_datafile")
+        self.input_dir = settings.get_setting("input_dir")
+        filenames = settings.get_setting("filenames")
+        self.eqtl_filename = filenames["eqtl"]
+        self.geno_filename = filenames["genotype"]
+        self.alleles_filename = filenames["alleles"]
+        self.expr_filename = filenames["expression"]
+        self.cov_filename = filenames["covariates"]
+        self.inter_filename = filenames["interaction"]
+        self.markers_filename = filenames["markers"]
         self.celltypes = settings.get_setting("celltypes")
         nrows = settings.get_setting("nrows")
         if not isinstance(nrows, int):
@@ -64,7 +67,8 @@ class Dataset:
 
     def get_eqtl_df(self):
         if self.eqtl_df is None:
-            self.eqtl_df = load_dataframe(inpath=self.eqtl_inpath,
+            self.eqtl_df = load_dataframe(inpath=os.path.join(self.input_dir,
+                                                              self.eqtl_filename),
                                           header=0,
                                           index_col=False,
                                           nrows=self.nrows)
@@ -75,7 +79,8 @@ class Dataset:
 
     def get_geno_df(self):
         if self.geno_df is None:
-            self.geno_df = load_dataframe(inpath=self.geno_inpath,
+            self.geno_df = load_dataframe(inpath=os.path.join(self.input_dir,
+                                                              self.geno_filename),
                                           header=0,
                                           index_col=0,
                                           nrows=self.nrows)
@@ -84,7 +89,8 @@ class Dataset:
 
     def get_alleles_df(self):
         if self.alleles_df is None:
-            self.alleles_df = load_dataframe(inpath=self.alleles_inpath,
+            self.alleles_df = load_dataframe(inpath=os.path.join(self.input_dir,
+                                                                 self.alleles_filename),
                                              header=0,
                                              index_col=0,
                                              nrows=self.nrows)
@@ -93,7 +99,8 @@ class Dataset:
 
     def get_expr_df(self):
         if self.expr_df is None:
-            self.expr_df = load_dataframe(inpath=self.expr_inpath,
+            self.expr_df = load_dataframe(inpath=os.path.join(self.input_dir,
+                                                              self.expr_filename),
                                           header=0,
                                           index_col=0,
                                           nrows=self.nrows)
@@ -102,7 +109,8 @@ class Dataset:
 
     def get_cov_df(self):
         if self.cov_df is None:
-            self.cov_df = load_dataframe(inpath=self.cov_inpath,
+            self.cov_df = load_dataframe(inpath=os.path.join(self.input_dir,
+                                                             self.cov_filename),
                                          header=0,
                                          index_col=0)
             self.validate()
@@ -110,7 +118,8 @@ class Dataset:
 
     def get_inter_df(self):
         if self.inter_df is None:
-            self.inter_df = load_dataframe(inpath=self.inter_inpath,
+            self.inter_df = load_dataframe(inpath=os.path.join(self.input_dir,
+                                                               self.inter_filename),
                                            header=0,
                                            index_col=0)
             self.validate()
@@ -118,7 +127,8 @@ class Dataset:
 
     def get_marker_df(self):
         if self.marker_df is None:
-            self.marker_df = load_dataframe(inpath=self.marker_inpath,
+            self.marker_df = load_dataframe(inpath=os.path.join(self.input_dir,
+                                                                self.markers_filename),
                                             header=0,
                                             index_col=0)
             self.validate()
