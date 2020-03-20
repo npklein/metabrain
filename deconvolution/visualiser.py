@@ -3,7 +3,7 @@
 """
 File:         visualiser.py
 Created:      2020/03/13
-Last Changed:
+Last Changed: 2020/03/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -50,7 +50,10 @@ if __name__ == '__main__':
                                description=__description__)
     SETTINGS_FILE = CLA.get_argument("settings")
     PLOTS = CLA.get_argument("plots")
+    N_EQTLS = CLA.get_argument("n_eqtls")
+    VALIDATE = CLA.get_argument("validate")
 
     # Start the program.
-    PROGRAM = Main(settings_file=SETTINGS_FILE, plots=PLOTS)
+    PROGRAM = Main(settings_file=SETTINGS_FILE, plots=PLOTS,
+                   n_eqtls=N_EQTLS, validate=VALIDATE)
     PROGRAM.start()

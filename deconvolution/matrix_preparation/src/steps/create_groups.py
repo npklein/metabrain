@@ -1,7 +1,7 @@
 """
 File:         create_groups.py
 Created:      2020/03/12
-Last Changed: 2020/03/19
+Last Changed: 2020/03/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -90,7 +90,7 @@ class CreateGroups:
         for i, (group, group_id) in enumerate(zip(self.groups, self.group_ids)):
             print("\tWorking on: {:10s} [{}/{} "
                   "{:.2f}%]".format(group_id, i + 1, len(self.group_ids),
-                                    (100 / len(self.group_ids)) * i + 1))
+                                    (100 / len(self.group_ids)) * (i + 1)))
 
             # Create the group dir.
             group_dir = os.path.join(self.outdir, group_id)

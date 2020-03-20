@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/13
-Last Changed: 2020/03/18
+Last Changed: 2020/03/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -47,12 +47,14 @@ class Main:
     Main: this class is the main class that calls all other functionality.
     """
 
-    def __init__(self, settings_file, plots):
+    def __init__(self, settings_file, plots, n_eqtls, validate):
         """
         Initializer of the class.
 
         :param settings_file: string, the name of the settings file.
         :param plots: list, the names of the plots to create.
+        :param n_eqtls: int, the number of equals to load.
+        :param validate: boolean, whether or not to validate the input.
         """
         # Define the current directory.
         current_dir = str(Path(__file__).parent.parent)
@@ -62,11 +64,12 @@ class Main:
 
         # Load the variables.
         self.plots = plots
+        self.n_eqtls = n_eqtls
+        self.validate = validate
 
         # Prepare an output directory.
         self.outdir = os.path.join(current_dir,
-                                   self.settings.get_setting('output_dir'),
-                                   self.settings.get_setting('group_dir'))
+                                   self.settings.get_setting('output_dir'))
         prepare_output_dir(self.outdir)
 
     def start(self):
@@ -77,7 +80,9 @@ class Main:
         self.print_arguments()
 
         # Create the dataset object.
-        ds = Dataset(settings=self.settings)
+        ds = Dataset(settings=self.settings, nrows=n_eqtls)
+        if self.validate:
+            ds.load_all()
 
         # Figure 1: a simple eQTL effect.
         if ('simple_eqtl_effect' in self.plots) or ('all' in self.plots):
@@ -147,4 +152,5 @@ class Main:
         print("Arguments:")
         print("  > Output directory: {}".format(self.outdir))
         print("  > Plots: {}".format(self.plots))
+        print("  > Validate: {}".format(self.validate))
         print("")

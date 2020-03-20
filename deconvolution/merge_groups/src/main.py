@@ -221,7 +221,7 @@ class Main:
         for i, group_id in enumerate(self.group_ids):
             print("\tWorking on: {:10s} [{}/{} "
                   "{:.2f}%]".format(group_id, i + 1, len(self.group_ids),
-                                    (100 / len(self.group_ids)) * i + 1))
+                                    (100 / len(self.group_ids)) * (i + 1)))
 
             # Define the directory names.
             data_indir = os.path.join(self.g_data_indir, group_id)

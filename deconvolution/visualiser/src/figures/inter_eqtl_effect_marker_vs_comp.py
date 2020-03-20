@@ -82,7 +82,7 @@ class IntereQTLEffectMarkerVSComp:
             print("\tWorking on: {:6s} [{}/{} "
                   "{:.2f}%]".format(component, i + 1,
                                     len(components_zscores.columns),
-                                    (100 / len(components_zscores.columns)) * i + 1))
+                                    (100 / len(components_zscores.columns)) * (i + 1)))
             corr_df = self.plot_scatter_grid(components_zscores,
                                              markers_zscores, component,
                                              self.celltypes, self.color_map,

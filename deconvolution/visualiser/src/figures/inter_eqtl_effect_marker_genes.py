@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect_marker_genes.py
 Created:      2020/03/17
-Last Changed: 2020/03/18
+Last Changed: 2020/03/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -69,16 +69,18 @@ class IntereQTLEffectMarkerGenes:
                     index.split("_")[0] in self.celltypes):
                 marker_indices.append(index)
 
-        i = 0
-        for index, row in self.eqtl_df.iterrows():
+        print("Visualising.")
+        for i, (index, row) in enumerate(self.eqtl_df.iterrows()):
             # Extract the usefull information from the row.
             snp_name = row["SNPName"]
             probe_name = row["ProbeName"]
             hgnc_name = row["HGNCName"]
 
-            print("Working on: {}\t{}\t{}".format(snp_name,
-                                                  probe_name,
-                                                  hgnc_name))
+            print("\tWorking on: {}\t{}\t{} [{}/{} "
+                  "{:.2f}%]".format(snp_name, probe_name, hgnc_name,
+                                    i + 1,
+                                    self.eqtl_df.shape[0],
+                                    (100 / self.eqtl_df.shape[0]) * (i + 1)))
 
             # Get the genotype / expression data.
             genotype = self.geno_df.iloc[i, :].T.to_frame()
@@ -132,8 +134,6 @@ class IntereQTLEffectMarkerGenes:
 
             self.plot(snp_name, probe_name, hgnc_name, data, markers,
                       interaction_effect, self.celltypes, i, self.outdir)
-
-            i += 1
 
     @staticmethod
     def create_color_map():

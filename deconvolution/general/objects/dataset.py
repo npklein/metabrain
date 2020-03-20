@@ -31,7 +31,7 @@ from general.df_utilities import load_dataframe
 
 
 class Dataset:
-    def __init__(self, settings):
+    def __init__(self, settings, nrows):
         self.input_dir = settings.get_setting("input_dir")
         filenames = settings.get_setting("filenames")
         self.eqtl_filename = filenames["eqtl"]
@@ -42,15 +42,12 @@ class Dataset:
         self.inter_filename = filenames["interaction"]
         self.markers_filename = filenames["markers"]
         self.celltypes = settings.get_setting("celltypes")
-        nrows = settings.get_setting("nrows")
-        if not isinstance(nrows, int):
-            if isinstance(nrows, str) and (nrows == "" or
-                                           nrows.lower() == "all" or
-                                           nrows.lower() == "none"):
-                nrows = None
-            else:
-                print("Unexpected argument for nrows")
-                exit()
+        nrows = nrows
+        if nrows == -1:
+            nrows = None
+        elif nrows <= 0:
+            print("Unexpected argument for -n / --n_eqtls: '{}'".format(nrows))
+            exit()
         self.nrows = nrows
 
         # Declare empty variables.
@@ -61,6 +58,20 @@ class Dataset:
         self.cov_df = None
         self.inter_df = None
         self.marker_df = None
+
+    def load_all(self):
+        print("Loading all dataframes for validation.")
+        self.nrows = None
+        self.get_celltypes()
+        self.get_eqtl_df()
+        self.get_geno_df()
+        self.get_alleles_df()
+        self.get_expr_df()
+        self.get_cov_df()
+        self.get_inter_df()
+        self.get_marker_df()
+        print("Validation finished.")
+        exit()
 
     def get_celltypes(self):
         return self.celltypes

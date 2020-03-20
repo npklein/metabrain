@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/13
-Last Changed: 2020/03/18
+Last Changed: 2020/03/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -89,6 +89,16 @@ class CommandLineArguments:
                                      "inter_eqtl_effect_marker_vs_comp"],
                             help="The figures to be created, "
                                  "default: 'all'.")
+        parser.add_argument("-n",
+                            "--n_eqtls",
+                            type=int,
+                            default=1,
+                            help="The number of eQTLs to load, "
+                                 "default: 1.")
+        parser.add_argument("-validate",
+                            action='store_true',
+                            help="Include steps and command prints, "
+                                 "default: False.")
 
         return parser
 
