@@ -60,6 +60,7 @@ class Main:
         self.indir = settings.get_setting("input_dir")
         self.tech_covs = settings.get_setting("technical_covariates")
         self.eqtl_ia = settings.get_setting("eQTLInteractionAnalyser")
+        self.inter_regex = settings.get_setting("interaction_regex")
         self.groups = groups
         self.force = force
         self.verbose = verbose
@@ -106,19 +107,31 @@ class Main:
         # Loop over the groups.
         print("Performing interaction analyses.")
         for i, group_indir in enumerate(self.group_indirs):
-            group_id = get_leaf_dir(group_indir)
-            print("\tWorking on: {:15s} [{}/{} "
-                  "{:.2f}%]".format(group_id,
-                                    i + 1,
-                                    len(self.group_indirs),
-                                    (100 / len(self.group_indirs)) * (i + 1)))
-
             # Prepare the input and output directories.
+            group_id = get_leaf_dir(group_indir)
             group_outdir = os.path.join(self.outdir, group_id)
             ia_indir = os.path.join(group_outdir, 'input')
             ia_outdir = os.path.join(group_outdir, 'output')
             for outdir in [group_outdir, ia_indir, ia_outdir]:
                 prepare_output_dir(outdir)
+
+            # Check if we can find an InteractionZSCoreMatrix
+            has_inter_matrix = False
+            if not self.force:
+                for path in glob.glob(os.path.join(ia_outdir, "*")):
+                    if re.match(self.inter_regex, get_basename(path)):
+                        has_inter_matrix = True
+                        break
+
+            # Stop if we already have the interaction matrix.
+            if has_inter_matrix and not self.force:
+                continue
+
+            print("\tWorking on: {:15s} [{}/{} "
+                  "{:.2f}%]".format(group_id,
+                                    i + 1,
+                                    len(self.group_indirs),
+                                    (100 / len(self.group_indirs)) * (i + 1)))
 
             # Prepare the EQTLInteractioAnalyser expected input.
             self.print_string("\n### STEP1 ###\n")
@@ -184,17 +197,8 @@ class Main:
 
             # execute the program.
             self.print_string("\n### STEP3 ###\n")
-            found = False
-            if not self.force:
-                regex = "^InteractionZScoresMatrix-[0-9]+Covariates.txt$"
-                for path in glob.glob(os.path.join(ia_outdir, "*")):
-                    if re.match(regex, get_basename(path)):
-                        found = True
-                        break
-
-            if self.force or not found:
-                self.print_string("Executing the eQTLInteractionAnalyser.")
-                self.execute(ia_indir, ia_outdir, eqtl_file)
+            self.print_string("Executing the eQTLInteractionAnalyser.")
+            self.execute(ia_indir, ia_outdir, eqtl_file)
 
     def print_string(self, string):
         if self.verbose:

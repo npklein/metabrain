@@ -121,12 +121,14 @@ class Main:
         snp_mask, sample_mask, inter_df = self.combine_groups(inter_outpath)
 
         print("\nSubsetting data with masks:")
-        print("\tSNP mask:\tlength: {}\tmin: {}\tmax: {}".format(len(snp_mask),
-                                                                 min(snp_mask),
-                                                                 max(snp_mask)))
-        print("\tSample mask:\tlength: {}\tmin: {}"
-              "\tmax: {}".format(len(sample_mask), min(sample_mask),
-                                 max(sample_mask)))
+        print("\tSNP mask:\tlength: {}\tlowest index: {}"
+              "\thighest index: {}".format(len(snp_mask),
+                                           min(snp_mask),
+                                           max(snp_mask)))
+        print("\tSample mask:\tlength: {}\tlowest index: {}"
+              "\thighest index: {}".format(len(sample_mask),
+                                           min(sample_mask),
+                                           max(sample_mask)))
         print("")
 
         # Load the eQTL file if either the marker df or the eqtl df needs to be
@@ -219,7 +221,7 @@ class Main:
         sample_mask = np.array([], dtype=np.int16)
         inter_df = None
         for i, group_id in enumerate(self.group_ids):
-            print("\tWorking on: {:10s} [{}/{} "
+            print("  Working on: {:10s} [{}/{} "
                   "{:.2f}%]".format(group_id, i + 1, len(self.group_ids),
                                     (100 / len(self.group_ids)) * (i + 1)))
 
