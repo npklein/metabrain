@@ -65,6 +65,7 @@ class IntereQTLEffect:
         z_score_cutoff = stats.norm.ppf(
             0.05 / (self.inter_df.shape[0] * self.inter_df.shape[1]) / 2)
 
+        print("Iterating over eQTLs.")
         for i, (index, row) in enumerate(self.eqtl_df.iterrows()):
             # Extract the usefull information from the row.
             snp_name = row["SNPName"]

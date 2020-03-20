@@ -1,7 +1,7 @@
 """
 File:         local_settings.py
 Created:      2020/03/19
-Last Changed:
+Last Changed: 2020/03/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -37,11 +37,6 @@ class LocalSettings:
         """
         Singleton class that enables the extraction of data from the
         default_settings.json file.
-
-        Pylint:
-            - C0103: Class name "__LocalSettings" doesn't conform to PascalCase
-            naming style (invalid-name)
-            I respectfully disagree that this is a mistake.
         """
         def __init__(self, project_root, settings_file):
             """

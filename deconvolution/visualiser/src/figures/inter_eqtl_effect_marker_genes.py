@@ -69,7 +69,7 @@ class IntereQTLEffectMarkerGenes:
                     index.split("_")[0] in self.celltypes):
                 marker_indices.append(index)
 
-        print("Visualising.")
+        print("Iterating over eQTLs.")
         for i, (index, row) in enumerate(self.eqtl_df.iterrows()):
             # Extract the usefull information from the row.
             snp_name = row["SNPName"]

@@ -67,7 +67,7 @@ class CommandLineArguments:
                             version="{} {}".format(self.program,
                                                    self.version),
                             help="show program's version number and exit")
-        parser.add_argument("-l",
+        parser.add_argument("-s",
                             "--settings",
                             type=str,
                             default="default_settings",

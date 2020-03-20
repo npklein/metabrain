@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_zscore_bars.py
 Created:      2020/03/16
-Last Changed: 2020/03/18
+Last Changed: 2020/03/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -57,13 +57,19 @@ class IntereQTLZscoreBars:
         z_score_cutoff = st.norm.ppf(
             0.05 / (self.inter_df.shape[0] * self.inter_df.shape[1]) / 2)
 
-        i = 0
-        for index, row in self.eqtl_df.iterrows():
+        print("Iterating over eQTLs.")
+        for i, (index, row) in enumerate(self.eqtl_df.iterrows()):
             # Extract the usefull information from the row.
             snp_name = row["SNPName"]
             probe_name = row["ProbeName"]
             hgnc_name = row["HGNCName"]
             eqtl_type = row["CisTrans"]
+
+            print("\tWorking on: {}\t{}\t{} [{}/{} "
+                  "{:.2f}%]".format(snp_name, probe_name, hgnc_name,
+                                    i + 1,
+                                    self.eqtl_df.shape[0],
+                                    (100 / self.eqtl_df.shape[0]) * (i + 1)))
 
             # Check if the SNP has an interaction effect.
             interaction_effect = self.inter_df.iloc[:, i].to_frame()
@@ -76,8 +82,6 @@ class IntereQTLZscoreBars:
 
             self.plot(i, snp_name, probe_name, hgnc_name, eqtl_type,
                       z_score_cutoff, interaction_effect, self.outdir)
-
-        i += 1
 
     @staticmethod
     def plot(i, snp_name, probe_name, hgnc_name, eqtl_type, z_score_cutoff,
