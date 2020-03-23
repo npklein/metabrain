@@ -1,7 +1,7 @@
 """
 File:         dataset.py
 Created:      2020/03/16
-Last Changed: 2020/03/20
+Last Changed: 2020/03/23
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -39,8 +39,8 @@ class Dataset:
         self.alleles_filename = filenames["alleles"]
         self.expr_filename = filenames["expression"]
         self.cov_filename = filenames["covariates"]
-        self.inter_filename = filenames["interaction"]
         self.markers_filename = filenames["markers"]
+        self.inter_filename = settings.get_setting("interaction_datafile")
         self.celltypes = settings.get_setting("celltypes")
         nrows = nrows
         if nrows == -1:

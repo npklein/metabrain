@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
-Created:      2020/03/13
-Last Changed: 2020/03/20
+Created:      2020/03/23
+Last Changed:
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -73,13 +73,6 @@ class CommandLineArguments:
                             default="default_settings",
                             help="The settings input file (without '.json'), "
                                  "default: 'default_settings'.")
-        parser.add_argument("-g",
-                            "--groups",
-                            nargs="+",
-                            type=str,
-                            default=None,
-                            help="The group directories in the input directory "
-                                 "to analyse, default: 'None' (single input).")
         parser.add_argument("-force",
                             action='store_true',
                             help="Force the program to redo all steps, "

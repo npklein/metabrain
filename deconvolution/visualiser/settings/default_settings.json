@@ -6,9 +6,9 @@
     "alleles": "genotype_alleles.txt.gz",
     "expression": "expression_table.txt.gz",
     "covariates": "covariates_table.txt.gz",
-    "interaction": "interaction_table.txt.gz",
     "markers": "markers_table.txt.gz"
   },
+  "interaction_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/merge_groups/output/interaction_table.txt.gz",
   "celltypes": ["neurons", "oligodendrocytes", "endothelialcells", "microglia", "astrocytes"],
   "output_dir": "output"
 }
