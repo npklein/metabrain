@@ -1,7 +1,7 @@
 """
 File:         inter_zscores_dist.py
 Created:      2020/03/16
-Last Changed: 2020/03/18
+Last Changed: 2020/03/23
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -41,7 +41,7 @@ class InterZscoreDist:
         :param dataset: Dataset, the input data.
         :param outdir: string, the output directory.
         """
-        self.outdir = os.path.join(outdir, 'inter_zscores_dist')
+        self.outdir = os.path.join(outdir, 'inter_zscore_dist')
         prepare_output_dir(self.outdir)
 
         # Extract the required data.

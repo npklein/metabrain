@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/13
-Last Changed: 2020/03/20
+Last Changed: 2020/03/23
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -71,8 +71,11 @@ class Main:
         prepare_output_dir(self.outdir)
 
         # Find which groups are in the input directory.
-        groups_in_indir = glob.glob(os.path.join(self.indir, 'group_*'))
-        self.group_indirs = self.filter_groups(groups_in_indir)
+        if self.groups is not None:
+            groups_in_indir = glob.glob(os.path.join(self.indir, 'group_*'))
+            self.group_indirs = self.filter_groups(groups_in_indir)
+        else:
+            self.group_indirs = [self.indir]
 
         # Prepare filenames.
         filenames = settings.get_setting("filenames")
@@ -108,8 +111,12 @@ class Main:
         print("Performing interaction analyses.")
         for i, group_indir in enumerate(self.group_indirs):
             # Prepare the input and output directories.
-            group_id = get_leaf_dir(group_indir)
-            group_outdir = os.path.join(self.outdir, group_id)
+            if self.groups is not None:
+                group_id = get_leaf_dir(group_indir)
+                group_outdir = os.path.join(self.outdir, group_id)
+            else:
+                group_id = ""
+                group_outdir = self.outdir
             ia_indir = os.path.join(group_outdir, 'input')
             ia_outdir = os.path.join(group_outdir, 'output')
             for outdir in [group_outdir, ia_indir, ia_outdir]:
@@ -224,7 +231,7 @@ class Main:
                    '-eqtls', eqtl_inpath,
                    '--maxcov', '1',
                    '-noNormalization',
-                   '-noCovNormalization',
+#                   '-noCovNormalization',
                    '-cov', *self.tech_covs]
         self.execute_command(command)
 

@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/12
-Last Changed: 2020/03/19
+Last Changed: 2020/03/23
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -163,6 +163,7 @@ class Main:
         print("\n### STEP5 ###\n")
         cmm = MaskMatrices(
             settings=self.settings.get_setting('mask_matrices'),
+            eqtl_df=eqtl_df.copy(),
             geno_df=geno_df.copy(),
             alleles_df=alleles_df.copy(),
             expr_df=expr_df.copy(),
