@@ -21,16 +21,12 @@ jar_dir=
 sample_file=
 # github dir
 github_dir=
-# quant normalize only necesarry to select samples. we already know which are the good ones, so skip
-quant_norm=false
 # covariate table
 covar_table=
 # GTF file
 gtf=
 # number of threads to use for correlation and PCA step
 threads=
-# gene_network_dir that contains GeneNetworkBackend-1.0.7-SNAPSHOT-jar-with-dependencies.jar and PathwayMatrix/
-gene_network_dir=
 # memory to use when doing normalization, PCA etc
 mem=
 # qos to run sbatch jobs in (default = regular)
@@ -70,6 +66,8 @@ main(){
     6_CorrelationMatrix
     echo "7_evd_on_correlation"
     7_evd_on_correlation
+    echo "Finished correlation and eigenvalue decomposition, check output/7_evd_on_correlation_matrix/eigenvalues.png how many eigenvalues to use."
+    echo "Then run the next step."
 }
 
 
@@ -86,7 +84,6 @@ print_command_arguments(){
     echo "github_dir=$github_dir"
     echo "covar_table=$covar_table"
     echo "gtf=$gtf"
-    echo "gene_network_dir=$gene_network_dir"
     echo "mem=$mem"
     echo "qos=$qos"
     echo "name=$name"
@@ -281,7 +278,7 @@ usage(){
     programname=$0
     echo "usage: $programname -t TMPDIR -e expression_file -o output_dir -p project_dir"
     echo "                    -j jar_dir -s sample_file -g github_dir -z covar_table -v threads"
-    echo "                    -d GeneNetworkDir -r conbach_alpha -n name -m mem [-q qos]"
+    echo "                    -r conbach_alpha -n name -m mem [-q qos]"
     echo "  -t      TMPDIR where files will be written during runtime"
     echo "  -e      Expression file"
     echo "  -p      Base of the project_dir where config files will be written"
@@ -292,7 +289,6 @@ usage(){
     echo "  -z      Covariate table"
     echo "  -a      GTF file"
     echo "  -v      Number of threads to use for correlation step and PCA step"
-    echo "  -d      GeneNetwork directory (with backend data for predictions"
     echo "  -m      Memory to use for some steps"
     echo "  -q      qos to run sbatch jobs in"
     echo "  -n      Name that will be used in output file"
@@ -340,9 +336,6 @@ parse_commandline(){
                                             ;;
             -z | --covar_table )            shift
                                             covar_table=$1
-                                            ;;
-            -d | --gene_network_dir )       shift
-                                            gene_network_dir=$1
                                             ;;
             -m | --mem )                    shift
                                             mem=$1
@@ -409,12 +402,6 @@ parse_commandline(){
     if [ -z "$covar_table" ];
     then
         echo "ERROR: -z/--covar_table not set!"
-        usage
-        exit 1;
-    fi
-    if [ -z "$gene_network_dir" ];
-    then
-        echo "ERROR: -d/--gene_network_dir not set!"
         usage
         exit 1;
     fi
