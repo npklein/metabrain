@@ -3,7 +3,7 @@
 """
 File:         custom_interaction_analyser.py
 Created:      2020/03/23
-Last Changed:
+Last Changed: 2020/03/25
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -49,11 +49,11 @@ if __name__ == '__main__':
                                version=__version__,
                                description=__description__)
     SETTINGS_FILE = CLA.get_argument("settings")
-    FORCE = CLA.get_argument("force")
-    VERBOSE = CLA.get_argument("verbose")
+    N_EQTLS = CLA.get_argument("n_eqtls")
+    CORES = CLA.get_argument("cores")
 
     # Start the program.
     PROGRAM = Main(settings_file=SETTINGS_FILE,
-                   force=FORCE,
-                   verbose=VERBOSE)
+                   n_eqtls=N_EQTLS,
+                   cores=CORES)
     PROGRAM.start()
