@@ -1,5 +1,4 @@
 {
-  "eqtl_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/matrix_preparation/output/combine_eqtlprobes/eQTLprobes_combined.txt.gz",
   "genotye_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/matrix_preparation/output/create_matrices/genotype_table.txt.gz",
   "expression_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/matrix_preparation/output/create_matrices/expression_table.txt.gz",
   "covariates_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/matrix_preparation/output/create_cov_matrix/covariates_table.txt.gz",
@@ -45,5 +44,7 @@
     "TargetALS-EUR",
     "UCLA_ASD-EUR",
     "ENA-EU"
-  ]
+  ],
+  "max_runtime_in_min": 300,
+  "n_permutations": 100
 }
