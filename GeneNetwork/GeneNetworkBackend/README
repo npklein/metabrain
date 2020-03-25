@@ -1,0 +1,11 @@
+
+GeneNetwork backend. For more info, see https://github.com/molgenis/systemsgenetics/blob/master/GeneNetworkBackend and https://github.com/npklein/Genenetwork-cookbook
+
+
+make_go_matrices.py
+--------------------
+Create matrix of genes per GO category necesarry for GeneNetwork predictions.
+
+make_reactome_matrix.py
+--------------------
+Create matrix of genes per REACTOME patwhay necesarry for GeneNetwork predictions.
