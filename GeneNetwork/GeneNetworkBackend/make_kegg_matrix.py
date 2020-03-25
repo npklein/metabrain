@@ -11,9 +11,17 @@ parser.add_argument('ordered_gene_list',
                     help='List with ordered gene IDs')
 parser.add_argument('kegg_version',
                     help='Kegg version to use (e.g.: 7.0)')
+parser.add_argument('ncbi_to_ensembl_file',
+                    help='Gzipped file with in first column ensembl IDs, second column NCBI IDs')
 args = parser.parse_args()
 Path("PathwayMatrix/").mkdir(parents=True, exist_ok=True)
 
+ncbi_to_ensembl = {}
+with gzip.open(args.ncbi_to_ensembl_file,'rt') as input_file:
+    input_file.readline()
+    for line in input_file:
+        line = line.rstrip('\n').split('\t')
+        ncbi_to_ensembl[line[1]] = line[0]
 
 today = datetime.now().strftime("%Y-%m-%d") 
 input_file = today+'-c2.cp.kegg.v'+args.kegg_version+'.entrez.gmt.gz'
@@ -26,7 +34,6 @@ if not os.path.exists(input_file):
         f_out.writelines(f_in)
 
     os.remove(input_file.rstrip('.gz'))
-exit()
 
 pathway_genes = {}
 pathways = set([])
@@ -35,18 +42,14 @@ print('Start reading '+input_file)
 with  gzip.open(input_file,'rt') as input_file:
     for line in input_file:
         line = line.strip().split('\t')
-        if line[5] != 'Homo sapiens':
-            continue
-        ensembl_id = line[0]
-        pathway = line[1]
-        if pathway not in pathway_genes:
-            pathway_genes[pathway] = set([])
-        pathway_genes[pathway].add(ensembl_id)
+        pathway = ' '.join(line[0].replace('KEGG_','').lower().split('_')).capitalize()
+        ncbi_genes = line[2:]
+        pathway_genes[pathway] = set([ncbi_to_ensembl[x] for x in ncbi_genes if x in ncbi_to_ensembl])
         pathways.add(pathway)
 print('done')
 
 pathways = sorted(pathways)
-outfile = 'PathwayMatrix/'+today+'-Ensembl2Reactome_All_Levels.matrix.txt'
+outfile = 'PathwayMatrix/'+today+'c2.cp.kegg.v'+args.kegg_version+'.matrix.txt'
 print('start writing matrix')
 with open(args.ordered_gene_list) as input_file, open(outfile,'w') as out:
     out.write(today)
