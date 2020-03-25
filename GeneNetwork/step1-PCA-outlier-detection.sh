@@ -39,6 +39,7 @@ main(){
     2_remove_duplicate_samples
     echo "3_quantileNormalized"
     3_quantileNormalized
+    echo "Finished quantile normalizing, check the output PCA to see if any outliers need to be removed, otherwise go to next step"
 }
 
 

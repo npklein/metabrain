@@ -9,32 +9,29 @@ module load Python
 #### Only lines that should be changed ####
 # TMPDIR for writing files
 TMPDIR=
-# original expression table
-expression_file=
 # Directory to write output to
 output_dir=
 # Directory to write configuration files to (will be put in $project_dir/configs/)
 project_dir=
 # directory containing V13.jar
 jar_dir=
-# file with samples to analyze
-sample_file=
 # github dir
 github_dir=
-# quant normalize only necesarry to select samples. we already know which are the good ones, so skip
-quant_norm=false
 # GTF file
 gtf=
-# number of threads to use for correlation and PCA step
+# number of threads to use for correlation and evd step
 threads=
 # gene_network_dir that contains GeneNetworkBackend-1.0.7-SNAPSHOT-jar-with-dependencies.jar and PathwayMatrix/
 gene_network_dir=
-# memory to use when doing normalization, PCA etc
+# memory to use when doing normalization, evd etc
 mem=
-# qos to run sbatch jobs in (default = regular)
-qos=
 # Name of the project (e.g. GeneNetwork, MetaBrain, KidneyNetwork, etc)
+# This needs to be same as previous step
 name=
+# Number of eigenvectors to keep
+n_eigenvectors=
+# qos when submitting to cluster
+qos=regular
 ####
 
 main(){
@@ -72,29 +69,34 @@ print_command_arguments(){
     echo "Processing expression data for GeneNetwork."
     echo "-------------------------------------------"
     echo "Starting program with:"
-    echo "expression_file=$expression_file"
     echo "output_dir=$output_dir"
     echo "project_dir=$project_dir"
     echo "jar_dir=$jar_dir"
-    echo "sample_file=$sample_file"
     echo "github_dir=$github_dir"
     echo "gtf=$gtf"
     echo "gene_network_dir=$gene_network_dir"
     echo "mem=$mem"
-    echo "qos=$qos"
     echo "name=$name"
+    echo "qos=$qos"
+    echo "n_eigenvectors=$n_eigenvectors"
     echo "-------------------------------------------"
     echo ""
     echo ""
 }
 
 8_center_scale(){
-    output_file_step8="$output_dir/8_CenterScaledColumnsRows/$name.eigenvectors.columnsRowsCenterScaled.txt.gz"
+    output_file_step8="$output_dir/8_CenterScaledColumnsRows/$name.${n_eigenvectors}_eigenvectors.columnsRowsCenterScaled.txt.gz"
     if [ ! -f ${output_file_step8} ];
     then
         echo "${output_file_step8}.gz does not exist yet, start step 8"
+        if [ ! -f ${output_dir}/7_evd_on_correlation_matrix/$name.eigenvectors.${n_eigenvectors}_eigenvectors.txt.gz ];
+        then
+            nforcut=$(expr $n_eigenvectors + 1)
+            zcat < $output_dir/7_evd_on_correlation_matrix/$name.eigenvectors.txt.gz | cut -f1-$nforcut > $output_dir/7_evd_on_correlation_matrix/$name.eigenvectors.${n_eigenvectors}_eigenvectors.txt
+            gzip $output_dir/7_evd_on_correlation_matrix/$name.eigenvectors.${n_eigenvectors}_eigenvectors.txt
+        fi
         bash $github_dir/GeneNetwork/scripts_per_step/8_CenterScaleColumnsRows.sh \
-            -i $output_dir/7_PCA_on_correlation_matrix/$name.eigenvectors.txt.gz \
+            -i $output_dir/7_evd_on_correlation_matrix/$name.eigenvectors.${n_eigenvectors}_eigenvectors.txt \
             -o ${output_file_step8}
     else
         echo "${output_file_step8}.gz exists, go to step 9"
@@ -113,7 +115,10 @@ print_command_arguments(){
             -o ${output_file_step9} \
             -c $github_dir/GeneNetwork/config_file_templates/ \
             -j $jar_dir \
-            -t $threads
+            -t $threads \
+            -q $qos \
+            -m $mem \
+            -g $github_dir/GeneNetwork/
     else
         echo "${output_file_step9}.gz already exists, go to step 10"
     fi
@@ -139,19 +144,27 @@ print_command_arguments(){
                 sed -i "s;REPLACEOUT;$outfile;" $output_dir/10_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
                 sed -i "s;REPLACETYPE;${fullname[$type]};" $output_dir/10_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
                 cd $output_dir/10_GeneNetwork_predictions/scripts/$type/
-                sbatch ${type}_$(basename ${f%.txt}).predictions.sh
+                jobid=$(sbatch --parsable ${type}_$(basename ${f%.txt}).predictions.sh)
                 cd -
             done
             for f in ${gene_network_dir}/PathwayMatrix/split_matrices/$type/*txt;
             do
+                startDate=`date`
                 echo "Start testing if ${type}_$(basename ${f%.txt}).sh is finished"
                 cd $output_dir/10_GeneNetwork_predictions/scripts/$type/
-                while [ ! -f ${type}_$(basename ${f%.txt}).finished ];
+                while [ ! $(squeue -j $jobid | wc -l) -eq 0 ];
                 do
-                    echo "${type}_$(basename ${f%.txt}).finished not made yet. Sleep 5 minutes and check again"
-                    sleep 300
+                    echo "sbatch starting time: $startDate"
+                    echo "current time: `date`"
+                    echo "Job still running. Sleep 2 minutes"
+                    sleep 120
                 done
                 echo "Finished!"
+                if [ ! -f ${type}_$(basename ${f%.txt}).finished ];
+                then
+                    echo "ERROR: check job error log what went wrong"
+                    exit 1;
+                fi
                 grep AUC ${type}_$(basename ${f%.txt}).out | cut -f2,7,11,13 >> ${outfile%.txt}.AUC.txt;
                 cd -
             done
@@ -172,9 +185,9 @@ print_command_arguments(){
 usage(){
     # print the usage of the programme
     programname=$0
-    echo "usage: $programname -t TMPDIR -e expression_file -o output_dir -p project_dir"
-    echo "                    -j jar_dir -s sample_file -g github_dir -v threads"
-    echo "                    -d GeneNetworkDir -r conbach_alpha -n name -m mem [-q qos]"
+    echo "usage: $programname -t TMPDIR -o output_dir -p project_dir"
+    echo "                    -j jar_dir -g github_dir -v threads"
+    echo "                    -d GeneNetworkDir -n name -m mem -z n_eigenvectors [-q qos]"
     echo "  -t      TMPDIR where files will be written during runtime"
     echo "  -e      Expression file"
     echo "  -p      Base of the project_dir where config files will be written"
@@ -186,8 +199,9 @@ usage(){
     echo "  -v      Number of threads to use for correlation step and PCA step"
     echo "  -d      GeneNetwork directory (with backend data for predictions"
     echo "  -m      Memory to use for some steps"
-    echo "  -q      qos to run sbatch jobs in"
-    echo "  -n      Name that will be used in output file"
+    echo "  -n      Name that will be used in output file. Needs to be same as for the previous script!"
+    echo "  -z      Number of eigenvectors to use"
+    echo "  -q      qos to use when submitting to cluster"
     echo "  -h      display help"
     exit 1
 }
@@ -209,17 +223,11 @@ parse_commandline(){
             -p | --project_dir )            shift
                                             project_dir=$1
                                             ;;
-            -e | --expression_file )        shift
-                                            expression_file=$1
-                                            ;;
             -o | --output_dir )             shift
                                             output_dir=$1
                                             ;;
             -j | --jar_dir )                shift
                                             jar_dir=$1
-                                            ;;
-            -s | --sample_file )            shift
-                                            sample_file=$1
                                             ;;
             -g | --github_dir )             shift
                                             github_dir=$1
@@ -236,11 +244,14 @@ parse_commandline(){
             -m | --mem )                    shift
                                             mem=$1
                                             ;;
-            -q | --qos )                    shift
-                                            qos=$1
-                                            ;;
             -n | --name )                   shift
                                             name=$1
+                                            ;;
+            -z | --n_eigenvectors )         shift
+                                            n_eigenvectors=$1
+                                            ;;
+            -q | --qos )                    shift
+                                            qos=$1
                                             ;;
             -h | --help )                   usage
                                             exit
@@ -259,12 +270,6 @@ parse_commandline(){
         usage
         exit 1;
     fi
-    if [ -z "$expression_file" ];
-    then
-        echo "ERROR: -e/--expression_file not set!"
-        usage
-        exit 1;
-    fi
     if [ -z "$output_dir" ];
     then
         echo "ERROR: -o/--output_dir not set!"
@@ -274,12 +279,6 @@ parse_commandline(){
     if [ -z "$jar_dir" ];
     then
         echo "ERROR: -j/--jar_dir not set!"
-        usage
-        exit 1;
-    fi
-        if [ -z "$sample_file" ];
-    then
-        echo "ERROR: -s/--sample_file not set!"
         usage
         exit 1;
     fi
@@ -313,15 +312,15 @@ parse_commandline(){
         usage
         exit 1;
     fi
-    if [ -z "$qos" ];
-    then
-        echo "ERROR: -q/--qos not set!"
-        usage
-        exit 1;
-    fi
     if [ -z "$name" ];
     then
         echo "ERROR: -n/--name not set!"
+        usage
+        exit 1;
+    fi
+    if [ -z "$n_eigenvectors" ];
+    then
+        echo "ERROR: -z/--n_eigenvectors not set!"
         usage
         exit 1;
     fi
