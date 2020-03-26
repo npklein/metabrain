@@ -258,6 +258,7 @@ print_command_arguments(){
 
         while [ ! $(squeue -j $jobid | wc -l) -eq 0 ];
         do
+            echo "--------------------------------"
             echo "sbatch starting time: $startDate"
             echo "current time: `date`"
             echo "Job still running. Sleep 10 minutes"
