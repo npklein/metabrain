@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/23
-Last Changed: 2020/03/25
+Last Changed: 2020/03/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -32,6 +32,7 @@ import math
 import os
 
 # Third party imports.
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib
@@ -78,6 +79,10 @@ class Main:
                                    settings.get_setting("output_dir"))
         prepare_output_dir(self.outdir)
 
+        # Count the number of eQTLs.
+        if n_eqtls is None:
+            n_eqtls = self.count_n_eqtls()
+
         # Cap the number of cores to the maximum.
         host_cores = mp.cpu_count()
         if cores > host_cores:
@@ -96,6 +101,16 @@ class Main:
         self.n_eqtls = n_eqtls
         self.chunk_size = chunk_size
 
+    def count_n_eqtls(self):
+        print("Finding the number of eQTLs")
+        geno_nrows = self.get_number_of_lines(self.geno_inpath)
+        expr_nrows = self.get_number_of_lines(self.expr_inpath)
+        if geno_nrows != expr_nrows:
+            print("Number of rows in genotype / expression file do not match.")
+            exit()
+
+        return geno_nrows
+
     def start(self):
         """
         The method that serves as the pipeline of the whole program.
@@ -112,17 +127,6 @@ class Main:
         output_manager = mp.Manager()
         output_queue = output_manager.Queue()
 
-        # Check how many eqtls there are.
-        if self.n_eqtls is None:
-            print("Finding the number of eQTLs")
-            geno_nrows = self.get_number_of_lines(self.geno_inpath)
-            expr_nrows = self.get_number_of_lines(self.expr_inpath)
-            if geno_nrows != expr_nrows:
-                print("Number of rows in genotype / expression file do"
-                      "not match.")
-                exit()
-            self.n_eqtls = geno_nrows
-        print("Number of eQTLs: {}".format(self.n_eqtls))
 
         if self.n_eqtls == 1 and self.chunk_size == 1:
             input_queue.put(1)
@@ -157,7 +161,7 @@ class Main:
             if self.max_end_time <= now_time:
                 print("max progress time reached")
                 exit()
-            if now_time - last_print_time >= 30:
+            if now_time - last_print_time >= 60:
                 last_print_time = now_time
                 print("\tReceived data from {}/{} eQTLs "
                       "[{:.2f}%]".format(len(eqtl_zscores),
@@ -172,7 +176,6 @@ class Main:
                 # Get the new output
                 (zscore_type, new_output) = output_queue.get(True, timeout=1)
                 new_index = new_output[0]
-                print(zscore_type, new_index)
 
                 # Check the length.
                 if columns is not None and len(new_output) != len(columns):
@@ -197,7 +200,7 @@ class Main:
                         eqtl_adj_zscores.append(new_output)
 
             except queue.Empty:
-                time.sleep(0.1)
+                time.sleep(1)
                 continue
 
         # Join the processes.
@@ -214,6 +217,9 @@ class Main:
 
         # inter_df = pd.read_pickle(os.path.join(self.outdir, "inter_df.pkl"))
         # adj_inter_df = pd.read_pickle(os.path.join(self.outdir, "adj_inter_df.pkl"))
+
+        print(inter_df)
+        print(adj_inter_df)
 
         # Write the output file.
         save_dataframe(df=adj_inter_df,
@@ -253,6 +259,9 @@ class Main:
     def compare_z_scores(zscores_df, adj_zscores_df, outdir):
         df = pd.DataFrame({"default": zscores_df.melt()["value"],
                            "adjusted": adj_zscores_df.melt()["value"]})
+        df.replace([np.inf, -np.inf], np.nan, inplace=True)
+        df.dropna(inplace=True)
+        print(df)
 
         coef, p_value = stats.spearmanr(df["default"], df["adjusted"])
 
