@@ -125,49 +125,52 @@ print_command_arguments(){
 }
 
 10_GeneNetwork_predictions(){
+    if [ ! -f $github_dir/GeneNetwork/GeneNetworkBackend/GeneNetworkBackend-1.0.7-SNAPSHOT-jar-with-dependencies.jar ]
+    then
+        echo "Download GeneNetworkBackend-1.0.7-SNAPSHOT-jar-with-dependencies.jar"
+        cd $github_dir/GeneNetwork/GeneNetworkBackend/
+        wget  'https://molgenis50.gcc.rug.nl/jenkins/job/systemsgenetics/473/nl.systemsgenetics$GeneNetworkBackend/artifact/nl.systemsgenetics/GeneNetworkBackend/1.0.7-SNAPSHOT/GeneNetworkBackend-1.0.7-SNAPSHOT-jar-with-dependencies.jar'
+        cd -
+    fi
+
     mkdir -p  $output_dir/10_GeneNetwork_predictions/scripts/
-    declare -A fullname=( ["go_F"]="goa_human.gaf_F" ["go_P"]="goa_human.gaf_P" ["kegg"]="c2.cp.kegg.v6.1.entrez.gmt" ["hpo"]="ALL_SOURCES_ALL_FREQUENCIES_phenotype_to_genes.txt" ["reactome"]="Ensembl2Reactome_All_Levels.txt" ["go_C"]="goa_human.gaf_C")
-    for type in "go_F" "go_P" "kegg" "hpo" "reactome" "go_C";
+    for f in $github_dir/GeneNetwork/GeneNetworkBackend/PathwayMatrix/*matrix.txt;
     do
-        mkdir -p $output_dir/10_GeneNetwork_predictions/scripts/$type/
-        outfile="$output_dir/10_GeneNetwork_predictions/$name.${type}_predictions.txt"
+        matrix_name=$(basename ${f%_matrix.txt})
+        mkdir -p $output_dir/10_GeneNetwork_predictions/scripts/
+        outfile="$output_dir/10_GeneNetwork_predictions/${matrix_name}.predictions.txt"
         if [ ! -f $outfile ];
         then
-            for f in ${gene_network_dir}/PathwayMatrix/split_matrices/$type/*txt;
+            rsync -vP $github_dir/GeneNetwork/scripts_per_step/10_GeneNetwork_predictions.sh $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.predictions.sh
+            sed -i "s;REPLACENAME;${matrix_name}.predictions;" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.predictions.sh
+            sed -i "s;REPLACEGENENETWORKDIR;${gene_network_dir};" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.predictions.sh
+            sed -i "s;REPLACEIDENTITYMATRIX;$f;" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.predictions.sh
+            sed -i "s;REPLACEEIGENVECTORS;$output_dir/7_evd_on_correlation_matrix/${name}.eigenvectors.${n_eigenvectors}_eigenvectors.txt;" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.predictions.sh
+            sed -i "s;REPLACEOUT;$outfile;" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.predictions.sh
+            sed -i "s;REPLACEBACKGROUND;${f%matrix.txt}genesInPathways.txt;" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.predictions.sh
+            sed -i "s;REPLACEMEM;${mem};g" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.predictions.sh
+            sed -i "s;REPLACEQOS;${qos};" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.predictions.sh
+            cd $output_dir/10_GeneNetwork_predictions/scripts/
+            jobid=$(sbatch --parsable ${matrix_name}.predictions.sh)
+            echo "job submitted (jobid=$jobid), check if job is running, if so sleep for 10 minutes"
+            startDate=`date`
+
+            while [ ! $(squeue -j $jobid | wc -l) -eq 0 ];
             do
-                outfile="$output_dir/10_GeneNetwork_predictions/${type}/$(basename ${f%.txt}).predictions.txt"
-                rsync -vP $github_dir/GeneNetwork/scripts_per_step/10_GeneNetwork_predictions.sh $output_dir/10_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
-                sed -i "s;REPLACENAME;${type}_$(basename ${f%.txt});" $output_dir/10_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
-                sed -i "s;REPLACEGENENETWORKDIR;${gene_network_dir};" $output_dir/10_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
-                sed -i "s;REPLACEIDENTITYMATRIX;$f;" $output_dir/10_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
-                sed -i "s;REPLACEEIGENVECTORS;${output_dir}/7_PCA_on_correlation_matrix/$name.eigenvectors.filteredOnPathwayGenes.txt;" $output_dir/10_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
-                sed -i "s;REPLACEOUT;$outfile;" $output_dir/10_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
-                sed -i "s;REPLACETYPE;${fullname[$type]};" $output_dir/10_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
-                cd $output_dir/10_GeneNetwork_predictions/scripts/$type/
-                jobid=$(sbatch --parsable ${type}_$(basename ${f%.txt}).predictions.sh)
-                cd -
+                echo "--------------------------------"
+                echo "sbatch starting time: $startDate"
+                echo "current time: `date`"
+                echo "Job still running. Sleep 2 minutes"
+                sleep 120;
             done
-            for f in ${gene_network_dir}/PathwayMatrix/split_matrices/$type/*txt;
-            do
-                startDate=`date`
-                echo "Start testing if ${type}_$(basename ${f%.txt}).sh is finished"
-                cd $output_dir/10_GeneNetwork_predictions/scripts/$type/
-                while [ ! $(squeue -j $jobid | wc -l) -eq 0 ];
-                do
-                    echo "sbatch starting time: $startDate"
-                    echo "current time: `date`"
-                    echo "Job still running. Sleep 2 minutes"
-                    sleep 120
-                done
-                echo "Finished!"
-                if [ ! -f ${type}_$(basename ${f%.txt}).finished ];
-                then
-                    echo "ERROR: check job error log what went wrong"
-                    exit 1;
-                fi
-                grep AUC ${type}_$(basename ${f%.txt}).out | cut -f2,7,11,13 >> ${outfile%.txt}.AUC.txt;
-                cd -
-            done
+            echo "Done!"
+            if [ ! -f $outfile ];
+            then
+                echo "ERROR: Outputfile $outfile does not exist, check if job exited with an error"
+                exit 1;
+            fi
+            grep AUC $name.out | cut -f2,7,11,13 >> ${outfile%.txt}.AUC.txt;
+            cd -
         fi
     done
 }
