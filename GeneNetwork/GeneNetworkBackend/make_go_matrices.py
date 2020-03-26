@@ -74,7 +74,7 @@ with gzip.open(today+'-goa_human.gaf.gz','rt') as input_file:
 print('Able to map',IDs_mapped,' uniprot IDs to ensembl')
 print('Unable to map',IDs_not_mapped,' uniprot IDs to ensembl')
 def write_matrix(go_type, outfile):
-    with open(outfile,'w') as out, open(outfile.replace('matrix.txt','genesInPathways.txt','w') as out2:
+    with open(outfile,'w') as out, open(outfile.replace('matrix.txt','genesInPathways.txt'),'w') as out2:
         out.write(date_generated)
         for go_term in gene_per_go[go_type]:
             out.write('\t'+go_term)
