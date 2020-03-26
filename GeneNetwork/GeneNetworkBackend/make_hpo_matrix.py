@@ -60,7 +60,7 @@ print('done')
 pathways = sorted(pathways)
 outfile = 'PathwayMatrix/'+input_file_name.replace('.txt.gz','')+'.matrix.txt'
 print('start writing matrix')
-with open(args.ordered_gene_list) as input_file, open(outfile,'w') as out, open(outfile.replace('matrix.txt','genesInPathways.txt','w') as out2:
+with open(args.ordered_gene_list) as input_file, open(outfile,'w') as out, open(outfile.replace('matrix.txt','genesInPathways.txt'),'w') as out2:
     out.write(today)
     for pathway in pathways:
         out.write('\t'+pathway)

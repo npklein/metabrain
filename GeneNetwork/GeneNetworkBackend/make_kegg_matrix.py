@@ -51,7 +51,7 @@ print('done')
 pathways = sorted(pathways)
 outfile = 'PathwayMatrix/'+today+'c2.cp.kegg.v'+args.kegg_version+'.matrix.txt'
 print('start writing matrix')
-with open(args.ordered_gene_list) as input_file, open(outfile,'w') as out open(outfile.replace('matrix.txt','genesInPathways.txt','w') as out2:
+with open(args.ordered_gene_list) as input_file, open(outfile,'w') as out, open(outfile.replace('matrix.txt','genesInPathways.txt'),'w') as out2:
     out.write(today)
     for pathway in pathways:
         out.write('\t'+pathway)
