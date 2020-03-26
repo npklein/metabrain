@@ -21,6 +21,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Standard imports.
+from datetime import datetime
 import queue
 import time
 
@@ -36,7 +37,14 @@ import scipy.stats as stats
 
 def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                    input_q, output_q, max_end_time, chunk_size, n_permutations):
-    print("Worker: {} started".format(worker_id))
+    start_time = time.time()
+    start_time_str = datetime.fromtimestamp(start_time).strftime(
+        "%d-%m-%Y, %H:%M:%S")
+    print("Worker: {} started [{}]".format(worker_id, start_time_str))
+
+    # Create time lists.
+    eqtl_process_times = []
+    cov_process_times = []
 
     # Load the covariate file.
     cov_df = pd.read_csv(cov_inpath,
@@ -81,6 +89,7 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
 
             # loop over eQTLs.
             for i in range(chunk_size):
+                eqtl_start_time = time.time()
                 print("Worker: {}, working on eQTL {}/{}".format(worker_id,
                                                                  start_index + i,
                                                                  (start_index + chunk_size) - 1))
@@ -108,6 +117,7 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                 snp_zscores = []
                 snp_adj_zscores = []
                 for j in range(covariates.shape[0]):
+                    cov_start_time = time.time()
                     print("Worker: {}, working on covariate {}/{}".format(worker_id,
                                                                           j + 1,
                                                                           covariates.shape[0]))
@@ -127,8 +137,9 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                     snp_zscores.append(zscore)
 
                     # Permutate.
+                    p_values = []
                     if n_permutations > 0:
-                        perm_count = 0
+                        pvalue_rank = 0
                         for k in range(n_permutations):
                             # Shuffle the genotypes.
                             inter_array = cov_of_interest * genotype
@@ -145,25 +156,48 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
 
                             # Compare the models.
                             perm_pvalue, _ = compare_models(rss_null, rss_alt, df_null, df_alt, n)
-                            if pvalue < perm_pvalue:
-                                perm_count += 1
+                            if perm_pvalue < pvalue:
+                                pvalue_rank += 1
+                            p_values.append(perm_pvalue)
 
                         # Calculate the emperical FDR.
-                        adj_pvalue = perm_count / n_permutations
+                        adj_pvalue = calc_adj_p_value(pvalue_rank, n_permutations)
                         adj_zscore = get_z_score(adj_pvalue)
 
                         # Safe.
                         snp_adj_zscores.append(adj_zscore)
 
+                        # Safe the time.
+                        cov_process_time = time.time() - cov_start_time
+                        cov_process_times.append(cov_process_time)
+
                 # Push the results.
-                print("Worker: {} pushing results".format(worker_id))
+                # print("Worker: {} pushing results".format(worker_id))
                 output_q.put(("default", [start_index + i] + [genotype.name] + snp_zscores))
                 output_q.put(("adjusted", [start_index + i] + [genotype.name] + snp_adj_zscores))
+
+                # Safe the time.
+                eqtl_process_time = time.time() - eqtl_start_time
+                eqtl_process_times.append(eqtl_process_time)
 
         except queue.Empty:
             break
 
-    print("Worker: {} stopped".format(worker_id))
+    # Print the process times.
+    print("eqtl_process_times <- c({})".format(', '.join([str(round(x, 2)) for x in eqtl_process_times])))
+    print("cov_process_times <- c({})".format(', '.join([str(round(x, 2)) for x in cov_process_times])))
+
+    # Calculate the worker process time.
+    end_time = time.time()
+    end_time_str = datetime.fromtimestamp(end_time).strftime(
+        "%d-%m-%Y, %H:%M:%S")
+    run_time_min, run_time_sec = divmod(end_time - start_time, 60)
+    run_time_hour, run_time_min = divmod(run_time_min, 60)
+    print("Worker: {} stopped [{}], ran for {} hours, "
+          "{} minutes and {} seconds.".format(worker_id, end_time_str,
+                                              int(run_time_hour),
+                                              int(run_time_min),
+                                              int(run_time_sec)))
 
 
 def create_model(X, y):
@@ -187,18 +221,37 @@ def compare_models(rss1, rss2, df1, df2, n):
 
 
 def calc_f_value(rss1, rss2, df1, df2, n):
-    return((rss1 - rss2) / (df2 - df1)) / (rss2 / (n - df2))
+    if df1 >= df2:
+        return np.nan
+    if df2 >= n:
+        return np.nan
+
+    return ((rss1 - rss2) / (df2 - df1)) / (rss2 / (n - df2))
 
 
 def get_p_value(f_value, df1, df2, n):
     p_value = 1 - stats.f.cdf(f_value,
                               dfn=(df2 - df1),
                               dfd=(n - df2))
-    if p_value < 2.2250738585072014e-308:
-        p_value = 2.2250738585072014e-308
+    if p_value < 1e-16:
+        p_value = 1e-16
 
     return p_value
 
 
+def calc_adj_p_value(rank, n_permutations):
+    adj_pvalue = (rank + 1) / (n_permutations + 1)
+    if adj_pvalue >= 1:
+        adj_pvalue = 1 - 1e-16
+    elif adj_pvalue < 1e-16:
+        adj_pvalue = 1e-16
+    return adj_pvalue
+
+
 def get_z_score(p_value):
+    if p_value >= 1:
+        return np.nan
+    if p_value <= 0:
+        return np.nan
+
     return stats.norm.ppf((1 - p_value))
