@@ -3,7 +3,7 @@
 """
 File:         custom_interaction_analyser.py
 Created:      2020/03/23
-Last Changed: 2020/03/25
+Last Changed: 2020/03/27
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -50,10 +50,12 @@ if __name__ == '__main__':
                                description=__description__)
     SETTINGS_FILE = CLA.get_argument("settings")
     N_EQTLS = CLA.get_argument("n_eqtls")
+    N_SAMPLES = CLA.get_argument("n_samples")
     CORES = CLA.get_argument("cores")
 
     # Start the program.
     PROGRAM = Main(settings_file=SETTINGS_FILE,
                    n_eqtls=N_EQTLS,
+                   n_samples=N_SAMPLES,
                    cores=CORES)
     PROGRAM.start()

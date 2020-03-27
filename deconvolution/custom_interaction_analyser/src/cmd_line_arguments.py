@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/23
-Last Changed: 2020/03/25
+Last Changed: 2020/03/27
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -73,11 +73,17 @@ class CommandLineArguments:
                             default="default_settings",
                             help="The settings input file (without '.json'), "
                                  "default: 'default_settings'.")
-        parser.add_argument("-n",
+        parser.add_argument("-ne",
                             "--n_eqtls",
                             type=int,
                             default=None,
                             help="The number of eQTLs in the input files, "
+                                 "default: None (determine manually).")
+        parser.add_argument("-ns",
+                            "--n_samples",
+                            type=int,
+                            default=None,
+                            help="The number of samples in the input files, "
                                  "default: None (determine manually).")
         parser.add_argument("-c",
                             "--cores",

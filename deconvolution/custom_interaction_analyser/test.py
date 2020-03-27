@@ -25,7 +25,8 @@ import unittest
 # Third party imports.
 
 # Local application imports.
-from .src.workers import calc_f_value, get_p_value, get_z_score
+from .src.workers import calc_f_value, get_p_value
+from .src.main import get_z_score
 
 
 class Test(unittest.TestCase):
