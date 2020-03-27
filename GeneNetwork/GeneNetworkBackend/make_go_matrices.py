@@ -12,6 +12,8 @@ parser.add_argument('uniprot_ID_mapping',
 parser.add_argument('ordered_gene_list',
                     help='List with ordered gene IDs')
 
+
+
 args = parser.parse_args()
 
 today = datetime.now().strftime("%Y-%m-%d") 
@@ -74,13 +76,14 @@ with gzip.open(today+'-goa_human.gaf.gz','rt') as input_file:
 print('Able to map',IDs_mapped,' uniprot IDs to ensembl')
 print('Unable to map',IDs_not_mapped,' uniprot IDs to ensembl')
 def write_matrix(go_type, outfile):
-    with open(outfile,'w') as out, open(outfile.replace('matrix.txt','genesInPathways.txt'),'w') as out2:
+    with open(args.ordered_gene_list) as input_file, open(outfile,'w') as out, open(outfile.replace('matrix.txt','genesInPathways.txt'),'w') as out2:
         out.write(date_generated)
         for go_term in gene_per_go[go_type]:
             out.write('\t'+go_term)
         out.write('\n')
         genes_in_at_least_1_pathway = set()
-        for gene in genes_included[go_type]:
+        for gene in input_file.readline():
+            gene = gene.strip()
             out.write(gene)
             for go_term in gene_per_go[go_type]:
                 if gene in gene_per_go[go_type][go_term]:
