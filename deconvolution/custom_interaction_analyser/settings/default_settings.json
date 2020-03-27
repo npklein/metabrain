@@ -45,6 +45,6 @@
     "UCLA_ASD-EUR",
     "ENA-EU"
   ],
-  "max_runtime_in_min": 720,
-  "n_permutations": 1000
+  "max_runtime_in_min": 60,
+  "n_permutations": 10
 }
