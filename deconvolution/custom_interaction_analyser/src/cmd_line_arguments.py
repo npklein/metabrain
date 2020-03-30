@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/23
-Last Changed: 2020/03/27
+Last Changed: 2020/03/30
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -73,6 +73,12 @@ class CommandLineArguments:
                             default="default_settings",
                             help="The settings input file (without '.json'), "
                                  "default: 'default_settings'.")
+        parser.add_argument("-sr",
+                            "--skip_rows",
+                            type=int,
+                            default=0,
+                            help="The number of rows to skip in the input "
+                                 "files, default: 0.")
         parser.add_argument("-ne",
                             "--n_eqtls",
                             type=int,
@@ -91,6 +97,10 @@ class CommandLineArguments:
                             default=1,
                             help="The number of cores to use, "
                                  "default: 1.")
+        parser.add_argument("-combine",
+                            action='store_true',
+                            help="Combine the created files, alternative "
+                                 "functionality. Default: False.")
 
         return parser
 
