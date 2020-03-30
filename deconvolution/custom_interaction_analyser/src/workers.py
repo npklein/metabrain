@@ -1,7 +1,7 @@
 """
 File:         workers.py
 Created:      2020/03/24
-Last Changed: 2020/03/27
+Last Changed: 2020/03/30
 Author(s):    M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -43,9 +43,6 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
         "%d-%m-%Y, %H:%M:%S")
     print("Worker: {} started [{}]".format(worker_id, start_time_str))
 
-    # Create time lists.
-    eqtl_process_times = []
-
     # Load the covariate file.
     cov_df = pd.read_csv(cov_inpath,
                          sep="\t",
@@ -54,7 +51,6 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
 
     tech_cov = cov_df.loc[tech_covs, :]
     cov_df.drop(tech_covs, inplace=True)
-    cov_columns = cov_df.columns
 
     output_q.put((None, [-1] + ["-"] + list(cov_df.index)))
 
@@ -65,7 +61,7 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
         try:
             if input_q.empty():
                 break
-            (start_index, shuffle_type, column_indices) = input_q.get(True, timeout=1)
+            (start_index, shuffle_type, column_order) = input_q.get(True, timeout=1)
             # print("Worker: {} start_index: {}\tshuffle type: {}\t"
             #       "column_indices: {}".format(worker_id, start_index,
             #                                   shuffle_type, column_indices[:5]))
@@ -90,35 +86,23 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
             except pandas.io.common.EmptyDataError:
                 break
 
-            # Reorder the genotype dataframe.
-            geno_columns = geno_df.columns
-            geno_df = geno_df.iloc[:, column_indices]
-            geno_df.columns = geno_columns
-
-            # Reorder the covariate dataframe.
-            tmp_cov_df = cov_df.copy()
-            tmp_cov_df = tmp_cov_df.iloc[:, column_indices]
-            tmp_cov_df.columns = cov_columns
-
             # Replace -1 with NaN in the genotype dataframe.
             geno_df.replace(-1, np.nan, inplace=True)
 
             # loop over eQTLs.
             for i in range(chunk_size):
-                eqtl_start_time = time.time()
                 # print("Worker: {}, working on eQTL {}/{}".format(worker_id,
                 #                                                  start_index + i,
                 #                                                  (start_index + chunk_size) - 1))
                 # Get the missing genotype indices.
                 indices = np.arange(geno_df.shape[1])
-                sample_mask = indices[~geno_df.iloc[i, :].isnull().values]
-                n = len(sample_mask)
+                eqtl_indices = indices[~geno_df.iloc[i, :].isnull().values]
+                n = len(eqtl_indices)
 
                 # Subset the row and present samples for this eQTL.
-                genotype = geno_df.iloc[i, sample_mask].copy()
-                expression = expr_df.iloc[i, sample_mask].copy()
-                technical_covs = tech_cov.iloc[:, sample_mask].copy()
-                covariates = tmp_cov_df.iloc[:, sample_mask].copy()
+                genotype = geno_df.iloc[i, eqtl_indices].copy()
+                expression = expr_df.iloc[i, eqtl_indices].copy()
+                technical_covs = tech_cov.iloc[:, eqtl_indices].copy()
 
                 # Check if SNP index are identical.
                 if genotype.name != expression.name:
@@ -131,22 +115,39 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
 
                 # Loop over the covariates.
                 snp_pvalues = []
-                for j in range(covariates.shape[0]):
+                for j in range(cov_df.shape[0]):
+                    cov_name = cov_df.index[j]
+
                     # print("Worker: {}, working on covariate {}/{}".format(
                     #     worker_id,
                     #     j + 1,
                     #     covariates.shape[0]))
-                    # Append to covariate.
-                    cov_name = covariates.index[j]
-                    cov_of_interest = covariates.iloc[j, :]
+
+                    # Calculate the interaction of the covariate of interest.
+                    covariate_all = cov_df.iloc[j, :].copy()
+                    genotype_all = geno_df.iloc[i, :].copy()
+                    interaction_all = covariate_all * genotype_all
+                    interaction_all.name = cov_name
+
+                    # Reorder the series.
+                    interaction_all = interaction_all.reindex(interaction_all.index[column_order])
+
+                    # Remove missing values.
+                    interaction_all = interaction_all.dropna()
+
+                    # Set the identical names as the null matrix.
+                    interaction_all.index = null_matrix.columns
+
+                    # Create the alternative matrix.
                     alt_matrix = null_matrix.copy()
-                    alt_matrix.loc[cov_name, :] = cov_of_interest * genotype
+                    alt_matrix = alt_matrix.append(interaction_all)
 
                     # Create the alternative model.
                     df_alt, rss_alt = create_model(alt_matrix.T, expression)
 
                     # Compare the models.
-                    pvalue = compare_models(rss_null, rss_alt, df_null, df_alt,
+                    pvalue = compare_models(rss_null, rss_alt,
+                                            df_null, df_alt,
                                             n)
 
                     # Safe.
@@ -156,16 +157,8 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                 # print("Worker: {} pushing results".format(worker_id))
                 output_q.put((shuffle_type, [start_index + i] + [genotype.name] + snp_pvalues))
 
-                # Safe the time.
-                eqtl_process_time = time.time() - eqtl_start_time
-                eqtl_process_times.append(eqtl_process_time)
-
         except queue.Empty:
             break
-
-    # Print the process times.
-    print("eqtl_process_times <- c({})".format(
-        ', '.join([str(round(x, 2)) for x in eqtl_process_times])))
 
     # Calculate the worker process time.
     end_time = time.time()
@@ -178,37 +171,6 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                                               int(run_time_hour),
                                               int(run_time_min),
                                               int(run_time_sec)))
-
-
-def perform_permutations(null_matrix, cov_of_interest, genotype, expression,
-                         cov_name, rss_null, df_null, pvalue, n, n_permutations):
-    p_values = []
-    pvalue_rank = 0
-    for k in range(n_permutations):
-        # Shuffle the genotypes.
-        inter_array = cov_of_interest * genotype
-        index = inter_array.index
-        inter_array = inter_array.sample(frac=1)
-        inter_array.index = index
-
-        # Append to covariate.
-        perm_matrix = null_matrix.copy()
-        perm_matrix.loc[cov_name, :] = inter_array
-
-        # Create the alternative model.
-        df_alt, rss_alt = create_model(perm_matrix.T, expression)
-
-        # Compare the models.
-        perm_pvalue, _ = compare_models(rss_null, rss_alt, df_null, df_alt,
-                                        n)
-        if perm_pvalue < pvalue:
-            pvalue_rank += 1
-        p_values.append(perm_pvalue)
-
-    # Calculate the emperical FDR.
-    adj_pvalue = calc_adj_p_value(pvalue_rank, n_permutations)
-
-    return adj_pvalue
 
 
 def create_model(X, y):
@@ -240,19 +202,4 @@ def calc_f_value(rss1, rss2, df1, df2, n):
 
 
 def get_p_value(f_value, df1, df2, n):
-    p_value = 1 - stats.f.cdf(f_value,
-                              dfn=(df2 - df1),
-                              dfd=(n - df2))
-    if p_value < 1e-16:
-        p_value = 1e-16
-
-    return p_value
-
-
-def calc_adj_p_value(rank, n_permutations):
-    adj_pvalue = (rank + 1) / (n_permutations + 1)
-    if adj_pvalue >= 1:
-        adj_pvalue = 1 - 1e-16
-    elif adj_pvalue < 1e-16:
-        adj_pvalue = 1e-16
-    return adj_pvalue
+    return stats.f.sf(f_value, dfn=(df2 - df1), dfd=(n - df2))

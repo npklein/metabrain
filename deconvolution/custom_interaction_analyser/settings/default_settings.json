@@ -46,5 +46,7 @@
     "ENA-EU"
   ],
   "max_runtime_in_min": 60,
-  "n_permutations": 10
+  "n_permutations": 10,
+  "actual_pvalues_pickle_filename": "pvalue_data_",
+  "permuted_pvalues_pickle_filename": "perm_pvalues_"
 }
