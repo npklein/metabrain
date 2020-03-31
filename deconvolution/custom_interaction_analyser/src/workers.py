@@ -1,7 +1,7 @@
 """
 File:         workers.py
 Created:      2020/03/24
-Last Changed: 2020/03/30
+Last Changed: 2020/03/31
 Author(s):    M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -32,16 +32,34 @@ import pandas.io.common
 from sklearn.linear_model import LinearRegression
 import scipy.stats as stats
 
-
 # Local application imports.
 
 
 def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
-                   input_q, output_q, max_end_time, chunk_size, n_permutations):
+                   start_q, input_q, output_q, max_end_time, chunk_size):
     start_time = time.time()
     start_time_str = datetime.fromtimestamp(start_time).strftime(
         "%d-%m-%Y, %H:%M:%S")
-    print("Worker: {} started [{}]".format(worker_id, start_time_str))
+    if worker_id == 0:
+        print("Worker: {} started [{}]".format(worker_id, start_time_str))
+
+    # Wait until sample orders are received.
+    sample_orders = None
+    while sample_orders is None:
+        if max_end_time <= time.time():
+            break
+
+        try:
+            if start_q.empty():
+                break
+            sample_orders = start_q.get(True, timeout=1)
+        except queue.Empty:
+            break
+
+    if sample_orders is None:
+        return
+    # if worker_id == 0:
+    #     print("Worker: {} received sample orders.".format(worker_id))
 
     # Load the covariate file.
     cov_df = pd.read_csv(cov_inpath,
@@ -61,10 +79,11 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
         try:
             if input_q.empty():
                 break
-            (start_index, shuffle_type, column_order) = input_q.get(True, timeout=1)
-            # print("Worker: {} start_index: {}\tshuffle type: {}\t"
-            #       "column_indices: {}".format(worker_id, start_index,
-            #                                   shuffle_type, column_indices[:5]))
+            start_index = input_q.get(True, timeout=1)
+            # if worker_id == 0:
+            #     print("Worker: {} loading data {}-{}".format(worker_id,
+            #                                                  start_index,
+            #                                                  start_index + chunk_size - 1))
 
             try:
                 geno_df = pd.read_csv(geno_inpath,
@@ -91,9 +110,12 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
 
             # loop over eQTLs.
             for i in range(chunk_size):
-                # print("Worker: {}, working on eQTL {}/{}".format(worker_id,
-                #                                                  start_index + i,
-                #                                                  (start_index + chunk_size) - 1))
+                # if worker_id == 0:
+                #     print("Worker: {}, working on eQTL "
+                #           "{}/{}".format(worker_id,
+                #                          start_index + i,
+                #                          (start_index + chunk_size) - 1))
+
                 # Get the missing genotype indices.
                 indices = np.arange(geno_df.shape[1])
                 eqtl_indices = indices[~geno_df.iloc[i, :].isnull().values]
@@ -101,6 +123,7 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
 
                 # Subset the row and present samples for this eQTL.
                 genotype = geno_df.iloc[i, eqtl_indices].copy()
+                genotype_all = geno_df.iloc[i, :].copy()
                 expression = expr_df.iloc[i, eqtl_indices].copy()
                 technical_covs = tech_cov.iloc[:, eqtl_indices].copy()
 
@@ -113,49 +136,57 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                 null_matrix = technical_covs.mul(genotype, axis=1)
                 df_null, rss_null = create_model(null_matrix.T, expression)
 
-                # Loop over the covariates.
-                snp_pvalues = []
-                for j in range(cov_df.shape[0]):
-                    cov_name = cov_df.index[j]
+                # Loop over each sample order.
+                for order_id, sample_order in enumerate(sample_orders):
+                    if worker_id == 0:
+                        print("Worker: {}, working on permutation {}/{}".format(
+                            worker_id, order_id, len(sample_orders)))
 
-                    # print("Worker: {}, working on covariate {}/{}".format(
-                    #     worker_id,
-                    #     j + 1,
-                    #     covariates.shape[0]))
+                    # Loop over the covariates.
+                    snp_pvalues = []
+                    for j in range(cov_df.shape[0]):
+                        cov_name = cov_df.index[j]
 
-                    # Calculate the interaction of the covariate of interest.
-                    covariate_all = cov_df.iloc[j, :].copy()
-                    genotype_all = geno_df.iloc[i, :].copy()
-                    interaction_all = covariate_all * genotype_all
-                    interaction_all.name = cov_name
+                        # if worker_id == 0:
+                        #     print("Worker: {}, working on covariate {}/{}".format(
+                        #         worker_id,
+                        #         j + 1,
+                        #         cov_df.shape[0]))
 
-                    # Reorder the series.
-                    interaction_all = interaction_all.reindex(interaction_all.index[column_order])
+                        # Calculate the interaction of the covariate of
+                        # interest.
+                        covariate_all = cov_df.iloc[j, :].copy()
+                        interaction_all = covariate_all * genotype_all
+                        interaction_all.name = cov_name
 
-                    # Remove missing values.
-                    interaction_all = interaction_all.dropna()
+                        # Reorder the series.
+                        interaction_all = interaction_all.reindex(interaction_all.index[sample_order])
 
-                    # Set the identical names as the null matrix.
-                    interaction_all.index = null_matrix.columns
+                        # Remove missing values.
+                        interaction_all = interaction_all.dropna()
 
-                    # Create the alternative matrix.
-                    alt_matrix = null_matrix.copy()
-                    alt_matrix = alt_matrix.append(interaction_all)
+                        # Set the identical names as the null matrix.
+                        interaction_all.index = null_matrix.columns
 
-                    # Create the alternative model.
-                    df_alt, rss_alt = create_model(alt_matrix.T, expression)
+                        # Create the alternative matrix.
+                        alt_matrix = null_matrix.copy()
+                        alt_matrix = alt_matrix.append(interaction_all)
 
-                    # Compare the models.
-                    pvalue = compare_models(rss_null, rss_alt,
-                                            df_null, df_alt,
-                                            n)
+                        # Create the alternative model.
+                        df_alt, rss_alt = create_model(alt_matrix.T, expression)
 
-                    # Safe.
-                    snp_pvalues.append(pvalue)
+                        # Compare the models.
+                        pvalue = compare_models(rss_null, rss_alt,
+                                                df_null, df_alt,
+                                                n)
 
-                # Push the results.
-                # print("Worker: {} pushing results".format(worker_id))
-                output_q.put((shuffle_type, [start_index + i] + [genotype.name] + snp_pvalues))
+                        # Safe.
+                        snp_pvalues.append(pvalue)
+
+                    # Push the results.
+                    # if worker_id == 0:
+                    #     print("Worker: {} pushing results".format(worker_id))
+                    output_q.put((order_id, [start_index + i] + [genotype.name] + snp_pvalues))
 
         except queue.Empty:
             break
@@ -166,15 +197,15 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
         "%d-%m-%Y, %H:%M:%S")
     run_time_min, run_time_sec = divmod(end_time - start_time, 60)
     run_time_hour, run_time_min = divmod(run_time_min, 60)
-    print("Worker: {} stopped [{}], ran for {} hours, "
-          "{} minutes and {} seconds.".format(worker_id, end_time_str,
-                                              int(run_time_hour),
-                                              int(run_time_min),
-                                              int(run_time_sec)))
+    print("Worker: {} stopped [{}].\tWorked for {} hour(s), "
+          "{} minute(s), and {} second(s).".format(worker_id, end_time_str,
+                                                   int(run_time_hour),
+                                                   int(run_time_min),
+                                                   int(run_time_sec)))
 
 
 def create_model(X, y):
-    regressor = LinearRegression()
+    regressor = LinearRegression(n_jobs=1)
     regressor.fit(X, y)
     y_hat = regressor.predict(X)
 
