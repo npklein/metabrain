@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed:
+Last Changed: 2020/03/31
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -34,7 +34,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib
-
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -42,6 +41,7 @@ from scipy import stats
 # Local application imports.
 from general.local_settings import LocalSettings
 from general.df_utilities import save_dataframe
+from general.utilities import p_value_to_symbol
 
 
 class CombineAndPlot:
@@ -93,27 +93,41 @@ class CombineAndPlot:
         _, perm_pvalues = self.combine_pickles(self.perm_pvalues_outfile)
 
         # Create a pandas dataframe from the nested list.
+        print("Creating p-values dataframe.")
         pvalue_df = self.create_df(pvalues_data, columns)
 
         # Get the pvalues from the dataframe.
         pvalues = pvalue_df.melt()["value"].to_list()
 
-        # Visualise null distribution.
-        self.plot_distributions(pvalues, perm_pvalues, self.outdir)
+        # Sort the lists.
+        print("Sorting p-values.")
+        perm_pvalues = sorted(perm_pvalues)
+        pvalues = sorted(pvalues)
 
-        # Create a dataframe with adjusted pvalues.
-        fdr_df = self.create_fdr_df(pvalue_df,
-                                    pvalues,
-                                    perm_pvalues,
-                                    self.n_permutations)
+        # Visualise null distribution.
+        print("Visualizing distributions.")
+        self.plot_distributions(perm_pvalues, pvalues, self.outdir)
+
+        # Create the FDR dataframes.
+        print("Creating permutation FDR dataframe.")
+        perm_fdr_df = self.create_perm_fdr_df(pvalue_df,
+                                              pvalues,
+                                              perm_pvalues,
+                                              self.n_permutations)
+        print("Creating Benjamini-Hochberg FDR dataframe.")
+        bh_fdr_df = self.create_bh_fdr_df(pvalue_df, pvalues)
 
         # Compare the two pvalue scores.
-        self.compare_pvalue_scores(pvalue_df, fdr_df, self.outdir)
+        print("Creating score visualisation.")
+        self.compare_pvalue_scores(pvalue_df, perm_fdr_df, bh_fdr_df,
+                                   self.outdir)
 
         # Create a dataframe with z-scores.
+        print("Creating Z-score dataframe.")
         zscore_df = self.create_zscore_df(pvalue_df)
 
         # Write the output file.
+        print("Saving Z-score dataframe.")
         save_dataframe(df=zscore_df,
                        outpath=os.path.join(self.outdir,
                                             "interaction_table.txt.gz"),
@@ -131,7 +145,9 @@ class CombineAndPlot:
     def combine_pickles(inpath, columns=False):
         col_list = None
         data = []
-        for i, fpath in enumerate(glob.glob(inpath + "*.pkl")):
+        infiles = sorted(glob.glob(inpath + "*.pkl"))
+        for i, fpath in enumerate(infiles):
+            print("Loading {}.".format(fpath))
             with open(fpath, "rb") as f:
                 content = pickle.load(f)
                 if columns and i == 0:
@@ -150,7 +166,7 @@ class CombineAndPlot:
         return df
 
     @staticmethod
-    def plot_distributions(pvalues, perm_pvalues, outdir):
+    def plot_distributions(perm_pvalues, pvalues, outdir):
         sns.set(rc={'figure.figsize': (12, 9)})
         sns.set_style("whitegrid")
         fig, (ax1, ax2) = plt.subplots(1, 2)
@@ -182,9 +198,7 @@ class CombineAndPlot:
         plt.close()
 
     @staticmethod
-    def create_fdr_df(df, pvalues, perm_pvalues, n_perm):
-        pvalues = sorted(pvalues)
-        perm_pvalues = sorted(perm_pvalues)
+    def create_perm_fdr_df(df, pvalues, perm_pvalues, n_perm):
         fdr_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
 
         len_max_rank = len(str(len(pvalues)))
@@ -207,6 +221,48 @@ class CombineAndPlot:
                 fdr_df.iloc[row_index, col_index] = fdr_value
         return fdr_df
 
+    def create_bh_fdr_df(self, df, pvalues):
+        m = len(pvalues)
+        fdr_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
+        len_max_rank = len(str(len(pvalues)))
+        fdr_values = []
+        for row_index in range(df.shape[0]):
+            for col_index in range(df.shape[1]):
+                pvalue = df.iloc[row_index, col_index]
+                rank = bisect_left(pvalues, pvalue) + 1
+                fdr_value = pvalue * (m / rank)
+                if fdr_value > 1:
+                    fdr_value = 1
+                fdr_values.append((rank, row_index, col_index, fdr_value))
+                fdr_df.iloc[row_index, col_index] = fdr_value
+
+        fdr_values = sorted(fdr_values, key=lambda x: x[0], reverse=True)
+        prev_fdr_value = None
+        for (rank, row_index, col_index, fdr_value) in fdr_values:
+            # if prev_fdr_value is not None:
+                # print("Rank: {}\tRow index: {}\t Col index: {}\t"
+                #       "Prev. FDR-Value: {:.2e}\tFDR-Value: {:.2e}".format(rank,
+                #                                                           row_index,
+                #                                                           col_index,
+                #                                                           prev_fdr_value,
+                #                                                           fdr_value))
+            if prev_fdr_value is not None and fdr_value > prev_fdr_value:
+                #print("Changing {} for {}.".format(fdr_value, prev_fdr_value))
+                fdr_df.iloc[row_index, col_index] = prev_fdr_value
+                prev_fdr_value = prev_fdr_value
+            else:
+                prev_fdr_value = fdr_value
+
+        return fdr_df
+
+    @staticmethod
+    def calc_adjusted_pvalue(pvalue, m, rank):
+        fdr_value = pvalue * (m / rank)
+        if fdr_value > 1:
+            fdr_value = 1
+
+        return fdr_value
+
     def create_zscore_df(self, df):
         new_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
         for row_index in range(df.shape[0]):
@@ -226,43 +282,57 @@ class CombineAndPlot:
 
         return stats.norm.ppf((1 - p_value))
 
-    @staticmethod
-    def compare_pvalue_scores(pvalue_df, adj_pvalue_df, outdir):
-        df = pd.DataFrame({"default": pvalue_df.melt()["value"],
-                           "adjusted": adj_pvalue_df.melt()["value"]})
-        print(df)
+    def compare_pvalue_scores(self, pvalue_df, perm_fdr, bh_fdr, outdir):
+        df = pd.DataFrame({"P-value": pvalue_df.melt()["value"],
+                           "Permutation FDR": perm_fdr.melt()["value"],
+                           "BH FDR": bh_fdr.melt()["value"]})
 
-        sns.set(rc={'figure.figsize': (12, 9)})
+        sns.set()
         sns.set_style("whitegrid")
-        g = sns.jointplot(x="default", y="adjusted", data=df, kind="reg",
-                          joint_kws={'scatter_kws':
-                                         {'facecolors': '#000000',
-                                          'edgecolor': '#000000',
-                                          'alpha': 0.2},
-                                     'line_kws': {"color": "#D7191C"}
-                                     },
-                          )
-        g.annotate(stats.spearmanr)
-        g.ax_marg_x.set_xlim(-0.1, 1.1)
-        g.ax_marg_y.set_ylim(-0.1, 1.1)
-        g.fig.suptitle('P-value and permutation based FDR regression',
-                       fontsize=12,
-                       fontweight='bold')
-        g.ax_joint.set_ylabel('Permutation based FDR',
-                              fontsize=8,
-                              fontweight='bold')
-        g.ax_joint.set_xlabel('Default P-value',
-                              fontsize=8,
-                              fontweight='bold')
-        plt.tight_layout()
-        g.savefig(os.path.join(outdir, "pvalue_comparison.png"))
+        sns.set_context("paper", rc={"axes.labelsize": 22,
+                                     "axes.fontweight": 'bold',
+                                     'xtick.labelsize': 16,
+                                     'ytick.labelsize': 16})
+        g = sns.pairplot(df, kind='reg', diag_kind='hist', corner=True,
+                         height=5, aspect=1,
+                         plot_kws={'scatter_kws':
+                                       {'facecolors': '#000000',
+                                        'edgecolor': '#000000',
+                                        'alpha': 0.2},
+                                   'line_kws': {"color": "#D7191C"}
+                                   },
+                         diag_kws={'bins': 25, 'color': "#000000"}
+                         )
+        g.map_lower(self.correlation)
+        g.fig.suptitle('Comparing P-values and FDR-values', y=1.05,
+                       fontsize=30, fontweight='bold')
+
+        ticks = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+        for ax in g.axes.flat:
+            if ax:
+                ax.set_xticks(ticks)
+                ax.set_xlim(-0.1, 1.1)
+                ax.set_yticks(ticks)
+                ax.set_ylim(-0.1, 1.1)
+
+        #plt.tight_layout()
+        g.savefig(os.path.join(outdir, "pvalue_vs_fdr_comparison.png"))
+
+    @staticmethod
+    def correlation(x, y, **kwargs):
+        r, p = stats.spearmanr(x, y)
+        ax = plt.gca()
+        ax.annotate("r = {:.2f} [{}]".format(r, p_value_to_symbol(p)),
+                    xy=(.1, .95), xycoords=ax.transAxes, color='#D7191C',
+                    fontsize=16, fontweight='bold')
 
     def print_arguments(self):
         print("Arguments:")
         print("  > Output directory: {}".format(self.outdir))
         print("  > N permutations: {}".format(self.n_permutations))
         print(
-            "  > Actual P-values output file: {}*.pkl".format(self.pvalues_outfile))
+            "  > Actual P-values output file: {}*.pkl".format(
+                self.pvalues_outfile))
         print("  > Permutated P-values output file: {}*.pkl".format(
             self.perm_pvalues_outfile))
         print("")

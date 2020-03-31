@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/23
-Last Changed: 2020/03/30
+Last Changed: 2020/03/31
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -69,6 +69,8 @@ class Main:
         self.tech_covs = settings.get_setting("technical_covariates")
         self.max_end_time = int(time.time()) + settings.get_setting(
             "max_runtime_in_min") * 60
+        self.max_wait_time = settings.get_setting("max_wait_time_in_min") * 60
+        self.print_interval = settings.get_setting("print_interval_in_sec")
         self.n_permutations = settings.get_setting("n_permutations")
 
         # Prepare an output directory.
@@ -95,7 +97,7 @@ class Main:
             chunk_size = n_eqtls
             cores = n_eqtls
         else:
-            chunk_size = math.ceil(n_eqtls / cores / 2)
+            chunk_size = math.ceil(n_eqtls / cores / 1.5)
         self.skip_rows = skip_rows
         self.n_cores = cores
         self.n_eqtls = n_eqtls
@@ -154,16 +156,24 @@ class Main:
         # Start the timer.
         start_time = time.time()
 
+        # Calculate the size of the queues.
+        total_analyses = self.n_eqtls * (self.n_permutations + 1)
+
         # Create queues.
+        start_manager = mp.Manager()
+        start_queue = start_manager.Queue()
         input_manager = mp.Manager()
         input_queue = input_manager.Queue()
         output_manager = mp.Manager()
         output_queue = output_manager.Queue()
 
+        # Fill start queue.
+        print("Loading start queue.")
+        self.fill_start_queue(start_queue)
+
         # Fill input queue.
         print("Loading input queue.")
-        njobs = self.fill_input_queue(input_queue)
-        print("Number of jobs to complete: {}".format(njobs))
+        self.fill_input_queue(input_queue)
 
         # Fire off the workers.
         processes = []
@@ -174,11 +184,11 @@ class Main:
                                               self.geno_inpath,
                                               self.expr_inpath,
                                               self.tech_covs,
+                                              start_queue,
                                               input_queue,
                                               output_queue,
                                               self.max_end_time,
-                                              self.chunk_size,
-                                              self.n_permutations)))
+                                              self.chunk_size)))
         for proc in processes:
             proc.start()
 
@@ -187,16 +197,19 @@ class Main:
         pvalue_data = []
         perm_pvalues = []
         analyses_done = 0
-        total_analyses = self.n_eqtls * (self.n_permutations + 1)
         print_len = len(str(total_analyses))
-        last_print_time = time.time() - 50
+        last_message_time = time.time()
+        last_print_time = time.time() - (self.print_interval * 0.1)
         print("Waiting for output from workers.")
         while analyses_done != total_analyses:
             now_time = time.time()
             if self.max_end_time <= now_time:
                 print("ERROR: max progress time reached")
                 exit()
-            if now_time - last_print_time >= 60:
+            if now_time - last_message_time >= self.max_wait_time:
+                print("ERROR: max wait time reached")
+                exit()
+            if now_time - last_print_time >= self.print_interval:
                 last_print_time = now_time
                 print("\tReceived data from {:{}d}/{:{}d} analyses "
                       "[{:.2f}%]".format(analyses_done, print_len,
@@ -209,17 +222,18 @@ class Main:
                     continue
 
                 # Get the new output
-                (output_type, output) = output_queue.get(True, timeout=1)
+                (sample_order_id, output) = output_queue.get(True, timeout=1)
                 new_index = output[0]
+                last_message_time = time.time()
 
                 # Safe the columns.
                 if new_index == -1 and not columns_added:
                     pvalue_data.append(output)
                     columns_added = True
-                else:
+                elif new_index >= 0:
                     # Safe the output to the right result.
                     analyses_done += 1
-                    if output_type == -1:
+                    if sample_order_id == 0:
                         pvalue_data.append(output)
                     else:
                         perm_pvalues.extend(output[2:])
@@ -244,38 +258,34 @@ class Main:
             pickle.dump(perm_pvalues, f)
         f.close()
 
-        # Stop timer.
-        process_time = time.time() - start_time
-
         # Print the time.
-        minutes, seconds = divmod(process_time, 60)
-        print("Finished in {:.0f} minutes and "
-              "{:.0f} seconds".format(minutes, seconds))
+        run_time_min, run_time_sec = divmod(time.time() - start_time, 60)
+        run_time_hour, run_time_min = divmod(run_time_min, 60)
+        print("Finished in  {} hour(s), {} minute(s) and "
+              "{} second(s).".format(int(run_time_hour),
+                                     int(run_time_min),
+                                     int(run_time_sec)))
+
+    def fill_start_queue(self, start_queue):
+        # Create x random shuffles of the column indices.
+        sample_orders = [self.get_column_indices()]
+        for _ in range(self.n_permutations):
+            sample_orders.append(self.create_random_shuffle())
+
+        for _ in range(self.n_cores):
+            start_queue.put(sample_orders)
 
     def fill_input_queue(self, input_queue):
         # Create a list of start indices.
         start_indices = [i for i in range(self.skip_rows + 1,
-                                          self.n_eqtls + 1,
+                                          self.skip_rows + self.n_eqtls + 1,
                                           self.chunk_size)]
         if self.n_eqtls == 1 and self.chunk_size == 1:
             start_indices = [self.skip_rows + 1]
 
-        # Create x random shuffles of the column indices.
-        random_shuffles = [self.create_random_shuffle() for _ in
-                           range(self.n_permutations)]
-
         # Start filling the input queue.
-        njobs = 0
         for start_index in start_indices:
-            # print("input_queue.put(({}, -1, {}))".format(start_index, self.get_column_indices()[:5]))
-            input_queue.put((start_index, -1, self.get_column_indices()))
-            njobs += 1
-            for i, random_shuffle in enumerate(random_shuffles):
-                # print("input_queue.put(({}, {}, {}))".format(start_index, i, random_shuffle[:5]))
-                input_queue.put((start_index, i, random_shuffle))
-                njobs += 1
-
-        return njobs
+            input_queue.put(start_index)
 
     def get_column_indices(self):
         return [x for x in range(self.n_samples)]
@@ -294,13 +304,15 @@ class Main:
         print("  > Covariates datafile: {}".format(self.cov_inpath))
         print("  > Output directory: {}".format(self.outdir))
         print("  > Technical covariates: {}".format(self.tech_covs))
+        print("  > Max end datetime: {}".format(end_time_string))
+        print("  > Max wait time: {} sec".format(self.max_wait_time))
+        print("  > Print interval: {} sec".format(self.print_interval))
         print("  > N permutations: {}".format(self.n_permutations))
         print("  > Actual P-values output file: {}".format(self.pvalues_outfile))
         print("  > Permutated P-values output file: {}".format(self.perm_pvalues_outfile))
         print("  > Skip rows: {}".format(self.skip_rows))
-        print("  > N eQTLs: {}".format(self.n_eqtls))
-        print("  > N samples: {}".format(self.n_samples))
-        print("  > N cores: {}".format(self.n_cores))
+        print("  > EQTLs: {}".format(self.n_eqtls))
+        print("  > Samples: {}".format(self.n_samples))
+        print("  > Cores: {}".format(self.n_cores))
         print("  > Chunk size: {}".format(self.chunk_size))
-        print("  > Max end datetime: {}".format(end_time_string))
         print("")
