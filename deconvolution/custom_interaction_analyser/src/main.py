@@ -69,7 +69,8 @@ class Main:
         self.tech_covs = settings.get_setting("technical_covariates")
         self.max_end_time = int(time.time()) + settings.get_setting(
             "max_runtime_in_min") * 60
-        self.max_wait_time = settings.get_setting("max_wait_time_in_min") * 60
+        self.analysis_max_runtime = settings.get_setting(
+            "single_eqtl_max_runtime_in_min") * 60
         self.print_interval = settings.get_setting("print_interval_in_sec")
         self.n_permutations = settings.get_setting("n_permutations")
 
@@ -97,7 +98,7 @@ class Main:
             chunk_size = n_eqtls
             cores = n_eqtls
         else:
-            chunk_size = math.ceil(n_eqtls / cores / 1.5)
+            chunk_size = min(math.ceil(n_eqtls / cores / 2), 10)
         self.skip_rows = skip_rows
         self.n_cores = cores
         self.n_eqtls = n_eqtls
@@ -206,7 +207,7 @@ class Main:
             if self.max_end_time <= now_time:
                 print("ERROR: max progress time reached")
                 exit()
-            if now_time - last_message_time >= self.max_wait_time:
+            if now_time - last_message_time >= self.analysis_max_runtime:
                 print("ERROR: max wait time reached")
                 exit()
             if now_time - last_print_time >= self.print_interval:
@@ -305,7 +306,7 @@ class Main:
         print("  > Output directory: {}".format(self.outdir))
         print("  > Technical covariates: {}".format(self.tech_covs))
         print("  > Max end datetime: {}".format(end_time_string))
-        print("  > Max wait time: {} sec".format(self.max_wait_time))
+        print("  > Single analysis max runtime: {} sec".format(self.analysis_max_runtime))
         print("  > Print interval: {} sec".format(self.print_interval))
         print("  > N permutations: {}".format(self.n_permutations))
         print("  > Actual P-values output file: {}".format(self.pvalues_outfile))
