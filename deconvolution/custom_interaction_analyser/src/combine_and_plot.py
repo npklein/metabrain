@@ -24,7 +24,9 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 from __future__ import print_function
 from pathlib import Path
 from bisect import bisect_left
+from colour import Color
 import pickle
+import math
 import glob
 import time
 import os
@@ -114,13 +116,27 @@ class CombineAndPlot:
                                               pvalues,
                                               perm_pvalues,
                                               self.n_permutations)
+        # Write the output file.
+        print("\tSaving dataframe.")
+        save_dataframe(df=perm_fdr_df,
+                       outpath=os.path.join(self.outdir,
+                                            "perm_fdr_table.txt.gz"),
+                       header=True, index=True)
+
         print("Creating Benjamini-Hochberg FDR dataframe.")
         bh_fdr_df = self.create_bh_fdr_df(pvalue_df, pvalues)
+        print("\tSaving dataframe.")
+        save_dataframe(df=bh_fdr_df,
+                       outpath=os.path.join(self.outdir,
+                                            "bh_fdr_table.txt.gz"),
+                       header=True, index=True)
 
         # Compare the two pvalue scores.
         print("Creating score visualisation.")
         self.compare_pvalue_scores(pvalue_df, perm_fdr_df, bh_fdr_df,
                                    self.outdir)
+        self.compare_pvalue_scores(pvalue_df, perm_fdr_df, bh_fdr_df,
+                                   self.outdir, stepsize=0.02, max_val=0.05)
 
         # Create a dataframe with z-scores.
         print("Creating Z-score dataframe.")
@@ -221,11 +237,12 @@ class CombineAndPlot:
                 fdr_df.iloc[row_index, col_index] = fdr_value
         return fdr_df
 
-    def create_bh_fdr_df(self, df, pvalues):
+    @staticmethod
+    def create_bh_fdr_df(df, pvalues):
         m = len(pvalues)
         fdr_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
-        len_max_rank = len(str(len(pvalues)))
         fdr_values = []
+        len_max_rank = len(str(len(pvalues)))
         for row_index in range(df.shape[0]):
             for col_index in range(df.shape[1]):
                 pvalue = df.iloc[row_index, col_index]
@@ -255,14 +272,6 @@ class CombineAndPlot:
 
         return fdr_df
 
-    @staticmethod
-    def calc_adjusted_pvalue(pvalue, m, rank):
-        fdr_value = pvalue * (m / rank)
-        if fdr_value > 1:
-            fdr_value = 1
-
-        return fdr_value
-
     def create_zscore_df(self, df):
         new_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
         for row_index in range(df.shape[0]):
@@ -280,13 +289,27 @@ class CombineAndPlot:
         if p_value <= 0:
             return np.nan
 
-        return stats.norm.ppf((1 - p_value))
+        return stats.norm.isf(p_value)
 
-    def compare_pvalue_scores(self, pvalue_df, perm_fdr, bh_fdr, outdir):
+    def compare_pvalue_scores(self, pvalue_df, perm_fdr, bh_fdr, outdir,
+                              stepsize=0.2, max_val=1.0):
         df = pd.DataFrame({"P-value": pvalue_df.melt()["value"],
                            "Permutation FDR": perm_fdr.melt()["value"],
                            "BH FDR": bh_fdr.melt()["value"]})
 
+        # Filter the values of interest.
+        indices = []
+        for index, row in df.iterrows():
+            add = (row <= max_val).any()
+            indices.append(add)
+        df = df.loc[indices, :]
+
+        # Calculate the lower and upper bound.
+        precision = 10 ^ len(str(stepsize).split(".")[1])
+        xy_min = math.floor(df.values.min() * precision) / precision - stepsize
+        xy_max = math.ceil(df.values.max() * precision) / precision + stepsize
+
+        # Create the plot.
         sns.set()
         sns.set_style("whitegrid")
         sns.set_context("paper", rc={"axes.labelsize": 22,
@@ -296,27 +319,54 @@ class CombineAndPlot:
         g = sns.pairplot(df, kind='reg', diag_kind='hist', corner=True,
                          height=5, aspect=1,
                          plot_kws={'scatter_kws':
-                                       {'facecolors': '#000000',
-                                        'edgecolor': '#000000',
-                                        'alpha': 0.2},
-                                   'line_kws': {"color": "#D7191C"}
+                                       {'facecolors': '#FFFFFF',
+                                        'edgecolor': '#FFFFFF'},
+                                   'line_kws': {"color": "#FFFFFF"}
                                    },
-                         diag_kws={'bins': 25, 'color': "#000000"}
+                         diag_kws={'bins': 25, 'color': "#606060"}
                          )
+        # Change the colors.
+        g.map_lower(self.my_scatter)
+        g.map_lower(self.diagonal_line)
         g.map_lower(self.correlation)
         g.fig.suptitle('Comparing P-values and FDR-values', y=1.05,
                        fontsize=30, fontweight='bold')
 
-        ticks = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+        ticks = [round(i / 100, 2) for i in range(int(xy_min*100), int(xy_max*100), int(stepsize*100))]
         for ax in g.axes.flat:
             if ax:
                 ax.set_xticks(ticks)
-                ax.set_xlim(-0.1, 1.1)
+                ax.set_xlim(xy_min, xy_max)
+                ax.set_xticklabels(ticks, rotation=45)
                 ax.set_yticks(ticks)
-                ax.set_ylim(-0.1, 1.1)
+                ax.set_ylim(xy_min, xy_max)
 
         #plt.tight_layout()
-        g.savefig(os.path.join(outdir, "pvalue_vs_fdr_comparison.png"))
+        g.savefig(os.path.join(outdir, "pvalue_vs_fdr_comparison_{}_{}.png".format(xy_min, xy_max)))
+
+    @staticmethod
+    def create_color_map():
+        """
+        """
+        palette = list(Color("#D3D3D3").range_to(Color("#000000"), 1251))
+        colors = [x.rgb for x in palette]
+        values = [x / 100000 for x in list(range(0, 1251))]
+        value_color_map = {}
+        for val, col in zip(values, colors):
+            value_color_map[val] = col
+        return value_color_map
+
+    def my_scatter(self, x, y, **kwargs):
+        colormap = self.create_color_map()
+        diff = round((x - y) ** 2, 5)
+        colors = diff.map(colormap).fillna("#000000")
+        kwargs['scatter_kws'] = {'facecolors': colors, 'edgecolors': colors}
+        kwargs['line_kws'] = {"color": "#D7191C"}
+        sns.regplot(x, y, **kwargs)
+
+    @staticmethod
+    def diagonal_line(*args, **kwargs):
+        plt.plot([-1, 2], [-1, 2], ls="--", c=".3")
 
     @staticmethod
     def correlation(x, y, **kwargs):

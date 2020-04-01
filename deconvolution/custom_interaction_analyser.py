@@ -28,8 +28,10 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 
 # Local application imports.
 from custom_interaction_analyser.src.main import Main
+from custom_interaction_analyser.src.manager import Manager
 from custom_interaction_analyser.src.combine_and_plot import CombineAndPlot
-from custom_interaction_analyser.src.cmd_line_arguments import CommandLineArguments
+from custom_interaction_analyser.src.cmd_line_arguments import \
+    CommandLineArguments
 
 # Metadata
 __program__ = "Custom Interaction Analyser"
@@ -62,9 +64,14 @@ if __name__ == '__main__':
         CORES = CLA.get_argument("cores")
 
         # Start the program.
-        PROGRAM = Main(settings_file=SETTINGS_FILE,
-                       skip_rows=SKIP_ROWS,
-                       n_eqtls=N_EQTLS,
-                       n_samples=N_SAMPLES,
-                       cores=CORES)
+        # PROGRAM = Main(settings_file=SETTINGS_FILE,
+        #                skip_rows=SKIP_ROWS,
+        #                n_eqtls=N_EQTLS,
+        #                n_samples=N_SAMPLES,
+        #                cores=CORES)
+        # PROGRAM.start()
+        PROGRAM = Manager(settings_file=SETTINGS_FILE, skip_rows=SKIP_ROWS,
+                          n_eqtls=N_EQTLS,
+                          n_samples=N_SAMPLES,
+                          cores=CORES)
         PROGRAM.start()
