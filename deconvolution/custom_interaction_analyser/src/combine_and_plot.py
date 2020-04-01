@@ -117,7 +117,6 @@ class CombineAndPlot:
                                               perm_pvalues,
                                               self.n_permutations)
         # Write the output file.
-        print("\tSaving dataframe.")
         save_dataframe(df=perm_fdr_df,
                        outpath=os.path.join(self.outdir,
                                             "perm_fdr_table.txt.gz"),
@@ -125,7 +124,6 @@ class CombineAndPlot:
 
         print("Creating Benjamini-Hochberg FDR dataframe.")
         bh_fdr_df = self.create_bh_fdr_df(pvalue_df, pvalues)
-        print("\tSaving dataframe.")
         save_dataframe(df=bh_fdr_df,
                        outpath=os.path.join(self.outdir,
                                             "bh_fdr_table.txt.gz"),
@@ -141,9 +139,6 @@ class CombineAndPlot:
         # Create a dataframe with z-scores.
         print("Creating Z-score dataframe.")
         zscore_df = self.create_zscore_df(pvalue_df)
-
-        # Write the output file.
-        print("Saving Z-score dataframe.")
         save_dataframe(df=zscore_df,
                        outpath=os.path.join(self.outdir,
                                             "interaction_table.txt.gz"),
@@ -342,7 +337,7 @@ class CombineAndPlot:
                 ax.set_ylim(xy_min, xy_max)
 
         #plt.tight_layout()
-        g.savefig(os.path.join(outdir, "pvalue_vs_fdr_comparison_{}_{}.png".format(xy_min, xy_max)))
+        g.savefig(os.path.join(outdir, "pvalue_vs_fdr_comparison_{:.2f}_{:.2f}.png".format(xy_min, xy_max)))
 
     @staticmethod
     def create_color_map():
