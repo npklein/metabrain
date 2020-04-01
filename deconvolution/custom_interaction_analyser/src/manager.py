@@ -143,7 +143,7 @@ class Manager:
             chunk_size = 1
             cores = 1
         elif (n_eqtls > 1) and math.floor(n_eqtls / cores) == 0:
-            chunk_size = n_eqtls
+            chunk_size = 1
             cores = n_eqtls
         else:
             chunk_size = min(math.ceil(n_eqtls / cores / 2), 10)
@@ -197,12 +197,14 @@ class Manager:
         # initialize variables.
         schedule = {}
         doctor_dict = {}
+        columns_added = False
         pvalue_data = []
         perm_pvalues = []
-        counter = 0
         eqtl_id_len = len(str(self.n_eqtls))
         order_id_len = len(str(len(all_sample_orders)))
         last_print_time = time.time() - (self.print_interval * 0.1)
+        counter = 0
+        total_analyses = self.n_eqtls * (self.n_permutations + 1)
 
         while True:
             if time.time() > self.max_end_time:
@@ -252,10 +254,12 @@ class Manager:
                     print("[receiver]\ta new worker connected: "
                           "'worker {}'".format(worker_id))
                     schedule[worker_id] = None
-                    pvalue_data.append([eqtl_index] + data)
+                    if not columns_added:
+                        pvalue_data.append([eqtl_index] + data)
+                        columns_added = True
                 elif category == "result":
                     print("[receiver]\treceived an output "
-                          "(eqtl {:{}d}, sample order {:{}d}) from: "
+                          "(eQTL_{:<{}d}, order_{:<{}d}) from: "
                           "'worker {}'".format(eqtl_index, eqtl_id_len,
                                                sample_order_id, order_id_len,
                                                worker_id))
@@ -301,11 +305,9 @@ class Manager:
                         (start_index, sample_orders, chunk_size) = wait_list.pop(0)
                         print("[scheduler]\tassigning work to "
                               "'worker {}'".format(worker_id))
-                        work = {}
-                        for i in range(start_index, start_index + chunk_size):
-                            if i <= self.n_eqtls:
-                                work[i] = sample_orders.copy()
-                        schedule[worker_id] = work
+                        schedule[worker_id] = {i: sample_orders.copy()
+                                               for i in range(start_index,
+                                                              start_index + chunk_size)}
 
             # clear the job queue and push the new schedule. Push some
             # extra copies to make sure each process can get one.
@@ -323,7 +325,8 @@ class Manager:
             now_time = int(time.time())
             if now_time - last_print_time >= self.print_interval:
                 last_print_time = now_time
-                self.print_status(wait_list, schedule)
+                self.print_status(wait_list, schedule, eqtl_id_len, order_id_len)
+                #self.print_progress(counter, total_analyses)
 
             # check if we are done.
             if not wait_list:
@@ -343,11 +346,9 @@ class Manager:
             proc.join()
 
         # Pickle the files.
-        print(pvalue_data)
         with open(self.pvalues_outfile, "wb") as f:
             pickle.dump(pvalue_data, f)
         f.close()
-        print(perm_pvalues)
         with open(self.perm_pvalues_outfile, "wb") as f:
             pickle.dump(perm_pvalues, f)
         f.close()
@@ -360,7 +361,7 @@ class Manager:
               "{} second(s).".format(int(run_time_hour),
                                      int(run_time_min),
                                      int(run_time_sec)))
-        print("[manager]\treceived {:.2f} analyses "
+        print("[receiver]\treceived {:.2f} analyses "
               "per second.".format(counter / run_time))
 
         # shutdown the manager.
@@ -397,22 +398,24 @@ class Manager:
                                      self.skip_rows + self.n_eqtls + 1,
                                      self.chunk_size):
                 chunk_size = self.chunk_size
-                if (start_index + self.chunk_size) > self.n_eqtls:
-                    chunk_size = (self.n_eqtls - start_index) + 1
+                if (start_index + self.chunk_size) > (self.skip_rows + self.n_eqtls):
+                    chunk_size = self.skip_rows + self.n_eqtls - start_index + 1
 
                 wait_list.append((start_index, all_sample_orders.copy(), chunk_size))
 
         return wait_list
 
     @staticmethod
-    def print_status(wait_list, schedule):
+    def print_status(wait_list, schedule, eqtl_id_len, order_id_len):
         print("[manager]\t")
         if len(wait_list) > 0:
             work_info = []
             wait_list = sorted(wait_list, key=lambda x: x[0])
             for job in wait_list:
-                work_info.append("eQTL_{}-eQTL_{} (x{})".format(job[0], job[0] + job[2], len(job[1])))
+                work_info.append("eQTL_{:<{}d}-eQTL_{:<{}d} (x{:<{}d})".format(job[0], eqtl_id_len,  job[0] + job[2], eqtl_id_len, len(job[1]), order_id_len))
             print("[manager]\twait list: [{}]".format(', '.join(work_info)))
+        else:
+            print("[manager]\twait list: empty")
         print("[manager]\tcurrent schedule:")
         if len(schedule.keys()) > 0:
             connected_workers = list(schedule.keys())
@@ -423,10 +426,18 @@ class Manager:
                 if work:
                     for key in sorted(work.keys()):
                         work_info.append(
-                            "eQTL_{} (x{})".format(key, len(schedule[worked_id][key])))
+                            "eQTL_{:<{}d} (x{:<{}d})".format(key, eqtl_id_len, len(schedule[worked_id][key]), order_id_len))
                 print("[manager]\t\tworker {}: [{}]".format(worked_id, ', '.join(work_info)))
         else:
             print("[manager]\t\tempty")
+
+    @staticmethod
+    def print_progress(counter, total_analyses):
+        print_len = len(str(total_analyses))
+        print("[manager]\treceived data from {:<{}d}/{:<{}d} analyses "
+              "[{:.2f}%]".format(counter, print_len,
+                                 total_analyses, print_len,
+                                 (100 / total_analyses) * counter))
 
     def print_arguments(self):
         end_time_string = datetime.fromtimestamp(self.max_end_time).strftime(

@@ -49,7 +49,7 @@
   "permuted_pvalues_pickle_filename": "perm_pvalues_",
   "n_permutations": 10,
   "sleep_time_in_sec": 10,
-  "print_interval_in_sec": 10,
+  "print_interval_in_sec": 30,
   "single_eqtl_max_runtime_in_min": 2,
   "max_runtime_in_min": 180
 }
