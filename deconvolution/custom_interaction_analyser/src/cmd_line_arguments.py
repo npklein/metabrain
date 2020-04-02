@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/23
-Last Changed: 2020/03/30
+Last Changed: 2020/04/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -97,6 +97,10 @@ class CommandLineArguments:
                             default=1,
                             help="The number of cores to use, "
                                  "default: 1.")
+        parser.add_argument("-verbose",
+                            action='store_true',
+                            help="Include steps and command prints, "
+                                 "default: False.")
         parser.add_argument("-combine",
                             action='store_true',
                             help="Combine the created files, alternative "

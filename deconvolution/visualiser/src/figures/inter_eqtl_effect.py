@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect.py
 Created:      2020/03/16
-Last Changed: 2020/03/20
+Last Changed: 2020/04/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -31,7 +31,7 @@ import matplotlib.pyplot as plt
 from scipy import stats
 
 # Local application imports.
-from general.utilities import prepare_output_dir
+from general.utilities import prepare_output_dir, p_value_to_symbol
 
 
 class IntereQTLEffect:
@@ -197,7 +197,7 @@ class IntereQTLEffect:
             # Add the text.
             ax.set(ylim=(min, max))
             ax.annotate(
-                '{}: r = {:.2e}, p = {:.2e}'.format(allele, coef, p),
+                '{}: r = {:.2e} [{}]'.format(allele, coef, p_value_to_symbol(p)),
                 xy=(0.03, 0.94 - ((i / 100) * 3)),
                 xycoords=ax.transAxes,
                 color=color,

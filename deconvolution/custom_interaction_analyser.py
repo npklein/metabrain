@@ -3,7 +3,7 @@
 """
 File:         custom_interaction_analyser.py
 Created:      2020/03/23
-Last Changed: 2020/03/27
+Last Changed: 2020/04/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -52,6 +52,7 @@ if __name__ == '__main__':
                                version=__version__,
                                description=__description__)
     SETTINGS_FILE = CLA.get_argument("settings")
+    VERBOSE = CLA.get_argument("verbose")
     COMBINE = CLA.get_argument("combine")
 
     if COMBINE:
@@ -70,8 +71,10 @@ if __name__ == '__main__':
         #                n_samples=N_SAMPLES,
         #                cores=CORES)
         # PROGRAM.start()
-        PROGRAM = Manager(settings_file=SETTINGS_FILE, skip_rows=SKIP_ROWS,
+        PROGRAM = Manager(settings_file=SETTINGS_FILE,
+                          skip_rows=SKIP_ROWS,
                           n_eqtls=N_EQTLS,
                           n_samples=N_SAMPLES,
-                          cores=CORES)
+                          cores=CORES,
+                          verbose=VERBOSE)
         PROGRAM.start()

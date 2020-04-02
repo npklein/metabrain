@@ -3,7 +3,7 @@
 """
 File:         eQTL_plotter.py
 Created:      2020/02/26
-Last Changed: 2020/03/10
+Last Changed: 2020/04/02
 Author:       M.Vochteloo
 
 Copyright (C) 2019 M.Vochteloo
@@ -38,6 +38,7 @@ from colour import Color
 import scipy.stats as st
 
 # Local application imports.
+from general.utilities import p_value_to_symbol
 
 
 # Metadata.
@@ -492,7 +493,7 @@ class Main:
             # Add the text.
             ax.set(ylim=(min, max))
             ax.annotate(
-                '{}: r = {:.2e}, p = {:.2e}'.format(allele, coef, p),
+                '{}: r = {:.2e} [{}]'.format(allele, coef, p_value_to_symbol(p)),
                 xy=(0.03, 0.94 - ((i / 100) * 3)),
                 xycoords=ax.transAxes,
                 color=color,

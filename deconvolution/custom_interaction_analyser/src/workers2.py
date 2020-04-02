@@ -1,7 +1,7 @@
 """
 File:         workers2.py
 Created:      2020/04/01
-Last Changed:
+Last Changed: 2020/04/02
 Author(s):    M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -36,7 +36,7 @@ import scipy.stats as stats
 
 
 def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
-                   start_q, job_q, result_q, sleep_time, max_end_time):
+                   start_q, job_q, result_q, sleep_time, max_end_time, verbose):
     start_time = time.time()
     start_time_str = datetime.fromtimestamp(start_time).strftime(
         "%d-%m-%Y, %H:%M:%S")
@@ -57,20 +57,25 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
 
     if sample_orders is None:
         return
-    # if worker_id == 0:
-    #     print("Worker: {} received sample orders.".format(worker_id))
+
+    if verbose:
+        print("[worker {:2d}]\treceived sample orders.".format(worker_id))
 
     # Load the covariate file.
-    cov_df = pd.read_csv(cov_inpath,
-                         sep="\t",
-                         header=0,
-                         index_col=0)
+    tech_cov_df, cov_df = load_covariate_file(cov_inpath, tech_covs)
 
-    tech_cov = cov_df.loc[tech_covs, :]
-    cov_df.drop(tech_covs, inplace=True)
+    if verbose:
+        print("[worker {:2d}]\tloaded covariate file.".format(worker_id))
+        print("[worker {:2d}]\t\t"
+              "technical covariates: {}".format(worker_id, tech_cov_df.shape))
+        print("[worker {:2d}]\t\t"
+              "relevant covariates:  {}".format(worker_id, cov_df.shape))
 
+    # Push the header to the manager. This is also the message that confirms
+    # the worker is ready to start.
     result_q.put((worker_id, "online", -1, None, ["-"] + list(cov_df.index)))
 
+    # Start infinite loop.
     while True:
         if max_end_time <= time.time():
             break
@@ -86,16 +91,19 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                 time.sleep(sleep_time)
                 continue
             my_work = schedule[worker_id]
-            #print("[worker {:2d}]\tFound work".format(worker_id))
+            if verbose:
+                print("[worker {:2d}]\tFound work".format(worker_id))
 
             # Combine start indices.
             start_index = min(my_work.keys())
             nrows = max(my_work.keys()) - start_index + 1
 
-            # print("[worker {:2d}]\tloading data {}-{}".format(worker_id,
-            #                                                  start_index,
-            #                                                  start_index + nrows))
+            if verbose:
+                print("[worker {:2d}]\tloading data {}-{}".format(worker_id,
+                                                                 start_index,
+                                                                 start_index + nrows))
 
+            # Load the genotype and expression data.
             try:
                 geno_df = pd.read_csv(geno_inpath,
                                       sep="\t",
@@ -112,16 +120,25 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                                       skiprows=[i for i in
                                                 range(1, start_index)],
                                       nrows=nrows)
-
             except pandas.io.common.EmptyDataError:
                 break
+
+            # Check if the covariate data still exists. If not, reload it.
+            try:
+                _ = tech_cov_df.shape
+                _ = cov_df.shape
+            except:
+                print("[worker {:2d}]\tcovariate table was lost. "
+                      "Reloading data..".format(worker_id))
+                tech_cov_df, cov_df = load_covariate_file(cov_inpath, tech_covs)
 
             # Replace -1 with NaN in the genotype dataframe.
             geno_df.replace(-1, np.nan, inplace=True)
 
             # loop over eQTLs.
             for i, eqtl_index in enumerate(my_work.keys()):
-                #print("[worker {:2d}]\tworking on 'eQTL {}'.".format(worker_id, eqtl_index))
+                if verbose:
+                    print("[worker {:2d}]\tworking on 'eQTL_{}'.".format(worker_id, eqtl_index))
 
                 # Get the missing genotype indices.
                 indices = np.arange(geno_df.shape[1])
@@ -132,7 +149,7 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                 genotype = geno_df.iloc[i, eqtl_indices].copy()
                 genotype_all = geno_df.iloc[i, :].copy()
                 expression = expr_df.iloc[i, eqtl_indices].copy()
-                technical_covs = tech_cov.iloc[:, eqtl_indices].copy()
+                technical_covs = tech_cov_df.iloc[:, eqtl_indices].copy()
 
                 # Check if SNP index are identical.
                 if genotype.name != expression.name:
@@ -147,15 +164,18 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                 for order_id, sample_order in enumerate(sample_orders):
                     if order_id not in my_work[eqtl_index]:
                         continue
-                    #print("[worker {:2d}]\tworking on 'sample order {}'.".format(worker_id, order_id))
+                    if verbose:
+                        print("[worker {:2d}]\tworking on 'sample order {}'.".format(worker_id, order_id))
 
                     # Loop over the covariates.
                     snp_pvalues = []
                     for j in range(cov_df.shape[0]):
                         cov_name = cov_df.index[j]
 
-                        # print("[worker {:2d}]\tworking on covariate "
-                        #       "{}/{}".format(worker_id, j + 1, cov_df.shape[0]))
+                        # if verbose:
+                        #     print("[worker {:2d}]\tworking on covariate "
+                        #           "{}/{}".format(worker_id, j + 1,
+                        #                          cov_df.shape[0]))
 
                         # Calculate the interaction of the covariate of
                         # interest.
@@ -188,7 +208,8 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                         snp_pvalues.append(pvalue)
 
                     # Push the results.
-                    #print("[worker {:2d}]\tpushing results".format(worker_id))
+                    if verbose:
+                        print("[worker {:2d}]\tpushing results".format(worker_id))
                     result_q.put((worker_id, "result", eqtl_index, order_id, [genotype.name] + snp_pvalues))
 
             # Wait before getting a new job.
@@ -208,6 +229,18 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                                                    int(run_time_hour),
                                                    int(run_time_min),
                                                    int(run_time_sec)))
+
+
+def load_covariate_file(cov_inpath, tech_covs):
+    cov_df = pd.read_csv(cov_inpath,
+                         sep="\t",
+                         header=0,
+                         index_col=0)
+
+    tech_cov_df = cov_df.loc[tech_covs, :]
+    cov_df.drop(tech_covs, inplace=True)
+
+    return tech_cov_df, cov_df
 
 
 def create_model(X, y):
@@ -239,4 +272,10 @@ def calc_f_value(rss1, rss2, df1, df2, n):
 
 
 def get_p_value(f_value, df1, df2, n):
+    # stats.f.sf(1827.95, dfn=1, dfd=3661) = 5e-324
+    # stats.f.sf(9.9e-12, dfn=1, dfd=3661) = 0.9999974567714613
+
+    # stats.f.cdf(69, dfn=1, dfd=3661) = 0.9999999999999999
+    # stats.f.cdf(1e-320, dfn=1, dfd=3661) = 1.0730071046473278e-160
+
     return stats.f.sf(f_value, dfn=(df2 - df1), dfd=(n - df2))

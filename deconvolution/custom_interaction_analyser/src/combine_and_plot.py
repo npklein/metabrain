@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed: 2020/03/31
+Last Changed: 2020/04/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -42,7 +42,7 @@ from scipy import stats
 
 # Local application imports.
 from general.local_settings import LocalSettings
-from general.df_utilities import save_dataframe
+from general.df_utilities import save_dataframe, get_basename
 from general.utilities import p_value_to_symbol
 
 
@@ -90,6 +90,7 @@ class CombineAndPlot:
         start_time = time.time()
 
         # Combine the pickle files.
+        print("Loading data.")
         columns, pvalues_data = self.combine_pickles(self.pvalues_outfile,
                                                      columns=True)
         _, perm_pvalues = self.combine_pickles(self.perm_pvalues_outfile)
@@ -97,6 +98,14 @@ class CombineAndPlot:
         # Create a pandas dataframe from the nested list.
         print("Creating p-values dataframe.")
         pvalue_df = self.create_df(pvalues_data, columns)
+
+        # Create a dataframe with z-scores.
+        print("Creating Z-score dataframe.")
+        zscore_df = self.create_zscore_df(pvalue_df)
+        save_dataframe(df=zscore_df,
+                       outpath=os.path.join(self.outdir,
+                                            "interaction_table.txt.gz"),
+                       header=True, index=True)
 
         # Get the pvalues from the dataframe.
         pvalues = pvalue_df.melt()["value"].to_list()
@@ -136,14 +145,6 @@ class CombineAndPlot:
         self.compare_pvalue_scores(pvalue_df, perm_fdr_df, bh_fdr_df,
                                    self.outdir, stepsize=0.02, max_val=0.05)
 
-        # Create a dataframe with z-scores.
-        print("Creating Z-score dataframe.")
-        zscore_df = self.create_zscore_df(pvalue_df)
-        save_dataframe(df=zscore_df,
-                       outpath=os.path.join(self.outdir,
-                                            "interaction_table.txt.gz"),
-                       header=True, index=True)
-
         # Stop timer.
         process_time = time.time() - start_time
 
@@ -158,12 +159,13 @@ class CombineAndPlot:
         data = []
         infiles = sorted(glob.glob(inpath + "*.pkl"))
         for i, fpath in enumerate(infiles):
-            print("Loading {}.".format(fpath))
             with open(fpath, "rb") as f:
                 content = pickle.load(f)
                 if columns and i == 0:
                     col_list = content[0]
                 data.extend(content[1:])
+                print("\tLoaded list: {} with length: {}".format(
+                    get_basename(fpath), len(content)))
         return col_list, data
 
     @staticmethod
@@ -279,11 +281,13 @@ class CombineAndPlot:
 
     @staticmethod
     def get_z_score(p_value):
-        if p_value >= 1:
-            return np.nan
-        if p_value <= 0:
-            return np.nan
+        if p_value > (1.0 - 1e-16):
+            p_value = 1e-16
+        if p_value < 1e-323:
+            p_value = 1e-323
 
+        # stats.norm.isf((1 - 1e-16)) = -8.209536151601387
+        # stats.norm.isf(1e-323) = 38.44939448087599
         return stats.norm.isf(p_value)
 
     def compare_pvalue_scores(self, pvalue_df, perm_fdr, bh_fdr, outdir,

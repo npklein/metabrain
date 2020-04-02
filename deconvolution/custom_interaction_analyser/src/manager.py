@@ -1,7 +1,7 @@
 """
 File:         manager.py
 Created:      2020/04/01
-Last Changed:
+Last Changed: 2020/04/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -45,7 +45,8 @@ class Manager:
     Class for the manager.
     """
 
-    def __init__(self, settings_file, skip_rows, n_eqtls, n_samples, cores):
+    def __init__(self, settings_file, skip_rows, n_eqtls, n_samples, cores,
+                 verbose):
         """
         Initializer of the class.
 
@@ -54,6 +55,7 @@ class Manager:
         :param n_eqtls: int, the number of eqtls in the input files.
         :param n_samples: int, the number of samples in the input files.
         :param cores: int, the number of cores to use.
+        :param verbose: boolean, whether or not to print all update info.
         """
         # Define the current directory.
         current_dir = str(Path(__file__).parent.parent)
@@ -75,6 +77,7 @@ class Manager:
         self.print_interval = settings.get_setting("print_interval_in_sec")
         self.analysis_max_runtime = settings.get_setting("single_eqtl_max_runtime_in_min") * 60
         self.max_end_time = int(time.time()) + settings.get_setting("max_runtime_in_min") * 60
+        self.verbose = verbose
 
         # Count the number of eQTLs / samples.
         if n_eqtls is None:
@@ -153,9 +156,9 @@ class Manager:
         """
         Function to start the manager.
         """
+        self.print_arguments()
         print("[manager]\tstarting manager [{}]".format(
             datetime.now().strftime("%H:%M:%S")))
-        self.print_arguments()
 
         # start the timer.
         start_time = int(time.time())
@@ -177,7 +180,7 @@ class Manager:
         wait_list = self.load_wait_list(all_sample_orders)
 
         # start the workers.
-        print("[manager]\tstarting workers.")
+        print("[manager]\tstarting processes.")
         processes = {}
         for worker_id in range(self.n_cores):
             processes[worker_id] = mp.Process(target=process_worker,
@@ -190,7 +193,8 @@ class Manager:
                                                     job_q,
                                                     result_q,
                                                     self.sleep_time,
-                                                    self.max_end_time))
+                                                    self.max_end_time,
+                                                    self.verbose))
         for proc in processes.values():
             proc.start()
 
@@ -206,6 +210,7 @@ class Manager:
         counter = 0
         total_analyses = self.n_eqtls * (self.n_permutations + 1)
 
+        print("[manager]\tstarting scheduler.")
         while True:
             if time.time() > self.max_end_time:
                 break
@@ -230,6 +235,7 @@ class Manager:
 
                         # Stop tracking this worker.
                         processes[worker_id].terminate()
+                        del processes[worker_id]
                         del schedule[worker_id]
                         del doctor_dict[worker_id]
 
@@ -258,11 +264,14 @@ class Manager:
                         pvalue_data.append([eqtl_index] + data)
                         columns_added = True
                 elif category == "result":
-                    print("[receiver]\treceived an output "
-                          "(eQTL_{:<{}d}, order_{:<{}d}) from: "
-                          "'worker {}'".format(eqtl_index, eqtl_id_len,
-                                               sample_order_id, order_id_len,
-                                               worker_id))
+                    if self.verbose:
+                        print("[receiver]\treceived an output "
+                              "(eQTL_{:<{}d}, order_{:<{}d}) from: "
+                              "'worker {}'".format(eqtl_index,
+                                                   eqtl_id_len,
+                                                   sample_order_id,
+                                                   order_id_len,
+                                                   worker_id))
                     counter += 1
 
                     # Safe the output to the right result.
@@ -303,8 +312,9 @@ class Manager:
 
                     for worker_id in free_workers:
                         (start_index, sample_orders, chunk_size) = wait_list.pop(0)
-                        print("[scheduler]\tassigning work to "
-                              "'worker {}'".format(worker_id))
+                        if self.verbose:
+                            print("[scheduler]\tassigning work to "
+                                  "'worker {}'".format(worker_id))
                         schedule[worker_id] = {i: sample_orders.copy()
                                                for i in range(start_index,
                                                               start_index + chunk_size)}
@@ -325,8 +335,10 @@ class Manager:
             now_time = int(time.time())
             if now_time - last_print_time >= self.print_interval:
                 last_print_time = now_time
-                self.print_status(wait_list, schedule, eqtl_id_len, order_id_len)
-                #self.print_progress(counter, total_analyses)
+                if self.verbose:
+                    self.print_status(wait_list, schedule, eqtl_id_len, order_id_len)
+                else:
+                    self.print_progress(counter, total_analyses)
 
             # check if we are done.
             if not wait_list:
@@ -336,8 +348,10 @@ class Manager:
                     break
 
             time.sleep(self.sleep_time)
+        print("[manager]\tscheduler finished.")
 
         # Send the kill signal.
+        print("[manager]\tkilling processes.")
         for proc in processes.values():
             proc.terminate()
 
@@ -346,6 +360,7 @@ class Manager:
             proc.join()
 
         # Pickle the files.
+        print("[manager]\tsaving output files.")
         with open(self.pvalues_outfile, "wb") as f:
             pickle.dump(pvalue_data, f)
         f.close()
@@ -460,4 +475,5 @@ class Manager:
         print("  > Samples: {}".format(self.n_samples))
         print("  > Cores: {}".format(self.n_cores))
         print("  > Chunk size: {}".format(self.chunk_size))
+        print("  > Verbose: {}".format(self.verbose))
         print("")
