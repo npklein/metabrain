@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect_marker_genes.py
 Created:      2020/03/17
-Last Changed: 2020/03/20
+Last Changed: 2020/04/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -203,8 +203,8 @@ class IntereQTLEffectMarkerGenes:
                 # Add the text.
                 ax.set(ylim=(min, max))
                 ax.annotate(
-                    '{}: r = {:.2f}, p = {:.2e} [{}]'.format(allele, coef, p,
-                                                             p_value_to_symbol(p)),
+                    '{}: r = {:.2f} [{}]'.format(allele, coef,
+                                                 p_value_to_symbol(p)),
                     xy=(0.03, 0.94 - ((i / 100) * 3)),
                     xycoords=ax.transAxes,
                     color=color,

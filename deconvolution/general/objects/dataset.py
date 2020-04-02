@@ -1,7 +1,7 @@
 """
 File:         dataset.py
 Created:      2020/03/16
-Last Changed: 2020/03/23
+Last Changed: 2020/04/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -159,11 +159,6 @@ class Dataset:
                     not a.columns.identical(b.columns):
                 print("Order of samples are not identical.")
                 exit()
-
-        if self.cov_df is not None and self.inter_df is not None and \
-                not self.cov_df.index.identical(self.inter_df.index):
-            print("Order of covariates is not identical.")
-            exit()
 
         if self.inter_df is not None:
             for df in [self.eqtl_df, self.geno_df, self.alleles_df,

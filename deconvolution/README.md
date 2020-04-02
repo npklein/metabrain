@@ -15,7 +15,7 @@ The program requires the following packages to be installed:
  * matplotlib ([v3.1.3](https://github.com/matplotlib/matplotlib/releases); [BSD License](https://matplotlib.org/3.1.3/users/license.html))  
  * seaborn ([v0.10.0](https://github.com/mwaskom/seaborn); [BSD 3-Clause License](https://github.com/mwaskom/seaborn/blob/master/LICENSE))  
  * scikit-learn ([v0.22.2.post1](https://scikit-learn.org/stable/whats_new.html); [BSD 3-Clause License](https://github.com/scikit-learn/scikit-learn/blob/master/COPYING))
- * colour (v0.1.5; )  
+ * colour ([v0.1.5](https://pypi.org/project/colour/#history); [BSD 3-Clause License](https://pypi.org/project/colour/))  
   
 See 'Installing' on how to install these packages.
 
@@ -59,7 +59,7 @@ Options:
  * **-f** / **--force_steps**: The steps to force the program to redo, default: None.
  
   
-### Step 2: analyse interactions  
+### Step 2A: analyse interactions ([eQTLInteractionAnalyser](https://github.com/molgenis/systemsgenetics/wiki/Discovery-of-hidden-confounders-of-QTLs))
 Settings: [default_settings.json]('analyse_interactions/settings/default_settings.json')  
 Syntax:
 ```console  
@@ -72,7 +72,7 @@ Options:
  * **-force**: Force the program to redo all steps, default: False.
  * **-verbose**: Include steps and command prints, default: False. 
  
-### Step 3: merge groups  
+### Step 2B: merge groups  
 Settings: [default_settings.json]('merge_groups/settings/default_settings.json')  
 Syntax:
 ```console  
@@ -84,7 +84,57 @@ Options:
  * **-g** / **--groups**: The name of the group to analyse, default: 'all'.
  * **-force**: Force the program to redo all steps, default: False.
     
-### Step 4: visualiser  
+
+### Step 2: analyse interactions (own implementation)
+Settings: [default_settings.json]('custom_interaction_analyser/settings/default_settings.json')  
+
+**Step 2.A: Parallel analyses**  
+This step performs the interaction analyses on a partition of the complete 
+dataframe and saves the result as pickled files.
+  
+Syntax:
+```console  
+python3 ./custom_interaction_analyser.py
+```  
+Options:
+
+ * **-s** / **--settings**: The settings input file (without '.json'), default: 'default_settings'.
+ * **-sr** / **--skip_rows**: The number of rows to skip in the input files, default: 0
+ * **-ne** / **--n_eqtls**: The number of eQTLs in the input files, default: None (determine manually).
+ * **-ns** / **--n_samples**: The number of samples in the input files, default: None (determine manually).
+ * **-c** / **--cores**: The number of cores to use, default: 1.
+ * **-verbose**: Include steps and command prints, default: False.  
+
+Example:
+ * Job1, analyzes eqtl 0-999: 
+ ```console  
+python3 ./custom_interaction_analyser.py -ne 1000 -c 10 
+```  
+ * Job2, analyzed eQTL 1000-1999: 
+ ```console  
+python3 ./custom_interaction_analyser.py -sr 1000 -ne 1000 -c 10 
+``` 
+ * Job3:   
+   ...  
+
+Complexity:  
+I got on average 0.68 analyses per second. Estimate the runtime by calculating
+(n eQTLs * (n permutations + 1)) / 0.68.
+   
+   
+**Step 2.B: Combine data**  
+This step loads the pickled data and combines them into a complete interaction
+matrix. Also multi testing corrections are performed and these values are
+compared and visualised.
+  
+Syntax:
+```console  
+python3 ./custom_interaction_analyser.py -combine
+```  
+Options:
+ * **-combine**: Combine the created files, alternative functionality. Default: False.    
+  
+### Step 3: visualiser  
 Settings: [default_settings.json]('visualiser/settings/default_settings.json')  
 Syntax:
 ```console  
