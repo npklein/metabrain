@@ -256,11 +256,6 @@ class Manager:
                 # safe the moment the message was received.
                 doctor_dict[worker_id] = int(time.time())
 
-                # prevent duplicates by checking if the worker didn't die
-                # already.
-                if worker_id not in schedule.keys():
-                    continue
-
                 # check what kind of message it is.
                 if category == "online":
                     print("[receiver]\ta new worker connected: "
@@ -282,26 +277,30 @@ class Manager:
                                                    worker_id),
                               flush=True)
 
-                    counter += 1
+                    # prevent duplicates by checking if the worker didn't die
+                    # already.
+                    if worker_id in schedule.keys():
+                        # Increment the counter.
+                        counter += 1
 
-                    # Safe the output to the right result.
-                    if sample_order_id == 0:
-                        pvalue_data.append([eqtl_index] + data)
-                    else:
-                        perm_pvalues.extend(data[1:])
-
-                    # remove the job from the schedule.
-                    if worker_id in schedule and eqtl_index in schedule[worker_id]:
-                        sample_orders_to_perform = schedule[worker_id][eqtl_index]
-                        sample_orders_to_perform.remove(sample_order_id)
-                        if sample_orders_to_perform:
-                            schedule[worker_id][eqtl_index] = sample_orders_to_perform
+                        # Safe the output to the right result.
+                        if sample_order_id == 0:
+                            pvalue_data.append([eqtl_index] + data)
                         else:
-                            del schedule[worker_id][eqtl_index]
+                            perm_pvalues.extend(data[1:])
 
-                        # remove the job so new work can be added.
-                        if not schedule[worker_id].keys():
-                            schedule[worker_id] = None
+                        # remove the job from the schedule.
+                        if eqtl_index in schedule[worker_id].keys():
+                            sample_orders_to_perform = schedule[worker_id][eqtl_index]
+                            sample_orders_to_perform.remove(sample_order_id)
+                            if sample_orders_to_perform:
+                                schedule[worker_id][eqtl_index] = sample_orders_to_perform
+                            else:
+                                del schedule[worker_id][eqtl_index]
+
+                            # remove the job so new work can be added.
+                            if not schedule[worker_id].keys():
+                                schedule[worker_id] = None
                 else:
                     pass
 
