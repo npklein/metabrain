@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/23
-Last Changed: 2020/03/31
+Last Changed: 2020/04/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -68,7 +68,7 @@ class Main:
         self.cov_inpath = settings.get_setting("covariates_datafile")
         self.tech_covs = settings.get_setting("technical_covariates")
         self.max_end_time = int(time.time()) + settings.get_setting(
-            "max_runtime_in_min") * 60
+            "max_runtime_in_hours") * 60 * 60
         self.analysis_max_runtime = settings.get_setting(
             "single_eqtl_max_runtime_in_min") * 60
         self.print_interval = settings.get_setting("print_interval_in_sec")

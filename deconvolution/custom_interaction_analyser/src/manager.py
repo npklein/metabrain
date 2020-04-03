@@ -76,7 +76,8 @@ class Manager:
         self.sleep_time = settings.get_setting("sleep_time_in_sec")
         self.print_interval = settings.get_setting("print_interval_in_sec")
         self.analysis_max_runtime = settings.get_setting("single_eqtl_max_runtime_in_min") * 60
-        self.max_end_time = int(time.time()) + settings.get_setting("max_runtime_in_min") * 60
+        self.max_end_time = int(time.time()) + settings.get_setting(
+            "max_runtime_in_hours") * 60 * 60
         self.verbose = verbose
 
         # Count the number of eQTLs / samples.
@@ -158,7 +159,7 @@ class Manager:
         """
         self.print_arguments()
         print("[manager]\tstarting manager [{}]".format(
-            datetime.now().strftime("%H:%M:%S")))
+            datetime.now().strftime("%H:%M:%S")), flush=True)
 
         # start the timer.
         start_time = int(time.time())
@@ -172,15 +173,15 @@ class Manager:
         result_q = result_manager.Queue()
 
         # load the start queue.
-        print("[manager]\tloading start queue.")
+        print("[manager]\tloading start queue.", flush=True)
         all_sample_orders = self.fill_start_queue(start_q)
 
         # load the wait list.
-        print("[manager]\tcreating waitlist.")
+        print("[manager]\tcreating waitlist.", flush=True)
         wait_list = self.load_wait_list(all_sample_orders)
 
         # start the workers.
-        print("[manager]\tstarting processes.")
+        print("[manager]\tstarting processes.", flush=True)
         processes = {}
         for worker_id in range(self.n_cores):
             processes[worker_id] = mp.Process(target=process_worker,
@@ -255,10 +256,17 @@ class Manager:
                 # safe the moment the message was received.
                 doctor_dict[worker_id] = int(time.time())
 
+                # prevent duplicates by checking if the worker didn't die
+                # already.
+                if worker_id not in schedule.keys():
+                    continue
+
                 # check what kind of message it is.
                 if category == "online":
                     print("[receiver]\ta new worker connected: "
-                          "'worker {}'".format(worker_id))
+                          "'worker {}'".format(worker_id),
+                          flush=True)
+
                     schedule[worker_id] = None
                     if not columns_added:
                         pvalue_data.append([eqtl_index] + data)
@@ -271,7 +279,9 @@ class Manager:
                                                    eqtl_id_len,
                                                    sample_order_id,
                                                    order_id_len,
-                                                   worker_id))
+                                                   worker_id),
+                              flush=True)
+
                     counter += 1
 
                     # Safe the output to the right result.
@@ -281,16 +291,17 @@ class Manager:
                         perm_pvalues.extend(data[1:])
 
                     # remove the job from the schedule.
-                    sample_orders_to_perform = schedule[worker_id][eqtl_index]
-                    sample_orders_to_perform.remove(sample_order_id)
-                    if sample_orders_to_perform:
-                        schedule[worker_id][eqtl_index] = sample_orders_to_perform
-                    else:
-                        del schedule[worker_id][eqtl_index]
+                    if worker_id in schedule and eqtl_index in schedule[worker_id]:
+                        sample_orders_to_perform = schedule[worker_id][eqtl_index]
+                        sample_orders_to_perform.remove(sample_order_id)
+                        if sample_orders_to_perform:
+                            schedule[worker_id][eqtl_index] = sample_orders_to_perform
+                        else:
+                            del schedule[worker_id][eqtl_index]
 
-                    # remove the job so new work can be added.
-                    if not schedule[worker_id].keys():
-                        schedule[worker_id] = None
+                        # remove the job so new work can be added.
+                        if not schedule[worker_id].keys():
+                            schedule[worker_id] = None
                 else:
                     pass
 
@@ -314,7 +325,7 @@ class Manager:
                         (start_index, sample_orders, chunk_size) = wait_list.pop(0)
                         if self.verbose:
                             print("[scheduler]\tassigning work to "
-                                  "'worker {}'".format(worker_id))
+                                  "'worker {}'".format(worker_id), flush=True)
                         schedule[worker_id] = {i: sample_orders.copy()
                                                for i in range(start_index,
                                                               start_index + chunk_size)}
@@ -348,10 +359,10 @@ class Manager:
                     break
 
             time.sleep(self.sleep_time)
-        print("[manager]\tscheduler finished.")
+        print("[manager]\tscheduler finished.", flush=True)
 
         # Send the kill signal.
-        print("[manager]\tkilling processes.")
+        print("[manager]\tkilling processes.", flush=True)
         for proc in processes.values():
             proc.terminate()
 
@@ -360,7 +371,7 @@ class Manager:
             proc.join()
 
         # Pickle the files.
-        print("[manager]\tsaving output files.")
+        print("[manager]\tsaving output files.", flush=True)
         with open(self.pvalues_outfile, "wb") as f:
             pickle.dump(pvalue_data, f)
         f.close()
@@ -375,13 +386,16 @@ class Manager:
         print("[manager]\tfinished in  {} hour(s), {} minute(s) and "
               "{} second(s).".format(int(run_time_hour),
                                      int(run_time_min),
-                                     int(run_time_sec)))
+                                     int(run_time_sec)),
+              flush=True)
         print("[receiver]\treceived {:.2f} analyses "
-              "per second.".format(counter / run_time))
+              "per second.".format(counter / run_time),
+              flush=True)
 
         # shutdown the manager.
         print("[manager]\tshutting down manager [{}]".format(
-            datetime.now().strftime("%H:%M:%S")))
+            datetime.now().strftime("%H:%M:%S")),
+            flush=True)
 
     def fill_start_queue(self, start_queue):
         # Create x random shuffles of the column indices.
@@ -422,13 +436,14 @@ class Manager:
 
     @staticmethod
     def print_status(wait_list, schedule, eqtl_id_len, order_id_len):
-        print("[manager]\t")
+        print("[manager]\t", flush=True)
         if len(wait_list) > 0:
             work_info = []
             wait_list = sorted(wait_list, key=lambda x: x[0])
             for job in wait_list:
                 work_info.append("eQTL_{:<{}d}-eQTL_{:<{}d} (x{:<{}d})".format(job[0], eqtl_id_len,  job[0] + job[2], eqtl_id_len, len(job[1]), order_id_len))
-            print("[manager]\twait list: [{}]".format(', '.join(work_info)))
+            print("[manager]\twait list: [{}]".format(', '.join(work_info)),
+                  flush=True)
         else:
             print("[manager]\twait list: empty")
         print("[manager]\tcurrent schedule:")
@@ -442,9 +457,10 @@ class Manager:
                     for key in sorted(work.keys()):
                         work_info.append(
                             "eQTL_{:<{}d} (x{:<{}d})".format(key, eqtl_id_len, len(schedule[worked_id][key]), order_id_len))
-                print("[manager]\t\tworker {}: [{}]".format(worked_id, ', '.join(work_info)))
+                print("[manager]\t\tworker {}: [{}]".format(worked_id, ', '.join(work_info)),
+                      flush=True)
         else:
-            print("[manager]\t\tempty")
+            print("[manager]\t\tempty", flush=True)
 
     @staticmethod
     def print_progress(counter, total_analyses):
@@ -452,7 +468,8 @@ class Manager:
         print("[manager]\treceived data from {:<{}d}/{:<{}d} analyses "
               "[{:.2f}%]".format(counter, print_len,
                                  total_analyses, print_len,
-                                 (100 / total_analyses) * counter))
+                                 (100 / total_analyses) * counter),
+              flush=True)
 
     def print_arguments(self):
         end_time_string = datetime.fromtimestamp(self.max_end_time).strftime(
@@ -476,4 +493,4 @@ class Manager:
         print("  > Cores: {}".format(self.n_cores))
         print("  > Chunk size: {}".format(self.chunk_size))
         print("  > Verbose: {}".format(self.verbose))
-        print("")
+        print("", flush=True)
