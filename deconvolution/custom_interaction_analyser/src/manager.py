@@ -1,7 +1,7 @@
 """
 File:         manager.py
 Created:      2020/04/01
-Last Changed: 2020/04/02
+Last Changed: 2020/04/04
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -200,6 +200,7 @@ class Manager:
             proc.start()
 
         # initialize variables.
+        dead_workers = []
         schedule = {}
         doctor_dict = {}
         columns_added = False
@@ -207,7 +208,7 @@ class Manager:
         perm_pvalues = []
         eqtl_id_len = len(str(self.n_eqtls))
         order_id_len = len(str(len(all_sample_orders)))
-        last_print_time = time.time() - (self.print_interval * 0.1)
+        last_print_time = int(time.time()) - self.print_interval
         counter = 0
         total_analyses = self.n_eqtls * (self.n_permutations + 1)
 
@@ -228,23 +229,21 @@ class Manager:
                     # a dead client has been found.
                     print("[doctor]\toh no, 'worker {}' "
                           "has died.".format(worker_id))
-                    unfinished_work = schedule[worker_id]
-                    if unfinished_work is not None:
-                        # reassign the unfinished work.
-                        for key, value in unfinished_work.items():
-                            wait_list.append((key, value, 1))
+                    if worker_id not in dead_workers and \
+                            worker_id in schedule.keys():
+                        unfinished_work = schedule[worker_id]
+                        if unfinished_work is not None:
+                            # reassign the unfinished work.
+                            for key, value in unfinished_work.items():
+                                wait_list.append((key, value, 1))
 
-                        # Stop tracking this worker.
-                        processes[worker_id].terminate()
-                        del processes[worker_id]
-                        del schedule[worker_id]
+                            # Stop tracking this worker.
+                            del schedule[worker_id]
+
+                    if worker_id in doctor_dict.keys():
                         del doctor_dict[worker_id]
 
-            # RECRUITER: look for jobs
-
-            if wait_list:
-                for job in wait_list:
-                    job_q.put(job)
+                    dead_workers.append(worker_id)
 
             # RECEIVER: install new clients and reduce results
 
@@ -254,7 +253,8 @@ class Manager:
                 (worker_id, category, eqtl_index, sample_order_id, data) = result_q.get()
 
                 # safe the moment the message was received.
-                doctor_dict[worker_id] = int(time.time())
+                if worker_id not in dead_workers:
+                    doctor_dict[worker_id] = int(time.time())
 
                 # check what kind of message it is.
                 if category == "online":
@@ -358,6 +358,12 @@ class Manager:
                     break
 
             time.sleep(self.sleep_time)
+
+        # print statements to update to end-user.
+        if self.verbose:
+            self.print_status(wait_list, schedule, eqtl_id_len, order_id_len)
+        else:
+            self.print_progress(counter, total_analyses)
         print("[manager]\tscheduler finished.", flush=True)
 
         # Send the kill signal.

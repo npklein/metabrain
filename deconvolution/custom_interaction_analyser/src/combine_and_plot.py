@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed: 2020/04/02
+Last Changed: 2020/04/04
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -73,11 +73,8 @@ class CombineAndPlot:
             print("Error, output directory does not exist.")
 
         # Get the pickle filenames.
-        self.pvalues_outfile = os.path.join(self.outdir, settings.get_setting(
-            "actual_pvalues_pickle_filename"))
-        self.perm_pvalues_outfile = os.path.join(self.outdir,
-                                                 settings.get_setting(
-                                                     "permuted_pvalues_pickle_filename"))
+        self.pvalues_outfile = settings.get_setting("actual_pvalues_pickle_filename")
+        self.perm_pvalues_outfile = settings.get_setting("permuted_pvalues_pickle_filename")
 
     def start(self):
         """
@@ -90,17 +87,19 @@ class CombineAndPlot:
         start_time = time.time()
 
         # Combine the pickle files.
-        print("Loading data.")
-        columns, pvalues_data = self.combine_pickles(self.pvalues_outfile,
+        print("Loading data.", flush=True)
+        columns, pvalues_data = self.combine_pickles(self.outdir,
+                                                     self.pvalues_outfile,
                                                      columns=True)
-        _, perm_pvalues = self.combine_pickles(self.perm_pvalues_outfile)
+        _, perm_pvalues = self.combine_pickles(self.outdir,
+                                               self.perm_pvalues_outfile)
 
         # Create a pandas dataframe from the nested list.
-        print("Creating p-values dataframe.")
+        print("Creating p-values dataframe.", flush=True)
         pvalue_df = self.create_df(pvalues_data, columns)
 
         # Create a dataframe with z-scores.
-        print("Creating Z-score dataframe.")
+        print("Creating Z-score dataframe.", flush=True)
         zscore_df = self.create_zscore_df(pvalue_df)
         save_dataframe(df=zscore_df,
                        outpath=os.path.join(self.outdir,
@@ -111,16 +110,16 @@ class CombineAndPlot:
         pvalues = pvalue_df.melt()["value"].to_list()
 
         # Sort the lists.
-        print("Sorting p-values.")
+        print("Sorting p-values.", flush=True)
         perm_pvalues = sorted(perm_pvalues)
         pvalues = sorted(pvalues)
 
         # Visualise null distribution.
-        print("Visualizing distributions.")
+        print("Visualizing distributions.", flush=True)
         self.plot_distributions(perm_pvalues, pvalues, self.outdir)
 
         # Create the FDR dataframes.
-        print("Creating permutation FDR dataframe.")
+        print("Creating permutation FDR dataframe.", flush=True)
         perm_fdr_df = self.create_perm_fdr_df(pvalue_df,
                                               pvalues,
                                               perm_pvalues,
@@ -131,7 +130,7 @@ class CombineAndPlot:
                                             "perm_fdr_table.txt.gz"),
                        header=True, index=True)
 
-        print("Creating Benjamini-Hochberg FDR dataframe.")
+        print("Creating Benjamini-Hochberg FDR dataframe.", flush=True)
         bh_fdr_df = self.create_bh_fdr_df(pvalue_df, pvalues)
         save_dataframe(df=bh_fdr_df,
                        outpath=os.path.join(self.outdir,
@@ -139,26 +138,33 @@ class CombineAndPlot:
                        header=True, index=True)
 
         # Compare the two pvalue scores.
-        print("Creating score visualisation.")
+        print("Creating score visualisation.", flush=True)
         self.compare_pvalue_scores(pvalue_df, perm_fdr_df, bh_fdr_df,
                                    self.outdir)
         self.compare_pvalue_scores(pvalue_df, perm_fdr_df, bh_fdr_df,
                                    self.outdir, stepsize=0.02, max_val=0.05)
 
-        # Stop timer.
-        process_time = time.time() - start_time
-
         # Print the time.
-        minutes, seconds = divmod(process_time, 60)
-        print("Finished in {:.0f} minutes and "
-              "{:.0f} seconds".format(minutes, seconds))
+        run_time_min, run_time_sec = divmod(time.time() - start_time, 60)
+        run_time_hour, run_time_min = divmod(run_time_min, 60)
+        print("[manager]\tfinished in  {} hour(s), {} minute(s) and "
+              "{} second(s).".format(int(run_time_hour),
+                                     int(run_time_min),
+                                     int(run_time_sec)), flush=True)
 
     @staticmethod
-    def combine_pickles(inpath, columns=False):
+    def combine_pickles(indir, filename, columns=False):
         col_list = None
         data = []
-        infiles = sorted(glob.glob(inpath + "*.pkl"))
-        for i, fpath in enumerate(infiles):
+        infiles = glob.glob(os.path.join(indir, filename + "*.pkl"))
+        start_indices = []
+        for fpath in infiles:
+            fpath_si = int(fpath.split(filename)[1].split('.')[0])
+            start_indices.append(fpath_si)
+        start_indices = sorted(start_indices)
+
+        for i, start_index in enumerate(start_indices):
+            fpath = os.path.join(indir, filename + str(start_index) + ".pkl")
             with open(fpath, "rb") as f:
                 content = pickle.load(f)
                 if columns and i == 0:
