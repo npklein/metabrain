@@ -1,7 +1,7 @@
 """
 File:         workers2.py
 Created:      2020/04/01
-Last Changed: 2020/04/02
+Last Changed: 2020/04/07
 Author(s):    M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -41,6 +41,8 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
     start_time_str = datetime.fromtimestamp(start_time).strftime(
         "%d-%m-%Y, %H:%M:%S")
     print("[worker {:2d}]\tstarted [{}].".format(worker_id, start_time_str), flush=True)
+
+    weird_eqtls = []
 
     # Wait until sample orders are received.
     sample_orders = None
@@ -158,6 +160,8 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
 
                 # Create the null model.
                 null_matrix = technical_covs.mul(genotype, axis=1)
+                genotype_as_df = pd.DataFrame([genotype], index=["SNP"])
+                null_matrix = pd.concat([genotype_as_df, null_matrix])
                 df_null, rss_null = create_model(null_matrix.T, expression)
 
                 # Loop over each sample order.
@@ -177,20 +181,17 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                         #           "{}/{}".format(worker_id, j + 1,
                         #                          cov_df.shape[0]))
 
+                        # Perform permutation of the covariate of interest.
+                        covariate_all = cov_df.iloc[j, :].copy()
+                        covariate_all_index = covariate_all.index
+                        covariate_all = covariate_all.reindex(covariate_all.index[sample_order])
+                        covariate_all.index = covariate_all_index
+
                         # Calculate the interaction of the covariate of
                         # interest.
-                        covariate_all = cov_df.iloc[j, :].copy()
                         interaction_all = covariate_all * genotype_all
                         interaction_all.name = cov_name
-
-                        # Reorder the series.
-                        interaction_all = interaction_all.reindex(interaction_all.index[sample_order])
-
-                        # Remove missing values.
-                        interaction_all = interaction_all.dropna()
-
-                        # Set the identical names as the null matrix.
-                        interaction_all.index = null_matrix.columns
+                        interaction_all.dropna(inplace=True)
 
                         # Create the alternative matrix.
                         alt_matrix = null_matrix.copy()
@@ -203,6 +204,9 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                         pvalue = compare_models(rss_null, rss_alt,
                                                 df_null, df_alt,
                                                 n)
+
+                        if rss_alt > rss_null:
+                            weird_eqtls.append((rss_null, rss_alt, eqtl_index, order_id, cov_name))
 
                         # Safe.
                         snp_pvalues.append(pvalue)
@@ -218,6 +222,13 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
         except queue.Empty:
             break
 
+    print("[worker {:2d}]\t Analyses where RSS alt > RSS null:", flush=True)
+    for we in weird_eqtls:
+        print("[worker {:2d}]\tRSS null:{}\tRSS alt: {}\teQTL: {}\t"
+              "Sample order: {}\tCovariate: {}".format(worker_id, we[0], we[1],
+                                                       we[2], we[3], we[4],
+                                                       we[5]), flush=True)
+
     # Calculate the worker process time.
     end_time = time.time()
     end_time_str = datetime.fromtimestamp(end_time).strftime(
@@ -228,7 +239,8 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
           "{} minute(s), and {} second(s).".format(worker_id, end_time_str,
                                                    int(run_time_hour),
                                                    int(run_time_min),
-                                                   int(run_time_sec)), flush=True)
+                                                   int(run_time_sec)),
+          flush=True)
 
 
 def load_covariate_file(cov_inpath, tech_covs):
@@ -238,7 +250,6 @@ def load_covariate_file(cov_inpath, tech_covs):
                          index_col=0)
 
     tech_cov_df = cov_df.loc[tech_covs, :]
-    cov_df.drop(tech_covs, inplace=True)
 
     return tech_cov_df, cov_df
 

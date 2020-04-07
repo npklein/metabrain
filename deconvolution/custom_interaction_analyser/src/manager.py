@@ -1,7 +1,7 @@
 """
 File:         manager.py
 Created:      2020/04/01
-Last Changed: 2020/04/04
+Last Changed: 2020/04/07
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -36,7 +36,7 @@ import os
 
 # Local application imports.
 from general.local_settings import LocalSettings
-from general.utilities import prepare_output_dir
+from general.utilities import check_file_exists, prepare_output_dir
 from .workers2 import process_worker
 
 
@@ -94,6 +94,7 @@ class Manager:
                                                               cores)
 
         # Define output filenames.
+        self.perm_orders_outfile = os.path.join(self.outdir, settings.get_setting("permutations_order_pickle_filename") + ".pkl")
         self.pvalues_outfile = os.path.join(self.outdir, settings.get_setting("actual_pvalues_pickle_filename") + "{}.pkl".format(self.skip_rows))
         self.perm_pvalues_outfile = os.path.join(self.outdir, settings.get_setting("permuted_pvalues_pickle_filename") + "{}.pkl".format(self.skip_rows))
 
@@ -164,6 +165,25 @@ class Manager:
         # start the timer.
         start_time = int(time.time())
 
+        # Get the permutation orders.
+        permutation_orders = None
+        if check_file_exists(self.perm_orders_outfile):
+            print("[manager]\tloading permutation order.", flush=True)
+            permutation_orders = self.load_pickle(self.perm_orders_outfile)
+            if len(permutation_orders) != (self.n_permutations + 1):
+                print("[manager]\t\tinvalid.", flush=True)
+                permutation_orders = None
+            for order in permutation_orders:
+                if len(order) != self.n_samples:
+                    print("[manager]\t\tinvalid.", flush=True)
+                    permutation_orders = None
+                    break
+
+        if permutation_orders is None:
+            print("[manager]\tcreating permutation order.")
+            permutation_orders = self.create_perm_orders()
+            self.dump_pickle(permutation_orders, self.perm_orders_outfile)
+
         # create queues.
         start_manager = mp.Manager()
         start_q = start_manager.Queue()
@@ -174,7 +194,9 @@ class Manager:
 
         # load the start queue.
         print("[manager]\tloading start queue.", flush=True)
-        all_sample_orders = self.fill_start_queue(start_q)
+        for _ in range(self.n_cores):
+            start_q.put(permutation_orders)
+        all_sample_orders = [i for i in range(len(permutation_orders))]
 
         # load the wait list.
         print("[manager]\tcreating waitlist.", flush=True)
@@ -377,12 +399,9 @@ class Manager:
 
         # Pickle the files.
         print("[manager]\tsaving output files.", flush=True)
-        with open(self.pvalues_outfile, "wb") as f:
-            pickle.dump(pvalue_data, f)
-        f.close()
-        with open(self.perm_pvalues_outfile, "wb") as f:
-            pickle.dump(perm_pvalues, f)
-        f.close()
+        # Pickle the files.
+        self.dump_pickle(pvalue_data, self.pvalues_outfile)
+        self.dump_pickle(perm_pvalues, self.perm_pvalues_outfile)
 
         # Print the time.
         run_time = int(time.time()) - start_time
@@ -402,16 +421,23 @@ class Manager:
             datetime.now().strftime("%H:%M:%S")),
             flush=True)
 
-    def fill_start_queue(self, start_queue):
-        # Create x random shuffles of the column indices.
+    @staticmethod
+    def load_pickle(fpath):
+        with open(fpath, "rb") as f:
+            content = pickle.load(f)
+        return content
+
+    @staticmethod
+    def dump_pickle(content, fpath):
+        with open(fpath, "wb") as f:
+            pickle.dump(content, f)
+        f.close()
+
+    def create_perm_orders(self):
         sample_orders = [self.get_column_indices()]
         for _ in range(self.n_permutations):
             sample_orders.append(self.create_random_shuffle())
-
-        for _ in range(self.n_cores):
-            start_queue.put(sample_orders)
-
-        return [i for i in range(len(sample_orders))]
+        return sample_orders
 
     def get_column_indices(self):
         return [x for x in range(self.n_samples)]

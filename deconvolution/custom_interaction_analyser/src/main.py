@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/23
-Last Changed: 2020/04/03
+Last Changed: 2020/04/07
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -37,7 +37,7 @@ import os
 
 # Local application imports.
 from general.local_settings import LocalSettings
-from general.utilities import prepare_output_dir
+from general.utilities import check_file_exists, prepare_output_dir
 from .workers import process_worker
 
 
@@ -106,6 +106,7 @@ class Main:
         self.chunk_size = chunk_size
 
         # Create output filepaths.
+        self.perm_orders_outfile = os.path.join(self.outdir, settings.get_setting("permutations_order_pickle_filename") + ".pkl")
         self.pvalues_outfile = os.path.join(self.outdir, settings.get_setting("actual_pvalues_pickle_filename") + "{}.pkl".format(self.skip_rows))
         self.perm_pvalues_outfile = os.path.join(self.outdir, settings.get_setting("permuted_pvalues_pickle_filename") + "{}.pkl".format(self.skip_rows))
 
@@ -157,6 +158,25 @@ class Main:
         # Start the timer.
         start_time = time.time()
 
+        # Get the permutation orders.
+        permutation_orders = None
+        if check_file_exists(self.perm_orders_outfile):
+            print("Loading permutation order.")
+            permutation_orders = self.load_pickle(self.perm_orders_outfile)
+            if len(permutation_orders) != (self.n_permutations + 1):
+                print("\tInvalid.")
+                permutation_orders = None
+            for order in permutation_orders:
+                if len(order) != self.n_samples:
+                    print("\tInvalid.")
+                    permutation_orders = None
+                    break
+
+        if permutation_orders is None:
+            print("Creating permutation order.")
+            permutation_orders = self.create_perm_orders()
+            self.dump_pickle(permutation_orders, self.perm_orders_outfile)
+
         # Calculate the size of the queues.
         total_analyses = self.n_eqtls * (self.n_permutations + 1)
 
@@ -170,11 +190,21 @@ class Main:
 
         # Fill start queue.
         print("Loading start queue.")
-        self.fill_start_queue(start_queue)
+        for _ in range(self.n_cores):
+            start_queue.put(permutation_orders)
 
         # Fill input queue.
         print("Loading input queue.")
-        self.fill_input_queue(input_queue)
+        # Create a list of start indices.
+        start_indices = [i for i in range(self.skip_rows + 1,
+                                          self.skip_rows + self.n_eqtls + 1,
+                                          self.chunk_size)]
+        if self.n_eqtls == 1 and self.chunk_size == 1:
+            start_indices = [self.skip_rows + 1]
+
+        # Start filling the input queue.
+        for start_index in start_indices:
+            input_queue.put(start_index)
 
         # Fire off the workers.
         processes = []
@@ -252,12 +282,8 @@ class Main:
             proc.join()
 
         # Pickle the files.
-        with open(self.pvalues_outfile, "wb") as f:
-            pickle.dump(pvalue_data, f)
-        f.close()
-        with open(self.perm_pvalues_outfile, "wb") as f:
-            pickle.dump(perm_pvalues, f)
-        f.close()
+        self.dump_pickle(pvalue_data, self.pvalues_outfile)
+        self.dump_pickle(perm_pvalues, self.perm_pvalues_outfile)
 
         # Print the time.
         run_time_min, run_time_sec = divmod(time.time() - start_time, 60)
@@ -267,26 +293,23 @@ class Main:
                                      int(run_time_min),
                                      int(run_time_sec)))
 
-    def fill_start_queue(self, start_queue):
-        # Create x random shuffles of the column indices.
+    @staticmethod
+    def load_pickle(fpath):
+        with open(fpath, "rb") as f:
+            content = pickle.load(f)
+        return content
+
+    @staticmethod
+    def dump_pickle(content, fpath):
+        with open(fpath, "wb") as f:
+            pickle.dump(content, f)
+        f.close()
+
+    def create_perm_orders(self):
         sample_orders = [self.get_column_indices()]
         for _ in range(self.n_permutations):
             sample_orders.append(self.create_random_shuffle())
-
-        for _ in range(self.n_cores):
-            start_queue.put(sample_orders)
-
-    def fill_input_queue(self, input_queue):
-        # Create a list of start indices.
-        start_indices = [i for i in range(self.skip_rows + 1,
-                                          self.skip_rows + self.n_eqtls + 1,
-                                          self.chunk_size)]
-        if self.n_eqtls == 1 and self.chunk_size == 1:
-            start_indices = [self.skip_rows + 1]
-
-        # Start filling the input queue.
-        for start_index in start_indices:
-            input_queue.put(start_index)
+        return sample_orders
 
     def get_column_indices(self):
         return [x for x in range(self.n_samples)]
@@ -309,6 +332,7 @@ class Main:
         print("  > Single analysis max runtime: {} sec".format(self.analysis_max_runtime))
         print("  > Print interval: {} sec".format(self.print_interval))
         print("  > N permutations: {}".format(self.n_permutations))
+        print("  > Permutations order output file: {}".format(self.perm_orders_outfile))
         print("  > Actual P-values output file: {}".format(self.pvalues_outfile))
         print("  > Permutated P-values output file: {}".format(self.perm_pvalues_outfile))
         print("  > Skip rows: {}".format(self.skip_rows))

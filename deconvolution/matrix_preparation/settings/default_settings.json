@@ -12,44 +12,51 @@
   },
   "create_matrices": {
     "genotype_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-02-18-eqtls/cortex-genotypedump-EURandAFR/GenotypeData.txt.gz",
-    "expression_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-02-17-step5-remove-covariates-per-dataset/output-cortex/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.CovariatesRemovedOLS.txt.gz",
+    "expression_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-02-17-step5-remove-covariates-per-dataset/output-cortex/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.CovariatesRemovedOLS.txt.gz"
+  },
+  "create_deconvolution_matrices": {
+    "celltype_profile_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/data/CellMap_brain_celltype_avgCPM.txt",
+    "translate_datafile": "/groups/umcg-biogen/tmp03/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz",
     "marker_dict": {
       "neurons": [
-        "UCHL1",
-        "INA",
-        "SYT10",
-        "RELN",
-        "ELAVL3"
+        "NPY",
+        "VIP",
+        "CCK",
+        "CALB2",
+        "KIT"
       ],
       "oligodendrocytes": [
-        "CA2",
-        "MOBP",
-        "ASPA",
-        "SOX10",
-        "OLIG2"
+        "MOG",
+        "MBP",
+        "MAG",
+        "CNP",
+        "CA2"
       ],
       "endothelialcells": [
         "CD34",
         "VWF",
-        "CXCL12",
-        "SHE",
-        "CAV1"
+        "ENG",
+        "KDR",
+        "CXCL12"
       ],
       "microglia": [
         "AIF1",
+        "CCL2",
+        "CX3CR1",
         "TLR2",
-        "CD14",
-        "CD68",
-        "IL1A"
+        "CD14"
       ],
       "astrocytes": [
+        "GFAP",
+        "AQP4",
         "EGFR",
-        "FABP7",
-        "GJB6",
-        "CLU",
-        "MLC1"
+        "SLC1A3",
+        "SLC1A2"
       ]
     }
+  },
+  "perform_celltype_pca": {
+
   },
   "create_cov_matrix": {
     "covariate_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-02-17-step5-remove-covariates-per-dataset/2020-02-17-freeze2dot1.TMM.Covariates.withBrainRegion-noncategorical-variable.top20correlated-cortex-withMDS.txt.gz",
