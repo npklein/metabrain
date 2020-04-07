@@ -45,11 +45,12 @@
     "UCLA_ASD-EUR",
     "ENA-EU"
   ],
+  "permutations_order_pickle_filename": "permutation_order",
   "actual_pvalues_pickle_filename": "pvalue_data_",
   "permuted_pvalues_pickle_filename": "perm_pvalues_",
   "n_permutations": 10,
   "sleep_time_in_sec": 10,
   "print_interval_in_sec": 300,
   "single_eqtl_max_runtime_in_min": 4,
-  "max_runtime_in_hours": 6
+  "max_runtime_in_hours": 12
 }

@@ -1,7 +1,7 @@
 """
 File:         create_cov_matrices.py
 Created:      2020/03/12
-Last Changed: 2020/03/19
+Last Changed: 2020/04/07
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -33,12 +33,15 @@ from general.df_utilities import load_dataframe, save_dataframe
 
 
 class CreateCovMatrix:
-    def __init__(self, settings, marker_file, sample_order, force, outdir):
+    def __init__(self, settings, marker_file, celltype_pcs, sample_order,
+                 force, outdir):
         """
         The initializer for the class.
 
         :param settings: string, the settings.
         :param marker_file: string, path to the marker file.
+        :param celltype_pcs: DataFrame, the first principle component of each
+                             celltype expression.
         :param sample_order: list, order of samples.
         :param force: boolean, whether or not to force the step to redo.
         :param outdir: string, the output directory.
@@ -52,6 +55,7 @@ class CreateCovMatrix:
         self.eig_bef_cov_corr_file = settings["eigenvectors_before_cov_corr_datafile"]
         self.marker_file = marker_file
         self.sample_order = sample_order
+        self.celltype_pcs = celltype_pcs
         self.force = force
 
         # Prepare an output directories.
@@ -129,7 +133,7 @@ class CreateCovMatrix:
         # merge.
         print("Merging matrices.")
         comb_cov = reduce(lambda left, right: pd.merge(left, right, left_index=True, right_index=True),
-                          [cov_df, cohorts_df, gender_df, eigen_df, cov_cor_df, marker_df])
+                          [cov_df, cohorts_df, gender_df, eigen_df, cov_cor_df, self.celltype_pcs.T, marker_df])
         comb_cov = comb_cov.T
         comb_cov = comb_cov[self.sample_order]
         comb_cov.index = comb_cov.index.set_names(['Sample'])
@@ -176,6 +180,7 @@ class CreateCovMatrix:
         print("  > N. Eigenvectors: {}".format(self.n_eigen))
         print("  > Eigenvec before cov. corr. input file: {}".format(self.eig_bef_cov_corr_file))
         print("  > Markers input file: {}".format(self.marker_file))
+        print("  > Celltype PCs: {}".format(self.celltype_pcs.shape))
         print("  > Output path: {}".format(self.outpath))
         print("  > Force: {}".format(self.force))
         print("")

@@ -1,7 +1,7 @@
 """
 File:         create_matrices.py
 Created:      2020/03/12
-Last Changed: 2020/03/19
+Last Changed: 2020/04/07
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -50,7 +50,6 @@ class CreateMatrices:
         """
         self.geno_file = settings["genotype_datafile"]
         self.expr_file = settings["expression_datafile"]
-        self.marker_dict = settings["marker_dict"]
         self.gte_df = gte_df
         self.sample_dict = sample_dict
         self.sample_order = sample_order
@@ -65,26 +64,27 @@ class CreateMatrices:
         self.geno_outpath = os.path.join(self.outdir, "genotype_table.txt.gz")
         self.alleles_outpath = os.path.join(self.outdir, "genotype_alleles.txt.gz")
         self.expr_outpath = os.path.join(self.outdir, "expression_table.txt.gz")
-        self.markers_outpath = os.path.join(self.outdir, "marker_genes.txt.gz")
         self.group_outpath = os.path.join(self.outdir, "groups.pkl")
 
+        # Create empty variable.
+        self.complete_expr_matrix = None
+
     def start(self):
-        print("Starting creating complete genotype / expression matrices.")
+        print("Starting creating matrices.")
         self.print_arguments()
 
         # Check if output file exist.
         if check_file_exists(self.geno_outpath) and \
                 check_file_exists(self.alleles_outpath) and \
                 check_file_exists(self.expr_outpath) and \
-                check_file_exists(self.markers_outpath) and \
                 check_file_exists(self.group_outpath) and \
                 not self.force:
             print("Skipping step.")
             return
 
         # Remove the output files.
-        for outfile in [self.geno_outpath, self.alleles_outpath, self.expr_outpath,
-                        self.markers_outpath, self.group_outpath]:
+        for outfile in [self.geno_outpath, self.alleles_outpath,
+                        self.expr_outpath, self.group_outpath]:
             if os.path.isfile(outfile):
                 print("Removing file: {}.".format(outfile))
                 os.remove(outfile)
@@ -100,22 +100,24 @@ class CreateMatrices:
         print("Loading expression matrix.")
         expr_df = load_dataframe(self.expr_file, header=0, index_col=0)
         expr_df = expr_df.rename(columns=self.sample_dict)
-        expr_df = expr_df[self.sample_order]
+        self.complete_expr_matrix = expr_df[self.sample_order]
 
         # Construct the genotype / expression matrices.
         print("Constructing matrices.")
         geno_str_buffer = ["-" + "\t" + "\t".join(self.sample_order) + "\n"]
         expr_str_buffer = ["-" + "\t" + "\t".join(self.sample_order) + "\n"]
         allele_str_buffer = ["-" + "\t" + "\t".join(list(allele_df.columns)) + "\n"]
-        marker_str_buffer = ["-" + "\t" + "\t".join(self.sample_order) + "\n"]
 
+        saved_profile_genes = []
         groups = []
         new_group_id = 0
         n_snps = self.eqtl_df.shape[0]
         for i, row in self.eqtl_df.iterrows():
             if (i % 250 == 0) or (i == (n_snps - 1)):
                 print("\tProcessing {}/{} "
-                      "[{:.2f}%]".format(i, n_snps, (100 / n_snps) * i))
+                      "[{:.2f}%]".format(i,
+                                         (n_snps - 1),
+                                         (100 / (n_snps - 1)) * i))
 
                 # Write output files.
                 self.write_buffer(self.geno_outpath, geno_str_buffer)
@@ -126,9 +128,6 @@ class CreateMatrices:
 
                 self.write_buffer(self.alleles_outpath, allele_str_buffer)
                 allele_str_buffer = []
-
-                self.write_buffer(self.markers_outpath, marker_str_buffer)
-                marker_str_buffer = []
 
             # Get the row info.
             snp_name = row["SNPName"]
@@ -163,7 +162,7 @@ class CreateMatrices:
             allele_str_buffer.append(allele_str)
 
             # Get the expression.
-            expression = expr_df.loc[[probe_name], :]
+            expression = self.complete_expr_matrix.loc[[probe_name], :]
             if (len(expression.index)) != 1:
                 print("Probe: {} gives 0 or >1 expression "
                       "profiles.".format(probe_name))
@@ -171,14 +170,6 @@ class CreateMatrices:
             expr_str = snp_name + "\t" + "\t".join(
                 expression.iloc[0, :].astype(str).values) + "\n"
             expr_str_buffer.append(expr_str)
-
-            # Check if it is a marker gene.
-            for celltype, marker_genes in self.marker_dict.items():
-                for marker_gene in marker_genes:
-                    if marker_gene == hgnc_name:
-                        marker_str = celltype + "_" + marker_gene + "\t" + \
-                                     "\t".join(expression.iloc[0, :].astype(str).values) + "\n"
-                        marker_str_buffer.append(marker_str)
 
             # Create an eQTL object.
             new_eqtl = Eqtl(snp_name, i, genotype, expression)
@@ -214,9 +205,6 @@ class CreateMatrices:
         if allele_str_buffer:
             self.write_buffer(self.alleles_outpath, allele_str_buffer)
 
-        if marker_str_buffer:
-            self.write_buffer(self.markers_outpath, marker_str_buffer)
-
         # Pickle the groups.
         print("Writing group pickle file.")
         with open(self.group_outpath, "wb") as f:
@@ -246,8 +234,6 @@ class CreateMatrices:
 
     def clear_variables(self):
         self.geno_file = None
-        self.expr_file = None
-        self.marker_dict = None
         self.gte_df = None
         self.sample_dict = None
         self.sample_order = None
@@ -260,11 +246,14 @@ class CreateMatrices:
     def get_alleles_outpath(self):
         return self.alleles_outpath
 
+    def get_expr_file(self):
+        return self.expr_file
+
     def get_expr_outpath(self):
         return self.expr_outpath
 
-    def get_markers_outpath(self):
-        return self.markers_outpath
+    def get_complete_expr_matrix(self):
+        return self.complete_expr_matrix
 
     def get_group_outpath(self):
         return self.group_outpath
@@ -276,7 +265,6 @@ class CreateMatrices:
         print("  > Genotype output path: {}".format(self.geno_outpath))
         print("  > Alleles output path: {}".format(self.alleles_outpath))
         print("  > Expression output path: {}".format(self.expr_outpath))
-        print("  > Markers output path: {}".format(self.markers_outpath))
         print("  > Groups pickle output path: {}".format(self.group_outpath))
         print("  > GTE input shape: {}".format(self.gte_df.shape))
         print("  > eQTL input shape: {}".format(self.eqtl_df.shape))

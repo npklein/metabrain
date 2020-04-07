@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/13
-Last Changed: 2020/03/20
+Last Changed: 2020/04/07
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -31,6 +31,7 @@ import os
 from general.utilities import prepare_output_dir
 from general.local_settings import LocalSettings
 from general.objects.dataset import Dataset
+from .figures.celltype_profile_pc_vs_marker_genes import CelltypeProfileVSMarkerGenes
 from .figures.simple_eqtl_effect import SimpleeQTLEffect
 from .figures.inter_zscore_bars import InterZscoreBars
 from .figures.inter_zscore_dist import InterZscoreDist
@@ -84,7 +85,14 @@ class Main:
         if self.validate:
             ds.load_all()
 
-        # Figure 1: a simple eQTL effect.
+        if ('celltype_profile_pc_vs_marker_genes' in self.plots) or \
+                ('all' in self.plots):
+            print("\n### CellType Profile PC vs Marker Genes ###\n")
+            cpvmg = CelltypeProfileVSMarkerGenes(dataset=ds,
+                                                 outdir=self.outdir)
+            cpvmg.start()
+            del cpvmg
+
         if ('simple_eqtl_effect' in self.plots) or ('all' in self.plots):
             print("\n### SIMPLE EQTL EFFECT ###\n")
             sef = SimpleeQTLEffect(dataset=ds,
@@ -99,19 +107,19 @@ class Main:
             izb.start()
             del izb
 
-        if ('inter_zscore_dist' in self.plots) or ('all' in self.plots):
-            print("\n### INTERACTION Z-SCORE DISTRIBUTION PLOT ###\n")
-            izd = InterZscoreDist(dataset=ds,
-                                  outdir=self.outdir)
-            izd.start()
-            del izd
+        # if ('inter_zscore_dist' in self.plots) or ('all' in self.plots):
+        #     print("\n### INTERACTION Z-SCORE DISTRIBUTION PLOT ###\n")
+        #     izd = InterZscoreDist(dataset=ds,
+        #                           outdir=self.outdir)
+        #     izd.start()
+        #     del izd
 
-        if ('inter_zscore_marker_genes' in self.plots) or ('all' in self.plots):
-            print("\n### INTERACTION Z-SCORE CLUSTERMAP ###\n")
-            izmg = InterZscoreMarkerGenes(dataset=ds,
-                                          outdir=self.outdir)
-            izmg.start()
-            del izmg
+        # if ('inter_zscore_marker_genes' in self.plots) or ('all' in self.plots):
+        #     print("\n### INTERACTION Z-SCORE MARKER GENES ###\n")
+        #     izmg = InterZscoreMarkerGenes(dataset=ds,
+        #                                   outdir=self.outdir)
+        #     izmg.start()
+        #     del izmg
 
         if ('inter_zscore_clustermap' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION Z-SCORE CLUSTERMAP ###\n")

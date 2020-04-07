@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed: 2020/04/04
+Last Changed: 2020/04/07
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -142,7 +142,8 @@ class CombineAndPlot:
         self.compare_pvalue_scores(pvalue_df, perm_fdr_df, bh_fdr_df,
                                    self.outdir)
         self.compare_pvalue_scores(pvalue_df, perm_fdr_df, bh_fdr_df,
-                                   self.outdir, stepsize=0.02, max_val=0.05)
+                                   self.outdir, stepsize=0.1, max_val=0.05,
+                                   rescale=True)
 
         # Print the time.
         run_time_min, run_time_sec = divmod(time.time() - start_time, 60)
@@ -230,6 +231,8 @@ class CombineAndPlot:
                 perm_rank = bisect_left(perm_pvalues, pvalue)
                 if (rank > 0) and (perm_rank > 0):
                     fdr_value = (perm_rank / n_perm) / rank
+                    if fdr_value > 1:
+                        fdr_value = 1
                 else:
                     fdr_value = 0
                 # print("P-value: {:.2e}\tRank: {:{}d}\tPerm.Rank: {:{}d}\t"
@@ -297,10 +300,14 @@ class CombineAndPlot:
         return stats.norm.isf(p_value)
 
     def compare_pvalue_scores(self, pvalue_df, perm_fdr, bh_fdr, outdir,
-                              stepsize=0.2, max_val=1.0):
+                              stepsize=0.2, max_val=1.0, rescale=False):
         df = pd.DataFrame({"P-value": pvalue_df.melt()["value"],
                            "Permutation FDR": perm_fdr.melt()["value"],
                            "BH FDR": bh_fdr.melt()["value"]})
+
+        if rescale:
+            df = -np.log10(df + 1)
+            df.columns = ["-log10({} + 1)".format(x) for x in df.columns]
 
         # Filter the values of interest.
         indices = []

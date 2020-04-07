@@ -73,10 +73,10 @@ class InterZscoreBars:
                fontsize=12, alpha=0.75, ha='center', va='bottom',
                transform=ax.transAxes)
         g.set_ylabel('covariate',
-                     fontsize=12,
+                     fontsize=10,
                      fontweight='bold')
         g.set_xlabel('sum(z-score^2)',
-                     fontsize=12,
+                     fontsize=10,
                      fontweight='bold')
         ax.tick_params(labelsize=5)
         ax.set_yticks(range(len(df.index)))

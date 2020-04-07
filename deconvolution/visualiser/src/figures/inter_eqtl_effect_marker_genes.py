@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect_marker_genes.py
 Created:      2020/03/17
-Last Changed: 2020/04/02
+Last Changed: 2020/04/07
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -24,11 +24,11 @@ from colour import Color
 import os
 
 # Third party imports.
+from scipy import stats
 import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from scipy import stats
 
 # Local application imports.
 from general.utilities import prepare_output_dir, p_value_to_symbol
@@ -68,6 +68,9 @@ class IntereQTLEffectMarkerGenes:
             if ("_" in index) and (
                     index.split("_")[0] in self.celltypes):
                 marker_indices.append(index)
+
+        # Get the covariates of the marker genes.
+        markers = self.cov_df.loc[marker_indices, :].T
 
         print("Iterating over eQTLs.")
         for i, (index, row) in enumerate(self.eqtl_df.iterrows()):
@@ -128,9 +131,6 @@ class IntereQTLEffectMarkerGenes:
             interaction_effect = self.inter_df.iloc[:, i].to_frame()
             interaction_effect = interaction_effect.loc[marker_indices, :]
             interaction_effect.columns = ["zscore"]
-
-            # Get the covariates of the marker genes.
-            markers = self.cov_df.loc[marker_indices, :].T
 
             self.plot(snp_name, probe_name, hgnc_name, data, markers,
                       interaction_effect, self.celltypes, i, self.outdir)
