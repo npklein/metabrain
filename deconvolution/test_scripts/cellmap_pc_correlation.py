@@ -3,7 +3,7 @@
 """
 File:         cellmap_pc_correlation.py
 Created:      2020/04/07
-Last Changed:
+Last Changed: 2020/04/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -56,7 +56,7 @@ __description__ = "{} is a program developed and maintained by {}. " \
 class main():
     def __init__(self):
         self.profile_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/matrix_preparation/output/perform_celltype_pca/celltype_pcs.txt.gz"
-        self.marker_genes = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/matrix_preparation/output/create_matrices/marker_genes.txt.gz"
+        self.marker_genes = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/matrix_preparation/output/create_deconvolution_matrices/marker_genes.txt.gz"
         self.outdir = str(Path(__file__).parent.parent)
 
     def start(self):

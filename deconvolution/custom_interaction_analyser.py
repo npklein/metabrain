@@ -3,7 +3,7 @@
 """
 File:         custom_interaction_analyser.py
 Created:      2020/03/23
-Last Changed: 2020/04/02
+Last Changed: 2020/04/07
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -27,7 +27,6 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 # Third party imports.
 
 # Local application imports.
-from custom_interaction_analyser.src.main import Main
 from custom_interaction_analyser.src.manager import Manager
 from custom_interaction_analyser.src.combine_and_plot import CombineAndPlot
 from custom_interaction_analyser.src.cmd_line_arguments import \
@@ -52,7 +51,6 @@ if __name__ == '__main__':
                                version=__version__,
                                description=__description__)
     SETTINGS_FILE = CLA.get_argument("settings")
-    VERBOSE = CLA.get_argument("verbose")
     COMBINE = CLA.get_argument("combine")
 
     if COMBINE:
@@ -63,14 +61,9 @@ if __name__ == '__main__':
         N_EQTLS = CLA.get_argument("n_eqtls")
         N_SAMPLES = CLA.get_argument("n_samples")
         CORES = CLA.get_argument("cores")
+        VERBOSE = CLA.get_argument("verbose")
 
         # Start the program.
-        # PROGRAM = Main(settings_file=SETTINGS_FILE,
-        #                skip_rows=SKIP_ROWS,
-        #                n_eqtls=N_EQTLS,
-        #                n_samples=N_SAMPLES,
-        #                cores=CORES)
-        # PROGRAM.start()
         PROGRAM = Manager(settings_file=SETTINGS_FILE,
                           skip_rows=SKIP_ROWS,
                           n_eqtls=N_EQTLS,
