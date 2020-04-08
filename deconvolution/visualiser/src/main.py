@@ -107,12 +107,12 @@ class Main:
             izb.start()
             del izb
 
-        # if ('inter_zscore_dist' in self.plots) or ('all' in self.plots):
-        #     print("\n### INTERACTION Z-SCORE DISTRIBUTION PLOT ###\n")
-        #     izd = InterZscoreDist(dataset=ds,
-        #                           outdir=self.outdir)
-        #     izd.start()
-        #     del izd
+        if ('inter_zscore_dist' in self.plots) or ('all' in self.plots):
+            print("\n### INTERACTION Z-SCORE DISTRIBUTION PLOT ###\n")
+            izd = InterZscoreDist(dataset=ds,
+                                  outdir=self.outdir)
+            izd.start()
+            del izd
 
         # if ('inter_zscore_marker_genes' in self.plots) or ('all' in self.plots):
         #     print("\n### INTERACTION Z-SCORE MARKER GENES ###\n")

@@ -58,6 +58,9 @@
   "perform_celltype_pca": {
 
   },
+  "perform_deconvolution": {
+
+  },
   "create_cov_matrix": {
     "covariate_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-02-17-step5-remove-covariates-per-dataset/2020-02-17-freeze2dot1.TMM.Covariates.withBrainRegion-noncategorical-variable.top20correlated-cortex-withMDS.txt.gz",
     "covariate_exclude": [

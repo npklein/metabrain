@@ -262,7 +262,7 @@ class CombineAndPlot:
         fdr_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
         for row_index in range(df.shape[0]):
             for col_index in range(df.shape[1]):
-                pvalue = df.iat[row_index, col_index]
+                pvalue = df.iloc[row_index, col_index]
                 rank = bisect_left(pvalues, pvalue)
                 perm_rank = bisect_left(perm_pvalues, pvalue)
                 if (rank > 0) and (perm_rank > 0):
@@ -271,7 +271,7 @@ class CombineAndPlot:
                         fdr_value = 1
                 else:
                     fdr_value = 0
-                fdr_df.iat[row_index, col_index] = fdr_value
+                fdr_df.iloc[row_index, col_index] = fdr_value
         return fdr_df
 
     @staticmethod
@@ -291,13 +291,13 @@ class CombineAndPlot:
         fdr_values = []
         for row_index in range(df.shape[0]):
             for col_index in range(df.shape[1]):
-                pvalue = df.iat[row_index, col_index]
+                pvalue = df.iloc[row_index, col_index]
                 rank = bisect_left(pvalues, pvalue) + 1
                 fdr_value = pvalue * (m / rank)
                 if fdr_value > 1:
                     fdr_value = 1
                 fdr_values.append((rank, row_index, col_index, fdr_value))
-                fdr_df.iat[row_index, col_index] = fdr_value
+                fdr_df.iloc[row_index, col_index] = fdr_value
 
         # Make sure the BH FDR is a monotome function. This goes through
         # the FDR values backwords and make sure that the next FDR is always
@@ -306,7 +306,7 @@ class CombineAndPlot:
         prev_fdr_value = None
         for (rank, row_index, col_index, fdr_value) in fdr_values:
             if prev_fdr_value is not None and fdr_value > prev_fdr_value:
-                fdr_df.iat[row_index, col_index] = prev_fdr_value
+                fdr_df.iloc[row_index, col_index] = prev_fdr_value
                 prev_fdr_value = prev_fdr_value
             else:
                 prev_fdr_value = fdr_value
@@ -323,9 +323,9 @@ class CombineAndPlot:
         zscore_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
         for row_index in range(df.shape[0]):
             for col_index in range(df.shape[1]):
-                pvalue = df.iat[row_index, col_index]
+                pvalue = df.iloc[row_index, col_index]
                 zscore = self.get_z_score(pvalue)
-                zscore_df.iat[row_index, col_index] = zscore
+                zscore_df.iloc[row_index, col_index] = zscore
 
         return zscore_df
 

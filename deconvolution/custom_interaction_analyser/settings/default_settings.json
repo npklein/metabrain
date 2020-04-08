@@ -52,5 +52,5 @@
   "sleep_time_in_sec": 10,
   "print_interval_in_sec": 300,
   "single_eqtl_max_runtime_in_min": 4,
-  "max_runtime_in_hours": 12
+  "max_runtime_in_hours": 24
 }
