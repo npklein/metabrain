@@ -1,7 +1,7 @@
 """
 File:         inter_zscores_bars.py
 Created:      2020/03/16
-Last Changed: 2020/03/18
+Last Changed: 2020/04/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -73,10 +73,10 @@ class InterZscoreBars:
                fontsize=12, alpha=0.75, ha='center', va='bottom',
                transform=ax.transAxes)
         g.set_ylabel('covariate',
-                     fontsize=10,
+                     fontsize=8,
                      fontweight='bold')
         g.set_xlabel('sum(z-score^2)',
-                     fontsize=10,
+                     fontsize=8,
                      fontweight='bold')
         ax.tick_params(labelsize=5)
         ax.set_yticks(range(len(df.index)))

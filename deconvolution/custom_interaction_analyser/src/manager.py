@@ -1,7 +1,7 @@
 """
 File:         manager.py
 Created:      2020/04/01
-Last Changed: 2020/04/07
+Last Changed: 2020/04/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -37,14 +37,13 @@ import os
 # Local application imports.
 from general.local_settings import LocalSettings
 from general.utilities import check_file_exists, prepare_output_dir
-from .workers2 import process_worker
+from .workers import process_worker
 
 
 class Manager:
     """
     Class for the manager.
     """
-
     def __init__(self, settings_file, skip_rows, n_eqtls, n_samples, cores,
                  verbose):
         """
@@ -75,23 +74,23 @@ class Manager:
         self.n_permutations = settings.get_setting("n_permutations")
         self.sleep_time = settings.get_setting("sleep_time_in_sec")
         self.print_interval = settings.get_setting("print_interval_in_sec")
-        self.analysis_max_runtime = settings.get_setting("single_eqtl_max_runtime_in_min") * 60
+        self.analysis_max_runtime = settings.get_setting(
+            "single_eqtl_max_runtime_in_min") * 60
         self.max_end_time = int(time.time()) + settings.get_setting(
             "max_runtime_in_hours") * 60 * 60
+        self.skip_rows = skip_rows
         self.verbose = verbose
 
-        # Count the number of eQTLs / samples.
+        # Count the number of eQTLs / samples if it isn't given by the user.
         if n_eqtls is None:
             n_eqtls = self.count_n_eqtls()
+        self.n_eqtls = n_eqtls
         if n_samples is None:
             n_samples = self.count_n_samples()
+        self.n_samples = n_samples
 
-        # Determine optimal distribution.
-        self.skip_rows, self.n_eqtls, self.n_samples, self.n_cores, \
-        self.chunk_size = self.determine_optimal_distribution(skip_rows,
-                                                              n_eqtls,
-                                                              n_samples,
-                                                              cores)
+        # Determine optimal distribution of the work of the cores.
+        self.n_cores, self.chunk_size = self.divide_work(n_eqtls, cores)
 
         # Define output filenames.
         self.perm_orders_outfile = os.path.join(self.outdir, settings.get_setting("permutations_order_pickle_filename") + ".pkl")
@@ -99,7 +98,12 @@ class Manager:
         self.perm_pvalues_outfile = os.path.join(self.outdir, settings.get_setting("permuted_pvalues_pickle_filename") + "{}.pkl".format(self.skip_rows))
 
     def count_n_eqtls(self):
-        print("Finding the number of eQTLs")
+        """
+        Method for counting the number of eQTLs (rows) in the genotype and
+        expression file.
+
+        :return geno_nrows: int, the number of eQTLs in both files.
+        """
         geno_nrows = self.get_number_of_rows(self.geno_inpath)
         expr_nrows = self.get_number_of_rows(self.expr_inpath)
         if geno_nrows != expr_nrows:
@@ -110,6 +114,12 @@ class Manager:
 
     @staticmethod
     def get_number_of_rows(inpath):
+        """
+        Method for counting the number of rows in a .txt.gz file.
+
+        :param inpath: string, the input file.
+        :return i: int, the number of rows in the input file.
+        """
         with gzip.open(inpath, 'rb') as f:
             for i, l in enumerate(f):
                 pass
@@ -117,7 +127,12 @@ class Manager:
         return i
 
     def count_n_samples(self):
-        print("Finding the number of samples")
+        """
+        Method for counting the number of samples (columns) in the genotype and
+        expression file.
+
+        :return geno_ncols: int, the number of samples in both files.
+        """
         geno_ncols = self.get_number_of_columns(self.geno_inpath)
         expr_ncols = self.get_number_of_columns(self.expr_inpath)
         if geno_ncols != expr_ncols:
@@ -129,6 +144,12 @@ class Manager:
 
     @staticmethod
     def get_number_of_columns(inpath):
+        """
+        Method for counting the number of columns in a .txt.gz file.
+
+        :param inpath: string, the input file.
+        :return i: int, the number of columns in the input file.
+        """
         with gzip.open(inpath, 'rb') as f:
             for i, l in enumerate(f):
                 ncols = len(l.decode().split("\t")) - 1
@@ -137,13 +158,21 @@ class Manager:
         return ncols
 
     @staticmethod
-    def determine_optimal_distribution(skip_rows, n_eqtls, n_samples, cores):
+    def divide_work(n_eqtls, cores):
+        """
+        Method for distributing the work over the number of cores.
+        .
+        :param n_eqtls: int, the number of eqtls in the input files.
+        :param cores: int, the number of cores to use.
+        :return cores: int, the number of cores to use.
+        :return chunk_size: int, the number of eQTLs per job entree.
+        """
         # Cap the number of cores to the maximum.
         host_cores = mp.cpu_count()
         if cores > host_cores:
             cores = host_cores
 
-        # Set the correct values for skip_rows, chunk size, and cores.
+        # Set the optimal values for the chunk_size and number of cores.
         if n_eqtls == 1:
             chunk_size = 1
             cores = 1
@@ -152,17 +181,18 @@ class Manager:
             cores = n_eqtls
         else:
             chunk_size = min(math.ceil(n_eqtls / cores / 2), 10)
-        return skip_rows, n_eqtls, n_samples, cores, chunk_size
+
+        return cores, chunk_size
 
     def start(self):
         """
-        Function to start the manager.
+        Method to start the manager.
         """
         self.print_arguments()
         print("[manager]\tstarting manager [{}]".format(
             datetime.now().strftime("%H:%M:%S")), flush=True)
 
-        # start the timer.
+        # Start the timer.
         start_time = int(time.time())
 
         # Get the permutation orders.
@@ -170,6 +200,8 @@ class Manager:
         if check_file_exists(self.perm_orders_outfile):
             print("[manager]\tloading permutation order.", flush=True)
             permutation_orders = self.load_pickle(self.perm_orders_outfile)
+
+            # Validate the permutation orders for the given input.
             if len(permutation_orders) != (self.n_permutations + 1):
                 print("[manager]\t\tinvalid.", flush=True)
                 permutation_orders = None
@@ -178,13 +210,12 @@ class Manager:
                     print("[manager]\t\tinvalid.", flush=True)
                     permutation_orders = None
                     break
-
         if permutation_orders is None:
             print("[manager]\tcreating permutation order.")
             permutation_orders = self.create_perm_orders()
             self.dump_pickle(permutation_orders, self.perm_orders_outfile)
 
-        # create queues.
+        # Create the multiprocessing queues.
         start_manager = mp.Manager()
         start_q = start_manager.Queue()
         job_manager = mp.Manager()
@@ -192,36 +223,36 @@ class Manager:
         result_manager = mp.Manager()
         result_q = result_manager.Queue()
 
-        # load the start queue.
+        # Load the start queue.
         print("[manager]\tloading start queue.", flush=True)
         for _ in range(self.n_cores):
             start_q.put(permutation_orders)
         all_sample_orders = [i for i in range(len(permutation_orders))]
 
-        # load the wait list.
+        # Load the wait list.
         print("[manager]\tcreating waitlist.", flush=True)
         wait_list = self.load_wait_list(all_sample_orders)
 
-        # start the workers.
+        # Start the workers.
         print("[manager]\tstarting processes.", flush=True)
-        processes = {}
+        processes = []
         for worker_id in range(self.n_cores):
-            processes[worker_id] = mp.Process(target=process_worker,
-                                              args=(worker_id,
-                                                    self.cov_inpath,
-                                                    self.geno_inpath,
-                                                    self.expr_inpath,
-                                                    self.tech_covs,
-                                                    start_q,
-                                                    job_q,
-                                                    result_q,
-                                                    self.sleep_time,
-                                                    self.max_end_time,
-                                                    self.verbose))
-        for proc in processes.values():
+            processes.append(mp.Process(target=process_worker,
+                                        args=(worker_id,
+                                              self.cov_inpath,
+                                              self.geno_inpath,
+                                              self.expr_inpath,
+                                              self.tech_covs,
+                                              start_q,
+                                              job_q,
+                                              result_q,
+                                              self.sleep_time,
+                                              self.max_end_time,
+                                              self.verbose)))
+        for proc in processes:
             proc.start()
 
-        # initialize variables.
+        # Initialize variables.
         dead_workers = []
         schedule = {}
         doctor_dict = {}
@@ -236,26 +267,24 @@ class Manager:
 
         print("[manager]\tstarting scheduler.")
         while True:
+            # Break the loop of the maximum runtime has been reached. This prevents
+            # the workers to continue indefinitely.
             if time.time() > self.max_end_time:
                 break
 
-            # DOCTOR: checks heartbeats
-
-            # check if a client isn't responding.
-
+            # DOCTOR: check if a client isn't responding.
             now_time = int(time.time())
             tmp_doctor_dict = doctor_dict.copy()
-
             for worker_id, last_hr in tmp_doctor_dict.items():
                 if (now_time - last_hr) > self.analysis_max_runtime:
-                    # a dead client has been found.
+                    # A dead worker has been found.
                     print("[doctor]\toh no, 'worker {}' "
                           "has died.".format(worker_id))
                     if worker_id not in dead_workers and \
                             worker_id in schedule.keys():
                         unfinished_work = schedule[worker_id]
                         if unfinished_work is not None:
-                            # reassign the unfinished work.
+                            # Reassign the unfinished work.
                             for key, value in unfinished_work.items():
                                 wait_list.append((key, value, 1))
 
@@ -264,18 +293,22 @@ class Manager:
 
                     if worker_id in doctor_dict.keys():
                         del doctor_dict[worker_id]
-
                     dead_workers.append(worker_id)
 
-            # RECEIVER: install new clients and reduce results
+            # RECEIVER: Install new clients and reduce results
 
-            # empty the results queue.
+            # Empty the results queue.
             while not result_q.empty():
-                # get an result from the queue.
-                (worker_id, category, eqtl_index, sample_order_id, data) = result_q.get()
+                # Get an result from the queue.
+                (worker_id, category, eqtl_index, sample_order_id,
+                 data) = result_q.get()
 
-                # safe the moment the message was received.
-                if worker_id not in dead_workers:
+                # Safe the moment the message was received. Don't save it
+                # if it was already declared dead.
+                if worker_id in dead_workers:
+                    continue
+
+                if worker_id in doctor_dict.keys():
                     doctor_dict[worker_id] = int(time.time())
 
                 # check what kind of message it is.
@@ -283,9 +316,10 @@ class Manager:
                     print("[receiver]\ta new worker connected: "
                           "'worker {}'".format(worker_id),
                           flush=True)
-
+                    # Add the worker to the schedule so it can receive work.
                     schedule[worker_id] = None
                     if not columns_added:
+                        # Safe the columns.
                         pvalue_data.append([eqtl_index] + data)
                         columns_added = True
                 elif category == "result":
@@ -299,19 +333,19 @@ class Manager:
                                                    worker_id),
                               flush=True)
 
-                    # prevent duplicates by checking if the worker didn't die
+                    # Prevent duplicates by checking if the worker didn't die
                     # already.
                     if worker_id in schedule.keys():
                         # Increment the counter.
                         counter += 1
 
-                        # Safe the output to the right result.
+                        # Safe the output to the right result list.
                         if sample_order_id == 0:
                             pvalue_data.append([eqtl_index] + data)
                         else:
                             perm_pvalues.extend(data[1:])
 
-                        # remove the job from the schedule.
+                        # Remove the job from the schedule.
                         if eqtl_index in schedule[worker_id].keys():
                             sample_orders_to_perform = schedule[worker_id][eqtl_index]
                             sample_orders_to_perform.remove(sample_order_id)
@@ -330,7 +364,6 @@ class Manager:
 
             # check if there is work to schedule.
             if len(wait_list) > 0:
-
                 # count the number of free_processes
                 free_workers = []
                 for worker_id, work in schedule.items():
@@ -343,15 +376,17 @@ class Manager:
                         free_workers = free_workers[0:len(wait_list)]
 
                     for worker_id in free_workers:
-                        (start_index, sample_orders, chunk_size) = wait_list.pop(0)
                         if self.verbose:
                             print("[scheduler]\tassigning work to "
                                   "'worker {}'".format(worker_id), flush=True)
+
+                        # Assign work.
+                        (start_index, sample_orders, chunk_size) = wait_list.pop(0)
                         schedule[worker_id] = {i: sample_orders.copy()
                                                for i in range(start_index,
                                                               start_index + chunk_size)}
 
-            # clear the job queue and push the new schedule. Push some
+            # Clear the job queue and push the new schedule. Push some
             # extra copies to make sure each process can get one.
             # clearing the queue prevents from clients executing outdated
             # commands.
@@ -363,7 +398,7 @@ class Manager:
 
             # END
 
-            # print statements to update to end-user.
+            # print statements to update the end-user.
             now_time = int(time.time())
             if now_time - last_print_time >= self.print_interval:
                 last_print_time = now_time
@@ -372,7 +407,7 @@ class Manager:
                 else:
                     self.print_progress(counter, total_analyses)
 
-            # check if we are done.
+            # Check if we are done.
             if not wait_list:
                 unfinished_work = schedule.values()
                 unfinished_work = [x for x in unfinished_work if x]
@@ -381,7 +416,8 @@ class Manager:
 
             time.sleep(self.sleep_time)
 
-        # print statements to update to end-user.
+        # Update the end-user again. This allows for comfirmation all work
+        # is indeed done.
         if self.verbose:
             self.print_status(wait_list, schedule, eqtl_id_len, order_id_len)
         else:
@@ -390,20 +426,19 @@ class Manager:
 
         # Send the kill signal.
         print("[manager]\tkilling processes.", flush=True)
-        for proc in processes.values():
+        for proc in processes:
             proc.terminate()
 
         # Join the processes.
-        for proc in processes.values():
+        for proc in processes:
             proc.join()
 
-        # Pickle the files.
-        print("[manager]\tsaving output files.", flush=True)
-        # Pickle the files.
+        # Pickle the output lists.
+        print("[manager]\tsaving output lists.", flush=True)
         self.dump_pickle(pvalue_data, self.pvalues_outfile)
         self.dump_pickle(perm_pvalues, self.perm_pvalues_outfile)
 
-        # Print the time.
+        # Print the process time.
         run_time = int(time.time()) - start_time
         run_time_min, run_time_sec = divmod(run_time, 60)
         run_time_hour, run_time_min = divmod(run_time_min, 60)
@@ -416,38 +451,73 @@ class Manager:
               "per second.".format(counter / run_time),
               flush=True)
 
-        # shutdown the manager.
+        # Shutdown the manager.
         print("[manager]\tshutting down manager [{}]".format(
             datetime.now().strftime("%H:%M:%S")),
             flush=True)
 
     @staticmethod
     def load_pickle(fpath):
+        """
+        Method for loading data from a pickle file.
+
+        :param fpath: string, the pickle input file.
+        :return content: , the pickle content.
+        """
         with open(fpath, "rb") as f:
             content = pickle.load(f)
+        f.close()
+
         return content
 
     @staticmethod
     def dump_pickle(content, fpath):
+        """
+        Method for dumping data to a pickle file.
+
+        :param content: , the pickle content.
+        :param fpath: string, the pickle output file.
+        """
         with open(fpath, "wb") as f:
             pickle.dump(content, f)
         f.close()
 
     def create_perm_orders(self):
+        """
+        Method for creating x random shuffles of the column indices.
+
+        return sample_orders: list, a nested list with sample orders.
+        """
         sample_orders = [self.get_column_indices()]
         for _ in range(self.n_permutations):
             sample_orders.append(self.create_random_shuffle())
         return sample_orders
 
     def get_column_indices(self):
+        """
+        Method for getting a ordered list of sample indices.
+
+        :return : list, ordered list with sample indices.
+        """
         return [x for x in range(self.n_samples)]
 
     def create_random_shuffle(self):
+        """
+        Method for creating a random shuffle of the column indices.
+
+        :return column_indices: list, a shuffles list with sample indices.
+        """
         column_indices = self.get_column_indices()
         random.shuffle(column_indices)
         return column_indices
 
     def load_wait_list(self, all_sample_orders):
+        """
+        Method for loading the wait list.
+
+        :param all_sample_orders: list, a nested list with sample orders.
+        :return wait_list: list, the wait list for the manager to work on.
+        """
         wait_list = []
         if self.n_eqtls == 1 and self.chunk_size == 1:
             wait_list.append((self.skip_rows + 1,
@@ -467,7 +537,15 @@ class Manager:
 
     @staticmethod
     def print_status(wait_list, schedule, eqtl_id_len, order_id_len):
-        print("[manager]\t", flush=True)
+        """
+        Method for printing the schedule in the terminal.
+
+        :param wait_list: list, the wait list for the manager to work on.
+        :param schedule: dict, the schedule of the manager.
+        :param eqtl_id_len: int, the length of the highest eQTL ID.
+        :param order_id_len: int, the length of the highest order ID.
+        """
+        print("[manager]", flush=True)
         if len(wait_list) > 0:
             work_info = []
             wait_list = sorted(wait_list, key=lambda x: x[0])
@@ -492,9 +570,16 @@ class Manager:
                       flush=True)
         else:
             print("[manager]\t\tempty", flush=True)
+        print("[manager]", flush=True)
 
     @staticmethod
     def print_progress(counter, total_analyses):
+        """
+        Method for printing a progress counter in the terminal.
+
+        :param counter: int, the number of analyses done.
+        :param total_analyses: int, the total number of analyses to perform.
+        """
         print_len = len(str(total_analyses))
         print("[manager]\treceived data from {:<{}d}/{:<{}d} analyses "
               "[{:.2f}%]".format(counter, print_len,
@@ -503,6 +588,9 @@ class Manager:
               flush=True)
 
     def print_arguments(self):
+        """
+        Method for printing the variables of the class.
+        """
         end_time_string = datetime.fromtimestamp(self.max_end_time).strftime(
             "%d-%m-%Y, %H:%M:%S")
         print("Arguments:")

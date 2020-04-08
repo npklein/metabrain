@@ -1,7 +1,7 @@
 """
 File:         workers.py
-Created:      2020/03/24
-Last Changed: 2020/03/31
+Created:      2020/04/01
+Last Changed: 2020/04/08
 Author(s):    M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -36,16 +36,17 @@ import scipy.stats as stats
 
 
 def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
-                   start_q, input_q, output_q, max_end_time, chunk_size):
-    start_time = time.time()
-    start_time_str = datetime.fromtimestamp(start_time).strftime(
+                   start_q, job_q, result_q, sleep_time, max_end_time, verbose):
+    start_time_str = datetime.fromtimestamp(time.time()).strftime(
         "%d-%m-%Y, %H:%M:%S")
-    if worker_id == 0:
-        print("Worker: {} started [{}]".format(worker_id, start_time_str))
+    print("[worker {:2d}]\tstarted [{}].".format(worker_id, start_time_str),
+          flush=True)
 
-    # Wait until sample orders are received.
+    # First receive the permutation order from the start queue.
     sample_orders = None
     while sample_orders is None:
+        # Break the loop of the maximum runtime has been reached. This prevents
+        # the workers to continue indefinitely.
         if max_end_time <= time.time():
             break
 
@@ -56,35 +57,74 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
         except queue.Empty:
             break
 
+    # The program cannot start if it hasn't gotten the sample orders.
     if sample_orders is None:
         return
-    # if worker_id == 0:
-    #     print("Worker: {} received sample orders.".format(worker_id))
 
-    # Load the covariate file.
-    cov_df = pd.read_csv(cov_inpath,
-                         sep="\t",
-                         header=0,
-                         index_col=0)
+    if verbose:
+        print("[worker {:2d}]\treceived sample orders.".format(worker_id),
+              flush=True)
 
-    tech_cov = cov_df.loc[tech_covs, :]
-    cov_df.drop(tech_covs, inplace=True)
+    # Load the covariate file. Split the matrix into technical covariates and
+    # covariates of interest.
+    tech_cov_df, cov_df = load_covariate_file(cov_inpath, tech_covs)
 
-    output_q.put((None, [-1] + ["-"] + list(cov_df.index)))
+    if verbose:
+        print("[worker {:2d}]\tloaded covariate file.".format(worker_id),
+              flush=True)
+        print("[worker {:2d}]\t\t"
+              "technical covariates: {}".format(worker_id, tech_cov_df.shape),
+              flush=True)
+        print("[worker {:2d}]\t\t"
+              "relevant covariates:  {}".format(worker_id, cov_df.shape),
+              flush=True)
 
+    # Push the header to the manager. This is also the message that confirms
+    # the worker is ready to start.
+    result_q.put((worker_id, "online", -1, None, ["-"] + list(cov_df.index)))
+
+    # Start infinite loop.
     while True:
+        # Break the loop of the maximum runtime has been reached. This prevents
+        # the workers to continue indefinitely.
         if max_end_time <= time.time():
             break
 
         try:
-            if input_q.empty():
-                break
-            start_index = input_q.get(True, timeout=1)
-            # if worker_id == 0:
-            #     print("Worker: {} loading data {}-{}".format(worker_id,
-            #                                                  start_index,
-            #                                                  start_index + chunk_size - 1))
+            if job_q.empty():
+                time.sleep(sleep_time)
 
+            # Get the schedule from the job queue.
+            schedule = job_q.get(True, timeout=1)
+
+            # Check if there is work for me, if not, send a waiting result
+            # back to the manager
+            if worker_id not in schedule.keys() or schedule[worker_id] is None:
+                result_q.put((worker_id, "waiting", None, None, None))
+                time.sleep(sleep_time)
+                continue
+            # The work has format: {eqtl_id [sample order id, ...], ...}
+            my_work = schedule[worker_id]
+            if verbose:
+                print("[worker {:2d}]\tFound work".format(worker_id),
+                      flush=True)
+
+            # TODO remove this
+            weird_eqtls = []
+            # TODO end
+
+            # Find the start index for reading the input files. The lowest
+            # key is the start index for reading the input file. The end nrows
+            # is the range of start indices + 1.
+            start_index = min(my_work.keys())
+            nrows = max(my_work.keys()) - start_index + 1
+
+            if verbose:
+                print("[worker {:2d}]\tloading data "
+                      "{}-{}".format(worker_id, start_index - 1,
+                                     start_index + nrows), flush=True)
+
+            # Load the genotype and expression data.
             try:
                 geno_df = pd.read_csv(geno_inpath,
                                       sep="\t",
@@ -92,7 +132,7 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                                       index_col=0,
                                       skiprows=[i for i in
                                                 range(1, start_index)],
-                                      nrows=chunk_size)
+                                      nrows=nrows)
 
                 expr_df = pd.read_csv(expr_inpath,
                                       sep="\t",
@@ -100,123 +140,216 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                                       index_col=0,
                                       skiprows=[i for i in
                                                 range(1, start_index)],
-                                      nrows=chunk_size)
-
+                                      nrows=nrows)
             except pandas.io.common.EmptyDataError:
                 break
 
-            # Replace -1 with NaN in the genotype dataframe.
+            # Check if the covariate data still exists. If not, reload it.
+            # This hasn't happend yet but I just wanna make sure that if the
+            # data is lost from the RAM, the worker will continue.
+            try:
+                _ = tech_cov_df.shape
+                _ = cov_df.shape
+            except:
+                print("[worker {:2d}]\tcovariate table was lost. "
+                      "Reloading data..".format(worker_id), flush=True)
+                tech_cov_df, cov_df = load_covariate_file(cov_inpath, tech_covs)
+
+            # Replace -1 with NaN in the genotype dataframe. This way we can
+            # drop missing values.
             geno_df.replace(-1, np.nan, inplace=True)
 
-            # loop over eQTLs.
-            for i in range(chunk_size):
-                # if worker_id == 0:
-                #     print("Worker: {}, working on eQTL "
-                #           "{}/{}".format(worker_id,
-                #                          start_index + i,
-                #                          (start_index + chunk_size) - 1))
+            # loop over the eQTLs.
+            for i, eqtl_index in enumerate(my_work.keys()):
+                if verbose:
+                    print("[worker {:2d}]\tworking on "
+                          "'eQTL_{}'.".format(worker_id, eqtl_index),
+                          flush=True)
+
+                # Get the complete genotype row for the permutation later.
+                genotype_all = geno_df.iloc[i, :].copy()
 
                 # Get the missing genotype indices.
                 indices = np.arange(geno_df.shape[1])
                 eqtl_indices = indices[~geno_df.iloc[i, :].isnull().values]
                 n = len(eqtl_indices)
+                print(n)
 
                 # Subset the row and present samples for this eQTL.
                 genotype = geno_df.iloc[i, eqtl_indices].copy()
-                genotype_all = geno_df.iloc[i, :].copy()
                 expression = expr_df.iloc[i, eqtl_indices].copy()
-                technical_covs = tech_cov.iloc[:, eqtl_indices].copy()
+                technical_covs = tech_cov_df.iloc[:, eqtl_indices].copy()
 
                 # Check if SNP index are identical.
                 if genotype.name != expression.name:
-                    print("Indices do not match.")
+                    print("[worker {:2d}]\tindices do "
+                          "not match.".format(worker_id), flush=True)
                     continue
 
-                # Create the null model.
+                # Create the null model. Null model are all the technical
+                # covariates multiplied with the genotype + the SNP.
                 null_matrix = technical_covs.mul(genotype, axis=1)
+                genotype_as_df = pd.DataFrame([genotype], index=["SNP"])
+                null_matrix = pd.concat([genotype_as_df, null_matrix])
                 df_null, rss_null = create_model(null_matrix.T, expression)
 
-                # Loop over each sample order.
+                # Loop over each permutation sample order. The first order
+                # is the normal order and the remainder are random shuffles.
                 for order_id, sample_order in enumerate(sample_orders):
-                    if worker_id == 0:
-                        print("Worker: {}, working on permutation {}/{}".format(
-                            worker_id, order_id, len(sample_orders)))
+                    # Making sure I only do the order that I have to do. It
+                    # might be the case I got assigned an incomplete eQTL
+                    # (i.e. not all sample orders have to be performed) due to
+                    # another core dieing halfway through the analysis.
+                    if order_id not in my_work[eqtl_index]:
+                        continue
+
+                    if verbose:
+                        print("[worker {:2d}]\tworking on "
+                              "sample 'order_{}'.".format(worker_id, order_id),
+                              flush=True)
 
                     # Loop over the covariates.
                     snp_pvalues = []
                     for j in range(cov_df.shape[0]):
                         cov_name = cov_df.index[j]
 
-                        # if worker_id == 0:
-                        #     print("Worker: {}, working on covariate {}/{}".format(
-                        #         worker_id,
-                        #         j + 1,
-                        #         cov_df.shape[0]))
+                        # if verbose:
+                        #     print("[worker {:2d}]\tworking on covariate "
+                        #           "{}/{}".format(worker_id, j + 1,
+                        #                          cov_df.shape[0]))
 
-                        # Calculate the interaction of the covariate of
-                        # interest.
+                        # Reorder the covariate based on the sample order.
+                        # Make sure the labels are in the same order, just
+                        # shuffle the values.
                         covariate_all = cov_df.iloc[j, :].copy()
+                        covariate_all_index = covariate_all.index
+                        covariate_all = covariate_all.reindex(covariate_all.index[sample_order])
+                        covariate_all.index = covariate_all_index
+
+                        # Calculate the interaction effect of the covariate of
+                        # interest. Then drop the missing values.
+                        # NOTE: For some reason applying the eqtl_indices mask
+                        # here does not work. Therefore, I added a check that
+                        # makes sure the orders are identical and no unwanted
+                        # NA's are introduced.
                         interaction_all = covariate_all * genotype_all
                         interaction_all.name = cov_name
+                        interaction_all.dropna(inplace=True)
 
-                        # Reorder the series.
-                        interaction_all = interaction_all.reindex(interaction_all.index[sample_order])
+                        # Check if the drop is identical (See above).
+                        if not interaction_all.index.equals(null_matrix.columns):
+                            print("[worker {:2d}]\terror in permutation "
+                                  "reordering (ID: {})".format(worker_id,
+                                                               order_id),
+                                  flush=True)
+                            snp_pvalues.append(np.nan)
+                            continue
 
-                        # Remove missing values.
-                        interaction_all = interaction_all.dropna()
-
-                        # Set the identical names as the null matrix.
-                        interaction_all.index = null_matrix.columns
-
-                        # Create the alternative matrix.
+                        # Create the alternative model. This is the null
+                        # matrix + the covariate of interest (shuffled or not).
                         alt_matrix = null_matrix.copy()
                         alt_matrix = alt_matrix.append(interaction_all)
-
-                        # Create the alternative model.
                         df_alt, rss_alt = create_model(alt_matrix.T, expression)
 
-                        # Compare the models.
+                        # Compare the null and alternative model.
                         pvalue = compare_models(rss_null, rss_alt,
                                                 df_null, df_alt,
                                                 n)
 
-                        # Safe.
+                        # TODO remove this
+                        if rss_alt > rss_null:
+                            weird_eqtls.append((rss_null, rss_alt, eqtl_index,
+                                                order_id, cov_name))
+                        # TODO end
+
+                        # Safe the pvalue.
                         snp_pvalues.append(pvalue)
 
-                    # Push the results.
-                    # if worker_id == 0:
-                    #     print("Worker: {} pushing results".format(worker_id))
-                    output_q.put((order_id, [start_index + i] + [genotype.name] + snp_pvalues))
+                    if verbose:
+                        print("[worker {:2d}]\tpushing "
+                              "results".format(worker_id))
+
+                    # Push the result back to the manager.
+                    result_q.put((worker_id, "result", eqtl_index, order_id,
+                                  [genotype.name] + snp_pvalues))
+
+            # TODO remove this
+            print("[worker {:2d}]\t Analyses where RSS alt > RSS null:",
+                  flush=True)
+            if weird_eqtls:
+                for we in weird_eqtls:
+                    print("[worker {:2d}]\tRSS null:{}\tRSS alt: {}\teQTL: {}\t"
+                          "Sample order: {}\tCovariate: {}".format(worker_id,
+                                                                   we[0],
+                                                                   we[1],
+                                                                   we[2],
+                                                                   we[3],
+                                                                   we[4]),
+                          flush=True)
+            else:
+                print("[worker {:2d}]\tNone", flush=True)
+            # TODO end
+
+            # Wait before getting a new job.
+            time.sleep(sleep_time * 2)
 
         except queue.Empty:
             break
 
-    # Calculate the worker process time.
-    end_time = time.time()
-    end_time_str = datetime.fromtimestamp(end_time).strftime(
-        "%d-%m-%Y, %H:%M:%S")
-    run_time_min, run_time_sec = divmod(end_time - start_time, 60)
-    run_time_hour, run_time_min = divmod(run_time_min, 60)
-    print("Worker: {} stopped [{}].\tWorked for {} hour(s), "
-          "{} minute(s), and {} second(s).".format(worker_id, end_time_str,
-                                                   int(run_time_hour),
-                                                   int(run_time_min),
-                                                   int(run_time_sec)))
+
+def load_covariate_file(cov_inpath, tech_covs):
+    """
+    Method for loading the covariate file and splitting it into technical
+    covariates and covariates of intrest.
+
+    :param cov_inpath: string, the input path of the covariate input file.
+    :param tech_covs: list, the indices of the technical covariates.
+    :return tech_cov_df: DataFrame, the technical covariates.
+    :return cov_df: DataFrame, the covariates of interest.
+    """
+    cov_df = pd.read_csv(cov_inpath,
+                         sep="\t",
+                         header=0,
+                         index_col=0)
+
+    tech_cov_df = cov_df.loc[tech_covs, :]
+
+    return tech_cov_df, cov_df
 
 
 def create_model(X, y):
+    """
+    Method for creating a multilinear model.
+
+    :param X: DataFrame, the matrix with rows as samples and columns as
+                         dimensions.
+    :param y: Series, the outcome values.
+    :return degrees_freedom: int, the degrees of freedom of this model.
+    :return residual_squared_sum: float, the residual sum of squares of this fit.
+    """
+    # Create the model.
     regressor = LinearRegression(n_jobs=1)
     regressor.fit(X, y)
     y_hat = regressor.predict(X)
 
     # Calculate the statistics of the model.
     degrees_freedom = len(X.columns) + 1
-    residual_squared_sum = ((y - y_hat) ** 2).sum()
+    residual_sum_squares = ((y - y_hat) ** 2).sum()
 
-    return degrees_freedom, residual_squared_sum
+    return degrees_freedom, residual_sum_squares
 
 
 def compare_models(rss1, rss2, df1, df2, n):
+    """
+    Method for comparing the two models using an F-distribution.
+
+    :param rss1: float, the residual sum of squares of the null model.
+    :param rss2: float, the residual sum of squares of the alternative model.
+    :param df1: int, the degrees of freedom of the null model.
+    :param df2: int, the degrees of freedom of the alternative model.
+    :param n: int, the number of samples in the model.
+    :return p_value: float, the p-value of the comparison.
+    """
     f_value = calc_f_value(rss1, rss2, df1, df2, n)
     p_value = get_p_value(f_value, df1, df2, n)
 
@@ -224,6 +357,17 @@ def compare_models(rss1, rss2, df1, df2, n):
 
 
 def calc_f_value(rss1, rss2, df1, df2, n):
+    """
+    Method for comparing the risdual sum squared of two models using
+    the F statistic.
+
+    :param rss1: float, the residual sum of squares of the null model.
+    :param rss2: float, the residual sum of squares of the alternative model.
+    :param df1: int, the degrees of freedom of the null model.
+    :param df2: int, the degrees of freedom of the alternative model.
+    :param n: int, the number of samples in the model.
+    :return : float, the p-value of the comparison.
+    """
     if df1 >= df2:
         return np.nan
     if df2 >= n:
@@ -233,4 +377,21 @@ def calc_f_value(rss1, rss2, df1, df2, n):
 
 
 def get_p_value(f_value, df1, df2, n):
+    """
+    Method for getting the p-value corresponding to a F-distribution.
+
+    :param f_value: float, the f-value.
+    :param df1: int, the degrees of freedom of the null model.
+    :param df2: int, the degrees of freedom of the alternative model.
+    :param n: int, the number of samples in the model.
+    :return : float, the p-value corresponding to the f-value.
+    """
+    # Lower and upper limit of stats.f.sf
+    # stats.f.sf(1827.95, dfn=1, dfd=3661) = 5e-324
+    # stats.f.sf(9.9e-12, dfn=1, dfd=3661) = 0.9999974567714613
+
+    # Lower and upper limit of cdf
+    # stats.f.cdf(69, dfn=1, dfd=3661) = 0.9999999999999999
+    # stats.f.cdf(1e-320, dfn=1, dfd=3661) = 1.0730071046473278e-160
+
     return stats.f.sf(f_value, dfn=(df2 - df1), dfd=(n - df2))

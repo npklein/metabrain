@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed: 2020/04/07
+Last Changed: 2020/04/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -34,11 +34,11 @@ import os
 # Third party imports.
 import numpy as np
 import pandas as pd
+from scipy import stats
 import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from scipy import stats
 
 # Local application imports.
 from general.local_settings import LocalSettings
@@ -48,9 +48,9 @@ from general.utilities import p_value_to_symbol
 
 class CombineAndPlot:
     """
-    Main: this class is the main class that calls all other functionality.
+    Main: this class combines the output of different jobs of the manager into
+        one result.
     """
-
     def __init__(self, settings_file):
         """
         Initializer of the class.
@@ -78,9 +78,9 @@ class CombineAndPlot:
 
     def start(self):
         """
-        The method that serves as the pipeline of the whole program.
+        Method to start the combiner.
         """
-        print("Starting interaction analyser.")
+        print("Starting interaction analyser - combine and plot.")
         self.print_arguments()
 
         # Start the timer.
@@ -155,8 +155,20 @@ class CombineAndPlot:
 
     @staticmethod
     def combine_pickles(indir, filename, columns=False):
+        """
+        Method for combining the pickled lists into one nested list.
+
+        :param indir: string, the input directory containing the pickle files.
+        :param filename: string, the prefix name of the input file.
+        :param columns: boolean, whether or not each pickle file has a column.
+        :return col_list: list, the columns of the content.
+        :return data: list, a nested list with the combined content.
+        """
+        # Declare variables.
         col_list = None
         data = []
+
+        # Order the filenames based on the integers appendices.
         infiles = glob.glob(os.path.join(indir, filename + "*.pkl"))
         start_indices = []
         for fpath in infiles:
@@ -164,6 +176,7 @@ class CombineAndPlot:
             start_indices.append(fpath_si)
         start_indices = sorted(start_indices)
 
+        # Combine the found files.
         for i, start_index in enumerate(start_indices):
             fpath = os.path.join(indir, filename + str(start_index) + ".pkl")
             with open(fpath, "rb") as f:
@@ -173,10 +186,18 @@ class CombineAndPlot:
                 data.extend(content[1:])
                 print("\tLoaded list: {} with length: {}".format(
                     get_basename(fpath), len(content)))
+            f.close()
         return col_list, data
 
     @staticmethod
     def create_df(data, columns):
+        """
+        Method for creating a pandas dataframe from a nested list.
+
+        :param data: list, a nested list with the data.
+        :param columns: list, the column names.
+        :return df: DataFrame, the created pandas dataframe.
+        """
         df = pd.DataFrame(data, columns=columns)
         df.set_index(df.columns[0], inplace=True)
         df.sort_index(inplace=True)
@@ -187,6 +208,14 @@ class CombineAndPlot:
 
     @staticmethod
     def plot_distributions(perm_pvalues, pvalues, outdir):
+        """
+        Method for visualizing the distribution of the null and alternative
+        p-values.
+
+        :param perm_pvalues: list, the sorted null model p-values.
+        :param pvalues: list, the sorted alternative model p-values.
+        :param outdir: string, the output directory for the image.
+        """
         sns.set(rc={'figure.figsize': (12, 9)})
         sns.set_style("whitegrid")
         fig, (ax1, ax2) = plt.subplots(1, 2)
@@ -219,14 +248,21 @@ class CombineAndPlot:
 
     @staticmethod
     def create_perm_fdr_df(df, pvalues, perm_pvalues, n_perm):
+        """
+        Method for creating the permutation False Discovery Rate dataframe.
+
+        FDR = (permutation rank / number of permutations) / actual rank
+
+        :param df: DataFrame, the alternative p-value dataframe.
+        :param perm_pvalues: list, the sorted null model p-values.
+        :param pvalues: list, the sorted alternative model p-values.
+        :param n_perm: int, the number of permutations performed.
+        :return fdr_df: DataFrame, the permutation FDR dataframe.
+        """
         fdr_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
-
-        len_max_rank = len(str(len(pvalues)))
-        len_max_perm_rank = len(str(len(perm_pvalues)))
-
         for row_index in range(df.shape[0]):
             for col_index in range(df.shape[1]):
-                pvalue = df.iloc[row_index, col_index]
+                pvalue = df.iat[row_index, col_index]
                 rank = bisect_left(pvalues, pvalue)
                 perm_rank = bisect_left(perm_pvalues, pvalue)
                 if (rank > 0) and (perm_rank > 0):
@@ -235,43 +271,42 @@ class CombineAndPlot:
                         fdr_value = 1
                 else:
                     fdr_value = 0
-                # print("P-value: {:.2e}\tRank: {:{}d}\tPerm.Rank: {:{}d}\t"
-                #       "FDR-value: {:.2e}".format(pvalue,
-                #                                    rank, len_max_rank,
-                #                                    perm_rank, len_max_perm_rank,
-                #                                    fdr_value))
-                fdr_df.iloc[row_index, col_index] = fdr_value
+                fdr_df.iat[row_index, col_index] = fdr_value
         return fdr_df
 
     @staticmethod
     def create_bh_fdr_df(df, pvalues):
+        """
+        Method for creating the Benjamini-Hochberg False Discovery Rate
+        dataframe.
+
+        FDR = p-value * (# p-values / rank)
+
+        :param df: DataFrame, the alternative p-value dataframe.
+        :param pvalues: list, the sorted alternative model p-values.
+        :return fdr_df: DataFrame, the Benjamini-Hochberg FDR dataframe.
+        """
         m = len(pvalues)
         fdr_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
         fdr_values = []
-        len_max_rank = len(str(len(pvalues)))
         for row_index in range(df.shape[0]):
             for col_index in range(df.shape[1]):
-                pvalue = df.iloc[row_index, col_index]
+                pvalue = df.iat[row_index, col_index]
                 rank = bisect_left(pvalues, pvalue) + 1
                 fdr_value = pvalue * (m / rank)
                 if fdr_value > 1:
                     fdr_value = 1
                 fdr_values.append((rank, row_index, col_index, fdr_value))
-                fdr_df.iloc[row_index, col_index] = fdr_value
+                fdr_df.iat[row_index, col_index] = fdr_value
 
+        # Make sure the BH FDR is a monotome function. This goes through
+        # the FDR values backwords and make sure that the next FDR is always
+        # lower or equal to the previous.
         fdr_values = sorted(fdr_values, key=lambda x: x[0], reverse=True)
         prev_fdr_value = None
         for (rank, row_index, col_index, fdr_value) in fdr_values:
-            # if prev_fdr_value is not None:
-                # print("Rank: {}\tRow index: {}\t Col index: {}\t"
-                #       "Prev. FDR-Value: {:.2e}\tFDR-Value: {:.2e}".format(rank,
-                #                                                           row_index,
-                #                                                           col_index,
-                #                                                           prev_fdr_value,
-                #                                                           fdr_value))
             if prev_fdr_value is not None and fdr_value > prev_fdr_value:
-                #print("Changing {} for {}.".format(fdr_value, prev_fdr_value))
-                fdr_df.iloc[row_index, col_index] = prev_fdr_value
+                fdr_df.iat[row_index, col_index] = prev_fdr_value
                 prev_fdr_value = prev_fdr_value
             else:
                 prev_fdr_value = fdr_value
@@ -279,44 +314,71 @@ class CombineAndPlot:
         return fdr_df
 
     def create_zscore_df(self, df):
-        new_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
+        """
+        Method for converting a dataframe of p-values to z-scores.
+
+        :param df: DataFrame, a dataframe containing p-values.
+        :return zscore_df: DataFrame, a dataframe containing z-scores
+        """
+        zscore_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
         for row_index in range(df.shape[0]):
             for col_index in range(df.shape[1]):
-                pvalue = df.iloc[row_index, col_index]
+                pvalue = df.iat[row_index, col_index]
                 zscore = self.get_z_score(pvalue)
-                new_df.iloc[row_index, col_index] = zscore
+                zscore_df.iat[row_index, col_index] = zscore
 
-        return new_df
+        return zscore_df
 
     @staticmethod
     def get_z_score(p_value):
+        """
+        Method for converting a p-value to a z-score.
+
+        :param p-value: float, the p-value to convert.
+        :param z-score: float, the corresponding z-score.
+        """
         if p_value > (1.0 - 1e-16):
             p_value = 1e-16
         if p_value < 1e-323:
             p_value = 1e-323
 
+        # The lower and upper limit of stats.norm.sf
         # stats.norm.isf((1 - 1e-16)) = -8.209536151601387
         # stats.norm.isf(1e-323) = 38.44939448087599
         return stats.norm.isf(p_value)
 
     def compare_pvalue_scores(self, pvalue_df, perm_fdr, bh_fdr, outdir,
-                              stepsize=0.2, max_val=1.0, rescale=False):
+                              stepsize=0.2, max_val=None, rescale=False):
+        """
+        Method for comparing the different p-value dataframes.
+
+        :param pvalue_df: DataFrame, the alternative p-value dataframe.
+        :param perm_fdr: DataFrame, the permutation FDR dataframe.
+        :param bh_fdr: DataFrame, the Benjamini-Hochberg FDR dataframe.
+        :param outdir: string, the output directory for the image.
+        :param stepsize: float, the stepsize for the axis ticks.
+        :param max_val: float, the maximum p-value to include.
+        :param rescale: boolean, whether or not to convert to -log10 scale.
+        """
+        # Combine the dataframes into one.
         df = pd.DataFrame({"P-value": pvalue_df.melt()["value"],
                            "Permutation FDR": perm_fdr.melt()["value"],
                            "BH FDR": bh_fdr.melt()["value"]})
 
+        # Rescale the values if need be.
         if rescale:
             df = -np.log10(df + 1)
             df.columns = ["-log10({} + 1)".format(x) for x in df.columns]
 
-        # Filter the values of interest.
-        indices = []
-        for index, row in df.iterrows():
-            add = (row <= max_val).any()
-            indices.append(add)
-        df = df.loc[indices, :]
+        # Filter the rows that contain at least one value below the max.
+        if max_val is not None:
+            indices = []
+            for index, row in df.iterrows():
+                add = (row <= max_val).any()
+                indices.append(add)
+            df = df.loc[indices, :]
 
-        # Calculate the lower and upper bound.
+        # Calculate the lower and upper bound of the axis.
         precision = 10 ^ len(str(stepsize).split(".")[1])
         xy_min = math.floor(df.values.min() * precision) / precision - stepsize
         xy_max = math.ceil(df.values.max() * precision) / precision + stepsize
@@ -344,6 +406,7 @@ class CombineAndPlot:
         g.fig.suptitle('Comparing P-values and FDR-values', y=1.05,
                        fontsize=30, fontweight='bold')
 
+        # Change the axis ticks.
         ticks = [round(i / 100, 2) for i in range(int(xy_min*100), int(xy_max*100), int(stepsize*100))]
         for ax in g.axes.flat:
             if ax:
@@ -354,21 +417,31 @@ class CombineAndPlot:
                 ax.set_ylim(xy_min, xy_max)
 
         #plt.tight_layout()
-        g.savefig(os.path.join(outdir, "pvalue_vs_fdr_comparison_{:.2f}_{:.2f}.png".format(xy_min, xy_max)))
+        g.savefig(os.path.join(outdir, "pvalue_vs_fdr_comparison_"
+                                       "{:.2f}_{:.2f}.png".format(xy_min,
+                                                                  xy_max)))
 
     @staticmethod
-    def create_color_map():
+    def create_color_map(max_val=1251):
         """
+        Method for creating a color gradient for the p-values.
         """
-        palette = list(Color("#D3D3D3").range_to(Color("#000000"), 1251))
+        palette = list(Color("#D3D3D3").range_to(Color("#000000"), max_val))
         colors = [x.rgb for x in palette]
-        values = [x / 100000 for x in list(range(0, 1251))]
+        values = [x / 100000 for x in list(range(0, max_val))]
         value_color_map = {}
         for val, col in zip(values, colors):
             value_color_map[val] = col
         return value_color_map
 
     def my_scatter(self, x, y, **kwargs):
+        """
+        Method for mapping a scatterplot to a FacetGrid. This method includes
+        adding the correct color gradient.
+
+        :param x: Series, the x-axis values.
+        :param y: Series, the y-xis values.
+        """
         colormap = self.create_color_map()
         diff = round((x - y) ** 2, 5)
         colors = diff.map(colormap).fillna("#000000")
@@ -378,10 +451,19 @@ class CombineAndPlot:
 
     @staticmethod
     def diagonal_line(*args, **kwargs):
+        """
+        Method for mapping a diagonal line to a FacetGrid.
+        """
         plt.plot([-1, 2], [-1, 2], ls="--", c=".3")
 
     @staticmethod
     def correlation(x, y, **kwargs):
+        """
+        Method for mapping a spearman regression annotation to a FacetGrid.
+
+        :param x: Series, the x-axis values.
+        :param y: Series, the y-xis values.
+        """
         r, p = stats.spearmanr(x, y)
         ax = plt.gca()
         ax.annotate("r = {:.2f} [{}]".format(r, p_value_to_symbol(p)),
@@ -389,6 +471,9 @@ class CombineAndPlot:
                     fontsize=16, fontweight='bold')
 
     def print_arguments(self):
+        """
+        Method for printing the variables of the class.
+        """
         print("Arguments:")
         print("  > Output directory: {}".format(self.outdir))
         print("  > N permutations: {}".format(self.n_permutations))
