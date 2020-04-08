@@ -1,7 +1,7 @@
 """
 File:         combine_gte_files.py
 Created:      2020/04/07
-Last Changed:
+Last Changed: 2020/04/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -59,6 +59,7 @@ class PerformCelltypePCA:
         self.outpath = os.path.join(self.outdir, "celltype_pcs.txt.gz")
 
         # Create empty variables.
+        self.celltype_expression = None
         self.celltype_pcs = None
 
     def start(self):
@@ -71,7 +72,7 @@ class PerformCelltypePCA:
             self.celltype_pcs = load_dataframe(inpath=self.outpath,
                                                header=0, index_col=0)
         else:
-            self.celltype_pcs = self.perform_pca()
+            self.celltype_expression, self.celltype_pcs = self.perform_pca()
             self.save()
 
     def perform_pca(self):
@@ -94,9 +95,10 @@ class PerformCelltypePCA:
         pc_data = []
         print("Performing PCA")
         for celltype in self.profile_df.columns:
-            print("\tWorking on: {}.".format(celltype))
+            print("\tWorking on: {}".format(celltype))
             ct_genes = gene_celltypes[gene_celltypes == celltype].index
             ct_expr = ct_expr_df.loc[ct_expr_df.index.isin(ct_genes), :]
+            print("\t  N = {}".format(len(ct_expr.index)))
 
             # perform PCA over the expression of these genes.
             component = self.get_first_component(ct_expr)
@@ -108,7 +110,7 @@ class PerformCelltypePCA:
                                     index=["{}_PC1".format(x) for x in self.profile_df.columns],
                                     columns=ct_expr_df.columns)
 
-        return celltype_pcs
+        return ct_expr_df, celltype_pcs
 
     def save(self):
         save_dataframe(df=self.celltype_pcs, outpath=self.outpath,
@@ -128,9 +130,12 @@ class PerformCelltypePCA:
 
         pca = PCA(n_components=1)
         pca.fit(corr_matrix)
-        print("\t  Explained variance ratio: {}".format(pca.explained_variance_ratio_[0]))
-        print("\t  Singular values: {}".format(pca.singular_values_[0]))
+        print("\t  Explained variance ratio: {:.2f}".format(pca.explained_variance_ratio_[0]))
+        print("\t  Singular values: {:.2f}".format(pca.singular_values_[0]))
         return pca.transform(corr_matrix)
+
+    def get_celltype_expression(self):
+        return self.celltype_expression
 
     def get_celltype_pcs(self):
         return self.celltype_pcs
@@ -148,6 +153,6 @@ class PerformCelltypePCA:
         else:
             print("  > Celltype profile input file: {}".format(self.profile_file))
         print("  > Celltype expression input path: {}".format(self.ct_expr_file))
-        print("  > Celltype PCAs outpath file: {}".format(self.outpath))
+        print("  > Celltype PCAs output file: {}".format(self.outpath))
         print("  > Force: {}".format(self.force))
         print("")

@@ -1,7 +1,7 @@
 """
 File:         create_deconvolution_matrices.py
 Created:      2020/04/07
-Last Changed:
+Last Changed: 2020/04/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -169,7 +169,6 @@ class CreateDeconvolutionMatrices:
         f.close()
 
     def clear_variables(self):
-        self.celltype_profile_file = None
         self.translate_file = None
         self.marker_dict = None
         self.expr_file = None

@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/12
-Last Changed: 2020/04/07
+Last Changed: 2020/04/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -82,6 +82,7 @@ class CommandLineArguments:
                                      "combine_eqtlprobes",
                                      "create_matrices",
                                      "create_deconvolution_matrices",
+                                     "perform_deconvolution",
                                      "perform_celltype_pca",
                                      "create_cov_matrix",
                                      "mask_matrices",

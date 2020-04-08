@@ -31,6 +31,7 @@ import pandas as pd
 import pandas.io.common
 from sklearn.linear_model import LinearRegression
 import scipy.stats as stats
+from functools import reduce
 
 # Local application imports.
 
@@ -121,8 +122,8 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
 
             if verbose:
                 print("[worker {:2d}]\tloading data "
-                      "{}-{}".format(worker_id, start_index - 1,
-                                     start_index + nrows), flush=True)
+                      "{}-{}".format(worker_id, start_index,
+                                     start_index + nrows - 1), flush=True)
 
             # Load the genotype and expression data.
             try:
@@ -172,8 +173,6 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                 # Get the missing genotype indices.
                 indices = np.arange(geno_df.shape[1])
                 eqtl_indices = indices[~geno_df.iloc[i, :].isnull().values]
-                n = len(eqtl_indices)
-                print(n)
 
                 # Subset the row and present samples for this eQTL.
                 genotype = geno_df.iloc[i, eqtl_indices].copy()
@@ -188,10 +187,17 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
 
                 # Create the null model. Null model are all the technical
                 # covariates multiplied with the genotype + the SNP.
-                null_matrix = technical_covs.mul(genotype, axis=1)
-                genotype_as_df = pd.DataFrame([genotype], index=["SNP"])
-                null_matrix = pd.concat([genotype_as_df, null_matrix])
-                df_null, rss_null = create_model(null_matrix.T, expression)
+                tech_inter_matrix = technical_covs.mul(genotype, axis=1)
+                tech_inter_matrix.index = ["{}_X_SNP".format(x) for x in technical_covs.index]
+                null_matrix = reduce(lambda left, right: pd.merge(left,
+                                                                  right,
+                                                                  left_index=True,
+                                                                  right_index=True),
+                                     [genotype.to_frame(),
+                                      technical_covs.T,
+                                      tech_inter_matrix.T])
+                n_null = null_matrix.shape[0]
+                df_null, rss_null = create_model(null_matrix, expression)
 
                 # Loop over each permutation sample order. The first order
                 # is the normal order and the remainder are random shuffles.
@@ -228,16 +234,18 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
 
                         # Calculate the interaction effect of the covariate of
                         # interest. Then drop the missing values.
-                        # NOTE: For some reason applying the eqtl_indices mask
-                        # here does not work. Therefore, I added a check that
-                        # makes sure the orders are identical and no unwanted
-                        # NA's are introduced.
-                        interaction_all = covariate_all * genotype_all
-                        interaction_all.name = cov_name
-                        interaction_all.dropna(inplace=True)
+                        inter_of_interest = covariate_all * genotype_all
+                        inter_of_interest.name = "{}_X_SNP".format(cov_name)
+                        inter_of_interest = inter_of_interest.iloc[eqtl_indices]
+
+                        # Drop the na's from the covariate.
+                        cov_of_interest = covariate_all.iloc[eqtl_indices]
 
                         # Check if the drop is identical (See above).
-                        if not interaction_all.index.equals(null_matrix.columns):
+                        if not inter_of_interest.index.equals(
+                                cov_of_interest.index) or \
+                                not inter_of_interest.index.equals(
+                                    null_matrix.index):
                             print("[worker {:2d}]\terror in permutation "
                                   "reordering (ID: {})".format(worker_id,
                                                                order_id),
@@ -245,21 +253,44 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                             snp_pvalues.append(np.nan)
                             continue
 
+                        # Combine the covariate of interest (if not in
+                        # null matrix) and the interaction term.
+                        if cov_name in null_matrix.columns:
+                            new_matrix_rows = inter_of_interest.to_frame()
+                            new_matrix_rows.columns = ["{}_2".format(x)
+                                                       for x in
+                                                       new_matrix_rows.columns]
+                        else:
+                            new_matrix_rows = pd.concat([cov_of_interest,
+                                                         inter_of_interest],
+                                                        axis=1)
+
                         # Create the alternative model. This is the null
                         # matrix + the covariate of interest (shuffled or not).
                         alt_matrix = null_matrix.copy()
-                        alt_matrix = alt_matrix.append(interaction_all)
-                        df_alt, rss_alt = create_model(alt_matrix.T, expression)
+                        alt_matrix = alt_matrix.merge(new_matrix_rows,
+                                                      left_index=True,
+                                                      right_index=True)
+                        n_alt = alt_matrix.shape[0]
+                        df_alt, rss_alt = create_model(alt_matrix, expression)
+
+                        # Make sure the n's are identical.
+                        if n_null != n_alt:
+                            print("[worker {:2d}]\terror due to unequal "
+                                  "n_null and n_alt".format(worker_id),
+                                  flush=True)
+                            snp_pvalues.append(np.nan)
+                            continue
 
                         # Compare the null and alternative model.
                         pvalue = compare_models(rss_null, rss_alt,
                                                 df_null, df_alt,
-                                                n)
+                                                n_null)
 
                         # TODO remove this
                         if rss_alt > rss_null:
                             weird_eqtls.append((rss_null, rss_alt, eqtl_index,
-                                                order_id, cov_name))
+                                                order_id, cov_name, pvalue))
                         # TODO end
 
                         # Safe the pvalue.
@@ -274,20 +305,18 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                                   [genotype.name] + snp_pvalues))
 
             # TODO remove this
-            print("[worker {:2d}]\t Analyses where RSS alt > RSS null:",
-                  flush=True)
+            print("[worker {:2d}]\t Analyses where RSS alt > "
+                  "RSS null:".format(worker_id), flush=True)
             if weird_eqtls:
                 for we in weird_eqtls:
-                    print("[worker {:2d}]\tRSS null:{}\tRSS alt: {}\teQTL: {}\t"
-                          "Sample order: {}\tCovariate: {}".format(worker_id,
-                                                                   we[0],
-                                                                   we[1],
-                                                                   we[2],
-                                                                   we[3],
-                                                                   we[4]),
+                    print("[worker {:2d}]\t\tRSS null:{:.2f}\tRSS alt: {:.2f}\t"
+                          "Delta: {:.2e}\tP-value: {:.2e}"
+                          "eQTL: {}\tSample order: {}\tCovariate: {}\t"
+                          .format(worker_id, we[0], we[1], we[0] - we[1], we[5],
+                                  we[2], we[3], we[4]),
                           flush=True)
             else:
-                print("[worker {:2d}]\tNone", flush=True)
+                print("[worker {:2d}]\tNone".format(worker_id), flush=True)
             # TODO end
 
             # Wait before getting a new job.
@@ -325,7 +354,8 @@ def create_model(X, y):
                          dimensions.
     :param y: Series, the outcome values.
     :return degrees_freedom: int, the degrees of freedom of this model.
-    :return residual_squared_sum: float, the residual sum of squares of this fit.
+    :return residual_squared_sum: float, the residual sum of squares of this
+                                  fit.
     """
     # Create the model.
     regressor = LinearRegression(n_jobs=1)

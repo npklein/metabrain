@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_zscore_bars.py
 Created:      2020/03/16
-Last Changed: 2020/03/20
+Last Changed: 2020/04/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -104,8 +104,8 @@ class IntereQTLZscoreBars:
         g.set_xlabel('z-score',
                      fontsize=18,
                      fontweight='bold')
-        plt.axvline(x=z_score_cutoff, ls='--', c='red')
-        plt.axvline(x=-1 * z_score_cutoff, ls='--', c='red')
+        plt.axvline(x=z_score_cutoff, ls='--', c='black')
+        plt.axvline(x=-1 * z_score_cutoff, ls='--', c='black')
         ax.tick_params(labelsize=10)
         ax.set_yticks(range(len(df.index)))
         ax.set_yticklabels(df["index"])

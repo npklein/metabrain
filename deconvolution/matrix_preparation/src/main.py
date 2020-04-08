@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/12
-Last Changed: 2020/04/07
+Last Changed: 2020/04/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -35,6 +35,7 @@ from .steps.combine_gte_files import CombineGTEFiles
 from .steps.combine_eqtlprobes import CombineEQTLProbes
 from .steps.create_matrices import CreateMatrices
 from .steps.create_deconvolution_matrices import CreateDeconvolutionMatrices
+from .steps.perform_deconvolution import PerformDeconvolution
 from .steps.perform_celltype_pca import PerformCelltypePCA
 from .steps.create_cov_matrix import CreateCovMatrix
 from .steps.mask_matrices import MaskMatrices
@@ -73,6 +74,7 @@ class Main:
         force_dict = {'combine_gte_files': False, 'combine_eqtlprobes': False,
                       'create_matrices': False, 'perform_celltype_pca': False,
                       'create_deconvolution_matrices': False,
+                      'perform_deconvolution': False,
                       'create_cov_matrix': False, 'mask_matrices': False,
                       'create_groups': False, 'create_regression_matrix': False}
         if force_steps is None or len(force_steps) == 0:
@@ -151,6 +153,19 @@ class Main:
 
         # Step6. Create the covariance matrix.
         print("\n### STEP6 ###\n")
+        pd = PerformDeconvolution(
+            settings=self.settings.get_setting('perform_deconvolution'),
+            profile_file=cdm.get_celltype_profile_file(),
+            profile_df=cdm.get_celltype_profile(),
+            ct_expr_file=cdm.get_ct_profile_expr_outpath(),
+            ct_expr_df=pcp.get_celltype_expression(),
+            force=self.force_dict['perform_deconvolution'],
+            outdir=self.outdir)
+        pd.start()
+        pd.clear_variables()
+
+        # Step7. Create the covariance matrix.
+        print("\n### STEP7 ###\n")
         ccm = CreateCovMatrix(
             settings=self.settings.get_setting('create_cov_matrix'),
             marker_file=cdm.get_markers_outpath(),
@@ -190,8 +205,8 @@ class Main:
         print("Validating matrices.")
         self.validate(eqtl_df.copy(), geno_df, alleles_df, expr_df, cov_df)
 
-        # Step7. Create the masked matrices.
-        print("\n### STEP7 ###\n")
+        # Step 8. Create the masked matrices.
+        print("\n### STEP8 ###\n")
         cmm = MaskMatrices(
             settings=self.settings.get_setting('mask_matrices'),
             eqtl_df=eqtl_df.copy(),
@@ -204,8 +219,8 @@ class Main:
         cmm.start()
         del cmm
 
-        # Step 8. Create the group matrices.
-        print("\n### STEP8 ###\n")
+        # Step 9. Create the group matrices.
+        print("\n### STEP9 ###\n")
         cg = CreateGroups(
             settings=self.settings.get_setting('create_groups'),
             eqtl_df=eqtl_df.copy(),
@@ -219,8 +234,8 @@ class Main:
         cg.start()
         del cg
 
-        # Step 9. Create the regression matrices.
-        print("\n### STEP9 ###\n")
+        # Step 10. Create the regression matrices.
+        print("\n### STEP10 ###\n")
         crm = CreateRegressionMatrix(
             settings=self.settings.get_setting('create_regression_matrix'),
             eqtl_df=eqtl_df.copy(),
