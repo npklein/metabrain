@@ -1,7 +1,7 @@
 """
 File:         combine_gte_files.py
 Created:      2020/04/07
-Last Changed: 2020/04/08
+Last Changed: 2020/04/09
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -119,9 +119,7 @@ class PerformCelltypePCA:
     @staticmethod
     def normalize(df):
         df = df.loc[df.std(axis=1) > 0, :]
-        df = df.T
-        df = (df-df.mean()) / df.std()
-        df = df.T
+        df = df.subtract(df.mean(axis=1), axis=0).divide(df.std(axis=1), axis=0)
         return df
 
     @staticmethod
