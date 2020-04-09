@@ -20,12 +20,12 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Standard imports.
-import random
 import os
 
 # Third party imports.
 import numpy as np
 import pandas as pd
+from scipy.optimize import nnls
 
 # Local application imports.
 from general.utilities import prepare_output_dir, check_file_exists
@@ -90,6 +90,9 @@ class PerformDeconvolution:
             self.ct_expr_df = load_dataframe(self.ct_expr_file,
                                              header=0, index_col=0)
 
+        # Convert the profile expression CPM to z-scores.
+        self.profile_df = self.normalize(self.profile_df)
+
         # Filter on overlap.
         overlap = np.intersect1d(self.profile_df.index, self.ct_expr_df.index)
         self.profile_df = self.profile_df.loc[overlap, :]
@@ -104,16 +107,49 @@ class PerformDeconvolution:
             print("Invalid order.")
             exit()
 
-        # Perform deconvolution.
-        # X = (1143, 3703), Y = (1143, 5)
-        cell_count_df = self.ct_expr_df.T.dot(self.profile_df)
-        print(cell_count_df)
+        # Perform deconvolution per sample.
+        decon_data = []
+        residuals_data = []
+        for col_id in range(len(self.ct_expr_df.columns)):
+            sample = self.ct_expr_df.iloc[:, col_id]
+            proportions, rnorm = self.nnls(self.profile_df, sample)
+            decon_data.append(proportions)
+            residuals_data.append(rnorm)
 
-        approx_expr = self.profile_df.dot(cell_count_df.T)
-        print(approx_expr)
-        print(self.ct_expr_df)
+        decon_df = pd.DataFrame(decon_data,
+                                index=self.ct_expr_df.columns,
+                                columns=self.profile_df.columns)
 
-        return pd.DataFrame()
+        print("Estimated weights:")
+        print(decon_df)
+
+        # Make the weights sum up to 1.
+        decon_df = self.sum_to_one(decon_df)
+        print("Estimated proportions:")
+        print(decon_df)
+
+        # Construct a Series for the residuals.
+        residuals_df = pd.Series(residuals_data, index=self.ct_expr_df.columns)
+        print(residuals_df)
+        print("Average residual: {:.2f}".format(residuals_df.mean()))
+
+        exit()
+
+        return decon_df
+
+    @staticmethod
+    def normalize(df):
+        df = df.loc[df.std(axis=1) > 0, :]
+        df = df.subtract(df.mean(axis=1), axis=0).divide(df.std(axis=1), axis=0)
+        return df
+
+    @staticmethod
+    def nnls(A, b):
+        return nnls(A, b)
+
+    @staticmethod
+    def sum_to_one(X):
+        return X.divide(X.sum(axis=1), axis=0)
 
     def save(self):
         save_dataframe(df=self.deconvolution, outpath=self.outpath,

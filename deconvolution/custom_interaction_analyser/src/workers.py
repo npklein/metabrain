@@ -110,10 +110,6 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                 print("[worker {:2d}]\tFound work".format(worker_id),
                       flush=True)
 
-            # TODO remove this
-            weird_eqtls = []
-            # TODO end
-
             # Find the start index for reading the input files. The lowest
             # key is the start index for reading the input file. The end nrows
             # is the range of start indices + 1.
@@ -287,12 +283,6 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                                                 df_null, df_alt,
                                                 n_null)
 
-                        # TODO remove this
-                        if rss_alt > rss_null:
-                            weird_eqtls.append((rss_null, rss_alt, eqtl_index,
-                                                order_id, cov_name, pvalue))
-                        # TODO end
-
                         # Safe the pvalue.
                         snp_pvalues.append(pvalue)
 
@@ -303,21 +293,6 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                     # Push the result back to the manager.
                     result_q.put((worker_id, "result", eqtl_index, order_id,
                                   [genotype.name] + snp_pvalues))
-
-            # TODO remove this
-            print("[worker {:2d}]\t Analyses where RSS alt > "
-                  "RSS null:".format(worker_id), flush=True)
-            if weird_eqtls:
-                for we in weird_eqtls:
-                    print("[worker {:2d}]\t\tRSS null:{:.2f}\tRSS alt: {:.2f}\t"
-                          "Delta: {:.2e}\tP-value: {:.2e}"
-                          "eQTL: {}\tSample order: {}\tCovariate: {}\t"
-                          .format(worker_id, we[0], we[1], we[0] - we[1], we[5],
-                                  we[2], we[3], we[4]),
-                          flush=True)
-            else:
-                print("[worker {:2d}]\tNone".format(worker_id), flush=True)
-            # TODO end
 
             # Wait before getting a new job.
             time.sleep(sleep_time * 2)

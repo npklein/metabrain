@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/12
-Last Changed: 2020/04/08
+Last Changed: 2020/04/09
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -170,6 +170,7 @@ class Main:
             settings=self.settings.get_setting('create_cov_matrix'),
             marker_file=cdm.get_markers_outpath(),
             celltype_pcs=pcp.get_celltype_pcs(),
+            deconvolution=pd.get_deconvolution(),
             sample_order=cgtef.get_sample_order(),
             force=self.force_dict['create_cov_matrix'],
             outdir=self.outdir)
