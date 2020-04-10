@@ -1,7 +1,7 @@
 """
 File:         manager.py
 Created:      2020/04/01
-Last Changed: 2020/04/08
+Last Changed: 2020/04/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -30,6 +30,7 @@ import random
 import gzip
 import time
 import math
+import glob
 import os
 
 # Third party imports.
@@ -45,7 +46,7 @@ class Manager:
     Class for the manager.
     """
     def __init__(self, settings_file, skip_rows, n_eqtls, n_samples, cores,
-                 verbose):
+                 include, verbose):
         """
         Initializer of the class.
 
@@ -55,6 +56,8 @@ class Manager:
         :param n_samples: int, the number of samples in the input files.
         :param cores: int, the number of cores to use.
         :param verbose: boolean, whether or not to print all update info.
+        :param include: boolean, whether or not to include the unfinished
+                        wait_list.
         """
         # Define the current directory.
         current_dir = str(Path(__file__).parent.parent)
@@ -78,8 +81,20 @@ class Manager:
             "single_eqtl_max_runtime_in_min") * 60
         self.max_end_time = int(time.time()) + settings.get_setting(
             "max_runtime_in_hours") * 60 * 60
+        self.panic_time = self.max_end_time - (settings.get_setting("panic_time_in_min") * 60)
         self.skip_rows = skip_rows
         self.verbose = verbose
+
+        # Define output filenames.
+        self.wait_list_outfile = os.path.join(self.outdir, settings.get_setting("wait_list_pickle_filename") + "{}.pkl".format(int(time.time())))
+        self.perm_orders_outfile = os.path.join(self.outdir, settings.get_setting("permutations_order_pickle_filename") + ".pkl")
+        self.pvalues_outfile = os.path.join(self.outdir, settings.get_setting("actual_pvalues_pickle_filename") + "{}.pkl".format(int(time.time())))
+        self.perm_pvalues_outfile = os.path.join(self.outdir, settings.get_setting("permuted_pvalues_pickle_filename") + "{}.pkl".format(int(time.time())))
+
+        # Load the previous wait list if need be.
+        self.prev_wait_list = []
+        if include:
+            self.prev_wait_list = self.load_previous_wait_list(self.outdir, settings.get_setting("wait_list_pickle_filename"))
 
         # Count the number of eQTLs / samples if it isn't given by the user.
         if n_eqtls is None:
@@ -92,10 +107,29 @@ class Manager:
         # Determine optimal distribution of the work of the cores.
         self.n_cores, self.chunk_size = self.divide_work(n_eqtls, cores)
 
-        # Define output filenames.
-        self.perm_orders_outfile = os.path.join(self.outdir, settings.get_setting("permutations_order_pickle_filename") + ".pkl")
-        self.pvalues_outfile = os.path.join(self.outdir, settings.get_setting("actual_pvalues_pickle_filename") + "{}.pkl".format(self.skip_rows))
-        self.perm_pvalues_outfile = os.path.join(self.outdir, settings.get_setting("permuted_pvalues_pickle_filename") + "{}.pkl".format(self.skip_rows))
+    def load_previous_wait_list(self, indir, filename):
+        """
+        Method that loads the wait list of a previous run.
+
+        :param indir: string, the input directory containing the pickle files.
+        :param filename: string, the prefix name of the input file.
+        :return wait_list: list, the previous wait_lists.
+        """
+        # Order the filenames based on the integers appendices.
+        infiles = glob.glob(os.path.join(indir, filename + "*.pkl"))
+        start_indices = []
+        for fpath in infiles:
+            fpath_si = int(fpath.split(filename)[1].split('.')[0])
+            start_indices.append(fpath_si)
+        start_indices = sorted(start_indices)
+
+        # Combine the found files.
+        wait_list = []
+        for i, start_index in enumerate(start_indices):
+            fpath = os.path.join(indir, filename + str(start_index) + ".pkl")
+            wait_list.extend(self.load_pickle(fpath))
+
+        return wait_list
 
     def count_n_eqtls(self):
         """
@@ -180,7 +214,7 @@ class Manager:
             chunk_size = 1
             cores = n_eqtls
         else:
-            chunk_size = min(math.ceil(n_eqtls / cores / 2), 10)
+            chunk_size = max(1, min(math.ceil(n_eqtls / cores / 2), 10))
 
         return cores, chunk_size
 
@@ -230,8 +264,12 @@ class Manager:
         all_sample_orders = [i for i in range(len(permutation_orders))]
 
         # Load the wait list.
-        print("[manager]\tcreating waitlist.", flush=True)
+        print("[manager]\tcreating wait list.", flush=True)
         wait_list = self.load_wait_list(all_sample_orders)
+        if self.prev_wait_list:
+            print("[manager]\tadded {} eQTLs from previous "
+                  "wait list.".format(len(self.prev_wait_list)), flush=True)
+            wait_list.extend(self.prev_wait_list)
 
         # Start the workers.
         print("[manager]\tstarting processes.", flush=True)
@@ -264,15 +302,17 @@ class Manager:
         last_print_time = int(time.time()) - self.print_interval
         counter = 0
         total_analyses = self.n_eqtls * (self.n_permutations + 1)
+        panic = False
 
         print("[manager]\tstarting scheduler.")
         while True:
-            # Break the loop of the maximum runtime has been reached. This prevents
-            # the workers to continue indefinitely.
+            # Break the loop of the maximum runtime has been reached.
+            # This prevents the workers to continue indefinitely.
             if time.time() > self.max_end_time:
                 break
 
-            # DOCTOR: check if a client isn't responding.
+            # DOCTOR: check if a client isn't responding. If this is the case
+            # then reschedule the unfinished work.
             now_time = int(time.time())
             tmp_doctor_dict = doctor_dict.copy()
             for worker_id, last_hr in tmp_doctor_dict.items():
@@ -293,9 +333,10 @@ class Manager:
 
                     if worker_id in doctor_dict.keys():
                         del doctor_dict[worker_id]
-                    dead_workers.append(worker_id)
+                    if worker_id not in dead_workers:
+                        dead_workers.append(worker_id)
 
-            # RECEIVER: Install new clients and reduce results
+            # RECEIVER: Install new workers and reduce results.
 
             # Empty the results queue.
             while not result_q.empty():
@@ -303,25 +344,28 @@ class Manager:
                 (worker_id, category, eqtl_index, sample_order_id,
                  data) = result_q.get()
 
-                # Safe the moment the message was received. Don't save it
-                # if it was already declared dead.
+                # Check the worker is not a zombie.
                 if worker_id in dead_workers:
                     continue
 
+                # Safe the moment the message was received. Don't save it
+                # if it was already declared dead.
                 if worker_id in doctor_dict.keys():
                     doctor_dict[worker_id] = int(time.time())
 
-                # check what kind of message it is.
+                # Check what kind of message it is.
                 if category == "online":
                     print("[receiver]\ta new worker connected: "
                           "'worker {}'".format(worker_id),
                           flush=True)
+
                     # Add the worker to the schedule so it can receive work.
                     schedule[worker_id] = None
                     if not columns_added:
                         # Safe the columns.
                         pvalue_data.append([eqtl_index] + data)
                         columns_added = True
+
                 elif category == "result":
                     if self.verbose:
                         print("[receiver]\treceived an output "
@@ -362,15 +406,15 @@ class Manager:
 
             # SCHEDULER: map jobs
 
-            # check if there is work to schedule.
+            # Check if there is work to schedule.
             if len(wait_list) > 0:
-                # count the number of free_processes
+                # Count the number of free_processes
                 free_workers = []
                 for worker_id, work in schedule.items():
                     if work is None:
                         free_workers.append(worker_id)
 
-                # check if there are free processes.
+                # Check if there are free processes.
                 if len(free_workers) > 0:
                     if len(wait_list) < len(free_workers):
                         free_workers = free_workers[0:len(wait_list)]
@@ -398,7 +442,7 @@ class Manager:
 
             # END
 
-            # print statements to update the end-user.
+            # Print statements to update the end-user.
             now_time = int(time.time())
             if now_time - last_print_time >= self.print_interval:
                 last_print_time = now_time
@@ -414,11 +458,16 @@ class Manager:
                 if not unfinished_work:
                     break
 
+            # Check whether we are almost running out of time.
+            if time.time() > self.panic_time:
+                panic = True
+                break
+
             time.sleep(self.sleep_time)
 
-        # Update the end-user again. This allows for comfirmation all work
+        # Update the end-user again. This allows for conformation all work
         # is indeed done.
-        if self.verbose:
+        if self.verbose or panic:
             self.print_status(wait_list, schedule, eqtl_id_len, order_id_len)
         else:
             self.print_progress(counter, total_analyses)
@@ -437,6 +486,16 @@ class Manager:
         print("[manager]\tsaving output lists.", flush=True)
         self.dump_pickle(pvalue_data, self.pvalues_outfile)
         self.dump_pickle(perm_pvalues, self.perm_pvalues_outfile)
+
+        # Empty the schedule.
+        print("[manager]\tclearing schedule, saving unfinished work.",
+              flush=True)
+        for unfinished_work in schedule.values():
+            if unfinished_work is not None:
+                for key, value in unfinished_work.items():
+                    wait_list.append((key, value, 1))
+        if wait_list:
+            self.dump_pickle(wait_list, self.wait_list_outfile)
 
         # Print the process time.
         run_time = int(time.time()) - start_time
@@ -593,6 +652,8 @@ class Manager:
         """
         end_time_string = datetime.fromtimestamp(self.max_end_time).strftime(
             "%d-%m-%Y, %H:%M:%S")
+        panic_time_string = datetime.fromtimestamp(self.panic_time).strftime(
+            "%d-%m-%Y, %H:%M:%S")
         print("Arguments:")
         print("  > Genotype datafile: {}".format(self.geno_inpath))
         print("  > Expression datafile: {}".format(self.expr_inpath))
@@ -606,6 +667,7 @@ class Manager:
         print("  > Print interval: {} sec".format(self.print_interval))
         print("  > Single analysis max runtime: {} sec".format(self.analysis_max_runtime))
         print("  > Max end datetime: {}".format(end_time_string))
+        print("  > Panic datetime: {}".format(panic_time_string))
         print("  > Skip rows: {}".format(self.skip_rows))
         print("  > EQTLs: {}".format(self.n_eqtls))
         print("  > Samples: {}".format(self.n_samples))

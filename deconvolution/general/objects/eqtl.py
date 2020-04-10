@@ -33,7 +33,6 @@ class Eqtl:
         self.name = name
         self.snp_index = snp_index
 
-
         df = self.combine_data(genotype, expression)
         self.samples, self.sample_indices = self.filter_data(df)
         self.n_missing = genotype.size - len(self.samples)

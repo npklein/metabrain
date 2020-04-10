@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/13
-Last Changed: 2020/03/23
+Last Changed: 2020/04/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -85,7 +85,15 @@ class Main:
         self.cov_filename = filenames["covariate"]
 
     def filter_groups(self, groups_in_indir):
-        # Get the groups we are interested in.
+        """
+        Method that intersect the groups that are found in the input directory
+        and the groups that are given on the command line.
+
+        :param groups_in_indir: list, the input paths of the group directories
+                                available.
+        :return group_indirs: list: the input paths of the group directories
+                                available but then filtered on interest.
+        """
         group_indirs = []
         if "all" in self.groups:
             group_indirs = groups_in_indir
@@ -208,24 +216,56 @@ class Main:
             self.execute(ia_indir, ia_outdir, eqtl_file)
 
     def print_string(self, string):
+        """
+        Method for printing. This allows me to only put the if statement
+        for verbose printing once.
+
+        :param string: str, the string to be printed.
+        """
         if self.verbose:
             print(string)
 
     def copy_file(self, inpath, outpath):
+        """
+        Method for copying a file.
+
+        :param inpath: str, the input path.
+        :param outpath: str, the output path.
+        """
         command = ['cp', inpath, outpath]
         self.execute_command(command)
 
     def decompress(self, inpath):
+        """
+        Method for decompressing a file.
+
+        :param inpath: str, the file to be decompressed.
+        """
         command = ['gunzip', inpath, '-f']
         self.execute_command(command)
 
     def convert_to_binary(self, inpath, outpath):
+        """
+        Method for converting a file to binary with the eQTLInteractionAnalyser.
+
+        :param inpath: str, the uncompressed input file path.
+        :param outpath: str, the binary outfile file path.
+        """
         command = ['java', '-jar', self.eqtl_ia,
                    '--convertMatrix',
                    '-i', inpath, '-o', outpath]
         self.execute_command(command)
 
     def execute(self, ia_indir, ia_outdir, eqtl_inpath):
+        """
+        Method that executes the eQTLInteractionAnalyser.
+
+        :param ia_indir: string, the input directory where the Genotype-,
+                         Expression- and Covariates.binary files are.
+        :param ia_outdir: string, the output directory for the program will
+                          safe the result files.
+        :param eqtl_inpath: string, the eQTL file.
+        """
         command = ['java', '-jar', self.eqtl_ia,
                    '-input', ia_indir, '-output', ia_outdir,
                    '-eqtls', eqtl_inpath,
@@ -236,6 +276,11 @@ class Main:
         self.execute_command(command)
 
     def execute_command(self, command):
+        """
+        Method for executing an subprocess command.
+
+        :param command: list, the command to be executed.
+        """
         self.print_string("{}".format(' '.join(command)))
         if self.verbose:
             output = subprocess.check_call(command)
@@ -250,6 +295,9 @@ class Main:
             exit()
 
     def print_arguments(self):
+        """
+        Method for printing the variables of the class.
+        """
         print("Arguments:")
         print("  > Input directory: {}".format(self.indir))
         print("  > Output directory: {}".format(self.outdir))
