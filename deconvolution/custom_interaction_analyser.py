@@ -3,7 +3,7 @@
 """
 File:         custom_interaction_analyser.py
 Created:      2020/03/23
-Last Changed: 2020/04/07
+Last Changed: 2020/04/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -61,6 +61,7 @@ if __name__ == '__main__':
         N_EQTLS = CLA.get_argument("n_eqtls")
         N_SAMPLES = CLA.get_argument("n_samples")
         CORES = CLA.get_argument("cores")
+        INCLUDE = CLA.get_argument("include")
         VERBOSE = CLA.get_argument("verbose")
 
         # Start the program.
@@ -69,5 +70,6 @@ if __name__ == '__main__':
                           n_eqtls=N_EQTLS,
                           n_samples=N_SAMPLES,
                           cores=CORES,
+                          include=INCLUDE,
                           verbose=VERBOSE)
         PROGRAM.start()

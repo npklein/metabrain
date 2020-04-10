@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed: 2020/04/08
+Last Changed: 2020/04/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -168,17 +168,9 @@ class CombineAndPlot:
         col_list = None
         data = []
 
-        # Order the filenames based on the integers appendices.
-        infiles = glob.glob(os.path.join(indir, filename + "*.pkl"))
-        start_indices = []
-        for fpath in infiles:
-            fpath_si = int(fpath.split(filename)[1].split('.')[0])
-            start_indices.append(fpath_si)
-        start_indices = sorted(start_indices)
-
         # Combine the found files.
-        for i, start_index in enumerate(start_indices):
-            fpath = os.path.join(indir, filename + str(start_index) + ".pkl")
+        for i, fpath in enumerate(glob.glob(os.path.join(indir,
+                                                         filename + "*.pkl"))):
             with open(fpath, "rb") as f:
                 content = pickle.load(f)
                 if columns and i == 0:
@@ -201,6 +193,7 @@ class CombineAndPlot:
         df = pd.DataFrame(data, columns=columns)
         df.set_index(df.columns[0], inplace=True)
         df.sort_index(inplace=True)
+        print(df)
         df.set_index("-", inplace=True)
         df = df.T
 

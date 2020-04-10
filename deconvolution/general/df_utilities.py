@@ -1,7 +1,7 @@
 """
 File:         df_utilities.py
 Created:      2020/03/19
-Last Changed:
+Last Changed: 2020/04/10
 Author(s):    M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -31,6 +31,22 @@ from .utilities import get_basename
 
 def load_dataframe(inpath, header, index_col, sep="\t", low_memory=True,
                    nrows=None):
+    """
+    Method for reading a comma-separated values (csv) file into a pandas
+    DataFrame.
+
+    :param inpath: str, the file to be read.
+    :param header: int, row number(s) to use as the column names, and the
+                   start of the data.
+    :param index_col: int, column(s) to use as the row labels of the DataFrame,
+                      either given as string name or column index.
+    :param sep: str, delimiter to use.
+    :param low_memory: boolean, internally process the file in chunks,
+                       resulting in lower memory use while parsing, but
+                       possibly mixed type inference.
+    :param nrows: int, number of rows of file to read.
+    :return df: DataFrame, the pandas dataframe.
+    """
     df = pd.read_csv(inpath, sep=sep, header=header, index_col=index_col,
                      low_memory=low_memory, nrows=nrows)
     print("\tLoaded dataframe: {} with shape: {}".format(get_basename(inpath),
@@ -39,6 +55,15 @@ def load_dataframe(inpath, header, index_col, sep="\t", low_memory=True,
 
 
 def save_dataframe(df, outpath, header, index, sep="\t"):
+    """
+    Method for writing an dataframe to a comma-separated values (csv) file.
+
+    :param df: DataFrame, the pandas dataframe.
+    :param outpath: str, the filepath for the dataframe.
+    :param header: boolean, write out the column names.
+    :param index: boolean, write row names (index).
+    :param sep: str, field delimiter for the output file.
+    """
     compression = 'infer'
     if outpath.endswith('.gz'):
         compression = 'gzip'
