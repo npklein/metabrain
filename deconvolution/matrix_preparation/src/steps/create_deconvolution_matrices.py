@@ -67,7 +67,7 @@ class CreateDeconvolutionMatrices:
         self.celltype_profile = None
 
     def start(self):
-        print("Starting creating matrices.")
+        print("Starting creating deconvolution matrices.")
         self.print_arguments()
 
         # Check if output file exist.

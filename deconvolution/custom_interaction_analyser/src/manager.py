@@ -297,6 +297,7 @@ class Manager:
         columns_added = False
         pvalue_data = []
         perm_pvalues = []
+        single_eqtl_runtime = []
         eqtl_id_len = len(str(self.n_eqtls))
         order_id_len = len(str(len(all_sample_orders)))
         last_print_time = int(time.time()) - self.print_interval
@@ -351,6 +352,9 @@ class Manager:
                 # Safe the moment the message was received. Don't save it
                 # if it was already declared dead.
                 if worker_id not in dead_workers:
+                    if worker_id in doctor_dict.keys():
+                        old_hr = doctor_dict[worker_id]
+                        single_eqtl_runtime.append(int(time.time()) - old_hr)
                     doctor_dict[worker_id] = int(time.time())
 
                 # Check what kind of message it is.
@@ -512,6 +516,9 @@ class Manager:
         print("[receiver]\treceived {:.2f} analyses "
               "per minute.".format(counter / (run_time / 60)),
               flush=True)
+        print("[manager]\taverage runtime per eQTL: "
+              "{} seconds".format(sum(single_eqtl_runtime) /
+                                  len(single_eqtl_runtime)), flush=True)
 
         # Shutdown the manager.
         print("[manager]\tshutting down manager [{}]".format(
@@ -621,7 +628,7 @@ class Manager:
             work_info = []
             wait_list = sorted(wait_list, key=lambda x: x[0])
             for job in wait_list:
-                work_info.append("eQTL_{:<{}d}-eQTL_{:<{}d} (x{:<{}d})".format(job[0], eqtl_id_len,  job[0] + job[2], eqtl_id_len, len(job[1]), order_id_len))
+                work_info.append("eQTL_{:<{}d} - eQTL_{:<{}d} (x{:<{}d})".format(job[0], eqtl_id_len,  job[0] + job[2], eqtl_id_len, len(job[1]), order_id_len))
             print("[manager]\twait list: [{}]".format(', '.join(work_info)),
                   flush=True)
         else:
