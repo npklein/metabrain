@@ -139,7 +139,6 @@ class CreateCovMatrix:
                           [cov_df, cohorts_df, gender_df, eigen_df, cov_cor_df, marker_df, self.celltype_pcs.T, self.deconvolution])
         comb_cov = comb_cov.T
         comb_cov = comb_cov[self.sample_order]
-        comb_cov.index = [x.upper() for x in comb_cov.index]
         comb_cov.index.name = "-"
         print("\tShape: {}".format(comb_cov.shape))
 

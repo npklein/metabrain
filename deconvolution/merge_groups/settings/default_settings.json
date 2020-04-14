@@ -16,5 +16,5 @@
     "markers": "markers_table.txt.gz"
   },
   "output_dir": "output",
-  "celltypes": ["NEURON", "OLIGODENDROCYTE", "ENDOTHELIALCELL", "MICROGLIA", "ASTROCYTE"]
+  "celltypes": ["Neuron", "Oligodendrocyte", "EndothelialCell", "Microglia", "Astrocyte"]
 }

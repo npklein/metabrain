@@ -17,37 +17,37 @@
   "create_deconvolution_matrices": {
     "celltype_profile_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/CellMap_brain_celltype_avgCPM.txt",
     "translate_datafile": "/groups/umcg-biogen/tmp03/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz",
-    "marker_genes_suffix": "McKenzie_",
+    "marker_genes_suffix": "McKenzie",
     "marker_dict": {
-      "NEURON": [
+      "Neuron": [
         "NPY",
         "VIP",
         "CCK",
         "CALB2",
         "KIT"
       ],
-      "OLIGODENDROCYTE": [
+      "Oligodendrocyte": [
         "MOG",
         "MBP",
         "MAG",
         "CNP",
         "CA2"
       ],
-      "ENDOTHELIALCELL": [
+      "EndothelialCell": [
         "CD34",
         "VWF",
         "ENG",
         "KDR",
         "CXCL12"
       ],
-      "MICROGLIA": [
+      "Microglia": [
         "AIF1",
         "CCL2",
         "CX3CR1",
         "TLR2",
         "CD14"
       ],
-      "ASTROCYTE": [
+      "Astrocyte": [
         "GFAP",
         "AQP4",
         "EGFR",

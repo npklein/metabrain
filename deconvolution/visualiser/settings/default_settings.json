@@ -9,6 +9,6 @@
     "markers": "markers_table.txt.gz"
   },
   "interaction_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/custom_interaction_analyser/output/interaction_table.txt.gz",
-  "celltypes": ["NEURON", "OLIGODENDROCYTE", "ENDOTHELIALCELL", "MICROGLIA", "ASTROCYTE"],
+  "celltypes": ["Neuron", "Oligodendrocyte", "EndothelialCell", "Microglia", "Astrocyte"],,
   "output_dir": "output"
 }
