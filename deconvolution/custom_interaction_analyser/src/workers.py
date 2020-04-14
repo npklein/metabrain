@@ -1,7 +1,7 @@
 """
 File:         workers.py
 Created:      2020/04/01
-Last Changed: 2020/04/08
+Last Changed: 2020/04/14
 Author(s):    M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -375,8 +375,10 @@ def calc_f_value(rss1, rss2, df1, df2, n):
     """
     if df1 >= df2:
         return np.nan
+    if rss2 >= rss1:
+        return 0
     if df2 >= n:
-        return np.nan
+        return 0
 
     return ((rss1 - rss2) / (df2 - df1)) / (rss2 / (n - df2))
 

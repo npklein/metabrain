@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed: 2020/04/10
+Last Changed: 2020/04/14
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -97,6 +97,10 @@ class CombineAndPlot:
         # Create a pandas dataframe from the nested list.
         print("Creating p-values dataframe.", flush=True)
         pvalue_df = self.create_df(pvalues_data, columns)
+        save_dataframe(df=pvalue_df,
+                       outpath=os.path.join(self.outdir,
+                                            "pvalue_table.txt.gz"),
+                       header=True, index=True)
 
         # Create a dataframe with z-scores.
         print("Creating Z-score dataframe.", flush=True)
@@ -179,6 +183,25 @@ class CombineAndPlot:
                 print("\tLoaded list: {} with length: {}".format(
                     get_basename(fpath), len(content)))
             f.close()
+
+        # for i, fpath in enumerate(glob.glob(os.path.join(indir, filename + "*.pkl"))):
+        #     with open(fpath, "rb") as f:
+        #         content = pickle.load(f)
+        #     f.close()
+        #
+        #     print(len(content))
+        #     tmp = []
+        #     for x in content:
+        #         if x != np.nan:
+        #             tmp.append(x)
+        #     print(len(tmp))
+
+            # with open(fpath, "wb") as f:
+            #     pickle.dump(tmp, f)
+            # f.close()
+            #
+            # exit()
+
         return col_list, data
 
     @staticmethod
@@ -193,11 +216,59 @@ class CombineAndPlot:
         df = pd.DataFrame(data, columns=columns)
         df.set_index(df.columns[0], inplace=True)
         df.sort_index(inplace=True)
-        print(df)
+
+        reference = set(np.arange(df.index.min(), df.index.max() + 1))
+        missing = list(df.index.symmetric_difference(reference))
+        duplicated = list(df.index[df.index.duplicated(keep="first")])
+        print("\tMissing indices: {}.".format(missing))
+        print("\tDuplicate indices: {}".format(duplicated))
+
         df.set_index("-", inplace=True)
         df = df.T
 
         return df
+
+    def create_zscore_df(self, df):
+        """
+        Method for converting a dataframe of p-values to z-scores.
+
+        :param df: DataFrame, a dataframe containing p-values.
+        :return zscore_df: DataFrame, a dataframe containing z-scores
+        """
+        count = 0
+        total = df.shape[0] * df.shape[1]
+
+        zscore_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
+        for row_index in range(df.shape[0]):
+            for col_index in range(df.shape[1]):
+                if count % 10000 == 0:
+                    print("\tworking on {}/{} [{:.2f}%]".format(count,
+                                                                total,
+                                                                (100 / total) * count))
+                pvalue = df.iloc[row_index, col_index]
+                zscore = self.get_z_score(pvalue)
+                zscore_df.iloc[row_index, col_index] = zscore
+                count += 1
+
+        return zscore_df
+
+    @staticmethod
+    def get_z_score(p_value):
+        """
+        Method for converting a p-value to a z-score.
+
+        :param p-value: float, the p-value to convert.
+        :param z-score: float, the corresponding z-score.
+        """
+        if p_value > (1.0 - 1e-16):
+            p_value = (1.0 - 1e-16)
+        if p_value < 1e-323:
+            p_value = 1e-323
+
+        # The lower and upper limit of stats.norm.sf
+        # stats.norm.isf((1 - 1e-16)) = -8.209536151601387
+        # stats.norm.isf(1e-323) = 38.44939448087599
+        return stats.norm.isf(p_value)
 
     @staticmethod
     def plot_distributions(perm_pvalues, pvalues, outdir):
@@ -252,9 +323,16 @@ class CombineAndPlot:
         :param n_perm: int, the number of permutations performed.
         :return fdr_df: DataFrame, the permutation FDR dataframe.
         """
+        count = 0
+        total = df.shape[0] * df.shape[1]
+
         fdr_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
         for row_index in range(df.shape[0]):
             for col_index in range(df.shape[1]):
+                if count % 10000 == 0:
+                    print("\tworking on {}/{} [{:.2f}%]".format(count,
+                                                                total,
+                                                                (100 / total) * count))
                 pvalue = df.iloc[row_index, col_index]
                 rank = bisect_left(pvalues, pvalue)
                 perm_rank = bisect_left(perm_pvalues, pvalue)
@@ -265,6 +343,8 @@ class CombineAndPlot:
                 else:
                     fdr_value = 0
                 fdr_df.iloc[row_index, col_index] = fdr_value
+                count += 1
+
         return fdr_df
 
     @staticmethod
@@ -279,11 +359,18 @@ class CombineAndPlot:
         :param pvalues: list, the sorted alternative model p-values.
         :return fdr_df: DataFrame, the Benjamini-Hochberg FDR dataframe.
         """
+        count = 0
+        total = df.shape[0] * df.shape[1]
+
         m = len(pvalues)
         fdr_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
         fdr_values = []
         for row_index in range(df.shape[0]):
             for col_index in range(df.shape[1]):
+                if count % 10000 == 0:
+                    print("\tworking on {}/{} [{:.2f}%]".format(count,
+                                                                total,
+                                                                (100 / total) * count))
                 pvalue = df.iloc[row_index, col_index]
                 rank = bisect_left(pvalues, pvalue) + 1
                 fdr_value = pvalue * (m / rank)
@@ -291,6 +378,7 @@ class CombineAndPlot:
                     fdr_value = 1
                 fdr_values.append((rank, row_index, col_index, fdr_value))
                 fdr_df.iloc[row_index, col_index] = fdr_value
+                count += 1
 
         # Make sure the BH FDR is a monotome function. This goes through
         # the FDR values backwords and make sure that the next FDR is always
@@ -305,40 +393,6 @@ class CombineAndPlot:
                 prev_fdr_value = fdr_value
 
         return fdr_df
-
-    def create_zscore_df(self, df):
-        """
-        Method for converting a dataframe of p-values to z-scores.
-
-        :param df: DataFrame, a dataframe containing p-values.
-        :return zscore_df: DataFrame, a dataframe containing z-scores
-        """
-        zscore_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
-        for row_index in range(df.shape[0]):
-            for col_index in range(df.shape[1]):
-                pvalue = df.iloc[row_index, col_index]
-                zscore = self.get_z_score(pvalue)
-                zscore_df.iloc[row_index, col_index] = zscore
-
-        return zscore_df
-
-    @staticmethod
-    def get_z_score(p_value):
-        """
-        Method for converting a p-value to a z-score.
-
-        :param p-value: float, the p-value to convert.
-        :param z-score: float, the corresponding z-score.
-        """
-        if p_value > (1.0 - 1e-16):
-            p_value = 1e-16
-        if p_value < 1e-323:
-            p_value = 1e-323
-
-        # The lower and upper limit of stats.norm.sf
-        # stats.norm.isf((1 - 1e-16)) = -8.209536151601387
-        # stats.norm.isf(1e-323) = 38.44939448087599
-        return stats.norm.isf(p_value)
 
     def compare_pvalue_scores(self, pvalue_df, perm_fdr, bh_fdr, outdir,
                               stepsize=0.2, max_val=None, rescale=False):
