@@ -118,7 +118,7 @@ class PerformDeconvolution:
 
         decon_df = pd.DataFrame(decon_data,
                                 index=self.ct_expr_df.columns,
-                                columns=self.profile_df.columns)
+                                columns=["NNLS_{}".format(x.split("_")[1]) for x in self.profile_df.columns])
 
         print("Estimated weights:")
         print(decon_df)
@@ -132,8 +132,6 @@ class PerformDeconvolution:
         residuals_df = pd.Series(residuals_data, index=self.ct_expr_df.columns)
         print(residuals_df)
         print("Average residual: {:.2f}".format(residuals_df.mean()))
-
-        exit()
 
         return decon_df
 

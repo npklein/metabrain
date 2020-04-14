@@ -73,7 +73,7 @@ class CelltypeProfileVSMarkerGenes:
         marker_indices = []
         for index in self.inter_df.index:
             if ("_" in index) and (
-                    index.split("_")[0] in self.celltypes):
+                    index.split("_")[1] in self.celltypes):
                 marker_indices.append(index)
         marker_df = self.inter_df.loc[marker_indices, :]
 
@@ -113,7 +113,7 @@ class CelltypeProfileVSMarkerGenes:
             # Get the marker genes of this celltype.
             marker_genes = []
             for index in marker_df.index:
-                if index.split("_")[0] == celltype:
+                if index.split("_")[1] == celltype:
                     marker_genes.append(index)
 
             # Loop over each marker gene.
@@ -149,8 +149,8 @@ class CelltypeProfileVSMarkerGenes:
 
                 ax.text(0.5, 1.05,
                         'Celltype: {} Marker gene: {} '.format(
-                            marker_gene.split("_")[0],
-                            marker_gene.split("_")[1]),
+                            marker_gene.split("_")[1],
+                            marker_gene.split("_")[2]),
                         fontsize=16, weight='bold', ha='center', va='bottom',
                         color=color,
                         transform=ax.transAxes)

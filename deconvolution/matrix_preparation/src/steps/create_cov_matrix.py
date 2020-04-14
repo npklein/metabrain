@@ -1,7 +1,7 @@
 """
 File:         create_cov_matrices.py
 Created:      2020/03/12
-Last Changed: 2020/04/09
+Last Changed: 2020/04/14
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -136,10 +136,10 @@ class CreateCovMatrix:
         # merge.
         print("Merging matrices.")
         comb_cov = reduce(lambda left, right: pd.merge(left, right, left_index=True, right_index=True),
-                          [cov_df, cohorts_df, gender_df, eigen_df, cov_cor_df, self.celltype_pcs.T, self.deconvolution, marker_df])
+                          [cov_df, cohorts_df, gender_df, eigen_df, cov_cor_df, marker_df, self.celltype_pcs.T, self.deconvolution])
         comb_cov = comb_cov.T
         comb_cov = comb_cov[self.sample_order]
-        comb_cov.index = comb_cov.index.set_names(['Sample'])
+        comb_cov.index = [x.upper() for x in comb_cov.index]
         comb_cov.index.name = "-"
         print("\tShape: {}".format(comb_cov.shape))
 

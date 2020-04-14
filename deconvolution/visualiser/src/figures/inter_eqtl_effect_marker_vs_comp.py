@@ -64,7 +64,7 @@ class IntereQTLEffectMarkerVSComp:
         comp_indices = []
         for index in self.inter_df.index:
             if ("_" in index) and (
-                    index.split("_")[0] in self.celltypes):
+                    index.split("_")[1] in self.celltypes):
                 marker_indices.append(index)
             elif index.startswith("Comp"):
                 comp_indices.append(index)
@@ -127,8 +127,8 @@ class IntereQTLEffectMarkerVSComp:
         col_index = 0
         for marker in markers.columns:
             # Split the name.
-            celltype = marker.split("_")[0]
-            gene = marker.split("_")[1]
+            celltype = marker.split("_")[1]
+            gene = marker.split("_")[2]
 
             # Get the color.
             color = color_map[celltype]

@@ -61,22 +61,18 @@ class InterZscoreBars:
     @staticmethod
     def plot(df, outdir, top=10):
         sns.set(rc={'figure.figsize': (12, 9)})
-        fig, ax = plt.subplots(figsize=(11.7, 8.27))
+        fig, ax = plt.subplots()
         g = sns.barplot(x="counts", y="index", data=df, palette="Blues_d",
                         orient="h")
         g.text(0.5, 1.05,
                'Top Covariates',
-               fontsize=16, weight='bold', ha='center', va='bottom',
-               transform=ax.transAxes)
-        g.text(0.5, 1.02,
-               '',
-               fontsize=12, alpha=0.75, ha='center', va='bottom',
+               fontsize=22, weight='bold', ha='center', va='bottom',
                transform=ax.transAxes)
         g.set_ylabel('covariate',
-                     fontsize=8,
+                     fontsize=14,
                      fontweight='bold')
         g.set_xlabel('sum(z-score^2)',
-                     fontsize=8,
+                     fontsize=14,
                      fontweight='bold')
         ax.tick_params(labelsize=5)
         ax.set_yticks(range(len(df.index)))
@@ -86,11 +82,14 @@ class InterZscoreBars:
         plt.close()
 
         subset = df.iloc[:top, :]
-        sns.set()
-        fig, ax = plt.subplots(figsize=(11.7, 8.27))
+        sns.set(rc={'figure.figsize': (12, 9)})
+        fig, ax = plt.subplots()
         g = sns.barplot(x="counts", y="index", data=subset, palette="Blues_d",
                         orient="h")
-        g.set_title('Top Covariates')
+        g.text(0.5, 1.05,
+               'Top Covariates',
+               fontsize=22, weight='bold', ha='center', va='bottom',
+               transform=ax.transAxes)
         g.set_ylabel('covariate',
                      fontsize=14,
                      fontweight='bold')

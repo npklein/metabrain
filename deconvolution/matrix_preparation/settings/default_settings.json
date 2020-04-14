@@ -15,38 +15,39 @@
     "expression_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-02-17-step5-remove-covariates-per-dataset/output-cortex/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.CovariatesRemovedOLS.txt.gz"
   },
   "create_deconvolution_matrices": {
-    "celltype_profile_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/data/CellMap_brain_celltype_avgCPM.txt",
+    "celltype_profile_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/CellMap_brain_celltype_avgCPM.txt",
     "translate_datafile": "/groups/umcg-biogen/tmp03/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz",
+    "marker_genes_suffix": "McKenzie_",
     "marker_dict": {
-      "neurons": [
+      "NEURON": [
         "NPY",
         "VIP",
         "CCK",
         "CALB2",
         "KIT"
       ],
-      "oligodendrocytes": [
+      "OLIGODENDROCYTE": [
         "MOG",
         "MBP",
         "MAG",
         "CNP",
         "CA2"
       ],
-      "endothelialcells": [
+      "ENDOTHELIALCELL": [
         "CD34",
         "VWF",
         "ENG",
         "KDR",
         "CXCL12"
       ],
-      "microglia": [
+      "MICROGLIA": [
         "AIF1",
         "CCL2",
         "CX3CR1",
         "TLR2",
         "CD14"
       ],
-      "astrocytes": [
+      "ASTROCYTE": [
         "GFAP",
         "AQP4",
         "EGFR",

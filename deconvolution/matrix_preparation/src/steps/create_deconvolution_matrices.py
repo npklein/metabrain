@@ -1,7 +1,7 @@
 """
 File:         create_deconvolution_matrices.py
 Created:      2020/04/07
-Last Changed: 2020/04/08
+Last Changed: 2020/04/14
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -47,6 +47,7 @@ class CreateDeconvolutionMatrices:
         """
         self.celltype_profile_file = settings["celltype_profile_datafile"]
         self.translate_file = settings["translate_datafile"]
+        self.marker_genes_suffix = settings["marker_genes_suffix"]
         self.marker_dict = settings["marker_dict"]
         self.expr_file = expr_file
         self.expr_df = expr_df
@@ -117,7 +118,8 @@ class CreateDeconvolutionMatrices:
                                   "profiles.".format(marker_gene))
                             continue
 
-                        marker_str = celltype + "_" + marker_gene + "\t" + \
+                        marker_str = self.marker_genes_suffix + "_" + \
+                                     celltype + "_" + marker_gene + "\t" + \
                                      "\t".join(expression.iloc[0, :].astype(str).values) \
                                      + "\n"
                         marker_str_buffer.append(marker_str)
@@ -196,6 +198,9 @@ class CreateDeconvolutionMatrices:
         else:
             print("  > Expression input file: {}".format(self.expr_file))
         print("  > Cell type profile input file: {}".format(self.celltype_profile_file))
+        print("  > Translate input file: {}".format(self.translate_file))
+        print("  > Marker genes suffix: {}".format(self.marker_genes_suffix))
+        print("  > Marker genes: {}".format(self.marker_dict))
         print("  > Cell type profile expression output path: {}".format(self.ct_profile_expr_outpath))
         print("  > Markers output path: {}".format(self.markers_outpath))
         print("  > Output directory: {}".format(self.outdir))

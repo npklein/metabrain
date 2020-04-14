@@ -66,7 +66,7 @@ class IntereQTLEffectMarkerGenes:
         marker_indices = []
         for index in self.cov_df.index:
             if ("_" in index) and (
-                    index.split("_")[0] in self.celltypes):
+                    index.split("_")[1] in self.celltypes):
                 marker_indices.append(index)
 
         # Get the covariates of the marker genes.
@@ -213,8 +213,8 @@ class IntereQTLEffectMarkerGenes:
 
             ax.text(0.5, 1.05,
                     'Celltype: {} Marker gene: {} '.format(
-                        cov_name.split("_")[0],
-                        cov_name.split("_")[1]),
+                        cov_name.split("_")[1],
+                        cov_name.split("_")[2]),
                     fontsize=16, weight='bold', ha='center', va='bottom',
                     transform=ax.transAxes)
             ax.text(0.5, 1.02,
