@@ -350,7 +350,7 @@ class Manager:
 
                 # Safe the moment the message was received. Don't save it
                 # if it was already declared dead.
-                if worker_id in doctor_dict.keys():
+                if worker_id not in dead_workers:
                     doctor_dict[worker_id] = int(time.time())
 
                 # Check what kind of message it is.
@@ -387,7 +387,7 @@ class Manager:
                         if sample_order_id == 0:
                             pvalue_data.append([eqtl_index] + data)
                         else:
-                            perm_pvalues.extend(data[1:])
+                            perm_pvalues.extend(data)
 
                         # Remove the job from the schedule.
                         if eqtl_index in schedule[worker_id].keys():
@@ -510,7 +510,7 @@ class Manager:
                                      int(run_time_sec)),
               flush=True)
         print("[receiver]\treceived {:.2f} analyses "
-              "per second.".format(counter / run_time),
+              "per minute.".format(counter / (run_time / 60)),
               flush=True)
 
         # Shutdown the manager.

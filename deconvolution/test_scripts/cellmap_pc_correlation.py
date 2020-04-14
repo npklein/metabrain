@@ -55,28 +55,24 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 class main():
     def __init__(self):
-        self.profile_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/matrix_preparation/output/perform_celltype_pca/celltype_pcs.txt.gz"
-        self.marker_genes = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/matrix_preparation/output/create_deconvolution_matrices/marker_genes.txt.gz"
+        self.covariates_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/output/create_cov_matrix/covariates_table.txt.gz"
+        self.celltypes = ["NEURON", "OLIGODENDROCYTE", "ENDOTHELIALCELL", "MICROGLIA", "ASTROCYTE", "MACROPHAGE"]
         self.outdir = str(Path(__file__).parent.parent)
 
     def start(self):
         print("Load the CellMap profile PC1")
-        df1 = pd.read_csv(self.profile_path, sep="\t", header=0, index_col=0)
+        df = pd.read_csv(self.covariates_path, sep="\t", header=0, index_col=0)
         print("\tLoaded dataframe: {} "
-              "with shape: {}".format(os.path.basename(self.profile_path),
-                                      df1.shape))
+              "with shape: {}".format(os.path.basename(self.covariates_path),
+                                      df.shape))
 
-        print("Load the marker genes")
-        df2 = pd.read_csv(self.marker_genes, sep="\t", header=0, index_col=0)
-        print("\tLoaded dataframe: {} "
-              "with shape: {}".format(os.path.basename(self.marker_genes),
-                                      df2.shape))
-        df2.drop_duplicates(inplace=True)
-        df2.sort_index(inplace=True)
-
-        print("Combining dataframes")
-        df = pd.concat([df1, df2], axis=0)
-        print("\tNew shape: {}".format(df.shape))
+        subset = []
+        for index in df.index:
+            for celltype in self.celltypes:
+                if celltype in index:
+                    subset.append(index)
+                    break
+        df = df.loc[subset, :]
 
         corr_df = pd.DataFrame(np.nan, index=df.index, columns=df.index)
         pval_df = pd.DataFrame("", index=df.index, columns=df.index)

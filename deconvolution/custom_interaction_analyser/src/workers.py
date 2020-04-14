@@ -163,6 +163,9 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                           "'eQTL_{}'.".format(worker_id, eqtl_index),
                           flush=True)
 
+                # Find which order ids to perform.
+                order_ids_to_perform = my_work[eqtl_index]
+
                 # Get the complete genotype row for the permutation later.
                 genotype_all = geno_df.iloc[i, :].copy()
 
@@ -174,6 +177,7 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                 genotype = geno_df.iloc[i, eqtl_indices].copy()
                 expression = expr_df.iloc[i, eqtl_indices].copy()
                 technical_covs = tech_cov_df.iloc[:, eqtl_indices].copy()
+                covariates = cov_df.iloc[:, eqtl_indices].copy()
 
                 # Check if SNP index are identical.
                 if genotype.name != expression.name:
@@ -185,40 +189,50 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                 # covariates multiplied with the genotype + the SNP.
                 tech_inter_matrix = technical_covs.mul(genotype, axis=1)
                 tech_inter_matrix.index = ["{}_X_SNP".format(x) for x in technical_covs.index]
-                null_matrix = reduce(lambda left, right: pd.merge(left,
+                base_matrix = reduce(lambda left, right: pd.merge(left,
                                                                   right,
                                                                   left_index=True,
                                                                   right_index=True),
                                      [genotype.to_frame(),
                                       technical_covs.T,
                                       tech_inter_matrix.T])
-                n_null = null_matrix.shape[0]
-                df_null, rss_null = create_model(null_matrix, expression)
 
-                # Loop over each permutation sample order. The first order
-                # is the normal order and the remainder are random shuffles.
-                for order_id, sample_order in enumerate(sample_orders):
-                    # Making sure I only do the order that I have to do. It
-                    # might be the case I got assigned an incomplete eQTL
-                    # (i.e. not all sample orders have to be performed) due to
-                    # another core dieing halfway through the analysis.
-                    if order_id not in my_work[eqtl_index]:
-                        continue
+                # Initialize results variable.
+                pvalues = {i: [genotype.name] for i in order_ids_to_perform}
+
+                # Loop over the covariates.
+                for j in range(cov_df.shape[0]):
+                    # Get the covariate we are processing.
+                    covarate = covariates.iloc[j, :]
+                    cov_name = covarate.name
 
                     if verbose:
-                        print("[worker {:2d}]\tworking on "
-                              "sample 'order_{}'.".format(worker_id, order_id),
-                              flush=True)
+                        print("[worker {:2d}]\tworking on covariate {} "
+                              "[{}/{}]".format(worker_id,
+                                               cov_name,
+                                               j + 1,
+                                               cov_df.shape[0]))
 
-                    # Loop over the covariates.
-                    snp_pvalues = []
-                    for j in range(cov_df.shape[0]):
-                        cov_name = cov_df.index[j]
+                    # Add the covariate to the null matrix if it isn't already.
+                    null_matrix = base_matrix.copy()
+                    if cov_name not in null_matrix.columns:
+                        null_matrix = null_matrix.merge(covarate.to_frame(),
+                                                        left_index=True,
+                                                        right_index=True)
 
-                        # if verbose:
-                        #     print("[worker {:2d}]\tworking on covariate "
-                        #           "{}/{}".format(worker_id, j + 1,
-                        #                          cov_df.shape[0]))
+                    # Create the null model.
+                    n_null = null_matrix.shape[0]
+                    df_null, rss_null = create_model(null_matrix, expression)
+
+                    # Loop over each permutation sample order. The first order
+                    # is the normal order and the remainder are random shuffles.
+                    for order_id, sample_order in enumerate(sample_orders):
+                        # Making sure I only do the order that I have to do. It
+                        # might be the case I got assigned an incomplete eQTL
+                        # (i.e. not all sample orders have to be performed) due
+                        # to another core dieing halfway through the analysis.
+                        if order_id not in order_ids_to_perform:
+                            continue
 
                         # Reorder the covariate based on the sample order.
                         # Make sure the labels are in the same order, just
@@ -229,44 +243,32 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                         covariate_all.index = covariate_all_index
 
                         # Calculate the interaction effect of the covariate of
-                        # interest. Then drop the missing values.
+                        # interest. Then drop the na's from the interaction
+                        # term.
                         inter_of_interest = covariate_all * genotype_all
-                        inter_of_interest.name = "{}_X_SNP".format(cov_name)
+                        inter_name = "{}_X_SNP".format(cov_name)
+                        if inter_name in null_matrix.columns:
+                            inter_name = inter_name + "_2"
+                        inter_of_interest.name = inter_name
                         inter_of_interest = inter_of_interest.iloc[eqtl_indices]
 
-                        # Drop the na's from the covariate.
-                        cov_of_interest = covariate_all.iloc[eqtl_indices]
-
-                        # Check if the drop is identical (See above).
-                        if not inter_of_interest.index.equals(
-                                cov_of_interest.index) or \
-                                not inter_of_interest.index.equals(
-                                    null_matrix.index):
+                        # Check if the drop is identical (see above).
+                        if not inter_of_interest.index.equals(null_matrix.index):
                             print("[worker {:2d}]\terror in permutation "
                                   "reordering (ID: {})".format(worker_id,
                                                                order_id),
                                   flush=True)
-                            snp_pvalues.append(np.nan)
+                            pvalues[order_id].append(np.nan)
                             continue
 
-                        # Combine the covariate of interest (if not in
-                        # null matrix) and the interaction term.
-                        if cov_name in null_matrix.columns:
-                            new_matrix_rows = inter_of_interest.to_frame()
-                            new_matrix_rows.columns = ["{}_2".format(x)
-                                                       for x in
-                                                       new_matrix_rows.columns]
-                        else:
-                            new_matrix_rows = pd.concat([cov_of_interest,
-                                                         inter_of_interest],
-                                                        axis=1)
-
-                        # Create the alternative model. This is the null
-                        # matrix + the covariate of interest (shuffled or not).
+                        # Create the alternative matrix and add the interaction
+                        # term.
                         alt_matrix = null_matrix.copy()
-                        alt_matrix = alt_matrix.merge(new_matrix_rows,
+                        alt_matrix = alt_matrix.merge(inter_of_interest.to_frame(),
                                                       left_index=True,
                                                       right_index=True)
+
+                        # Create the alternative model.
                         n_alt = alt_matrix.shape[0]
                         df_alt, rss_alt = create_model(alt_matrix, expression)
 
@@ -275,7 +277,7 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                             print("[worker {:2d}]\terror due to unequal "
                                   "n_null and n_alt".format(worker_id),
                                   flush=True)
-                            snp_pvalues.append(np.nan)
+                            pvalues[order_id].append(np.nan)
                             continue
 
                         # Compare the null and alternative model.
@@ -284,15 +286,17 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                                                 n_null)
 
                         # Safe the pvalue.
-                        snp_pvalues.append(pvalue)
+                        pvalues[order_id].append(pvalue)
 
-                    if verbose:
-                        print("[worker {:2d}]\tpushing "
-                              "results".format(worker_id))
+                # Push the result back to the manager.
+                for oid, data in pvalues.items():
+                    if len(data) == (cov_df.shape[0] + 1):
+                        if verbose:
+                            print("[worker {:2d}]\tpushing "
+                                  "results".format(worker_id))
 
-                    # Push the result back to the manager.
-                    result_q.put((worker_id, "result", eqtl_index, order_id,
-                                  [genotype.name] + snp_pvalues))
+                        result_q.put((worker_id, "result", eqtl_index, oid, data))
+                        time.sleep(0.1)
 
             # Wait before getting a new job.
             time.sleep(sleep_time * 2)

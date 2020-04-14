@@ -51,19 +51,19 @@ __description__ = "{} is a program developed and maintained by {}. " \
 class main():
     def __init__(self):
         # Translate tables.
-        self.cov_translate_inpath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/matrix_preparation/output/mask_matrices/cov_translate_table.txt.gz"
-        self.eqtl_translate_inpath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/matrix_preparation/output/mask_matrices/eqtl_translate_table.txt.gz"
-        self.sample_translate_inpath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/matrix_preparation/output/mask_matrices/sample_translate_table.txt.gz"
+        self.cov_translate_inpath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/output/mask_matrices/cov_translate_table.txt.gz"
+        self.eqtl_translate_inpath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/output/mask_matrices/eqtl_translate_table.txt.gz"
+        self.sample_translate_inpath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/output/mask_matrices/sample_translate_table.txt.gz"
 
         # Masked tables.
-        self.eqtl_inpath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/matrix_preparation/output/mask_matrices/eqtl_table.txt.gz"
-        self.alleles_inpath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/matrix_preparation/output/mask_matrices/genotype_alleles.txt.gz"
-        self.cov1_inpath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/matrix_preparation/output/mask_matrices/covariates_table.txt.gz"
+        self.eqtl_inpath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/output/mask_matrices/eqtl_table.txt.gz"
+        self.alleles_inpath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/output/mask_matrices/genotype_alleles.txt.gz"
+        self.cov1_inpath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/output/mask_matrices/covariates_table.txt.gz"
 
         # Files from Lude.
-        self.geno_inpath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/data/genotype_table.txt.binary.CohortCorrected.txt"
-        self.expr_inpath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/data/expression_table.txt.binary.CohortAnd50PCsCorrected.txt"
-        self.cov2_inpath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/data/expression_table.txt.binary.CovariatesOptimized.txt"
+        self.geno_inpath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/genotype_table.txt.binary.CohortCorrected.txt"
+        self.expr_inpath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/expression_table.txt.binary.CohortAnd50PCsCorrected.txt"
+        self.cov2_inpath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/expression_table.txt.binary.CovariatesOptimized.txt"
 
         self.outdir = os.path.join(str(Path(__file__).parent.parent), 'output')
         if not os.path.exists(self.outdir):

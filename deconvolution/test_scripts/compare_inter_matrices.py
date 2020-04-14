@@ -55,8 +55,8 @@ __description__ = "{} is a program developed and maintained by {}. " \
 class main():
     def __init__(self):
         # Interaction matrix files.
-        self.eqtl_ia_filepath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/merge_groups/output/interaction_table.txt.gz"
-        self.custom_ia_filepath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-deconvolution/custom_interaction_analyser/output/interaction_table.txt.gz"
+        self.eqtl_ia_filepath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/merge_groups/output/interaction_table.txt.gz"
+        self.custom_ia_filepath = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/custom_interaction_analyser/output/interaction_table.txt.gz"
         self.outdir = str(Path(__file__).parent.parent)
 
     def start(self):

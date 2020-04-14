@@ -295,7 +295,7 @@ class Main:
         # Subset on the marker genes.
         marker_cols = []
         for colname in inter_df.columns:
-            if ("_" in colname) and (colname.split("_")[0] in self.celltypes):
+            if ("_" in colname) and (colname.split("_")[1] in self.celltypes):
                 marker_cols.append(colname)
 
         marker_df = inter_df.loc[:, marker_cols]
@@ -305,7 +305,7 @@ class Main:
         gini_df = marker_df.copy()
         gini_df = gini_df.abs()
         zscore_mask = list(gini_df.max(axis=1) >= abs(z_score_cutoff))
-        gini_df.columns = [x.split("_")[0] for x in gini_df.columns]
+        gini_df.columns = [x.split("_")[1] for x in gini_df.columns]
         gini_df = gini_df.T.groupby(gini_df.columns).sum().T
 
         # Calculate the gini impurity.

@@ -112,7 +112,7 @@ class Main:
 
         inter_path = os.path.join(self.inter_indir,
                                   'InteractionZScoresMatrix-22Covariates.txt')
-        inter_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-12-03-interaction-analyser/analyse_interactions/group_11/output/InteractionZScoresMatrix-40Covariates.txt"
+        inter_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-interaction-analyser/analyse_interactions/group_11/output/InteractionZScoresMatrix-40Covariates.txt"
 
         # if not os.path.exists(inter_path):
         #     inter_path = inter_path + '.gz'
@@ -545,12 +545,12 @@ if __name__ == "__main__":
 
     INDIR = os.path.join(os.path.sep, "groups", "umcg-biogen", "tmp03",
                          "output", "2019-11-06-FreezeTwoDotOne",
-                         "2020-12-03-interaction-analyser",
+                         "2020-03-12-interaction-analyser",
                          "matrix_preparation", "output", "create_groups")
 
     INTER_INDIR = os.path.join(os.path.sep, "groups", "umcg-biogen", "tmp03",
                                "output", "2019-11-06-FreezeTwoDotOne",
-                               "2020-12-03-interaction-analyser",
+                               "2020-03-12-interaction-analyser",
                                "analyse_interactions", "group_11", "output")
 
     for GROUP_NAME in next(os.walk(INDIR))[1]:
