@@ -1,7 +1,7 @@
 """
 File:         manager.py
 Created:      2020/04/01
-Last Changed: 2020/04/10
+Last Changed: 2020/04/14
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -74,6 +74,10 @@ class Manager:
         self.expr_inpath = settings.get_setting("expression_datafile")
         self.cov_inpath = settings.get_setting("covariates_datafile")
         self.tech_covs = settings.get_setting("technical_covariates")
+        self.wait_list_filename = settings.get_setting("wait_list_pickle_filename")
+        self.pvalues_filename = settings.get_setting("actual_pvalues_pickle_filename")
+        self.perm_pvalues_filename = settings.get_setting("permuted_pvalues_pickle_filename")
+        self.perm_orders_filename = settings.get_setting("permutations_order_pickle_filename")
         self.n_permutations = settings.get_setting("n_permutations")
         self.sleep_time = settings.get_setting("sleep_time_in_sec")
         self.print_interval = settings.get_setting("print_interval_in_sec")
@@ -84,12 +88,6 @@ class Manager:
         self.panic_time = self.max_end_time - (settings.get_setting("panic_time_in_min") * 60)
         self.skip_rows = skip_rows
         self.verbose = verbose
-
-        # Define output filenames.
-        self.wait_list_outfile = os.path.join(self.outdir, settings.get_setting("wait_list_pickle_filename") + "{}.pkl".format(int(time.time())))
-        self.perm_orders_outfile = os.path.join(self.outdir, settings.get_setting("permutations_order_pickle_filename") + ".pkl")
-        self.pvalues_outfile = os.path.join(self.outdir, settings.get_setting("actual_pvalues_pickle_filename") + "{}.pkl".format(int(time.time())))
-        self.perm_pvalues_outfile = os.path.join(self.outdir, settings.get_setting("permuted_pvalues_pickle_filename") + "{}.pkl".format(int(time.time())))
 
         # Load the previous wait list if need be.
         self.prev_wait_list = []
@@ -231,9 +229,10 @@ class Manager:
 
         # Get the permutation orders.
         permutation_orders = None
-        if check_file_exists(self.perm_orders_outfile):
+        perm_orders_outfile = os.path.join(self.outdir, self.perm_orders_filename + ".pkl")
+        if check_file_exists(perm_orders_outfile):
             print("[manager]\tloading permutation order.", flush=True)
-            permutation_orders = self.load_pickle(self.perm_orders_outfile)
+            permutation_orders = self.load_pickle(perm_orders_outfile)
 
             # Validate the permutation orders for the given input.
             if len(permutation_orders) != (self.n_permutations + 1):
@@ -247,7 +246,7 @@ class Manager:
         if permutation_orders is None:
             print("[manager]\tcreating permutation order.")
             permutation_orders = self.create_perm_orders()
-            self.dump_pickle(permutation_orders, self.perm_orders_outfile)
+            self.dump_pickle(permutation_orders, self.outdir, self.perm_orders_filename)
 
         # Create the multiprocessing queues.
         start_manager = mp.Manager()
@@ -269,6 +268,7 @@ class Manager:
         if self.prev_wait_list:
             print("[manager]\tadded {} eQTLs from previous "
                   "wait list.".format(len(self.prev_wait_list)), flush=True)
+            print(self.prev_wait_list)
             wait_list.extend(self.prev_wait_list)
 
         # Start the workers.
@@ -301,7 +301,7 @@ class Manager:
         order_id_len = len(str(len(all_sample_orders)))
         last_print_time = int(time.time()) - self.print_interval
         counter = 0
-        total_analyses = self.n_eqtls * (self.n_permutations + 1)
+        total_analyses = (self.n_eqtls * (self.n_permutations + 1)) + sum([len(x[1]) for x in self.prev_wait_list])
         panic = False
 
         print("[manager]\tstarting scheduler.")
@@ -484,8 +484,10 @@ class Manager:
 
         # Pickle the output lists.
         print("[manager]\tsaving output lists.", flush=True)
-        self.dump_pickle(pvalue_data, self.pvalues_outfile)
-        self.dump_pickle(perm_pvalues, self.perm_pvalues_outfile)
+        self.dump_pickle(pvalue_data, self.outdir, self.pvalues_filename,
+                         unique=True)
+        self.dump_pickle(perm_pvalues, self.outdir, self.perm_pvalues_filename,
+                         unique=True)
 
         # Empty the schedule.
         print("[manager]\tclearing schedule, saving unfinished work.",
@@ -495,7 +497,8 @@ class Manager:
                 for key, value in unfinished_work.items():
                     wait_list.append((key, value, 1))
         if wait_list:
-            self.dump_pickle(wait_list, self.wait_list_outfile)
+            self.dump_pickle(wait_list, self.outdir, self.wait_list_filename,
+                             unique=True)
 
         # Print the process time.
         run_time = int(time.time()) - start_time
@@ -530,16 +533,25 @@ class Manager:
         return content
 
     @staticmethod
-    def dump_pickle(content, fpath):
+    def dump_pickle(content, directory, filename, unique=False):
         """
         Method for dumping data to a pickle file.
 
         :param content: , the pickle content.
-        :param fpath: string, the pickle output file.
+        :param directory: string, the pickle output directory.
+        :param filename: string, the pickle output file.
+        :param unique: boolean, whether or not to make the filename unique.
         """
+        if unique:
+            fpath = os.path.join(directory, filename + "{}.pkl".format(int(time.time())))
+        else:
+            fpath = os.path.join(directory, filename + ".pkl")
+
         with open(fpath, "wb") as f:
             pickle.dump(content, f)
         f.close()
+        print("[manager]\t\tcreated {}.".format(os.path.basename(fpath)),
+              flush=True)
 
     def create_perm_orders(self):
         """
@@ -660,8 +672,6 @@ class Manager:
         print("  > Covariates datafile: {}".format(self.cov_inpath))
         print("  > Output directory: {}".format(self.outdir))
         print("  > Technical covariates: {}".format(self.tech_covs))
-        print("  > Actual P-values output file: {}".format(self.pvalues_outfile))
-        print("  > Permutated P-values output file: {}".format(self.perm_pvalues_outfile))
         print("  > Permutations: {}".format(self.n_permutations))
         print("  > Sleep time: {} sec".format(self.sleep_time))
         print("  > Print interval: {} sec".format(self.print_interval))
