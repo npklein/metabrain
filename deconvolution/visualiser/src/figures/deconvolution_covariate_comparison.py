@@ -49,27 +49,12 @@ class DeconvolutionCovariateComparison:
         # Extract the required data.
         print("Loading data")
         self.cov_df = dataset.get_cov_df()
-        self.methods = dataset.get_methods()
 
     def start(self):
         print("Plotting deconvolution convariate comparison.")
         self.print_arguments()
-        df = self.filter()
-        corr_df, pval_df = self.correlate(df)
+        corr_df, pval_df = self.correlate(self.cov_df)
         self.plot(corr_df, pval_df, self.outdir)
-
-    def filter(self):
-        print("Filtering the covariate dataframe.")
-        subset = []
-        for index in self.cov_df.index:
-            for method in self.methods:
-                if method in index:
-                    subset.append(index)
-                    break
-        df = self.cov_df.copy()
-        df = df.loc[subset, :]
-        print("\tShape after subsetting: {}".format(df.shape))
-        return df
 
     @staticmethod
     def correlate(df):
@@ -89,13 +74,14 @@ class DeconvolutionCovariateComparison:
     def plot(corr_df, pval_df, outdir):
         print("Plotting")
 
-        indices = [(0, 5, "McKenzie", "McKenzie_"),
-                   (5, 10, "McKenzie", "McKenzie_"),
-                   (10, 15, "McKenzie", "McKenzie_"),
-                   (15, 20, "McKenzie", "McKenzie_"),
-                   (20, 25, "McKenzie", "McKenzie_"),
-                   (25, 30, "CellMap", "CellMap_"),
-                   (30, 35, "NNLS", "NNLS_")]
+        indices = [(93, 98, "McKenzie\nMG", "McKenzie_"),
+                   (98, 103, "McKenzie\nMG", "McKenzie_"),
+                   (103, 108, "McKenzie\nMG", "McKenzie_"),
+                   (108, 113, "McKenzie\nMG", "McKenzie_"),
+                   (113, 118, "McKenzie\nMG", "McKenzie_"),
+                   (118, 123, "CellMap\nPCA", "CellMapPCA_"),
+                   (123, 128, "CellMap\nNMF", "CellMapNMF_"),
+                   (128, 133, "CellMap\nNNLS", "CellMapNNLS_")]
 
         cmap = plt.cm.RdBu_r
         norm = matplotlib.colors.Normalize(vmin=-1, vmax=1)
@@ -105,7 +91,8 @@ class DeconvolutionCovariateComparison:
                           annot_kws={"size": 12, "color": "#808080"})
 
         sns.set(style="ticks", color_codes=True)
-        fig, axes = plt.subplots(ncols=7, nrows=7, figsize=(25, 18))
+        fig, axes = plt.subplots(ncols=len(indices), nrows=len(indices),
+                                 figsize=(29, 21))
         plt.subplots_adjust(left=0.2, right=0.87, bottom=0.2, top=0.95,
                             wspace=0.1, hspace=0.1)
 
@@ -118,7 +105,7 @@ class DeconvolutionCovariateComparison:
                 if i >= j:
                     print("\tPlotting axes[{}, {}]".format(i, j))
                     xticklabels = False
-                    if i == 6:
+                    if i == len(indices) - 1:
                         xticklabels = True
                     yticklabels = False
                     if j == 0:
@@ -159,6 +146,5 @@ class DeconvolutionCovariateComparison:
     def print_arguments(self):
         print("Arguments:")
         print("  > Covariate matrix shape: {}".format(self.cov_df.shape))
-        print("  > Methods: {}".format(self.methods))
         print("  > Output directory: {}".format(self.outdir))
         print("")

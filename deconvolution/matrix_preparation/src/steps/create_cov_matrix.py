@@ -1,7 +1,7 @@
 """
 File:         create_cov_matrices.py
 Created:      2020/03/12
-Last Changed: 2020/04/14
+Last Changed: 2020/04/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -33,15 +33,17 @@ from general.df_utilities import load_dataframe, save_dataframe
 
 
 class CreateCovMatrix:
-    def __init__(self, settings, marker_file, celltype_pcs, deconvolution,
-                 sample_order, force, outdir):
+    def __init__(self, settings, marker_file, celltype_pcs, celltype_cs,
+                 deconvolution, sample_order, force, outdir):
         """
         The initializer for the class.
 
         :param settings: string, the settings.
         :param marker_file: string, path to the marker file.
-        :param celltype_pcs: DataFrame, the first principle component of each
-                             celltype expression.
+        :param celltype_pcs: DataFrame, the first component from PCA of each
+                            celltype expression.
+        :param celltype_cs: DataFrame, the first component from NMF of each
+                            celltype expression.
         :param deconvolution: DataFrame, the estimated cell count proportions
                               of each celltype per sample.
         :param sample_order: list, order of samples.
@@ -58,6 +60,7 @@ class CreateCovMatrix:
         self.marker_file = marker_file
         self.sample_order = sample_order
         self.celltype_pcs = celltype_pcs
+        self.celltype_cs = celltype_cs
         self.deconvolution = deconvolution
         self.force = force
 
@@ -136,7 +139,7 @@ class CreateCovMatrix:
         # merge.
         print("Merging matrices.")
         comb_cov = reduce(lambda left, right: pd.merge(left, right, left_index=True, right_index=True),
-                          [cov_df, cohorts_df, gender_df, eigen_df, cov_cor_df, marker_df, self.celltype_pcs.T, self.deconvolution])
+                          [cov_df, cohorts_df, gender_df, eigen_df, cov_cor_df, marker_df, self.celltype_pcs.T, self.celltype_cs.T, self.deconvolution])
         comb_cov = comb_cov.T
         comb_cov = comb_cov[self.sample_order]
         comb_cov.index.name = "-"

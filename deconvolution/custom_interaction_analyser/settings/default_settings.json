@@ -51,8 +51,8 @@
   "wait_list_pickle_filename": "wait_list_",
   "n_permutations": 10,
   "sleep_time_in_sec": 10,
-  "print_interval_in_sec": 300,
+  "print_interval_in_sec": 600,
   "single_eqtl_max_runtime_in_min": 5,
-  "max_runtime_in_hours": 16,
+  "max_runtime_in_hours": 24,
   "panic_time_in_min": 5
 }

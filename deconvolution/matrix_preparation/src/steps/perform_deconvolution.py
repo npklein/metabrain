@@ -1,7 +1,7 @@
 """
 File:         perform_deconvolution.py
 Created:      2020/04/08
-Last Changed:
+Last Changed: 2020/04/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -118,7 +118,7 @@ class PerformDeconvolution:
 
         decon_df = pd.DataFrame(decon_data,
                                 index=self.ct_expr_df.columns,
-                                columns=["NNLS_{}".format(x.split("_")[1]) for x in self.profile_df.columns])
+                                columns=["{}NNLS_{}".format(*x.split("_")) for x in self.profile_df.columns])
 
         print("Estimated weights:")
         print(decon_df)
