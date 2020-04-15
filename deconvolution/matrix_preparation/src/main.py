@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/12
-Last Changed: 2020/04/09
+Last Changed: 2020/04/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -36,7 +36,7 @@ from .steps.combine_eqtlprobes import CombineEQTLProbes
 from .steps.create_matrices import CreateMatrices
 from .steps.create_deconvolution_matrices import CreateDeconvolutionMatrices
 from .steps.perform_deconvolution import PerformDeconvolution
-from .steps.perform_celltype_pca import PerformCelltypePCA
+from .steps.perform_celltype_factorization import PerformCelltypeFactorization
 from .steps.create_cov_matrix import CreateCovMatrix
 from .steps.mask_matrices import MaskMatrices
 from .steps.create_groups import CreateGroups
@@ -72,7 +72,8 @@ class Main:
     @staticmethod
     def create_force_dict(force_steps):
         force_dict = {'combine_gte_files': False, 'combine_eqtlprobes': False,
-                      'create_matrices': False, 'perform_celltype_pca': False,
+                      'create_matrices': False,
+                      'perform_celltype_factorization': False,
                       'create_deconvolution_matrices': False,
                       'perform_deconvolution': False,
                       'create_cov_matrix': False, 'mask_matrices': False,
@@ -141,15 +142,15 @@ class Main:
 
         # Step5. Create the celltype PCA file.
         print("\n### STEP5 ###\n")
-        pcp = PerformCelltypePCA(
-            settings=self.settings.get_setting('perform_celltype_pca'),
+        pcf = PerformCelltypeFactorization(
+            settings=self.settings.get_setting('perform_celltype_factorization'),
             profile_file=cdm.get_celltype_profile_file(),
             profile_df=cdm.get_celltype_profile(),
             ct_expr_file=cdm.get_ct_profile_expr_outpath(),
-            force=self.force_dict['perform_celltype_pca'],
+            force=self.force_dict['perform_celltype_factorization'],
             outdir=self.outdir)
-        pcp.start()
-        pcp.clear_variables()
+        pcf.start()
+        pcf.clear_variables()
 
         # Step6. Create the covariance matrix.
         print("\n### STEP6 ###\n")
@@ -158,7 +159,7 @@ class Main:
             profile_file=cdm.get_celltype_profile_file(),
             profile_df=cdm.get_celltype_profile(),
             ct_expr_file=cdm.get_ct_profile_expr_outpath(),
-            ct_expr_df=pcp.get_celltype_expression(),
+            ct_expr_df=pcf.get_celltype_expression(),
             force=self.force_dict['perform_deconvolution'],
             outdir=self.outdir)
         pd.start()
@@ -169,7 +170,8 @@ class Main:
         ccm = CreateCovMatrix(
             settings=self.settings.get_setting('create_cov_matrix'),
             marker_file=cdm.get_markers_outpath(),
-            celltype_pcs=pcp.get_celltype_pcs(),
+            celltype_pcs=pcf.get_celltype_pcs(),
+            celltype_cs=pcf.get_celltype_cs(),
             deconvolution=pd.get_deconvolution(),
             sample_order=cgtef.get_sample_order(),
             force=self.force_dict['create_cov_matrix'],

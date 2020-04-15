@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/12
-Last Changed: 2020/04/08
+Last Changed: 2020/04/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -78,12 +78,13 @@ class CommandLineArguments:
                             nargs="+",
                             type=str,
                             default=None,
-                            choices=["all", "combine_gte_files",
+                            choices=["all",
+                                     "combine_gte_files",
                                      "combine_eqtlprobes",
                                      "create_matrices",
                                      "create_deconvolution_matrices",
                                      "perform_deconvolution",
-                                     "perform_celltype_pca",
+                                     "perform_celltype_factorization",
                                      "create_cov_matrix",
                                      "mask_matrices",
                                      "create_groups",

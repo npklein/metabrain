@@ -120,20 +120,22 @@ class CovariatesExplainedByOthers:
                    (22, 40, "Cohorts", ""),
                    (40, 41, "Sex", ""),
                    (41, 91, "PCs", "Comp"),
-                   (91, 93, "", ""),
-                   (93, 118, "McKenzie", "McKenzie_"),
-                   (118, 123, "CellMap", "CellMap_"),
-                   (123, 128, "NNLS", "NNLS_")]
+                   (91, 93, "PCA", ""),
+                   (93, 118, "McKenzie\nMG", "McKenzie_"),
+                   (118, 123, "CellMap\nPCA", "CellMapPCA_"),
+                   (123, 128, "CellMap\nNMF", "CellMapNMF_"),
+                   (128, 133, "CellMap\nNNLS", "CellMapNNLS_")]
 
         gridspec_kw = {"height_ratios": [x[1] - x[0] for x in indices],
                        "width_ratios": [0.3, 0.7]}
 
         sns.set(style="ticks", color_codes=True)
         fig, axes = plt.subplots(ncols=2, nrows=len(indices),
-                                 figsize=(9, 25), gridspec_kw=gridspec_kw)
+                                 figsize=(9, 28), gridspec_kw=gridspec_kw)
         plt.subplots_adjust(top=0.95, bottom=0.05, wspace=0.1, hspace=0.2)
 
         for i in range(len(indices)):
+            print("\tPlotting axes[{}, 1]".format(i))
             axes[i, 0].set_axis_off()
             ax = axes[i, 1]
             sns.despine(fig=fig, ax=ax)
