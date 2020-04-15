@@ -42,6 +42,7 @@ class Dataset:
         self.markers_filename = filenames["markers"]
         self.inter_filename = settings.get_setting("interaction_datafile")
         self.celltypes = settings.get_setting("celltypes")
+        self.methods = settings.get_setting("methods")
         nrows = nrows
         if nrows == -1:
             nrows = None
@@ -75,6 +76,9 @@ class Dataset:
 
     def get_celltypes(self):
         return self.celltypes
+
+    def get_methods(self):
+        return self.methods
 
     def get_eqtl_df(self):
         if self.eqtl_df is None:

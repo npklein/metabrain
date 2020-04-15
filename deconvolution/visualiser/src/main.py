@@ -31,6 +31,9 @@ import os
 from general.utilities import prepare_output_dir
 from general.local_settings import LocalSettings
 from general.objects.dataset import Dataset
+from .figures.covariate_comparison import CovariateComparison
+from .figures.deconvolution_covariate_comparison import DeconvolutionCovariateComparison
+from .figures.covariates_explained_by_others import CovariatesExplainedByOthers
 from .figures.celltype_profile_pc_vs_marker_genes import CelltypeProfileVSMarkerGenes
 from .figures.simple_eqtl_effect import SimpleeQTLEffect
 from .figures.inter_zscore_bars import InterZscoreBars
@@ -84,6 +87,29 @@ class Main:
         ds = Dataset(settings=self.settings, nrows=self.n_eqtls)
         if self.validate:
             ds.load_all()
+
+        if ('covariate_comparison' in self.plots) or \
+                ('all' in self.plots):
+            print("\n### Covariate Comparison ###\n")
+            cc = CovariateComparison(dataset=ds, outdir=self.outdir)
+            cc.start()
+            del cc
+
+        if ('deconvolution_covariate_comparison' in self.plots) or \
+                ('all' in self.plots):
+            print("\n### Deconvolution Covariate Comparison ###\n")
+            dcc = DeconvolutionCovariateComparison(dataset=ds,
+                                                   outdir=self.outdir)
+            dcc.start()
+            del dcc
+
+        if ('covariates_explained_by_others' in self.plots) or \
+                ('all' in self.plots):
+            print("\n### Covariates Explained By Others ###\n")
+            cebo = CovariatesExplainedByOthers(dataset=ds,
+                                               outdir=self.outdir)
+            cebo.start()
+            del cebo
 
         if ('celltype_profile_pc_vs_marker_genes' in self.plots) or \
                 ('all' in self.plots):

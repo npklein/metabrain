@@ -391,7 +391,7 @@ class Manager:
                         if sample_order_id == 0:
                             pvalue_data.append([eqtl_index] + data)
                         else:
-                            perm_pvalues.extend(data)
+                            perm_pvalues.extend(data[1:])
 
                         # Remove the job from the schedule.
                         if eqtl_index in schedule[worker_id].keys():
@@ -467,6 +467,10 @@ class Manager:
                 panic = True
                 break
 
+            # Check if all workers dead.
+            if len(dead_workers) == self.n_cores:
+                break
+
             time.sleep(self.sleep_time)
 
         # Update the end-user again. This allows for conformation all work
@@ -488,10 +492,12 @@ class Manager:
 
         # Pickle the output lists.
         print("[manager]\tsaving output lists.", flush=True)
-        self.dump_pickle(pvalue_data, self.outdir, self.pvalues_filename,
-                         unique=True)
-        self.dump_pickle(perm_pvalues, self.outdir, self.perm_pvalues_filename,
-                         unique=True)
+        if pvalue_data:
+            self.dump_pickle(pvalue_data, self.outdir, self.pvalues_filename,
+                             unique=True)
+        if perm_pvalues:
+            self.dump_pickle(perm_pvalues, self.outdir, self.perm_pvalues_filename,
+                             unique=True)
 
         # Empty the schedule.
         print("[manager]\tclearing schedule, saving unfinished work.",
@@ -516,9 +522,11 @@ class Manager:
         print("[receiver]\treceived {:.2f} analyses "
               "per minute.".format(counter / (run_time / 60)),
               flush=True)
-        print("[manager]\taverage runtime per eQTL: "
-              "{} seconds".format(sum(single_eqtl_runtime) /
-                                  len(single_eqtl_runtime)), flush=True)
+        print("[manager]\truntime per eQTL: {}".format(single_eqtl_runtime,
+                                                       flush=True))
+        # print("[manager]\taverage runtime per eQTL: "
+        #       "{} seconds".format(sum(single_eqtl_runtime) /
+        #                           len(single_eqtl_runtime)), flush=True)
 
         # Shutdown the manager.
         print("[manager]\tshutting down manager [{}]".format(

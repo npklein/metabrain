@@ -202,6 +202,9 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
 
                 # Loop over the covariates.
                 for j in range(cov_df.shape[0]):
+                    if j % 10 == 0:
+                        result_q.put((worker_id, "working", None, None, None))
+
                     # Get the covariate we are processing.
                     covarate = covariates.iloc[j, :]
                     cov_name = covarate.name
