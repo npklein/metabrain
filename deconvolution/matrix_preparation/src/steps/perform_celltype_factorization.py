@@ -1,7 +1,7 @@
 """
 File:         perform_celltype_factorization.py
 Created:      2020/04/07
-Last Changed: 2020/04/09
+Last Changed: 2020/04/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -26,7 +26,6 @@ import os
 import pandas as pd
 import numpy as np
 from sklearn.decomposition import PCA, NMF
-from sklearn.preprocessing import MinMaxScaler
 
 # Local application imports.
 from general.utilities import prepare_output_dir, check_file_exists
@@ -86,6 +85,9 @@ class PerformCelltypeFactorization:
         ct_expr_df = load_dataframe(inpath=self.ct_expr_file,
                                     header=0, index_col=0)
 
+        # Shift the expression to be all positive.
+        ct_expr_df = ct_expr_df + abs(ct_expr_df.values.min())
+
         if self.profile_df is None:
             # Load the celltype profile file.
             print("Loading cell type profile matrix.")
@@ -116,7 +118,7 @@ class PerformCelltypeFactorization:
             print("\t  NMF")
             nmf_component = self.get_first_nmf_component(ct_expr)
             nmf_component_values = [x[0] for x in list(nmf_component)]
-            nmf_data.append(nmf_component)
+            nmf_data.append(nmf_component_values)
 
         # Create the data frames.
         celltype_pcs = pd.DataFrame(pca_data,
@@ -152,10 +154,7 @@ class PerformCelltypeFactorization:
 
     @staticmethod
     def get_first_nmf_component(X):
-        scaler = MinMaxScaler()
-        scaled_X = scaler.fit_transform(X)
-
-        corr_matrix = np.dot(scaled_X.T, scaled_X) / (scaled_X.shape[0] - 1)
+        corr_matrix = np.dot(X.T, X) / (X.shape[0] - 1)
 
         nmf = NMF(n_components=1)
         nmf.fit(corr_matrix)

@@ -1,7 +1,7 @@
 """
 File:         workers.py
 Created:      2020/04/01
-Last Changed: 2020/04/14
+Last Changed: 2020/04/16
 Author(s):    M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -37,11 +37,15 @@ from functools import reduce
 
 
 def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
-                   start_q, job_q, result_q, sleep_time, max_end_time, verbose):
+                   start_q, job_q, result_q, sleep_time, max_time_unresponsive,
+                   max_end_time, verbose):
     start_time_str = datetime.fromtimestamp(time.time()).strftime(
         "%d-%m-%Y, %H:%M:%S")
     print("[worker {:2d}]\tstarted [{}].".format(worker_id, start_time_str),
           flush=True)
+
+    # Define the update frequency.
+    update_frequency = int(max_time_unresponsive / 2)
 
     # First receive the permutation order from the start queue.
     sample_orders = None
@@ -83,6 +87,7 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
     # Push the header to the manager. This is also the message that confirms
     # the worker is ready to start.
     result_q.put((worker_id, "online", -1, None, ["-"] + list(cov_df.index)))
+    last_message = int(time.time())
 
     # Start infinite loop.
     while True:
@@ -101,7 +106,10 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
             # Check if there is work for me, if not, send a waiting result
             # back to the manager
             if worker_id not in schedule.keys() or schedule[worker_id] is None:
-                result_q.put((worker_id, "waiting", None, None, None))
+                now = int(time.time())
+                if (last_message - now) > update_frequency:
+                    result_q.put((worker_id, "waiting", None, None, None))
+                    last_message = now
                 time.sleep(sleep_time)
                 continue
             # The work has format: {eqtl_id [sample order id, ...], ...}
@@ -202,8 +210,10 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
 
                 # Loop over the covariates.
                 for j in range(cov_df.shape[0]):
-                    if j % 10 == 0:
+                    now = int(time.time())
+                    if (last_message - now) > update_frequency:
                         result_q.put((worker_id, "working", None, None, None))
+                        last_message = now
 
                     # Get the covariate we are processing.
                     covarate = covariates.iloc[j, :]

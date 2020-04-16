@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed: 2020/04/14
+Last Changed: 2020/04/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -76,6 +76,10 @@ class CombineAndPlot:
         self.pvalues_outfile = settings.get_setting("actual_pvalues_pickle_filename")
         self.perm_pvalues_outfile = settings.get_setting("permuted_pvalues_pickle_filename")
 
+        # Class variable.
+        self.max_col_value = 1001
+        self.precision = 3
+
     def start(self):
         """
         Method to start the combiner.
@@ -118,7 +122,7 @@ class CombineAndPlot:
         perm_pvalues = sorted(perm_pvalues)
         pvalues = sorted(pvalues)
 
-        # Visualise null distribution.
+        # Visualise distributions.
         print("Visualizing distributions.", flush=True)
         self.plot_distributions(perm_pvalues, pvalues, self.outdir)
 
@@ -147,7 +151,7 @@ class CombineAndPlot:
                                    self.outdir)
         self.compare_pvalue_scores(pvalue_df, perm_fdr_df, bh_fdr_df,
                                    self.outdir, stepsize=0.1, max_val=0.05,
-                                   rescale=True)
+                                   rescale=False)
 
         # Print the time.
         run_time_min, run_time_sec = divmod(time.time() - start_time, 60)
@@ -220,7 +224,7 @@ class CombineAndPlot:
         reference = set(np.arange(df.index.min(), df.index.max() + 1))
         missing = list(df.index.symmetric_difference(reference))
         duplicated = list(df.index[df.index.duplicated(keep="first")])
-        print("\tMissing indices: {}.".format(missing))
+        print("\tMissing indices: {}".format(missing))
         print("\tDuplicate indices: {}".format(duplicated))
 
         df.set_index("-", inplace=True)
@@ -235,13 +239,13 @@ class CombineAndPlot:
         :param df: DataFrame, a dataframe containing p-values.
         :return zscore_df: DataFrame, a dataframe containing z-scores
         """
-        count = 0
+        count = 1
         total = df.shape[0] * df.shape[1]
 
         zscore_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
         for row_index in range(df.shape[0]):
             for col_index in range(df.shape[1]):
-                if count % 10000 == 0:
+                if (count == 1) or (count % int(total / 10) == 0) or (count == total):
                     print("\tworking on {}/{} [{:.2f}%]".format(count,
                                                                 total,
                                                                 (100 / total) * count))
@@ -323,13 +327,13 @@ class CombineAndPlot:
         :param n_perm: int, the number of permutations performed.
         :return fdr_df: DataFrame, the permutation FDR dataframe.
         """
-        count = 0
+        count = 1
         total = df.shape[0] * df.shape[1]
 
         fdr_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
         for row_index in range(df.shape[0]):
             for col_index in range(df.shape[1]):
-                if count % 10000 == 0:
+                if (count == 1) or (count % int(total / 10) == 0) or (count == total):
                     print("\tworking on {}/{} [{:.2f}%]".format(count,
                                                                 total,
                                                                 (100 / total) * count))
@@ -359,7 +363,7 @@ class CombineAndPlot:
         :param pvalues: list, the sorted alternative model p-values.
         :return fdr_df: DataFrame, the Benjamini-Hochberg FDR dataframe.
         """
-        count = 0
+        count = 1
         total = df.shape[0] * df.shape[1]
 
         m = len(pvalues)
@@ -367,7 +371,7 @@ class CombineAndPlot:
         fdr_values = []
         for row_index in range(df.shape[0]):
             for col_index in range(df.shape[1]):
-                if count % 10000 == 0:
+                if (count == 1) or (count % int(total / 10) == 0) or (count == total):
                     print("\tworking on {}/{} [{:.2f}%]".format(count,
                                                                 total,
                                                                 (100 / total) * count))
@@ -426,9 +430,19 @@ class CombineAndPlot:
             df = df.loc[indices, :]
 
         # Calculate the lower and upper bound of the axis.
-        precision = 10 ^ len(str(stepsize).split(".")[1])
+        precision = 10 ^ len(str(float(stepsize)).split(".")[1])
         xy_min = math.floor(df.values.min() * precision) / precision - stepsize
         xy_max = math.ceil(df.values.max() * precision) / precision + stepsize
+
+        # Calculate the maximum color value.
+        max_col_value = -np.inf
+        for i in range(3):
+            for j in range(3):
+                if i > j:
+                    new_max = ((df.iloc[:, i] - df.iloc[:, j]) ** 2).max()
+                    if new_max > max_col_value:
+                        max_col_value = new_max
+        self.max_col_value = int(max_col_value * (10 ** self.precision))
 
         # Create the plot.
         sns.set()
@@ -437,15 +451,12 @@ class CombineAndPlot:
                                      "axes.fontweight": 'bold',
                                      'xtick.labelsize': 16,
                                      'ytick.labelsize': 16})
-        g = sns.pairplot(df, kind='reg', diag_kind='hist', corner=True,
+        g = sns.pairplot(df, kind='scatter', diag_kind='hist', corner=True,
                          height=5, aspect=1,
-                         plot_kws={'scatter_kws':
-                                       {'facecolors': '#FFFFFF',
-                                        'edgecolor': '#FFFFFF'},
-                                   'line_kws': {"color": "#FFFFFF"}
-                                   },
+                         plot_kws={'color': '#FFFFFF'},
                          diag_kws={'bins': 25, 'color': "#606060"}
                          )
+
         # Change the colors.
         g.map_lower(self.my_scatter)
         g.map_lower(self.diagonal_line)
@@ -469,13 +480,13 @@ class CombineAndPlot:
                                                                   xy_max)))
 
     @staticmethod
-    def create_color_map(max_val=1251):
+    def create_color_map(length, precision):
         """
         Method for creating a color gradient for the p-values.
         """
-        palette = list(Color("#D3D3D3").range_to(Color("#000000"), max_val))
+        palette = list(Color("#D3D3D3").range_to(Color("#000000"), length + 1))
         colors = [x.rgb for x in palette]
-        values = [x / 100000 for x in list(range(0, max_val))]
+        values = [x / (10 ** precision) for x in list(range(0, length + 1))]
         value_color_map = {}
         for val, col in zip(values, colors):
             value_color_map[val] = col
@@ -489,12 +500,11 @@ class CombineAndPlot:
         :param x: Series, the x-axis values.
         :param y: Series, the y-xis values.
         """
-        colormap = self.create_color_map()
-        diff = round((x - y) ** 2, 5)
-        colors = diff.map(colormap).fillna("#000000")
-        kwargs['scatter_kws'] = {'facecolors': colors, 'edgecolors': colors}
-        kwargs['line_kws'] = {"color": "#D7191C"}
-        sns.regplot(x, y, **kwargs)
+        colormap = self.create_color_map(length=self.max_col_value,
+                                         precision=self.precision)
+        diff = round((x - y) ** 2, self.precision)
+        colors = diff.map(colormap).fillna("#FFFFFF")
+        plt.scatter(x, y, c=colors)
 
     @staticmethod
     def diagonal_line(*args, **kwargs):

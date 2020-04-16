@@ -50,9 +50,9 @@
   "permuted_pvalues_pickle_filename": "perm_pvalues_",
   "wait_list_pickle_filename": "wait_list_",
   "n_permutations": 10,
-  "sleep_time_in_sec": 10,
+  "sleep_time_in_sec": 30,
   "print_interval_in_sec": 600,
-  "single_eqtl_max_runtime_in_min": 5,
+  "max_time_unresponsive_in_min": 5,
   "max_runtime_in_hours": 24,
   "panic_time_in_min": 5
 }

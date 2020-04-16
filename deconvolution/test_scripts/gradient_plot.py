@@ -3,7 +3,7 @@
 """
 File:         gradient_plot.py
 Created:      2020/04/15
-Last Changed:
+Last Changed: 2020/04/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -65,18 +65,27 @@ class main():
                                       cov_df.shape))
 
         # Define the axis.
-        xaxis = "Comp5"
-        yaxis = "Comp6"
-        zaxis = "SEX"
+        xaxis = "CellMapNMF_Astrocyte_C1"
+        yaxis = "CellMapNNLS_Astrocyte"
+        zaxis = ""
+
+        # # Define the axis.
+        # xaxis = "Comp5"
+        # yaxis = "Comp6"
+        # zaxis = "SEX"
 
         # Get the data.
         xdata = cov_df.loc[xaxis, :]
         ydata = cov_df.loc[yaxis, :]
-        zdata = cov_df.loc[zaxis, :]
-        zdata = zdata.map({0: "Male", 1: "Female"})
+        # zdata = cov_df.loc[zaxis, :]
+        # zdata = zdata.map({0: "Male", 1: "Female"})
+        #
+        # # Define colors.
+        # colormap = {"Male": "#03165E", "Female": "#DC106C"}
 
-        # Define colors.
-        colormap = {"Male": "#03165E", "Female": "#DC106C"}
+        # De-mean.
+        xdata = xdata - xdata.mean()
+        ydata = ydata - ydata.mean()
 
         # Plot.
         fig, ax = plt.subplots()
@@ -89,20 +98,20 @@ class main():
 
         g = sns.scatterplot(x=xdata,
                             y=ydata,
-                            hue=zdata,
-                            palette=colormap,
+                            # hue=zdata,
+                            # palette=colormap,
                             alpha=0.5)
 
         g.set_title("")
-        g.set_ylabel(yaxis,
-                     fontsize=12,
+        g.set_ylabel("{} - average".format(yaxis),
+                     fontsize=10,
                      fontweight='bold')
-        g.set_xlabel(xaxis,
-                     fontsize=12,
+        g.set_xlabel("{} - average".format(xaxis),
+                     fontsize=10,
                      fontweight='bold')
-        plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-        plt.setp(ax.get_legend().get_texts(), fontsize='10')
-        plt.setp(ax.get_legend().get_title(), fontsize='12')
+        # plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+        # plt.setp(ax.get_legend().get_texts(), fontsize='10')
+        # plt.setp(ax.get_legend().get_title(), fontsize='12')
         plt.tight_layout()
         fig.savefig(os.path.join(self.outdir, "{}_{}_{}.png".format(xaxis,
                                                                     yaxis,
