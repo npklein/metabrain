@@ -1,7 +1,7 @@
 """
 File:         manager.py
 Created:      2020/04/01
-Last Changed: 2020/04/14
+Last Changed: 2020/04/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -81,8 +81,7 @@ class Manager:
         self.n_permutations = settings.get_setting("n_permutations")
         self.sleep_time = settings.get_setting("sleep_time_in_sec")
         self.print_interval = settings.get_setting("print_interval_in_sec")
-        self.analysis_max_runtime = settings.get_setting(
-            "single_eqtl_max_runtime_in_min") * 60
+        self.max_time_unresponsive = settings.get_setting("max_time_unresponsive_in_min") * 60
         self.max_end_time = int(time.time()) + settings.get_setting(
             "max_runtime_in_hours") * 60 * 60
         self.panic_time = self.max_end_time - (settings.get_setting("panic_time_in_min") * 60)
@@ -285,6 +284,7 @@ class Manager:
                                               job_q,
                                               result_q,
                                               self.sleep_time,
+                                              self.max_time_unresponsive,
                                               self.max_end_time,
                                               self.verbose)))
         for proc in processes:
@@ -316,7 +316,7 @@ class Manager:
             now_time = int(time.time())
             tmp_doctor_dict = doctor_dict.copy()
             for worker_id, last_hr in tmp_doctor_dict.items():
-                if (now_time - last_hr) > self.analysis_max_runtime:
+                if (now_time - last_hr) > self.max_time_unresponsive:
                     # A dead worker has been found.
                     print("[doctor]\toh no, 'worker {}' "
                           "has died.".format(worker_id))
@@ -496,8 +496,7 @@ class Manager:
                              unique=True)
 
         # Empty the schedule.
-        print("[manager]\tclearing schedule, saving unfinished work.",
-              flush=True)
+        print("[manager]\tchecking for unfinished work.", flush=True)
         for unfinished_work in schedule.values():
             if unfinished_work is not None:
                 for key, value in unfinished_work.items():
@@ -681,7 +680,7 @@ class Manager:
         print("  > Permutations: {}".format(self.n_permutations))
         print("  > Sleep time: {} sec".format(self.sleep_time))
         print("  > Print interval: {} sec".format(self.print_interval))
-        print("  > Single analysis max runtime: {} sec".format(self.analysis_max_runtime))
+        print("  > Max time unresponsive: {} sec".format(self.max_time_unresponsive))
         print("  > Max end datetime: {}".format(end_time_string))
         print("  > Panic datetime: {}".format(panic_time_string))
         print("  > Skip rows: {}".format(self.skip_rows))

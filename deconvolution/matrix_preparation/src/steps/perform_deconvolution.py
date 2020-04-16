@@ -1,7 +1,7 @@
 """
 File:         perform_deconvolution.py
 Created:      2020/04/08
-Last Changed: 2020/04/15
+Last Changed: 2020/04/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -82,13 +82,20 @@ class PerformDeconvolution:
         if self.profile_df is None:
             # Load the celltype profile file.
             print("Loading cell type profile matrix.")
-            self.profile_df = load_dataframe(self.profile_file,
-                                             header=0, index_col=0)
+            profile_df = load_dataframe(self.profile_file,
+                                        header=0, index_col=0)
+
+            # Shift the expression to be all positive.
+            self.profile_df = profile_df + abs(profile_df.values.min())
+
         if self.ct_expr_df is None:
             # Load the celltype expression file.
             print("Loading cell type expression matrix.")
-            self.ct_expr_df = load_dataframe(self.ct_expr_file,
-                                             header=0, index_col=0)
+            ct_expr_df = load_dataframe(self.ct_expr_file,
+                                        header=0, index_col=0)
+
+            # Shift the expression to be all positive.
+            self.ct_expr_df = ct_expr_df + abs(ct_expr_df.values.min())
 
         # Convert the profile expression CPM to z-scores.
         self.profile_df = self.normalize(self.profile_df)
