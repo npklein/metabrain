@@ -1,7 +1,7 @@
 """
 File:         manager.py
 Created:      2020/04/01
-Last Changed: 2020/04/16
+Last Changed: 2020/04/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -138,7 +138,7 @@ class Manager:
         geno_nrows = self.get_number_of_rows(self.geno_inpath)
         expr_nrows = self.get_number_of_rows(self.expr_inpath)
         if geno_nrows != expr_nrows:
-            print("Number of rows in genotype / expression file do not match.")
+            print("Number of rows in genotype / expression file do not match")
             exit()
 
         return geno_nrows
@@ -168,7 +168,7 @@ class Manager:
         expr_ncols = self.get_number_of_columns(self.expr_inpath)
         if geno_ncols != expr_ncols:
             print("Number of columns in genotype / expression file do "
-                  "not match.")
+                  "not match")
             exit()
 
         return geno_ncols
@@ -230,20 +230,20 @@ class Manager:
         permutation_orders = None
         perm_orders_outfile = os.path.join(self.outdir, self.perm_orders_filename + ".pkl")
         if check_file_exists(perm_orders_outfile):
-            print("[manager]\tloading permutation order.", flush=True)
+            print("[manager]\tloading permutation order", flush=True)
             permutation_orders = self.load_pickle(perm_orders_outfile)
 
             # Validate the permutation orders for the given input.
             if len(permutation_orders) != (self.n_permutations + 1):
-                print("[manager]\t\tinvalid.", flush=True)
+                print("[manager]\t\tinvalid", flush=True)
                 permutation_orders = None
             for order in permutation_orders:
                 if len(order) != self.n_samples:
-                    print("[manager]\t\tinvalid.", flush=True)
+                    print("[manager]\t\tinvalid", flush=True)
                     permutation_orders = None
                     break
         if permutation_orders is None:
-            print("[manager]\tcreating permutation order.")
+            print("[manager]\tcreating permutation order")
             permutation_orders = self.create_perm_orders()
             self.dump_pickle(permutation_orders, self.outdir, self.perm_orders_filename)
 
@@ -256,22 +256,22 @@ class Manager:
         result_q = result_manager.Queue()
 
         # Load the start queue.
-        print("[manager]\tloading start queue.", flush=True)
+        print("[manager]\tloading start queue", flush=True)
         for _ in range(self.n_cores):
             start_q.put(permutation_orders)
         all_sample_orders = [i for i in range(len(permutation_orders))]
 
         # Load the wait list.
-        print("[manager]\tcreating wait list.", flush=True)
+        print("[manager]\tcreating wait list", flush=True)
         wait_list = self.load_wait_list(all_sample_orders)
         if self.prev_wait_list:
             print("[manager]\tadded {} eQTLs from previous "
-                  "wait list.".format(len(self.prev_wait_list)), flush=True)
+                  "wait list".format(len(self.prev_wait_list)), flush=True)
             print(self.prev_wait_list)
             wait_list.extend(self.prev_wait_list)
 
         # Start the workers.
-        print("[manager]\tstarting processes.", flush=True)
+        print("[manager]\tstarting processes", flush=True)
         processes = []
         for worker_id in range(self.n_cores):
             processes.append(mp.Process(target=process_worker,
@@ -304,7 +304,7 @@ class Manager:
         total_analyses = (self.n_eqtls * (self.n_permutations + 1)) + sum([len(x[1]) for x in self.prev_wait_list])
         panic = False
 
-        print("[manager]\tstarting scheduler.")
+        print("[manager]\tstarting scheduler")
         while True:
             # Break the loop of the maximum runtime has been reached.
             # This prevents the workers to continue indefinitely.
@@ -319,7 +319,7 @@ class Manager:
                 if (now_time - last_hr) > self.max_time_unresponsive:
                     # A dead worker has been found.
                     print("[doctor]\toh no, 'worker {}' "
-                          "has died.".format(worker_id))
+                          "has died".format(worker_id))
                     if worker_id not in dead_workers and \
                             worker_id in schedule.keys():
                         unfinished_work = schedule[worker_id]
@@ -475,10 +475,10 @@ class Manager:
             self.print_status(wait_list, schedule, eqtl_id_len, order_id_len)
         else:
             self.print_progress(counter, total_analyses)
-        print("[manager]\tscheduler finished.", flush=True)
+        print("[manager]\tscheduler finished", flush=True)
 
         # Send the kill signal.
-        print("[manager]\tkilling processes.", flush=True)
+        print("[manager]\tkilling processes", flush=True)
         for proc in processes:
             proc.terminate()
 
@@ -487,7 +487,7 @@ class Manager:
             proc.join()
 
         # Pickle the output lists.
-        print("[manager]\tsaving output lists.", flush=True)
+        print("[manager]\tsaving output lists", flush=True)
         if pvalue_data:
             self.dump_pickle(pvalue_data, self.outdir, self.pvalues_filename,
                              unique=True)
@@ -496,7 +496,7 @@ class Manager:
                              unique=True)
 
         # Empty the schedule.
-        print("[manager]\tchecking for unfinished work.", flush=True)
+        print("[manager]\tchecking for unfinished work", flush=True)
         for unfinished_work in schedule.values():
             if unfinished_work is not None:
                 for key, value in unfinished_work.items():
@@ -510,12 +510,12 @@ class Manager:
         run_time_min, run_time_sec = divmod(run_time, 60)
         run_time_hour, run_time_min = divmod(run_time_min, 60)
         print("[manager]\tfinished in  {} hour(s), {} minute(s) and "
-              "{} second(s).".format(int(run_time_hour),
+              "{} second(s)".format(int(run_time_hour),
                                      int(run_time_min),
                                      int(run_time_sec)),
               flush=True)
         print("[receiver]\treceived {:.2f} analyses "
-              "per minute.".format(counter / (run_time / 60)),
+              "per minute".format(counter / (run_time / 60)),
               flush=True)
 
         # Shutdown the manager.
@@ -555,7 +555,7 @@ class Manager:
         with open(fpath, "wb") as f:
             pickle.dump(content, f)
         f.close()
-        print("[manager]\t\tcreated {}.".format(os.path.basename(fpath)),
+        print("[manager]\t\tcreated {}".format(os.path.basename(fpath)),
               flush=True)
 
     def create_perm_orders(self):
@@ -667,9 +667,9 @@ class Manager:
         """
         Method for printing the variables of the class.
         """
-        end_time_string = datetime.fromtimestamp(self.max_end_time).strftime(
-            "%d-%m-%Y, %H:%M:%S")
         panic_time_string = datetime.fromtimestamp(self.panic_time).strftime(
+            "%d-%m-%Y, %H:%M:%S")
+        end_time_string = datetime.fromtimestamp(self.max_end_time).strftime(
             "%d-%m-%Y, %H:%M:%S")
         print("Arguments:")
         print("  > Genotype datafile: {}".format(self.geno_inpath))
@@ -681,8 +681,8 @@ class Manager:
         print("  > Sleep time: {} sec".format(self.sleep_time))
         print("  > Print interval: {} sec".format(self.print_interval))
         print("  > Max time unresponsive: {} sec".format(self.max_time_unresponsive))
-        print("  > Max end datetime: {}".format(end_time_string))
         print("  > Panic datetime: {}".format(panic_time_string))
+        print("  > Max end datetime: {}".format(end_time_string))
         print("  > Skip rows: {}".format(self.skip_rows))
         print("  > EQTLs: {}".format(self.n_eqtls))
         print("  > Samples: {}".format(self.n_samples))

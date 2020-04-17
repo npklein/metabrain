@@ -1,7 +1,7 @@
 """
 File:         workers.py
 Created:      2020/04/01
-Last Changed: 2020/04/16
+Last Changed: 2020/04/17
 Author(s):    M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -41,11 +41,11 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                    max_end_time, verbose):
     start_time_str = datetime.fromtimestamp(time.time()).strftime(
         "%d-%m-%Y, %H:%M:%S")
-    print("[worker {:2d}]\tstarted [{}].".format(worker_id, start_time_str),
+    print("[worker {:2d}]\tstarted [{}]".format(worker_id, start_time_str),
           flush=True)
 
     # Define the update frequency.
-    update_frequency = int(max_time_unresponsive / 2)
+    update_frequency = int(max_time_unresponsive / 2.1)
 
     # First receive the permutation order from the start queue.
     sample_orders = None
@@ -67,7 +67,7 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
         return
 
     if verbose:
-        print("[worker {:2d}]\treceived sample orders.".format(worker_id),
+        print("[worker {:2d}]\treceived sample orders".format(worker_id),
               flush=True)
 
     # Load the covariate file. Split the matrix into technical covariates and
@@ -75,7 +75,7 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
     tech_cov_df, cov_df = load_covariate_file(cov_inpath, tech_covs)
 
     if verbose:
-        print("[worker {:2d}]\tloaded covariate file.".format(worker_id),
+        print("[worker {:2d}]\tloaded covariate file".format(worker_id),
               flush=True)
         print("[worker {:2d}]\t\t"
               "technical covariates: {}".format(worker_id, tech_cov_df.shape),
@@ -107,7 +107,10 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
             # back to the manager
             if worker_id not in schedule.keys() or schedule[worker_id] is None:
                 now = int(time.time())
-                if (last_message - now) > update_frequency:
+                if (now - last_message) > update_frequency:
+                    if verbose:
+                        print("[worker {:2d}]\tSending "
+                              "heartbeat".format(worker_id), flush=True)
                     result_q.put((worker_id, "waiting", None, None, None))
                     last_message = now
                 time.sleep(sleep_time)
@@ -168,7 +171,7 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
             for i, eqtl_index in enumerate(my_work.keys()):
                 if verbose:
                     print("[worker {:2d}]\tworking on "
-                          "'eQTL_{}'.".format(worker_id, eqtl_index),
+                          "'eQTL_{}'".format(worker_id, eqtl_index),
                           flush=True)
 
                 # Find which order ids to perform.
@@ -190,7 +193,7 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                 # Check if SNP index are identical.
                 if genotype.name != expression.name:
                     print("[worker {:2d}]\tindices do "
-                          "not match.".format(worker_id), flush=True)
+                          "not match".format(worker_id), flush=True)
                     continue
 
                 # Create the null model. Null model are all the technical
@@ -211,20 +214,16 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                 # Loop over the covariates.
                 for j in range(cov_df.shape[0]):
                     now = int(time.time())
-                    if (last_message - now) > update_frequency:
+                    if (now - last_message) > update_frequency:
+                        if verbose:
+                            print("[worker {:2d}]\tSending "
+                                  "heartbeat".format(worker_id), flush=True)
                         result_q.put((worker_id, "working", None, None, None))
                         last_message = now
 
                     # Get the covariate we are processing.
                     covarate = covariates.iloc[j, :]
                     cov_name = covarate.name
-
-                    if verbose:
-                        print("[worker {:2d}]\tworking on covariate {} "
-                              "[{}/{}]".format(worker_id,
-                                               cov_name,
-                                               j + 1,
-                                               cov_df.shape[0]))
 
                     # Add the covariate to the null matrix if it isn't already.
                     null_matrix = base_matrix.copy()
