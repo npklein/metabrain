@@ -1,7 +1,7 @@
 """
 File:         inter_zscores_bars.py
 Created:      2020/03/16
-Last Changed: 2020/04/08
+Last Changed: 2020/04/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -20,9 +20,11 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Standard imports.
+import math
 import os
 
 # Third party imports.
+import scipy.stats as stats
 from colour import Color
 import seaborn as sns
 import matplotlib
@@ -52,15 +54,30 @@ class InterZscoreBars:
         print("Plotting interaction matrix z-scores as barplot.")
         self.print_arguments()
 
-        df = self.inter_df.pow(2)
-        sums = df.sum(axis=1).to_frame().reset_index()
+        data = self.get_counts(cutoff_value=0)
+        self.create_plots(data, "Positive ", "[>0]")
+
+        # Calculate the z-score cutoff.
+        z_score_cutoff = stats.norm.ppf(0.05 / (self.inter_df.shape[0] * self.inter_df.shape[1]) / 2)
+        self.get_counts(cutoff_value=z_score_cutoff)
+        self.create_plots(data, "Significant ", "[>{:.2f}]".format(z_score_cutoff))
+
+    def get_counts(self, cutoff_value=None):
+        df = self.inter_df.copy()
+        if cutoff_value is not None:
+            df[df < cutoff_value] = 0
+        sums = df.pow(2).sum(axis=1).to_frame().reset_index()
         sums.columns = ["index", "counts"]
         sums["color"] = self.create_color_map(sums["counts"])
         sums.sort_values(by=['counts'], ascending=False, inplace=True)
 
-        self.plot(sums, self.outdir, major_ticks=100000, fontsize=5)
-        self.plot(sums, self.outdir, top=10, major_ticks=100000, fontsize=14)
-        self.plot(sums, self.outdir, bottom=10, major_ticks=10000, fontsize=14)
+        return sums
+
+    def create_plots(self, data, title_prefix="", title_suffix=""):
+        majorticks = 10 ** math.floor(math.log10(data["counts"].max()))
+        self.plot(data, self.outdir, major_ticks=majorticks, fontsize=5, title_prefix=title_prefix, title_suffix=title_suffix)
+        self.plot(data, self.outdir, top=10, major_ticks=majorticks, fontsize=14, title_prefix=title_prefix, title_suffix=title_suffix)
+        self.plot(data, self.outdir, bottom=10, major_ticks=majorticks, fontsize=14, title_prefix=title_prefix, title_suffix=title_suffix)
 
     @staticmethod
     def create_color_map(values, size=101):
@@ -70,7 +87,7 @@ class InterZscoreBars:
         colors = [str(x).upper() for x in palette]
 
         start = 0
-        stop = max(values)
+        stop = math.ceil(max(values))
         step = (stop - start) / size
 
         color_list = []
@@ -80,7 +97,8 @@ class InterZscoreBars:
         return color_list
 
     @staticmethod
-    def plot(df, outdir, top=None, bottom=None, major_ticks=10, fontsize=10):
+    def plot(df, outdir, top=None, bottom=None, major_ticks=10, fontsize=10,
+             title_prefix="", title_suffix=""):
         # Subset the data.
         title_appendix = ''
         file_appendix = ''
@@ -100,7 +118,7 @@ class InterZscoreBars:
         sns.despine(fig=fig, ax=ax)
 
         minor_ticks = int(major_ticks / 2)
-        for i in range(0, int(max(df["counts"])) + (2 * major_ticks), minor_ticks):
+        for i in range(0, int(max(df["counts"])) + (1 * major_ticks), minor_ticks):
             alpha = 0.025
             if i % major_ticks == 0:
                 alpha = 0.15
@@ -110,7 +128,7 @@ class InterZscoreBars:
                         palette=df["color"], orient="h")
 
         g.text(0.5, 1.05,
-               'Covariate Interactions {}'.format(title_appendix),
+               '{}Covariate Interactions {} {}'.format(title_prefix, title_appendix, title_suffix),
                fontsize=22, weight='bold', ha='center', va='bottom',
                transform=ax.transAxes)
         g.set_ylabel('covariate',
@@ -124,7 +142,8 @@ class InterZscoreBars:
         ax.set_yticklabels(df["index"])
         plt.tight_layout()
         fig.savefig(os.path.join(outdir,
-                                 "cov_zscores_barplot{}.png".format(file_appendix)))
+                                 "{}cov_zscores_barplot{}.png".format(title_prefix.replace(" ", "").lower(),
+                                                                      file_appendix)))
         plt.close()
 
     def print_arguments(self):

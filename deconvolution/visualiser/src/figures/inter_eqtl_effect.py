@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect.py
 Created:      2020/03/16
-Last Changed: 2020/04/02
+Last Changed: 2020/04/14
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -125,7 +125,7 @@ class IntereQTLEffect:
             interaction_effect = self.inter_df.iloc[:, i].to_frame()
             interaction_effect.columns = ["zscore"]
             interaction_effect = interaction_effect.loc[
-                                 interaction_effect["zscore"].abs() >= abs(
+                                 interaction_effect["zscore"] > abs(
                                      z_score_cutoff), :]
             interaction_effect = interaction_effect.reindex(
                 interaction_effect["zscore"].abs().sort_values(
