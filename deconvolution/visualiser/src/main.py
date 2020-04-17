@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/13
-Last Changed: 2020/04/07
+Last Changed: 2020/04/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -34,7 +34,7 @@ from general.objects.dataset import Dataset
 from .figures.covariate_comparison import CovariateComparison
 from .figures.deconvolution_covariate_comparison import DeconvolutionCovariateComparison
 from .figures.covariates_explained_by_others import CovariatesExplainedByOthers
-from .figures.celltype_profile_pc_vs_marker_genes import CelltypeProfileVSMarkerGenes
+from .figures.deconvolution_zscore_comparison import DeconvolutionZscoreComparison
 from .figures.simple_eqtl_effect import SimpleeQTLEffect
 from .figures.inter_zscore_bars import InterZscoreBars
 from .figures.inter_zscore_dist import InterZscoreDist
@@ -42,7 +42,7 @@ from .figures.inter_zscore_clustermap import InterZscoreClusterMap
 from .figures.inter_eqtl_zscore_bars import IntereQTLZscoreBars
 from .figures.inter_zscore_marker_genes import InterZscoreMarkerGenes
 from .figures.inter_eqtl_effect import IntereQTLEffect
-from .figures.inter_eqtl_effect_marker_genes import IntereQTLEffectMarkerGenes
+from .figures.inter_eqtl_effect_deconvolution import IntereQTLEffectDeconvolution
 from .figures.inter_eqtl_effect_marker_vs_comp import IntereQTLEffectMarkerVSComp
 
 
@@ -88,36 +88,36 @@ class Main:
         if self.validate:
             ds.load_all()
 
-        if ('covariate_comparison' in self.plots) or \
-                ('all' in self.plots):
-            print("\n### Covariate Comparison ###\n")
-            cc = CovariateComparison(dataset=ds, outdir=self.outdir)
-            cc.start()
-            del cc
+        # if ('covariate_comparison' in self.plots) or \
+        #         ('all' in self.plots):
+        #     print("\n### Covariate Comparison ###\n")
+        #     cc = CovariateComparison(dataset=ds, outdir=self.outdir)
+        #     cc.start()
+        #     del cc
+        #
+        # if ('deconvolution_covariate_comparison' in self.plots) or \
+        #         ('all' in self.plots):
+        #     print("\n### Deconvolution Covariate Comparison ###\n")
+        #     dcc = DeconvolutionCovariateComparison(dataset=ds,
+        #                                            outdir=self.outdir)
+        #     dcc.start()
+        #     del dcc
+        #
+        # if ('covariates_explained_by_others' in self.plots) or \
+        #         ('all' in self.plots):
+        #     print("\n### Covariates Explained By Others ###\n")
+        #     cebo = CovariatesExplainedByOthers(dataset=ds,
+        #                                        outdir=self.outdir)
+        #     cebo.start()
+        #     del cebo
 
-        if ('deconvolution_covariate_comparison' in self.plots) or \
+        if ('deconvolution_zscore_comparison' in self.plots) or \
                 ('all' in self.plots):
-            print("\n### Deconvolution Covariate Comparison ###\n")
-            dcc = DeconvolutionCovariateComparison(dataset=ds,
-                                                   outdir=self.outdir)
-            dcc.start()
-            del dcc
-
-        if ('covariates_explained_by_others' in self.plots) or \
-                ('all' in self.plots):
-            print("\n### Covariates Explained By Others ###\n")
-            cebo = CovariatesExplainedByOthers(dataset=ds,
-                                               outdir=self.outdir)
-            cebo.start()
-            del cebo
-
-        if ('celltype_profile_pc_vs_marker_genes' in self.plots) or \
-                ('all' in self.plots):
-            print("\n### CellType Profile PC vs Marker Genes ###\n")
-            cpvmg = CelltypeProfileVSMarkerGenes(dataset=ds,
-                                                 outdir=self.outdir)
-            cpvmg.start()
-            del cpvmg
+            print("\n### CellType Methods vs Marker Genes ###\n")
+            dzc = DeconvolutionZscoreComparison(dataset=ds,
+                                                outdir=self.outdir)
+            dzc.start()
+            del dzc
 
         if ('simple_eqtl_effect' in self.plots) or ('all' in self.plots):
             print("\n### SIMPLE EQTL EFFECT ###\n")
@@ -168,12 +168,12 @@ class Main:
             iee.start()
             del iee
 
-        if ('inter_eqtl_effect_marker_genes' in self.plots) or ('all' in self.plots):
+        if ('inter_eqtl_effect_deconvolution' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION EQTL EFFECT MARKER GENES ###\n")
-            ieemg = IntereQTLEffectMarkerGenes(dataset=ds,
-                                               outdir=self.outdir)
-            ieemg.start()
-            del ieemg
+            ieed = IntereQTLEffectDeconvolution(dataset=ds,
+                                                outdir=self.outdir)
+            ieed.start()
+            del ieed
 
         if ('inter_eqtl_effect_marker_vs_comp' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION EQTL EFFECT MARKER GENES VS COMPS ###\n")

@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect_marker_vs_comp.py
 Created:      2020/03/18
-Last Changed: 2020/03/20
+Last Changed: 2020/04/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -50,9 +50,7 @@ class IntereQTLEffectMarkerVSComp:
         print("Loading data")
         self.inter_df = dataset.get_inter_df()
         self.celltypes = dataset.get_celltypes()
-
-        # Create color map.
-        self.color_map = self.get_colormap()
+        self.color_map = dataset.get_colormap()
 
     def start(self):
         print("Plotting interaction eQTL plots for marker genes versus "
@@ -95,11 +93,6 @@ class IntereQTLEffectMarkerVSComp:
 
         # Plot a clustermap of the average correlations.
         self.plot_clustermap(corr_df, pval_df, self.outdir)
-
-    def get_colormap(self):
-        colors = ["#9b59b6", "#3498db", "#e74c3c", "#34495e",
-                  "#2ecc71"]
-        return dict(zip(self.celltypes, colors))
 
     @staticmethod
     def plot_scatter_grid(components, markers, component, celltypes, color_map,

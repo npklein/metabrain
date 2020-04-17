@@ -1,7 +1,7 @@
 """
 File:         dataset.py
 Created:      2020/03/16
-Last Changed: 2020/04/02
+Last Changed: 2020/04/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -42,6 +42,8 @@ class Dataset:
         self.markers_filename = filenames["markers"]
         self.inter_filename = settings.get_setting("interaction_datafile")
         self.celltypes = settings.get_setting("celltypes")
+        self.cellmap_methods = settings.get_setting("cellmap_method_prefix_and_suffix")
+        self.marker_genes = settings.get_setting("marker_genes_prefix")
         nrows = nrows
         if nrows == -1:
             nrows = None
@@ -75,6 +77,17 @@ class Dataset:
 
     def get_celltypes(self):
         return self.celltypes
+
+    def get_cellmap_methods(self):
+        return self.cellmap_methods
+
+    def get_marker_genes(self):
+        return self.marker_genes
+
+    def get_colormap(self):
+        colors = ["#9b59b6", "#3498db", "#e74c3c", "#34495e",
+                  "#2ecc71"]
+        return dict(zip(self.celltypes, colors))
 
     def get_eqtl_df(self):
         if self.eqtl_df is None:

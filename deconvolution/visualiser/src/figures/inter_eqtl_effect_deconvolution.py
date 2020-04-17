@@ -1,7 +1,7 @@
 """
-File:         inter_eqtl_effect_marker_genes.py
+File:         inter_eqtl_effect_deconvolution.py
 Created:      2020/03/17
-Last Changed: 2020/04/07
+Last Changed: 2020/04/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 from general.utilities import prepare_output_dir, p_value_to_symbol
 
 
-class IntereQTLEffectMarkerGenes:
+class IntereQTLEffectDeconvolution:
     def __init__(self, dataset, outdir):
         """
         The initializer for the class.
@@ -42,7 +42,7 @@ class IntereQTLEffectMarkerGenes:
         :param dataset: Dataset, the input data.
         :param outdir: string, the output directory.
         """
-        self.outdir = os.path.join(outdir, 'inter_eqtl_effect_marker_genes')
+        self.outdir = os.path.join(outdir, 'inter_eqtl_effect_deconvolution')
         prepare_output_dir(self.outdir)
 
         # Extract the required data.
@@ -54,23 +54,27 @@ class IntereQTLEffectMarkerGenes:
         self.cov_df = dataset.get_cov_df()
         self.inter_df = dataset.get_inter_df()
         self.celltypes = dataset.get_celltypes()
+        self.cellmap_methods = dataset.get_cellmap_methods()
+        self.marker_genes = dataset.get_marker_genes()
 
         # Create color map.
         self.group_color_map, self.value_color_map = self.create_color_map()
 
     def start(self):
-        print("Plotting interaction eQTL plots for marker genes.")
+        print("Plotting interaction eQTL plots for deconvolution methods")
         self.print_arguments()
 
-        # Determine the columns of the celltypes in the covaraite table.
-        marker_indices = []
+        # Determine the columns of the deconvolution rows from the
+        # covariate matrix.
+        deconvolution_indices = []
         for index in self.cov_df.index:
-            if ("_" in index) and (
-                    index.split("_")[1] in self.celltypes):
-                marker_indices.append(index)
+            for decon_prefix in [x[0] for x in self.cellmap_methods]:
+                if index.startswith(decon_prefix) or index.startswith(self.marker_genes):
+                    deconvolution_indices.append(index)
+                    break
 
         # Get the covariates of the marker genes.
-        markers = self.cov_df.loc[marker_indices, :].T
+        decon_df = self.cov_df.loc[deconvolution_indices, :]
 
         print("Iterating over eQTLs.")
         for i, (index, row) in enumerate(self.eqtl_df.iterrows()):
@@ -129,10 +133,10 @@ class IntereQTLEffectMarkerGenes:
 
             # Get the interaction zscores
             interaction_effect = self.inter_df.iloc[:, i].to_frame()
-            interaction_effect = interaction_effect.loc[marker_indices, :]
+            interaction_effect = interaction_effect.loc[deconvolution_indices, :]
             interaction_effect.columns = ["zscore"]
 
-            self.plot(snp_name, probe_name, hgnc_name, data, markers,
+            self.plot(snp_name, probe_name, hgnc_name, data, decon_df,
                       interaction_effect, self.celltypes, i, self.outdir)
 
     @staticmethod
@@ -152,13 +156,13 @@ class IntereQTLEffectMarkerGenes:
         return group_color_map, value_color_map
 
     @staticmethod
-    def plot(snp_name, probe_name, hgnc_name, data, markers,
+    def plot(snp_name, probe_name, hgnc_name, data, decon_df,
              zscores, celltypes, count, outdir):
         """
         """
         # Calculate number of rows / columns.
-        ncols = int(len(celltypes))
-        nrows = int(len(markers.columns) / len(celltypes))
+        ncols = int(len(decon_df.index) / len(celltypes))
+        nrows = int(len(celltypes))
 
         sns.set(rc={'figure.figsize': (12 * ncols, 9 * nrows)})
         sns.set_style("ticks")
@@ -173,78 +177,76 @@ class IntereQTLEffectMarkerGenes:
         # Plot the markers.
         row_index = 0
         col_index = 0
-        for cov_name in markers.columns:
-            # Creat the subplot.
-            ax = fig.add_subplot(grid[row_index, col_index])
-            sns.despine(fig=fig, ax=ax)
+        for celltype in celltypes:
+            print(celltype)
+            celltype_df = decon_df.loc[decon_df.index.str.contains(celltype), :]
 
-            # Plot the groups.
-            for i, allele in enumerate(data["alleles"].unique()):
+            for cov_name, cov_data in celltype_df.iterrows():
+                print(cov_name)
                 # Combine the data.
                 df = data.copy()
-                cov = markers.loc[:, cov_name]
-                df = df.merge(cov, left_index=True, right_index=True)
-                del cov
+                df = df.merge(cov_data, left_index=True, right_index=True)
 
-                # Calculate the correlation.
-                subset = df.loc[df["alleles"] == allele, :].copy()
-                coef, p = stats.spearmanr(subset["expression"],
-                                          subset[cov_name])
-                color = subset["group_hue"][0]
+                # Creat the subplot.
+                ax = fig.add_subplot(grid[row_index, col_index])
+                sns.despine(fig=fig, ax=ax)
 
-                # Plot.
-                sns.regplot(x=cov_name, y="expression", data=subset,
-                            scatter_kws={'facecolors': subset['value_hue'],
-                                         'edgecolors': subset['group_hue']},
-                            line_kws={"color": color},
-                            ax=ax
-                            )
+                # Plot the groups.
+                for i, allele in enumerate(data["alleles"].unique()):
 
-                # Add the text.
-                ax.set(ylim=(min, max))
-                ax.annotate(
-                    '{}: r = {:.2f} [{}]'.format(allele, coef,
-                                                 p_value_to_symbol(p)),
-                    xy=(0.03, 0.94 - ((i / 100) * 3)),
-                    xycoords=ax.transAxes,
-                    color=color,
-                    fontsize=12,
-                    fontweight='bold')
+                    # Calculate the correlation.
+                    subset = df.loc[df["alleles"] == allele, :].copy()
+                    coef, p = stats.spearmanr(subset["expression"],
+                                              subset[cov_name])
+                    color = subset["group_hue"][0]
 
-            ax.text(0.5, 1.05,
-                    'Celltype: {} Marker gene: {} '.format(
-                        cov_name.split("_")[1],
-                        cov_name.split("_")[2]),
-                    fontsize=16, weight='bold', ha='center', va='bottom',
-                    transform=ax.transAxes)
-            ax.text(0.5, 1.02,
-                    '[z-score: {:.2f}]'.format(zscores.at[cov_name, "zscore"]),
-                    fontsize=12, alpha=0.75, ha='center', va='bottom',
-                    transform=ax.transAxes)
+                    # Plot.
+                    sns.regplot(x=cov_name, y="expression", data=subset,
+                                scatter_kws={'facecolors': subset['value_hue'],
+                                             'edgecolors': subset['group_hue']},
+                                line_kws={"color": color},
+                                ax=ax
+                                )
 
-            ax.set_ylabel('{} ({}) expression'.format(probe_name, hgnc_name),
-                          fontsize=12,
-                          fontweight='bold')
-            ax.set_xlabel('{} expression'.format(cov_name.split("_")[1]),
-                          fontsize=12,
-                          fontweight='bold')
+                    # Add the text.
+                    ax.set(ylim=(min, max))
+                    ax.annotate(
+                        '{}: r = {:.2f} [{}]'.format(allele, coef,
+                                                     p_value_to_symbol(p)),
+                        xy=(0.03, 0.94 - ((i / 100) * 3)),
+                        xycoords=ax.transAxes,
+                        color=color,
+                        fontsize=12,
+                        fontweight='bold')
 
-            # Increment indices.
-            col_index += 1
-            if col_index == ncols:
-                col_index = 0
-                row_index += 1
+                ax.text(0.5, 1.05,
+                        cov_name,
+                        fontsize=16, weight='bold', ha='center', va='bottom',
+                        transform=ax.transAxes)
+                ax.text(0.5, 1.02,
+                        '[z-score: {:.2f}]'.format(zscores.at[cov_name, "zscore"]),
+                        fontsize=12, alpha=0.75, ha='center', va='bottom',
+                        transform=ax.transAxes)
+
+                ax.set_ylabel('{} ({}) expression'.format(probe_name, hgnc_name),
+                              fontsize=12,
+                              fontweight='bold')
+                ax.set_xlabel(cov_name,
+                              fontsize=12,
+                              fontweight='bold')
+
+                col_index += 1
+            row_index += 1
 
         # Safe the plot.
         plt.tight_layout()
         fig.savefig(os.path.join(outdir,
-                                 "{}_inter_eqtl_{}_{}_{}_all_markers.png".format(
+                                 "{}_inter_eqtl_{}_{}_{}_deconvolution.png".format(
                                      count,
                                      snp_name,
                                      probe_name,
                                      hgnc_name)))
         plt.close()
-
 
     def print_arguments(self):
         print("Arguments:")
@@ -255,5 +257,7 @@ class IntereQTLEffectMarkerGenes:
         print("  > Covariate matrix shape: {}".format(self.cov_df.shape))
         print("  > Interaction matrix shape: {}".format(self.inter_df.shape))
         print("  > Celltypes: {}".format(self.celltypes))
+        print("  > CellMap Methods: {}".format(self.cellmap_methods))
+        print("  > Marker Genes: {}".format(self.marker_genes))
         print("  > Output directory: {}".format(self.outdir))
         print("")
