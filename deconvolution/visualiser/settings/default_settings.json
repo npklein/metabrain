@@ -8,7 +8,8 @@
     "covariates": "create_cov_matrix/covariates_table.txt.gz",
     "markers": "markers_table.txt.gz"
   },
-  "interaction_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/custom_interaction_analyser/output_test/interaction_table.txt.gz",
+    "interaction_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/custom_interaction_analyser/output/interaction_table.txt.gz",
+  "eqtl_celltype_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/assign_eqtl_to_celltype/output/eQTLProbesFDR0.05-ProbeLevel-withCelltypes.txt.gz",
   "celltypes": ["Neuron", "Oligodendrocyte", "EndothelialCell", "Microglia", "Astrocyte"],
   "cellmap_method_prefix_and_suffix": [
     ["CellMapPCA_", "_PC1"],

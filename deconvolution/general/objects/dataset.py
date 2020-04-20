@@ -1,7 +1,7 @@
 """
 File:         dataset.py
 Created:      2020/03/16
-Last Changed: 2020/04/17
+Last Changed: 2020/04/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -41,6 +41,7 @@ class Dataset:
         self.cov_filename = filenames["covariates"]
         self.markers_filename = filenames["markers"]
         self.inter_filename = settings.get_setting("interaction_datafile")
+        self.eqtl_celltype = settings.get_setting("eqtl_celltype_datafile")
         self.celltypes = settings.get_setting("celltypes")
         self.cellmap_methods = settings.get_setting("cellmap_method_prefix_and_suffix")
         self.marker_genes = settings.get_setting("marker_genes_prefix")
@@ -59,6 +60,7 @@ class Dataset:
         self.expr_df = None
         self.cov_df = None
         self.inter_df = None
+        self.eqtl_ct_df = None
         self.marker_df = None
 
     def load_all(self):
@@ -71,6 +73,7 @@ class Dataset:
         self.get_expr_df()
         self.get_cov_df()
         self.get_inter_df()
+        self.get_eqtl_ct_df()
         self.get_marker_df()
         print("Validation finished.")
         exit()
@@ -149,17 +152,27 @@ class Dataset:
             self.validate()
         return self.inter_df
 
+    def get_eqtl_ct_df(self):
+        if self.eqtl_ct_df is None:
+            self.eqtl_ct_df = load_dataframe(inpath=os.path.join(self.input_dir,
+                                                                 self.eqtl_celltype),
+                                             header=0,
+                                             index_col=0)
+            self.validate()
+        return self.eqtl_ct_df
+
     def get_marker_df(self):
         if self.marker_df is None:
             self.marker_df = load_dataframe(inpath=os.path.join(self.input_dir,
                                                                 self.markers_filename),
                                             header=0,
-                                            index_col=0)
+                                            index_col=False)
             self.validate()
         return self.marker_df
 
     def validate(self):
-        dfs = [self.eqtl_df, self.geno_df, self.alleles_df, self.expr_df]
+        dfs = [self.eqtl_df, self.geno_df, self.alleles_df, self.expr_df,
+               self.eqtl_ct_df]
         for (a, b) in list(itertools.combinations(dfs, 2)):
             if a is not None and b is not None and \
                     not a.index.identical(b.index):
@@ -175,7 +188,7 @@ class Dataset:
 
         if self.inter_df is not None:
             for df in [self.eqtl_df, self.geno_df, self.alleles_df,
-                       self.expr_df]:
+                       self.expr_df, self.eqtl_ct_df]:
                 if df is not None:
                     subset = self.inter_df.iloc[:, :self.nrows].copy()
                     for i, colname in enumerate(subset.columns):

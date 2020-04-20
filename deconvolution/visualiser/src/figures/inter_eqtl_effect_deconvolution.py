@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect_deconvolution.py
 Created:      2020/03/17
-Last Changed: 2020/04/17
+Last Changed: 2020/04/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -178,11 +178,14 @@ class IntereQTLEffectDeconvolution:
         row_index = 0
         col_index = 0
         for celltype in celltypes:
-            print(celltype)
-            celltype_df = decon_df.loc[decon_df.index.str.contains(celltype), :]
+            method_celltype = celltype
+            if method_celltype == "Microglia":
+                method_celltype = "Macrophage"
+
+            celltype_df = decon_df.loc[decon_df.index.str.contains(celltype) |
+                                       decon_df.index.str.contains(method_celltype), :]
 
             for cov_name, cov_data in celltype_df.iterrows():
-                print(cov_name)
                 # Combine the data.
                 df = data.copy()
                 df = df.merge(cov_data, left_index=True, right_index=True)
@@ -203,8 +206,9 @@ class IntereQTLEffectDeconvolution:
                     # Plot.
                     sns.regplot(x=cov_name, y="expression", data=subset,
                                 scatter_kws={'facecolors': subset['value_hue'],
-                                             'edgecolors': subset['group_hue']},
-                                line_kws={"color": color},
+                                             'edgecolors': subset['group_hue'],
+                                             'alpha': 0.75},
+                                line_kws={"color": color, "alpha": 0.75},
                                 ax=ax
                                 )
 
@@ -213,30 +217,32 @@ class IntereQTLEffectDeconvolution:
                     ax.annotate(
                         '{}: r = {:.2f} [{}]'.format(allele, coef,
                                                      p_value_to_symbol(p)),
-                        xy=(0.03, 0.94 - ((i / 100) * 3)),
+                        xy=(0.03, 0.94 - ((i / 100) * 4)),
                         xycoords=ax.transAxes,
                         color=color,
-                        fontsize=12,
+                        alpha=0.75,
+                        fontsize=18,
                         fontweight='bold')
 
-                ax.text(0.5, 1.05,
+                ax.text(0.5, 1.06,
                         cov_name,
-                        fontsize=16, weight='bold', ha='center', va='bottom',
+                        fontsize=26, weight='bold', ha='center', va='bottom',
                         transform=ax.transAxes)
                 ax.text(0.5, 1.02,
                         '[z-score: {:.2f}]'.format(zscores.at[cov_name, "zscore"]),
-                        fontsize=12, alpha=0.75, ha='center', va='bottom',
+                        fontsize=20, alpha=0.75, ha='center', va='bottom',
                         transform=ax.transAxes)
 
                 ax.set_ylabel('{} ({}) expression'.format(probe_name, hgnc_name),
-                              fontsize=12,
+                              fontsize=18,
                               fontweight='bold')
                 ax.set_xlabel(cov_name,
-                              fontsize=12,
+                              fontsize=18,
                               fontweight='bold')
 
                 col_index += 1
             row_index += 1
+            col_index = 0
 
         # Safe the plot.
         plt.tight_layout()

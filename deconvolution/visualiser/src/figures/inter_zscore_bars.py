@@ -1,7 +1,7 @@
 """
 File:         inter_zscores_bars.py
 Created:      2020/03/16
-Last Changed: 2020/04/17
+Last Changed: 2020/04/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -24,6 +24,7 @@ import math
 import os
 
 # Third party imports.
+import numpy as np
 import scipy.stats as stats
 from colour import Color
 import seaborn as sns
@@ -54,18 +55,20 @@ class InterZscoreBars:
         print("Plotting interaction matrix z-scores as barplot.")
         self.print_arguments()
 
-        data = self.get_counts(cutoff_value=0)
+        print("Plotting positive z-scores.")
+        data = self.get_counts(lower_cutoff=-np.inf, upper_cutoff=0)
         self.create_plots(data, "Positive ", "[>0]")
 
-        # Calculate the z-score cutoff.
+        print("Plotting significant z-scores.")
         z_score_cutoff = stats.norm.ppf(0.05 / (self.inter_df.shape[0] * self.inter_df.shape[1]) / 2)
-        self.get_counts(cutoff_value=z_score_cutoff)
-        self.create_plots(data, "Significant ", "[>{:.2f}]".format(z_score_cutoff))
+        self.get_counts(lower_cutoff=z_score_cutoff, upper_cutoff=abs(z_score_cutoff))
+        self.create_plots(data, "Significant ",
+                          "[{:.2f} < x < {:.2f}]".format(z_score_cutoff,
+                                                         abs(z_score_cutoff)))
 
-    def get_counts(self, cutoff_value=None):
+    def get_counts(self, lower_cutoff=0, upper_cutoff=0):
         df = self.inter_df.copy()
-        if cutoff_value is not None:
-            df[df < cutoff_value] = 0
+        df[(df > lower_cutoff) & (df < upper_cutoff)] = 0
         sums = df.pow(2).sum(axis=1).to_frame().reset_index()
         sums.columns = ["index", "counts"]
         sums["color"] = self.create_color_map(sums["counts"])
@@ -73,11 +76,13 @@ class InterZscoreBars:
 
         return sums
 
-    def create_plots(self, data, title_prefix="", title_suffix=""):
-        majorticks = 10 ** math.floor(math.log10(data["counts"].max()))
-        self.plot(data, self.outdir, major_ticks=majorticks, fontsize=5, title_prefix=title_prefix, title_suffix=title_suffix)
-        self.plot(data, self.outdir, top=10, major_ticks=majorticks, fontsize=14, title_prefix=title_prefix, title_suffix=title_suffix)
-        self.plot(data, self.outdir, bottom=10, major_ticks=majorticks, fontsize=14, title_prefix=title_prefix, title_suffix=title_suffix)
+    def create_plots(self, data, title_prefix="", subtitle_suffix=""):
+        self.plot(data, self.outdir, fontsize=5, title_prefix=title_prefix,
+                  subtitle_suffix=subtitle_suffix)
+        self.plot(data, self.outdir, top=10, fontsize=14,
+                  title_prefix=title_prefix, subtitle_suffix=subtitle_suffix)
+        self.plot(data, self.outdir, bottom=10, fontsize=14,
+                  title_prefix=title_prefix, subtitle_suffix=subtitle_suffix)
 
     @staticmethod
     def create_color_map(values, size=101):
@@ -97,26 +102,28 @@ class InterZscoreBars:
         return color_list
 
     @staticmethod
-    def plot(df, outdir, top=None, bottom=None, major_ticks=10, fontsize=10,
-             title_prefix="", title_suffix=""):
-        # Subset the data.
-        title_appendix = ''
+    def plot(df, outdir, top=None, bottom=None, fontsize=10, title_prefix="",
+             subtitle_suffix=""):
+        # Prepare the data.
+        subtitle = ''
         file_appendix = ''
         if top is not None:
             df = df.head(top)
-            title_appendix = '(Top {})'.format(top)
+            subtitle = 'top {} covariates'.format(top)
             file_appendix = '_top{}'.format(top)
         if bottom is not None:
             df = df.tail(bottom)
-            title_appendix = '(Bottom {})'.format(bottom)
+            subtitle = 'bottom {} covariates'.format(bottom)
             file_appendix = '_bottom{}'.format(bottom)
 
         # Plot.
-        sns.set(rc={'figure.figsize': (12, 9)})
+        sns.set(rc={'figure.figsize': (12, max(0.1 * df.shape[0], 9))})
+        print((12, max(0.1 * df.shape[0], 9)))
         sns.set_style("ticks")
         fig, ax = plt.subplots()
         sns.despine(fig=fig, ax=ax)
 
+        major_ticks = 10 ** (math.floor(math.log10(max(df["counts"].max(), 100))))
         minor_ticks = int(major_ticks / 2)
         for i in range(0, int(max(df["counts"])) + (1 * major_ticks), minor_ticks):
             alpha = 0.025
@@ -128,8 +135,11 @@ class InterZscoreBars:
                         palette=df["color"], orient="h")
 
         g.text(0.5, 1.05,
-               '{}Covariate Interactions {} {}'.format(title_prefix, title_appendix, title_suffix),
+               '{}Covariate Interactions'.format(title_prefix),
                fontsize=22, weight='bold', ha='center', va='bottom',
+               transform=ax.transAxes)
+        g.text(0.5, 1.02, "{} {}".format(subtitle, subtitle_suffix),
+               fontsize=12, alpha=0.75, ha='center', va='bottom',
                transform=ax.transAxes)
         g.set_ylabel('covariate',
                      fontsize=18,
@@ -142,8 +152,8 @@ class InterZscoreBars:
         ax.set_yticklabels(df["index"])
         plt.tight_layout()
         fig.savefig(os.path.join(outdir,
-                                 "{}cov_zscores_barplot{}.png".format(title_prefix.replace(" ", "").lower(),
-                                                                      file_appendix)))
+                                 "{}_cov_zscores_barplot{}.png".format(title_prefix.replace(" ", "").lower(),
+                                                                       file_appendix)))
         plt.close()
 
     def print_arguments(self):

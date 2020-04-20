@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
-Created:      2020/03/13
-Last Changed: 2020/04/20
+Created:      2020/04/19
+Last Changed:
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -73,39 +73,6 @@ class CommandLineArguments:
                             default="default_settings",
                             help="The settings input file (without '.json'), "
                                  "default: 'default_settings'.")
-        parser.add_argument("-p",
-                            "--plots",
-                            nargs="+",
-                            type=str,
-                            default=["all"],
-                            choices=["covariate_comparison",
-                                     "covariates_explained_by_others",
-                                     "deconvolution_covariate_comparison",
-                                     "deconvolution_zscore_comparison",
-                                     "simple_eqtl_effect",
-                                     "inter_zscore_bars",
-                                     "inter_zscore_dist",
-                                     "inter_zscore_clustermap",
-                                     "inter_zscore_marker_genes",
-                                     "inter_eqtl_zscore_bars",
-                                     "inter_eqtl_effect",
-                                     "inter_eqtl_effect_deconvolution",
-                                     "inter_eqtl_effect_marker_vs_comp",
-                                     "inter_eqtl_effect_celltype",
-                                     ],
-                            help="The name of the figures to be created, "
-                                 "default: 'all'.")
-        parser.add_argument("-n",
-                            "--n_eqtls",
-                            type=int,
-                            default=1,
-                            help="The number of eQTLs to visualise, "
-                                 "default: 1.")
-        parser.add_argument("-validate",
-                            action='store_true',
-                            help="Validate that the input matrices match "
-                                 "with each other and then quit, default: "
-                                 "'False'.")
 
         return parser
 

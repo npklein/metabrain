@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_zscore_bars.py
 Created:      2020/03/16
-Last Changed: 2020/04/08
+Last Changed: 2020/04/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -87,7 +87,10 @@ class IntereQTLZscoreBars:
     def plot(i, snp_name, probe_name, hgnc_name, eqtl_type, z_score_cutoff,
              df, outdir):
         sns.set(rc={'figure.figsize': (12, (.2 * (len(df.index))))})
+        sns.set_style("ticks")
         fig, ax = plt.subplots()
+        sns.despine(fig=fig, ax=ax)
+
         g = sns.barplot(x="zscore", y="index", data=df, palette="coolwarm",
                         orient="h")
         g.text(0.5, 1.025,

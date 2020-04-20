@@ -1,7 +1,7 @@
 """
 File:         simple_eqtl_effect.py
 Created:      2020/03/16
-Last Changed: 2020/03/20
+Last Changed: 2020/04/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -31,7 +31,7 @@ import matplotlib.pyplot as plt
 from scipy import stats
 
 # Local application imports.
-from general.utilities import prepare_output_dir
+from general.utilities import prepare_output_dir, p_value_to_symbol
 
 
 class SimpleeQTLEffect:
@@ -62,6 +62,7 @@ class SimpleeQTLEffect:
         print("Iterating over eQTLs.")
         for i, (index, row) in enumerate(self.eqtl_df.iterrows()):
             # Extract the usefull information from the row.
+            p_value = row["PValue"]
             snp_name = row["SNPName"]
             probe_name = row["ProbeName"]
             hgnc_name = row["HGNCName"]
@@ -120,7 +121,7 @@ class SimpleeQTLEffect:
             data.drop(["round_geno"], axis=1, inplace=True)
 
             # Plot a simple eQTL effect.
-            self.plot(i, snp_name, probe_name, hgnc_name, eqtl_type,
+            self.plot(i, p_value, snp_name, probe_name, hgnc_name, eqtl_type,
                       data, minor_allele, minor_allele_frequency,
                       first_allele, second_allele,
                       self.outdir)
@@ -142,7 +143,7 @@ class SimpleeQTLEffect:
         return group_color_map, value_color_map
 
     @staticmethod
-    def plot(i, snp_name, probe_name, hgnc_name, eqtl_type, df,
+    def plot(i, p_value, snp_name, probe_name, hgnc_name, eqtl_type, df,
              minor_allele, minor_allele_frequency, first_allele,
              second_allele, outdir):
         """
@@ -153,13 +154,14 @@ class SimpleeQTLEffect:
 
         # Prepare the figure.
         sns.set(rc={'figure.figsize': (12, 9)})
-        sns.set_style("darkgrid", {"axes.facecolor": ".9"})
+        sns.set_style("ticks")
         fig, ax = plt.subplots()
+        sns.despine(fig=fig, ax=ax)
 
         # Plot the scatter / box plot.
         sns.regplot(x="genotype", y="expression", data=df,
-                    scatter_kws={'facecolors': df['value_hue']},
-                    line_kws={"color": "#D7191C"},
+                    scatter_kws={'facecolors': df['value_hue'],
+                                 'edgecolors': "#808080"},
                     ax=ax
                     )
         sns.boxplot(x="group", y="expression", data=df,
@@ -175,24 +177,24 @@ class SimpleeQTLEffect:
         ax.set_xticklabels(["{}/{}".format(first_allele, first_allele),
                             "{}/{}".format(first_allele, second_allele),
                             "{}/{}".format(second_allele, second_allele)])
-        ax.text(0.5, 1.05,
-                '{} {}-eQTL (r = {:.2f}, p = {:.2e})'.format(hgnc_name,
-                                                             eqtl_type,
-                                                             coef,
-                                                             p),
-                fontsize=16, weight='bold', ha='center', va='bottom',
+        ax.text(0.5, 1.06,
+                '{} {}-eQTL [{}]'.format(hgnc_name, eqtl_type,
+                                         p_value_to_symbol(p_value)),
+                fontsize=22, weight='bold', ha='center', va='bottom',
                 transform=ax.transAxes)
         ax.text(0.5, 1.02,
-                '',
-                fontsize=12, alpha=0.75, ha='center', va='bottom',
+                'r = {:.2f} [{}]    minor allele frquency '
+                '{} = {:.2f}'.format(coef,
+                                     p_value_to_symbol(p),
+                                     minor_allele,
+                                     minor_allele_frequency),
+                fontsize=14, alpha=0.75, ha='center', va='bottom',
                 transform=ax.transAxes)
-        ax.set_ylabel('{} expression'.format(hgnc_name),
-                      fontsize=12,
+        ax.set_ylabel('{} ({}) expression'.format(probe_name, hgnc_name),
+                      fontsize=14,
                       fontweight='bold')
-        ax.set_xlabel('SNP {} [minor: {}: {:.2f}]'.format(snp_name,
-                                                          minor_allele,
-                                                          minor_allele_frequency),
-                      fontsize=12,
+        ax.set_xlabel('SNP {}'.format(snp_name),
+                      fontsize=14,
                       fontweight='bold')
 
         # Safe the plot.

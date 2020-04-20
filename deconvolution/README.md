@@ -17,6 +17,7 @@ The program requires the following packages to be installed:
  * scikit-learn ([v0.22.2.post1](https://scikit-learn.org/stable/whats_new.html); [BSD 3-Clause License](https://github.com/scikit-learn/scikit-learn/blob/master/COPYING))
  * colour ([v0.1.5](https://pypi.org/project/colour/#history); [BSD 3-Clause License](https://pypi.org/project/colour/))  
  * xlrd ([v1.2.0](); []()) 
+ * venn [v0.1.3](); []())
   
 See 'Installing' on how to install these packages.
 
