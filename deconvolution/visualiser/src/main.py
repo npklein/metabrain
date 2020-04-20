@@ -44,6 +44,7 @@ from .figures.inter_zscore_marker_genes import InterZscoreMarkerGenes
 from .figures.inter_eqtl_effect import IntereQTLEffect
 from .figures.inter_eqtl_effect_deconvolution import IntereQTLEffectDeconvolution
 from .figures.inter_eqtl_effect_marker_vs_comp import IntereQTLEffectMarkerVSComp
+from .figures.inter_eqtl_effect_celltype import IntereQTLEffectCelltype
 
 
 class Main:
@@ -87,13 +88,21 @@ class Main:
         ds = Dataset(settings=self.settings, nrows=self.n_eqtls)
         if self.validate:
             ds.load_all()
-
+        #
         # if ('covariate_comparison' in self.plots) or \
         #         ('all' in self.plots):
         #     print("\n### Covariate Comparison ###\n")
         #     cc = CovariateComparison(dataset=ds, outdir=self.outdir)
         #     cc.start()
         #     del cc
+        #
+        # if ('covariates_explained_by_others' in self.plots) or \
+        #         ('all' in self.plots):
+        #     print("\n### Covariates Explained By Others ###\n")
+        #     cebo = CovariatesExplainedByOthers(dataset=ds,
+        #                                        outdir=self.outdir)
+        #     cebo.start()
+        #     del cebo
         #
         # if ('deconvolution_covariate_comparison' in self.plots) or \
         #         ('all' in self.plots):
@@ -103,17 +112,9 @@ class Main:
         #     dcc.start()
         #     del dcc
         #
-        # if ('covariates_explained_by_others' in self.plots) or \
-        #         ('all' in self.plots):
-        #     print("\n### Covariates Explained By Others ###\n")
-        #     cebo = CovariatesExplainedByOthers(dataset=ds,
-        #                                        outdir=self.outdir)
-        #     cebo.start()
-        #     del cebo
-
         if ('deconvolution_zscore_comparison' in self.plots) or \
                 ('all' in self.plots):
-            print("\n### CellType Methods vs Marker Genes ###\n")
+            print("\n### DECONVOLUTION Z-SCORE COMPARISON ###\n")
             dzc = DeconvolutionZscoreComparison(dataset=ds,
                                                 outdir=self.outdir)
             dzc.start()
@@ -169,18 +170,26 @@ class Main:
             del iee
 
         if ('inter_eqtl_effect_deconvolution' in self.plots) or ('all' in self.plots):
-            print("\n### INTERACTION EQTL EFFECT MARKER GENES ###\n")
+            print("\n### INTERACTION EQTL EFFECT DECONVOLUTION ###\n")
             ieed = IntereQTLEffectDeconvolution(dataset=ds,
                                                 outdir=self.outdir)
             ieed.start()
             del ieed
 
-        if ('inter_eqtl_effect_marker_vs_comp' in self.plots) or ('all' in self.plots):
-            print("\n### INTERACTION EQTL EFFECT MARKER GENES VS COMPS ###\n")
-            ieemvc = IntereQTLEffectMarkerVSComp(dataset=ds,
-                                                 outdir=self.outdir)
-            ieemvc.start()
-            del ieemvc
+        # if ('inter_eqtl_effect_marker_vs_comp' in self.plots) or ('all' in self.plots):
+        #     print("\n### INTERACTION EQTL EFFECT MARKER GENES VS COMPS ###\n")
+        #     ieemvc = IntereQTLEffectMarkerVSComp(dataset=ds,
+        #                                          outdir=self.outdir)
+        #     ieemvc.start()
+        #     del ieemvc
+
+
+        if ('inter_eqtl_effect_celltype' in self.plots) or ('all' in self.plots):
+            print("\n### INTERACTION EQTL EFFECT CELLTYPE ###\n")
+            ieec = IntereQTLEffectCelltype(dataset=ds,
+                                           outdir=self.outdir)
+            ieec.start()
+            del ieec
 
     def print_arguments(self):
         print("Arguments:")

@@ -1,7 +1,7 @@
 """
 File:         deconvolution_zscore_comparison.py
 Created:      2020/04/07
-Last Changed: 2020/04/17
+Last Changed: 2020/04/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -72,7 +72,7 @@ class DeconvolutionZscoreComparison:
 
             # Plot vs marker genes.
             marker_df = self.inter_df.loc[self.inter_df.index.str.startswith(self.marker_genes), :]
-            print("{} vs marker genes".format(method1[0]))
+            print("{} vs {}_MarkerGenes".format(method1[0], self.marker_genes))
             self.compare_cellmap_with_marker_genes(method1, method1_df,
                                                    self.marker_genes, marker_df,
                                                    self.celltypes, self.color_map,
@@ -132,19 +132,19 @@ class DeconvolutionZscoreComparison:
                 xy=(0.03, 0.94),
                 xycoords=ax.transAxes,
                 color=color,
-                fontsize=12,
+                fontsize=18,
                 fontweight='bold')
 
             ax.text(0.5, 1.05, method_celltype,
-                    fontsize=16, weight='bold', ha='center', va='bottom',
+                    fontsize=26, weight='bold', ha='center', va='bottom',
                     color=color,
                     transform=ax.transAxes)
 
-            ax.set_ylabel(method1[0] + method1[1],
-                          fontsize=12,
+            ax.set_ylabel((method1[0] + method1[1]).replace("_", " "),
+                          fontsize=18,
                           fontweight='bold')
-            ax.set_xlabel(method2[0] + method2[1],
-                          fontsize=12,
+            ax.set_xlabel((method2[0] + method2[1]).replace("_", " "),
+                          fontsize=18,
                           fontweight='bold')
 
             ax.axhline(0, ls='--', color="#D7191C", alpha=0.3, zorder=-1)
@@ -219,22 +219,22 @@ class DeconvolutionZscoreComparison:
                     xy=(0.03, 0.94),
                     xycoords=ax.transAxes,
                     color=color,
-                    fontsize=12,
+                    fontsize=18,
                     fontweight='bold')
 
                 ax.text(0.5, 1.05,
-                        '{} vs Celltype: {} Gene: {}'.format(method_name,
-                                                             marker_gene.split("_")[0],
-                                                             marker_gene.split("_")[1]),
-                        fontsize=16, weight='bold', ha='center', va='bottom',
+                        '{} vs {} {}'.format(method_name.replace("_", " "),
+                                             marker_gene.split("_")[0],
+                                             marker_gene.split("_")[2]),
+                        fontsize=26, weight='bold', ha='center', va='bottom',
                         color=color,
                         transform=ax.transAxes)
 
-                ax.set_ylabel(method[0] + method_celltype + method[1],
-                              fontsize=12,
+                ax.set_ylabel((method[0] + method_celltype + method[1]).replace("_", " "),
+                              fontsize=18,
                               fontweight='bold')
-                ax.set_xlabel(marker_genes_prefix + marker_gene,
-                              fontsize=12,
+                ax.set_xlabel(marker_gene,
+                              fontsize=18,
                               fontweight='bold')
 
                 ax.axhline(0, ls='--', color="#D7191C", alpha=0.3, zorder=-1)

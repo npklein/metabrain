@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed: 2020/04/16
+Last Changed: 2020/04/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -124,7 +124,8 @@ class CombineAndPlot:
 
         # Visualise distributions.
         print("Visualizing distributions.", flush=True)
-        self.plot_distributions(perm_pvalues, pvalues, self.outdir)
+        self.plot_distributions(perm_pvalues, pvalues, self.n_permutations,
+                                self.outdir)
 
         # Create the FDR dataframes.
         print("Creating permutation FDR dataframe.", flush=True)
@@ -187,24 +188,6 @@ class CombineAndPlot:
                 print("\tLoaded list: {} with length: {}".format(
                     get_basename(fpath), len(content)))
             f.close()
-
-        # for i, fpath in enumerate(glob.glob(os.path.join(indir, filename + "*.pkl"))):
-        #     with open(fpath, "rb") as f:
-        #         content = pickle.load(f)
-        #     f.close()
-        #
-        #     print(len(content))
-        #     tmp = []
-        #     for x in content:
-        #         if x != np.nan:
-        #             tmp.append(x)
-        #     print(len(tmp))
-
-            # with open(fpath, "wb") as f:
-            #     pickle.dump(tmp, f)
-            # f.close()
-            #
-            # exit()
 
         return col_list, data
 
@@ -275,31 +258,53 @@ class CombineAndPlot:
         return stats.norm.isf(p_value)
 
     @staticmethod
-    def plot_distributions(perm_pvalues, pvalues, outdir):
+    def plot_distributions(perm_pvalues, pvalues, n_perm, outdir):
         """
         Method for visualizing the distribution of the null and alternative
         p-values.
 
         :param perm_pvalues: list, the sorted null model p-values.
         :param pvalues: list, the sorted alternative model p-values.
+        :param n_perm: int, the number of permutations performed.
         :param outdir: string, the output directory for the image.
         """
-        sns.set(rc={'figure.figsize': (12, 9)})
-        sns.set_style("whitegrid")
-        fig, (ax1, ax2) = plt.subplots(1, 2)
-        sns.distplot(perm_pvalues,
-                     norm_hist=True,
-                     color='cornflowerblue',
-                     label='null',
-                     kde_kws={'clip': (0.0, 1.0)},
-                     ax=ax1)
-        sns.distplot(pvalues,
-                     norm_hist=True,
-                     color='firebrick',
-                     label='real',
-                     kde_kws={'clip': (0.0, 1.0)},
-                     ax=ax2)
-        for ax, title in zip([ax1, ax2], ["Null", "Alternative"]):
+        # Create bins.
+        bins = np.linspace(0, 1, 50)
+        perm_pvalues_bins = pd.cut(perm_pvalues, bins=bins).value_counts().to_frame()
+        pvalues_bins = pd.cut(pvalues, bins=bins).value_counts().to_frame()
+        df = perm_pvalues_bins.merge(pvalues_bins, left_index=True, right_index=True)
+        df.columns = ["perm_pvalues", "pvalues"]
+        df = df.divide(df.sum())
+        df["sum"] = (df["pvalues"] + df["perm_pvalues"]) / 2
+        df["index"] = (bins[:-1] + bins[1:]) / 2
+
+        max_val = df.values.max()
+
+        sns.set(rc={'figure.figsize': (18, 9)})
+        sns.set_style("ticks")
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, sharey=False)
+        for i, ax in enumerate([ax1, ax2, ax3]):
+            left = True
+            if i == 0:
+                left = False
+            sns.despine(fig=fig, ax=ax, left=left)
+            ax.axes.xaxis.set_visible(False)
+            if left:
+                ax.axes.yaxis.set_visible(False)
+
+            for i in range(0, 101, 5):
+                alpha = 0.025
+                if i % 10 == 0:
+                    alpha = 0.15
+                ax.axhline(i / 100, ls='-', color="#000000",
+                           alpha=alpha, zorder=-1)
+
+        sns.barplot(x="index", y="perm_pvalues", color='cornflowerblue', data=df, ax=ax1)
+        sns.barplot(x="index", y="pvalues", color='firebrick', data=df, ax=ax2)
+        sns.barplot(x="index", y="sum", color='firebrick', data=df, ax=ax3)
+        sns.barplot(x="index", y="perm_pvalues", color='cornflowerblue', data=df / 2, ax=ax3)
+
+        for ax, title in zip([ax1, ax2, ax3], ["Null", "Alternative", "Combined"]):
             ax.text(0.5, 1.02,
                     '{} Distribution'.format(title),
                     fontsize=16, weight='bold', ha='center', va='bottom',
@@ -307,9 +312,11 @@ class CombineAndPlot:
             ax.set_xlabel('p-value',
                           fontsize=12,
                           fontweight='bold')
-            ax.set_ylabel('density',
+            ax.set_ylabel('ratio',
                           fontsize=12,
                           fontweight='bold')
+            ax.set_ylim(0, 0.35)
+
         plt.tight_layout()
         fig.savefig(os.path.join(outdir, "pvalues_distributions.png"))
         plt.close()

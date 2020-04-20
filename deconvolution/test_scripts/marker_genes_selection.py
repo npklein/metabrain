@@ -3,7 +3,7 @@
 """
 File:         marker_genes_selection.py
 Created:      2020/04/08
-Last Changed:
+Last Changed: 2020/04/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -28,10 +28,10 @@ from pathlib import Path
 import os
 
 # Third party imports.
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib
-
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
@@ -64,8 +64,8 @@ class main():
               "with shape: {}".format(os.path.basename(self.excel_path),
                                       df.shape))
 
-        # Subset.
-        df = df.loc[df["Cell_type_mentions"] > 0, :]
+        # Remove unwanted celltype.
+        df = df.loc[df["Celltype"] != "opc", :]
 
         # Remap.
         df["Celltype"] = df["Celltype"].map({"opc": "oligodendrocyte precursor cell",
@@ -86,20 +86,33 @@ class main():
         sns.set(rc={'figure.figsize': (12, 9)})
         sns.set_style("ticks")
 
-        g = sns.lineplot(x="x", y="Cell_type_mentions", hue="Celltype", data=df)
+        df1 = df.loc[df["x"] <= 5, :].copy()
+        df2 = df.loc[df["x"] >= 5, :].copy()
+        g = sns.lineplot(x="x", y="Cell_type_mentions", hue="Celltype",
+                         data=df1, ax=ax)
+        sns.lineplot(x="x", y="Cell_type_mentions", hue="Celltype",
+                     data=df2, legend=False,
+                     palette={i: "#808080" for i in df2["Celltype"].unique()},
+                     ax=ax)
+        g.set(yscale="log")
         ax.axvline(5, ls='--', color="#000000", zorder=-1)
 
-        g.set_title("McKenzie et al. 2018 - Marker Gene Mentions",
-                    fontsize=12,
-                    fontweight='bold')
+        ax.text(0.5, 1.08, "Marker Gene - Cell Type Mentions",
+                fontsize=14, weight='bold', ha='center', va='bottom',
+                transform=ax.transAxes)
+        ax.text(0.5, 1.02, "McKenzie et al. 2018",
+                fontsize=12, alpha=0.75, ha='center', va='bottom',
+                transform=ax.transAxes)
+
         g.set_ylabel("cell type mentions",
                      fontsize=10,
                      fontweight='bold')
         g.set_xlabel("")
-        plt.legend(loc=7, prop={'size': 5})
-        plt.setp(ax.get_legend().get_texts(), fontsize='10')
-        plt.setp(ax.get_legend().get_title(), fontsize='12')
-        plt.tight_layout()
+
+        ax.axes.xaxis.set_visible(False)
+        plt.legend(loc=1, prop={'size': 5})
+        plt.setp(ax.get_legend().get_texts(), fontsize='9')
+        plt.setp(ax.get_legend().get_title(), fontsize='10', fontweight='bold')
         fig.savefig(os.path.join(self.outdir, "mckenzie_cell_type_mentions.png"))
         plt.close()
 
