@@ -47,12 +47,14 @@
   ],
   "permutations_order_pickle_filename": "permutation_order",
   "actual_pvalues_pickle_filename": "pvalue_data_",
+  "actual_tvalues_pickle_filename": "tvalue_data_",
   "permuted_pvalues_pickle_filename": "perm_pvalues_",
+  "permuted_tvalues_pickle_filename": "perm_tvalues_",
   "wait_list_pickle_filename": "wait_list_",
   "n_permutations": 10,
   "sleep_time_in_sec": 10,
   "print_interval_in_sec": 600,
-  "max_time_unresponsive_in_min": 5,
+  "max_time_unresponsive_in_min": 10,
   "max_runtime_in_hours": 24,
   "panic_time_in_min": 5
 }
