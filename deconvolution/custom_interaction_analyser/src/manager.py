@@ -1,7 +1,7 @@
 """
 File:         manager.py
 Created:      2020/04/01
-Last Changed: 2020/04/17
+Last Changed: 2020/04/23
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -45,6 +45,7 @@ class Manager:
     """
     Class for the manager.
     """
+
     def __init__(self, settings_file, skip_rows, n_eqtls, n_samples, cores,
                  include, verbose):
         """
@@ -66,7 +67,8 @@ class Manager:
         settings = LocalSettings(current_dir, settings_file)
 
         # Prepare an output directory.
-        self.outdir = os.path.join(current_dir, settings.get_setting("output_dir"))
+        self.outdir = os.path.join(current_dir,
+                                   settings.get_setting("output_dir"))
         prepare_output_dir(self.outdir)
 
         # Safe settings.
@@ -74,24 +76,36 @@ class Manager:
         self.expr_inpath = settings.get_setting("expression_datafile")
         self.cov_inpath = settings.get_setting("covariates_datafile")
         self.tech_covs = settings.get_setting("technical_covariates")
-        self.wait_list_filename = settings.get_setting("wait_list_pickle_filename")
-        self.pvalues_filename = settings.get_setting("actual_pvalues_pickle_filename")
-        self.perm_pvalues_filename = settings.get_setting("permuted_pvalues_pickle_filename")
-        self.perm_orders_filename = settings.get_setting("permutations_order_pickle_filename")
+        self.wait_list_filename = settings.get_setting(
+            "wait_list_pickle_filename")
+        self.pvalues_filename = settings.get_setting(
+            "actual_pvalues_pickle_filename")
+        self.tvalues_filename = settings.get_setting(
+            "actual_tvalues_pickle_filename")
+        self.perm_pvalues_filename = settings.get_setting(
+            "permuted_pvalues_pickle_filename")
+        self.perm_tvalues_filename = settings.get_setting(
+            "permuted_tvalues_pickle_filename")
+        self.perm_orders_filename = settings.get_setting(
+            "permutations_order_pickle_filename")
         self.n_permutations = settings.get_setting("n_permutations")
         self.sleep_time = settings.get_setting("sleep_time_in_sec")
         self.print_interval = settings.get_setting("print_interval_in_sec")
-        self.max_time_unresponsive = settings.get_setting("max_time_unresponsive_in_min") * 60
+        self.max_time_unresponsive = settings.get_setting(
+            "max_time_unresponsive_in_min") * 60
         self.max_end_time = int(time.time()) + settings.get_setting(
             "max_runtime_in_hours") * 60 * 60
-        self.panic_time = self.max_end_time - (settings.get_setting("panic_time_in_min") * 60)
+        self.panic_time = self.max_end_time - (
+                    settings.get_setting("panic_time_in_min") * 60)
         self.skip_rows = skip_rows
         self.verbose = verbose
 
         # Load the previous wait list if need be.
         self.prev_wait_list = []
         if include:
-            self.prev_wait_list = self.load_previous_wait_list(self.outdir, settings.get_setting("wait_list_pickle_filename"))
+            self.prev_wait_list = self.load_previous_wait_list(self.outdir,
+                                                               settings.get_setting(
+                                                                   "wait_list_pickle_filename"))
 
         # Count the number of eQTLs / samples if it isn't given by the user.
         if n_eqtls is None:
@@ -221,31 +235,33 @@ class Manager:
         """
         self.print_arguments()
         print("[manager]\tstarting manager [{}]".format(
-            datetime.now().strftime("%H:%M:%S")), flush=True)
+            datetime.now().strftime("%H:%M:%S")))
 
         # Start the timer.
         start_time = int(time.time())
 
         # Get the permutation orders.
         permutation_orders = None
-        perm_orders_outfile = os.path.join(self.outdir, self.perm_orders_filename + ".pkl")
+        perm_orders_outfile = os.path.join(self.outdir,
+                                           self.perm_orders_filename + ".pkl")
         if check_file_exists(perm_orders_outfile):
-            print("[manager]\tloading permutation order", flush=True)
+            print("[manager]\tloading permutation order")
             permutation_orders = self.load_pickle(perm_orders_outfile)
 
             # Validate the permutation orders for the given input.
             if len(permutation_orders) != (self.n_permutations + 1):
-                print("[manager]\t\tinvalid", flush=True)
+                print("[manager]\t\tinvalid")
                 permutation_orders = None
             for order in permutation_orders:
                 if len(order) != self.n_samples:
-                    print("[manager]\t\tinvalid", flush=True)
+                    print("[manager]\t\tinvalid")
                     permutation_orders = None
                     break
         if permutation_orders is None:
             print("[manager]\tcreating permutation order")
             permutation_orders = self.create_perm_orders()
-            self.dump_pickle(permutation_orders, self.outdir, self.perm_orders_filename)
+            self.dump_pickle(permutation_orders, self.outdir,
+                             self.perm_orders_filename)
 
         # Create the multiprocessing queues.
         start_manager = mp.Manager()
@@ -256,22 +272,22 @@ class Manager:
         result_q = result_manager.Queue()
 
         # Load the start queue.
-        print("[manager]\tloading start queue", flush=True)
+        print("[manager]\tloading start queue")
         for _ in range(self.n_cores):
             start_q.put(permutation_orders)
         all_sample_orders = [i for i in range(len(permutation_orders))]
 
         # Load the wait list.
-        print("[manager]\tcreating wait list", flush=True)
+        print("[manager]\tcreating wait list")
         wait_list = self.load_wait_list(all_sample_orders)
         if self.prev_wait_list:
             print("[manager]\tadded {} eQTLs from previous "
-                  "wait list".format(len(self.prev_wait_list)), flush=True)
+                  "wait list".format(len(self.prev_wait_list)))
             print(self.prev_wait_list)
             wait_list.extend(self.prev_wait_list)
 
         # Start the workers.
-        print("[manager]\tstarting processes", flush=True)
+        print("[manager]\tstarting processes")
         processes = []
         for worker_id in range(self.n_cores):
             processes.append(mp.Process(target=process_worker,
@@ -296,15 +312,18 @@ class Manager:
         doctor_dict = {}
         columns_added = False
         pvalue_data = []
+        tvalue_data = []
         perm_pvalues = []
+        perm_tvalues = []
         eqtl_id_len = len(str(self.n_eqtls))
         order_id_len = len(str(len(all_sample_orders)))
         last_print_time = int(time.time()) - self.print_interval
         counter = 0
-        total_analyses = (self.n_eqtls * (self.n_permutations + 1)) + sum([len(x[1]) for x in self.prev_wait_list])
+        total_analyses = (self.n_eqtls * (self.n_permutations + 1)) + sum(
+            [len(x[1]) for x in self.prev_wait_list])
         panic = False
 
-        print("[manager]\tstarting scheduler")
+        print("[manager]\tstarting scheduler", flush=True)
         while True:
             # Break the loop of the maximum runtime has been reached.
             # This prevents the workers to continue indefinitely.
@@ -348,22 +367,20 @@ class Manager:
                 if worker_id in dead_workers:
                     continue
 
-                # Safe the moment the message was received. Don't save it
-                # if it was already declared dead.
-                if worker_id not in dead_workers:
-                    doctor_dict[worker_id] = int(time.time())
+                # Safe the moment the message was received.
+                doctor_dict[worker_id] = int(time.time())
 
                 # Check what kind of message it is.
                 if category == "online":
                     print("[receiver]\ta new worker connected: "
-                          "'worker {}'".format(worker_id),
-                          flush=True)
+                          "'worker {}'".format(worker_id))
 
                     # Add the worker to the schedule so it can receive work.
                     schedule[worker_id] = None
                     if not columns_added:
                         # Safe the columns.
                         pvalue_data.append([eqtl_index] + data)
+                        tvalue_data.append([eqtl_index] + data)
                         columns_added = True
 
                 elif category == "result":
@@ -374,33 +391,35 @@ class Manager:
                                                    eqtl_id_len,
                                                    sample_order_id,
                                                    order_id_len,
-                                                   worker_id),
-                              flush=True)
+                                                   worker_id))
 
-                    # Prevent duplicates by checking if the worker didn't die
-                    # already.
-                    if worker_id in schedule.keys():
-                        # Increment the counter.
-                        counter += 1
+                    # Increment the counter.
+                    counter += 1
 
-                        # Safe the output to the right result list.
-                        if sample_order_id == 0:
-                            pvalue_data.append([eqtl_index] + data)
+                    # Split the pvalues and the tvalues.
+                    pvalues = [x[0] for x in data]
+                    tvalues = [x[1] for x in data]
+
+                    # Safe the output to the right result list.
+                    if sample_order_id == 0:
+                        pvalue_data.append([eqtl_index] + pvalues)
+                        tvalue_data.append([eqtl_index] + tvalues)
+                    else:
+                        perm_pvalues.extend(pvalues[1:])
+                        perm_tvalues.extend(tvalues[1:])
+
+                    # Remove the job from the schedule.
+                    if eqtl_index in schedule[worker_id].keys():
+                        sample_orders_to_perform = schedule[worker_id][eqtl_index]
+                        sample_orders_to_perform.remove(sample_order_id)
+                        if sample_orders_to_perform:
+                            schedule[worker_id][eqtl_index] = sample_orders_to_perform
                         else:
-                            perm_pvalues.extend(data[1:])
+                            del schedule[worker_id][eqtl_index]
 
-                        # Remove the job from the schedule.
-                        if eqtl_index in schedule[worker_id].keys():
-                            sample_orders_to_perform = schedule[worker_id][eqtl_index]
-                            sample_orders_to_perform.remove(sample_order_id)
-                            if sample_orders_to_perform:
-                                schedule[worker_id][eqtl_index] = sample_orders_to_perform
-                            else:
-                                del schedule[worker_id][eqtl_index]
-
-                            # remove the job so new work can be added.
-                            if not schedule[worker_id].keys():
-                                schedule[worker_id] = None
+                    # remove the job so new work can be added.
+                    if not schedule[worker_id].keys():
+                        schedule[worker_id] = None
                 else:
                     pass
 
@@ -422,7 +441,7 @@ class Manager:
                     for worker_id in free_workers:
                         if self.verbose:
                             print("[scheduler]\tassigning work to "
-                                  "'worker {}'".format(worker_id), flush=True)
+                                  "'worker {}'".format(worker_id))
 
                         # Assign work.
                         (start_index, sample_orders, chunk_size) = wait_list.pop(0)
@@ -447,7 +466,8 @@ class Manager:
             if now_time - last_print_time >= self.print_interval:
                 last_print_time = now_time
                 if self.verbose:
-                    self.print_status(wait_list, schedule, eqtl_id_len, order_id_len)
+                    self.print_status(wait_list, schedule, eqtl_id_len,
+                                      order_id_len)
                 else:
                     self.print_progress(counter, total_analyses)
 
@@ -475,10 +495,10 @@ class Manager:
             self.print_status(wait_list, schedule, eqtl_id_len, order_id_len)
         else:
             self.print_progress(counter, total_analyses)
-        print("[manager]\tscheduler finished", flush=True)
+        print("[manager]\tscheduler finished")
 
         # Send the kill signal.
-        print("[manager]\tkilling processes", flush=True)
+        print("[manager]\tkilling processes")
         for proc in processes:
             proc.terminate()
 
@@ -487,16 +507,24 @@ class Manager:
             proc.join()
 
         # Pickle the output lists.
-        print("[manager]\tsaving output lists", flush=True)
+        print("[manager]\tsaving output lists")
         if pvalue_data:
             self.dump_pickle(pvalue_data, self.outdir, self.pvalues_filename,
                              unique=True)
+        if tvalue_data:
+            self.dump_pickle(tvalue_data, self.outdir, self.tvalues_filename,
+                             unique=True)
         if perm_pvalues:
-            self.dump_pickle(perm_pvalues, self.outdir, self.perm_pvalues_filename,
+            self.dump_pickle(perm_pvalues, self.outdir,
+                             self.perm_pvalues_filename,
+                             unique=True)
+        if perm_tvalues:
+            self.dump_pickle(perm_tvalues, self.outdir,
+                             self.perm_tvalues_filename,
                              unique=True)
 
         # Empty the schedule.
-        print("[manager]\tchecking for unfinished work", flush=True)
+        print("[manager]\tchecking for unfinished work")
         for unfinished_work in schedule.values():
             if unfinished_work is not None:
                 for key, value in unfinished_work.items():
@@ -511,12 +539,10 @@ class Manager:
         run_time_hour, run_time_min = divmod(run_time_min, 60)
         print("[manager]\tfinished in  {} hour(s), {} minute(s) and "
               "{} second(s)".format(int(run_time_hour),
-                                     int(run_time_min),
-                                     int(run_time_sec)),
-              flush=True)
+                                    int(run_time_min),
+                                    int(run_time_sec)))
         print("[receiver]\treceived {:.2f} analyses "
-              "per minute".format(counter / (run_time / 60)),
-              flush=True)
+              "per minute".format(counter / (run_time / 60)))
 
         # Shutdown the manager.
         print("[manager]\tshutting down manager [{}]".format(
@@ -548,7 +574,8 @@ class Manager:
         :param unique: boolean, whether or not to make the filename unique.
         """
         if unique:
-            fpath = os.path.join(directory, filename + "{}.pkl".format(int(time.time())))
+            fpath = os.path.join(directory,
+                                 filename + "{}.pkl".format(int(time.time())))
         else:
             fpath = os.path.join(directory, filename + ".pkl")
 
@@ -604,10 +631,12 @@ class Manager:
                                      self.skip_rows + self.n_eqtls + 1,
                                      self.chunk_size):
                 chunk_size = self.chunk_size
-                if (start_index + self.chunk_size) > (self.skip_rows + self.n_eqtls):
+                if (start_index + self.chunk_size) > (
+                        self.skip_rows + self.n_eqtls):
                     chunk_size = self.skip_rows + self.n_eqtls - start_index + 1
 
-                wait_list.append((start_index, all_sample_orders.copy(), chunk_size))
+                wait_list.append(
+                    (start_index, all_sample_orders.copy(), chunk_size))
 
         return wait_list
 
@@ -626,9 +655,15 @@ class Manager:
             work_info = []
             wait_list = sorted(wait_list, key=lambda x: x[0])
             for job in wait_list:
-                work_info.append("eQTL_{:<{}d} - eQTL_{:<{}d} (x{:<{}d})".format(job[0], eqtl_id_len,  job[0] + job[2], eqtl_id_len, len(job[1]), order_id_len))
-            print("[manager]\twait list: [{}]".format(', '.join(work_info)),
-                  flush=True)
+                work_info.append(
+                    "eQTL_{:<{}d} - eQTL_{:<{}d} (x{:<{}d})".format(job[0],
+                                                                    eqtl_id_len,
+                                                                    job[0] +
+                                                                    job[2],
+                                                                    eqtl_id_len,
+                                                                    len(job[1]),
+                                                                    order_id_len))
+            print("[manager]\twait list: [{}]".format(', '.join(work_info)))
         else:
             print("[manager]\twait list: empty")
         print("[manager]\tcurrent schedule:")
@@ -641,11 +676,16 @@ class Manager:
                 if work:
                     for key in sorted(work.keys()):
                         work_info.append(
-                            "eQTL_{:<{}d} (x{:<{}d})".format(key, eqtl_id_len, len(schedule[worked_id][key]), order_id_len))
-                print("[manager]\t\tworker {}: [{}]".format(worked_id, ', '.join(work_info)),
-                      flush=True)
+                            "eQTL_{:<{}d} (x{:<{}d})".format(key, eqtl_id_len,
+                                                             len(schedule[
+                                                                     worked_id][
+                                                                     key]),
+                                                             order_id_len))
+                print("[manager]\t\tworker {}: [{}]".format(worked_id,
+                                                            ', '.join(
+                                                                work_info)))
         else:
-            print("[manager]\t\tempty", flush=True)
+            print("[manager]\t\tempty")
         print("[manager]", flush=True)
 
     @staticmethod
@@ -680,7 +720,8 @@ class Manager:
         print("  > Permutations: {}".format(self.n_permutations))
         print("  > Sleep time: {} sec".format(self.sleep_time))
         print("  > Print interval: {} sec".format(self.print_interval))
-        print("  > Max time unresponsive: {} sec".format(self.max_time_unresponsive))
+        print("  > Max time unresponsive: {} sec".format(
+            self.max_time_unresponsive))
         print("  > Panic datetime: {}".format(panic_time_string))
         print("  > Max end datetime: {}".format(end_time_string))
         print("  > Skip rows: {}".format(self.skip_rows))

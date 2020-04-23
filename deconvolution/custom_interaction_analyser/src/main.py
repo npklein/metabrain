@@ -1,0 +1,505 @@
+"""
+File:         main.py
+Created:      2020/04/23
+Last Changed:
+Author:       M.Vochteloo
+
+Copyright (C) 2020 M.Vochteloo
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+A copy of the GNU General Public License can be found in the LICENSE file in the
+root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
+"""
+
+# Standard imports.
+from __future__ import print_function
+from pathlib import Path
+from datetime import datetime
+import pickle
+import random
+import time
+import gzip
+import os
+
+# Third party imports.
+import numpy as np
+import pandas as pd
+import scipy.stats as stats
+import statsmodels.api as sm
+from functools import reduce
+
+# Local application imports.
+from general.local_settings import LocalSettings
+from general.utilities import check_file_exists, prepare_output_dir
+from general.df_utilities import load_dataframe
+
+
+class Main:
+    """
+    Class for the manager.
+    """
+
+    def __init__(self, settings_file, skip_rows, n_eqtls, n_samples, verbose):
+        """
+        Initializer of the class.
+
+        :param settings_file: string, the name of the settings file.
+        :param skip_rows: int, the number of rows to skip.
+        :param n_eqtls: int, the number of eqtls in the input files.
+        :param n_samples: int, the number of samples in the input files.
+        :param cores: int, the number of cores to use.
+        :param verbose: boolean, whether or not to print all update info.
+        :param include: boolean, whether or not to include the unfinished
+                        wait_list.
+        """
+        # Define the current directory.
+        current_dir = str(Path(__file__).parent.parent)
+
+        # Load the LocalSettings singelton class.
+        settings = LocalSettings(current_dir, settings_file)
+
+        # Prepare an output directory.
+        self.outdir = os.path.join(current_dir,
+                                   settings.get_setting("output_dir"))
+        prepare_output_dir(self.outdir)
+
+        # Safe settings.
+        self.geno_inpath = settings.get_setting("genotye_datafile")
+        self.expr_inpath = settings.get_setting("expression_datafile")
+        self.cov_inpath = settings.get_setting("covariates_datafile")
+        self.tech_covs = settings.get_setting("technical_covariates")
+        self.pvalues_filename = settings.get_setting("actual_pvalues_pickle_filename")
+        self.tvalues_filename = settings.get_setting("actual_tvalues_pickle_filename")
+        self.perm_pvalues_filename = settings.get_setting("permuted_pvalues_pickle_filename")
+        self.perm_tvalues_filename = settings.get_setting("permuted_tvalues_pickle_filename")
+        self.perm_orders_filename = settings.get_setting("permutations_order_pickle_filename")
+        self.n_permutations = settings.get_setting("n_permutations")
+        self.skip_rows = skip_rows
+        self.n_eqtls = n_eqtls
+        self.n_samples = n_samples
+        self.verbose = verbose
+
+    def start(self):
+        """
+        Method to start the manager.
+        """
+        self.print_arguments()
+        print("Starting Custom Interaction Analyser "
+              "[{}]".format(datetime.now().strftime("%H:%M:%S")))
+
+        # Start the timer.
+        start_time = int(time.time())
+
+        # Get the permutation orders.
+        permutation_orders = None
+        perm_orders_outfile = os.path.join(self.outdir,
+                                           self.perm_orders_filename + ".pkl")
+        if check_file_exists(perm_orders_outfile):
+            print("Loading permutation order")
+            permutation_orders = self.load_pickle(perm_orders_outfile)
+
+            # Validate the permutation orders for the given input.
+            if len(permutation_orders) != (self.n_permutations + 1):
+                print("\tinvalid")
+                permutation_orders = None
+
+            if permutation_orders is not None:
+                for order in permutation_orders:
+                    if len(order) != self.n_samples:
+                        print("\tinvalid")
+                        permutation_orders = None
+                        break
+
+            print("\tvalid")
+
+        if permutation_orders is None:
+            print("Creating permutation order")
+            permutation_orders = self.create_perm_orders()
+            self.dump_pickle(permutation_orders, self.outdir,
+                             self.perm_orders_filename)
+
+        # Load the data
+        print("Loading data")
+        cov_df = load_dataframe(self.cov_inpath, header=0, index_col=0)
+        tech_cov_df = cov_df.loc[self.tech_covs, :].copy()
+        geno_df = load_dataframe(self.geno_inpath, header=0, index_col=0,
+                                 skiprows=[i for i in
+                                           range(1,  self.skip_rows + 1)],
+                                 nrows=self.n_eqtls)
+        expr_df = load_dataframe(self.expr_inpath, header=0, index_col=0,
+                                 skiprows=[i for i in
+                                           range(1,  self.skip_rows + 1)],
+                                 nrows=self.n_eqtls)
+
+        # Replace -1 with NaN in the genotype dataframe. This way we can
+        # drop missing values.
+        geno_df.replace(-1, np.nan, inplace=True)
+
+        # Initialize variables.
+        pvalue_buffer = [["-"] + list(cov_df.index)]
+        tvalue_buffer = [["-"] + list(cov_df.index)]
+        perm_pvalues_buffer = [["-"] + list(cov_df.index)]
+        perm_tvalues_buffer = [["-"] + list(cov_df.index)]
+
+        # Start working.
+        print("Starting interaction analyser")
+        for row_index, eqtl_index in enumerate([i for i in
+                                                range(self.skip_rows,
+                                                      self.skip_rows +
+                                                      self.n_eqtls)]):
+            print("\tProcessing eQTL {}/{} "
+                  "[{:.2f}%]".format(row_index + 1,
+                                     self.n_eqtls,
+                                     (100 / self.n_eqtls) * row_index))
+
+            # Get the complete genotype row for the permutation later.
+            genotype_all = geno_df.iloc[row_index, :].copy()
+
+            # Get the missing genotype indices.
+            indices = np.arange(geno_df.shape[1])
+            eqtl_indices = indices[~geno_df.iloc[row_index, :].isnull().values]
+
+            # Subset the row and present samples for this eQTL.
+            genotype = geno_df.iloc[row_index, eqtl_indices].copy()
+            expression = expr_df.iloc[row_index, eqtl_indices].copy()
+            technical_covs = tech_cov_df.iloc[:, eqtl_indices].copy()
+            covariates = cov_df.iloc[:, eqtl_indices].copy()
+
+            # Check if SNP index are identical.
+            if genotype.name != expression.name:
+                print("indices do not match", flush=True)
+                continue
+
+            # Create the null model. Null model are all the technical
+            # covariates multiplied with the genotype + the SNP.
+            tech_inter_matrix = technical_covs.mul(genotype, axis=1)
+            tech_inter_matrix.index = ["{}_X_SNP".format(x) for x in
+                                       technical_covs.index]
+            intercept = pd.DataFrame(1, index=genotype.index,
+                                     columns=["intercept"])
+            base_matrix = reduce(lambda left, right: pd.merge(left,
+                                                              right,
+                                                              left_index=True,
+                                                              right_index=True),
+                                 [intercept,
+                                  genotype.to_frame(),
+                                  technical_covs.T,
+                                  tech_inter_matrix.T])
+
+            # Initialize variables.
+            pvalues = [genotype.name]
+            tvalues = [genotype.name]
+            perm_pvalues = []
+            perm_tvalues = []
+
+            # Loop over the covariates.
+            for cov_index in range(cov_df.shape[0]):
+                # Get the covariate we are processing.
+                covarate = covariates.iloc[cov_index, :]
+                cov_name = covarate.name
+
+                if self.verbose:
+                    print("Working on '{}'".format(cov_name), flush=True)
+
+                # Add the covariate to the null matrix if it isn't already.
+                null_matrix = base_matrix.copy()
+                if cov_name not in null_matrix.columns:
+                    null_matrix = null_matrix.merge(covarate.to_frame(),
+                                                    left_index=True,
+                                                    right_index=True)
+
+                # Create the null model.
+                n_null = null_matrix.shape[0]
+                df_null, rss_null, _ = self.create_model(null_matrix,
+                                                         expression)
+
+                # Loop over each permutation sample order. The first order
+                # is the normal order and the remainder are random shuffles.
+                for order_id, sample_order in enumerate(permutation_orders):
+                    if self.verbose:
+                        print("Working on 'order_{}'".format(order_id),
+                              flush=True)
+
+                    # Reorder the covariate based on the sample order.
+                    # Make sure the labels are in the same order, just
+                    # shuffle the values.
+                    covariate_all = cov_df.iloc[cov_index, :].copy()
+                    covariate_all_index = covariate_all.index
+                    covariate_all = covariate_all.reindex(
+                        covariate_all.index[sample_order])
+                    covariate_all.index = covariate_all_index
+
+                    # Calculate the interaction effect of the covariate of
+                    # interest. Then drop the na's from the interaction
+                    # term.
+                    inter_of_interest = covariate_all * genotype_all
+                    inter_name = "{}_X_SNP".format(cov_name)
+                    if inter_name in null_matrix.columns:
+                        inter_name = inter_name + "_2"
+                    inter_of_interest.name = inter_name
+                    inter_of_interest = inter_of_interest.iloc[eqtl_indices]
+
+                    # Check if the drop is identical (see above).
+                    if not inter_of_interest.index.equals(null_matrix.index):
+                        print("Error in permutation reordering "
+                              "(ID: {})".format(order_id), flush=True)
+                        return
+
+                    # Create the alternative matrix and add the interaction
+                    # term.
+                    alt_matrix = null_matrix.copy()
+                    alt_matrix = alt_matrix.merge(inter_of_interest.to_frame(),
+                                                  left_index=True,
+                                                  right_index=True)
+
+                    # Create the alternative model.
+                    n_alt = alt_matrix.shape[0]
+                    df_alt, rss_alt, tvalue = self.create_model(alt_matrix,
+                                                                expression,
+                                                                inter_name)
+
+                    # Safe the t-values.
+                    if order_id == 0:
+                        tvalues.append(tvalue)
+                    else:
+                        perm_tvalues.append(tvalue)
+
+                    # Make sure the n's are identical.
+                    if n_null != n_alt:
+                        print("Error due to unequal n_null and n_alt",
+                              flush=True)
+                        return
+
+                    # Compare the null and alternative model.
+                    fvalue = self.calc_f_value(rss_null, rss_alt,
+                                               df_null, df_alt, n_null)
+                    pvalue = self.get_p_value(fvalue, df_null, df_alt, n_null)
+
+                    # Safe the p-values.
+                    if order_id == 0:
+                        pvalues.append(pvalue)
+                    else:
+                        perm_pvalues.append(pvalue)
+
+            # Safe the results of the eQTL.
+            pvalue_buffer.append(pvalues)
+            tvalue_buffer.append(tvalues)
+            perm_pvalues_buffer.append(perm_pvalues)
+            perm_tvalues_buffer.append(perm_tvalues)
+
+        print("[manager]\tSaving output files")
+        if pvalue_buffer:
+            self.dump_pickle(pvalue_buffer, self.outdir, self.pvalues_filename,
+                             unique=True)
+        if tvalue_buffer:
+            self.dump_pickle(tvalue_buffer, self.outdir, self.tvalues_filename,
+                             unique=True)
+        if perm_pvalues_buffer:
+            self.dump_pickle(perm_pvalues_buffer, self.outdir,
+                             self.perm_pvalues_filename,
+                             unique=True)
+        if perm_tvalues_buffer:
+            self.dump_pickle(perm_tvalues_buffer, self.outdir,
+                             self.perm_tvalues_filename,
+                             unique=True)
+
+        # Print the process time.
+        run_time = int(time.time()) - start_time
+        run_time_min, run_time_sec = divmod(run_time, 60)
+        run_time_hour, run_time_min = divmod(run_time_min, 60)
+        print("Finished in  {} hour(s), {} minute(s) and "
+              "{} second(s)".format(int(run_time_hour),
+                                    int(run_time_min),
+                                    int(run_time_sec)))
+        print("Received {:.2f} analyses per minute".format(self.n_eqtls /
+                                                           (run_time / 60)))
+
+        # Shutdown the manager.
+        print("Shutting down manager [{}]".format(
+            datetime.now().strftime("%H:%M:%S")), flush=True)
+
+    @staticmethod
+    def load_pickle(fpath):
+        """
+        Method for loading data from a pickle file.
+
+        :param fpath: string, the pickle input file.
+        :return content: , the pickle content.
+        """
+        with open(fpath, "rb") as f:
+            content = pickle.load(f)
+        f.close()
+
+        return content
+
+    @staticmethod
+    def dump_pickle(content, directory, filename, unique=False):
+        """
+        Method for dumping data to a pickle file.
+
+        :param content: , the pickle content.
+        :param directory: string, the pickle output directory.
+        :param filename: string, the pickle output file.
+        :param unique: boolean, whether or not to make the filename unique.
+        """
+        if unique:
+            fpath = os.path.join(directory,
+                                 filename + "{}.pkl".format(int(time.time())))
+        else:
+            fpath = os.path.join(directory, filename + ".pkl")
+
+        with open(fpath, "wb") as f:
+            pickle.dump(content, f)
+        f.close()
+        print("[manager]\t\tcreated {}".format(os.path.basename(fpath)))
+
+    def create_perm_orders(self):
+        """
+        Method for creating x random shuffles of the column indices.
+
+        return sample_orders: list, a nested list with sample orders.
+        """
+        sample_orders = [self.get_column_indices()]
+        for _ in range(self.n_permutations):
+            sample_orders.append(self.create_random_shuffle())
+        return sample_orders
+
+    def get_column_indices(self):
+        """
+        Method for getting a ordered list of sample indices.
+
+        :return : list, ordered list with sample indices.
+        """
+        return [x for x in range(self.n_samples)]
+
+    def create_random_shuffle(self):
+        """
+        Method for creating a random shuffle of the column indices.
+
+        :return column_indices: list, a shuffles list with sample indices.
+        """
+        column_indices = self.get_column_indices()
+        random.shuffle(column_indices)
+        return column_indices
+
+    @staticmethod
+    def write_buffer(filename, buffer):
+        """
+        Method for writing a list of strings to a gzipped file,
+
+        :param filename: string, the output file path.
+        :param buffer: list, the lines of strings to write.
+        """
+        # Write output files.
+        if os.path.isfile(filename):
+            mode = 'ab'
+        else:
+            mode = 'wb'
+
+        with gzip.open(filename, mode) as f:
+            for line in buffer:
+                f.write(line.encode())
+        f.close()
+
+    @staticmethod
+    def create_model(X, y, name=None):
+        """
+        Method for creating a multilinear model.
+
+        :param X: DataFrame, the matrix with rows as samples and columns as
+                             dimensions.
+        :param y: Series, the outcome values.
+        :param name: string, the name of the variable accessing for the t-value.
+        :return df: int, the degrees of freedom of this model.
+        :return ssr: float, the residual sum of squares of this fit.
+        :return tvalue: float, beta  / std error.
+        """
+        # Filter on features with no standard deviation.
+        stds = X.std(axis=0) > 0
+        stds['intercept'] = True
+        X = X.loc[:, stds]
+
+        # Perform the Ordinary least squares fit.
+        ols = sm.OLS(y.values, X)
+        ols_result = ols.fit()
+
+        df = ols_result.df_model
+        ssr = ols_result.ssr
+
+        tvalue = 0
+        if name and name in X.columns:
+            coef = ols_result.params[name]
+            std_err = ols_result.bse[name]
+            if std_err > 0:
+                tvalue = coef / std_err
+
+        return df, ssr, tvalue
+
+    @staticmethod
+    def calc_f_value(rss1, rss2, df1, df2, n):
+        """
+        Method for comparing the risdual sum squared of two models using
+        the F statistic.
+
+        :param rss1: float, the residual sum of squares of the null model.
+        :param rss2: float, the residual sum of squares of the alternative model.
+        :param df1: int, the degrees of freedom of the null model.
+        :param df2: int, the degrees of freedom of the alternative model.
+        :param n: int, the number of samples in the model.
+        :return : float, the p-value of the comparison.
+        """
+        if df1 >= df2:
+            return np.nan
+        if rss2 >= rss1:
+            return 0
+        if df2 >= n:
+            return 0
+
+        return ((rss1 - rss2) / (df2 - df1)) / (rss2 / (n - df2))
+
+    @staticmethod
+    def get_p_value(f_value, df1, df2, n):
+        """
+        Method for getting the p-value corresponding to a F-distribution.
+
+        :param f_value: float, the f-value.
+        :param df1: int, the degrees of freedom of the null model.
+        :param df2: int, the degrees of freedom of the alternative model.
+        :param n: int, the number of samples in the model.
+        :return : float, the p-value corresponding to the f-value.
+        """
+        # Lower and upper limit of stats.f.sf
+        # stats.f.sf(1827.95, dfn=1, dfd=3661) = 5e-324
+        # stats.f.sf(9.9e-12, dfn=1, dfd=3661) = 0.9999974567714613
+
+        # Lower and upper limit of cdf
+        # stats.f.cdf(69, dfn=1, dfd=3661) = 0.9999999999999999
+        # stats.f.cdf(1e-320, dfn=1, dfd=3661) = 1.0730071046473278e-160
+
+        return stats.f.sf(f_value, dfn=(df2 - df1), dfd=(n - df2))
+
+    def print_arguments(self):
+        """
+        Method for printing the variables of the class.
+        """
+        print("Arguments:")
+        print("  > Genotype datafile: {}".format(self.geno_inpath))
+        print("  > Expression datafile: {}".format(self.expr_inpath))
+        print("  > Covariates datafile: {}".format(self.cov_inpath))
+        print("  > Output directory: {}".format(self.outdir))
+        print("  > Technical covariates: {}".format(self.tech_covs))
+        print("  > Permutations: {}".format(self.n_permutations))
+        print("  > Skip rows: {}".format(self.skip_rows))
+        print("  > EQTLs: {}".format(self.n_eqtls))
+        print("  > Samples: {}".format(self.n_samples))
+        print("  > Verbose: {}".format(self.verbose))
+        print("", flush=True)

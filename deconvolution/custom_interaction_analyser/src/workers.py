@@ -1,7 +1,7 @@
 """
 File:         workers.py
 Created:      2020/04/01
-Last Changed: 2020/04/17
+Last Changed: 2020/04/23
 Author(s):    M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -29,8 +29,8 @@ import time
 import numpy as np
 import pandas as pd
 import pandas.io.common
-from sklearn.linear_model import LinearRegression
 import scipy.stats as stats
+import statsmodels.api as sm
 from functools import reduce
 
 # Local application imports.
@@ -45,7 +45,7 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
           flush=True)
 
     # Define the update frequency.
-    update_frequency = int(max_time_unresponsive / 2.1)
+    update_frequency = int(max_time_unresponsive / 4.1)
 
     # First receive the permutation order from the start queue.
     sample_orders = None
@@ -152,41 +152,42 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
             except pandas.io.common.EmptyDataError:
                 break
 
-            # Check if the covariate data still exists. If not, reload it.
-            # This hasn't happend yet but I just wanna make sure that if the
-            # data is lost from the RAM, the worker will continue.
-            try:
-                _ = tech_cov_df.shape
-                _ = cov_df.shape
-            except:
-                print("[worker {:2d}]\tcovariate table was lost. "
-                      "Reloading data..".format(worker_id), flush=True)
-                tech_cov_df, cov_df = load_covariate_file(cov_inpath, tech_covs)
-
             # Replace -1 with NaN in the genotype dataframe. This way we can
             # drop missing values.
             geno_df.replace(-1, np.nan, inplace=True)
 
             # loop over the eQTLs.
-            for i, eqtl_index in enumerate(my_work.keys()):
+            for row_index, eqtl_index in enumerate(my_work.keys()):
                 if verbose:
                     print("[worker {:2d}]\tworking on "
                           "'eQTL_{}'".format(worker_id, eqtl_index),
                           flush=True)
 
+                # Check if the covariate data still exists. If not, reload it.
+                # This hasn't happend yet but I just wanna make sure that if the
+                # data is lost from the RAM, the worker will continue.
+                try:
+                    _ = tech_cov_df.shape
+                    _ = cov_df.shape
+                except:
+                    print("[worker {:2d}]\tcovariate table was lost. "
+                          "Reloading data..".format(worker_id), flush=True)
+                    tech_cov_df, cov_df = load_covariate_file(cov_inpath,
+                                                              tech_covs)
+
                 # Find which order ids to perform.
                 order_ids_to_perform = my_work[eqtl_index]
 
                 # Get the complete genotype row for the permutation later.
-                genotype_all = geno_df.iloc[i, :].copy()
+                genotype_all = geno_df.iloc[row_index, :].copy()
 
                 # Get the missing genotype indices.
                 indices = np.arange(geno_df.shape[1])
-                eqtl_indices = indices[~geno_df.iloc[i, :].isnull().values]
+                eqtl_indices = indices[~geno_df.iloc[row_index, :].isnull().values]
 
                 # Subset the row and present samples for this eQTL.
-                genotype = geno_df.iloc[i, eqtl_indices].copy()
-                expression = expr_df.iloc[i, eqtl_indices].copy()
+                genotype = geno_df.iloc[row_index, eqtl_indices].copy()
+                expression = expr_df.iloc[row_index, eqtl_indices].copy()
                 technical_covs = tech_cov_df.iloc[:, eqtl_indices].copy()
                 covariates = cov_df.iloc[:, eqtl_indices].copy()
 
@@ -200,30 +201,29 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                 # covariates multiplied with the genotype + the SNP.
                 tech_inter_matrix = technical_covs.mul(genotype, axis=1)
                 tech_inter_matrix.index = ["{}_X_SNP".format(x) for x in technical_covs.index]
+                intercept = pd.DataFrame(1, index=genotype.index, columns=["intercept"])
                 base_matrix = reduce(lambda left, right: pd.merge(left,
                                                                   right,
                                                                   left_index=True,
                                                                   right_index=True),
-                                     [genotype.to_frame(),
+                                     [intercept,
+                                      genotype.to_frame(),
                                       technical_covs.T,
                                       tech_inter_matrix.T])
 
                 # Initialize results variable.
-                pvalues = {i: [genotype.name] for i in order_ids_to_perform}
+                results = {x: [(genotype.name, genotype.name)] for x in order_ids_to_perform}
 
                 # Loop over the covariates.
-                for j in range(cov_df.shape[0]):
-                    now = int(time.time())
-                    if (now - last_message) > update_frequency:
-                        if verbose:
-                            print("[worker {:2d}]\tSending "
-                                  "heartbeat".format(worker_id), flush=True)
-                        result_q.put((worker_id, "working", None, None, None))
-                        last_message = now
-
+                for cov_index in range(cov_df.shape[0]):
                     # Get the covariate we are processing.
-                    covarate = covariates.iloc[j, :]
+                    covarate = covariates.iloc[cov_index, :]
                     cov_name = covarate.name
+
+                    # if verbose:
+                    #     print("[worker {:2d}]\tworking on "
+                    #           "'{}'".format(worker_id, cov_name),
+                    #           flush=True)
 
                     # Add the covariate to the null matrix if it isn't already.
                     null_matrix = base_matrix.copy()
@@ -234,7 +234,7 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
 
                     # Create the null model.
                     n_null = null_matrix.shape[0]
-                    df_null, rss_null = create_model(null_matrix, expression)
+                    df_null, rss_null, _ = create_model(null_matrix, expression)
 
                     # Loop over each permutation sample order. The first order
                     # is the normal order and the remainder are random shuffles.
@@ -246,10 +246,25 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                         if order_id not in order_ids_to_perform:
                             continue
 
+                        # if verbose:
+                        #     print("[worker {:2d}]\tworking on "
+                        #           "'order_{}'".format(worker_id, order_id),
+                        #           flush=True)
+
+                        # Send an heartbeat back to the manager.
+                        now = int(time.time())
+                        if (now - last_message) > update_frequency:
+                            if verbose:
+                                print("[worker {:2d}]\tSending "
+                                      "heartbeat".format(worker_id), flush=True)
+                            result_q.put(
+                                (worker_id, "working", None, None, None))
+                            last_message = now
+
                         # Reorder the covariate based on the sample order.
                         # Make sure the labels are in the same order, just
                         # shuffle the values.
-                        covariate_all = cov_df.iloc[j, :].copy()
+                        covariate_all = cov_df.iloc[cov_index, :].copy()
                         covariate_all_index = covariate_all.index
                         covariate_all = covariate_all.reindex(covariate_all.index[sample_order])
                         covariate_all.index = covariate_all_index
@@ -270,7 +285,7 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                                   "reordering (ID: {})".format(worker_id,
                                                                order_id),
                                   flush=True)
-                            pvalues[order_id].append(np.nan)
+                            results[order_id].append((np.nan, np.nan))
                             continue
 
                         # Create the alternative matrix and add the interaction
@@ -282,14 +297,14 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
 
                         # Create the alternative model.
                         n_alt = alt_matrix.shape[0]
-                        df_alt, rss_alt = create_model(alt_matrix, expression)
+                        df_alt, rss_alt, tvalue = create_model(alt_matrix, expression, inter_name)
 
                         # Make sure the n's are identical.
                         if n_null != n_alt:
                             print("[worker {:2d}]\terror due to unequal "
                                   "n_null and n_alt".format(worker_id),
                                   flush=True)
-                            pvalues[order_id].append(np.nan)
+                            results[order_id].append((np.nan, np.nan))
                             continue
 
                         # Compare the null and alternative model.
@@ -298,20 +313,21 @@ def process_worker(worker_id, cov_inpath, geno_inpath, expr_inpath, tech_covs,
                                                 n_null)
 
                         # Safe the pvalue.
-                        pvalues[order_id].append(pvalue)
+                        results[order_id].append((pvalue, tvalue))
 
                 # Push the result back to the manager.
-                for oid, data in pvalues.items():
+                count = 0
+                for oid, data in results.items():
                     if len(data) == (cov_df.shape[0] + 1):
-                        if verbose:
-                            print("[worker {:2d}]\tpushing "
-                                  "results".format(worker_id))
-
+                        count += 1
                         result_q.put((worker_id, "result", eqtl_index, oid, data))
                         time.sleep(0.1)
+                if verbose:
+                    print("[worker {:2d}]\tpushed {} "
+                          "results".format(worker_id, count))
 
             # Wait before getting a new job.
-            time.sleep(sleep_time * 2)
+            time.sleep(sleep_time * 2.1)
 
         except queue.Empty:
             break
@@ -337,27 +353,38 @@ def load_covariate_file(cov_inpath, tech_covs):
     return tech_cov_df, cov_df
 
 
-def create_model(X, y):
+def create_model(X, y, name=None):
     """
     Method for creating a multilinear model.
 
     :param X: DataFrame, the matrix with rows as samples and columns as
                          dimensions.
     :param y: Series, the outcome values.
-    :return degrees_freedom: int, the degrees of freedom of this model.
-    :return residual_squared_sum: float, the residual sum of squares of this
-                                  fit.
+    :param name: string, the name of the variable accessing for the t-value.
+    :return df: int, the degrees of freedom of this model.
+    :return ssr: float, the residual sum of squares of this fit.
+    :return tvalue: float, beta  / std error.
     """
-    # Create the model.
-    regressor = LinearRegression(n_jobs=1)
-    regressor.fit(X, y)
-    y_hat = regressor.predict(X)
+    # Filter on features with no standard deviation.
+    stds = X.std(axis=0) > 0
+    stds['intercept'] = True
+    X = X.loc[:, stds]
 
-    # Calculate the statistics of the model.
-    degrees_freedom = len(X.columns) + 1
-    residual_sum_squares = ((y - y_hat) ** 2).sum()
+    # Perform the Ordinary least squares fit.
+    ols = sm.OLS(y.values, X)
+    ols_result = ols.fit()
 
-    return degrees_freedom, residual_sum_squares
+    df = ols_result.df_model
+    ssr = ols_result.ssr
+
+    tvalue = 0
+    if name and name in X.columns:
+        coef = ols_result.params[name]
+        std_err = ols_result.bse[name]
+        if std_err > 0:
+            tvalue = coef / std_err
+
+    return df, ssr, tvalue
 
 
 def compare_models(rss1, rss2, df1, df2, n):

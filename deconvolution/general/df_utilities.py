@@ -1,7 +1,7 @@
 """
 File:         df_utilities.py
 Created:      2020/03/19
-Last Changed: 2020/04/10
+Last Changed: 2020/04/23
 Author(s):    M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -30,7 +30,7 @@ from .utilities import get_basename
 
 
 def load_dataframe(inpath, header, index_col, sep="\t", low_memory=True,
-                   nrows=None):
+                   nrows=None, skiprows=None):
     """
     Method for reading a comma-separated values (csv) file into a pandas
     DataFrame.
@@ -45,10 +45,11 @@ def load_dataframe(inpath, header, index_col, sep="\t", low_memory=True,
                        resulting in lower memory use while parsing, but
                        possibly mixed type inference.
     :param nrows: int, number of rows of file to read.
+    :param skiprows: list, the index of rows to skip.
     :return df: DataFrame, the pandas dataframe.
     """
     df = pd.read_csv(inpath, sep=sep, header=header, index_col=index_col,
-                     low_memory=low_memory, nrows=nrows)
+                     low_memory=low_memory, nrows=nrows, skiprows=skiprows)
     print("\tLoaded dataframe: {} with shape: {}".format(get_basename(inpath),
                                                          df.shape))
     return df

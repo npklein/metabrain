@@ -3,7 +3,7 @@
 """
 File:         custom_interaction_analyser.py
 Created:      2020/03/23
-Last Changed: 2020/04/10
+Last Changed: 2020/04/23
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -28,6 +28,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 
 # Local application imports.
 from custom_interaction_analyser.src.manager import Manager
+from custom_interaction_analyser.src.main import Main
 from custom_interaction_analyser.src.combine_and_plot import CombineAndPlot
 from custom_interaction_analyser.src.cmd_line_arguments import \
     CommandLineArguments
@@ -64,12 +65,20 @@ if __name__ == '__main__':
         INCLUDE = CLA.get_argument("include")
         VERBOSE = CLA.get_argument("verbose")
 
+        # # Start the program.
+        # PROGRAM = Manager(settings_file=SETTINGS_FILE,
+        #                   skip_rows=SKIP_ROWS,
+        #                   n_eqtls=N_EQTLS,
+        #                   n_samples=N_SAMPLES,
+        #                   cores=CORES,
+        #                   include=INCLUDE,
+        #                   verbose=VERBOSE)
+        # PROGRAM.start()
+
         # Start the program.
-        PROGRAM = Manager(settings_file=SETTINGS_FILE,
-                          skip_rows=SKIP_ROWS,
-                          n_eqtls=N_EQTLS,
-                          n_samples=N_SAMPLES,
-                          cores=CORES,
-                          include=INCLUDE,
-                          verbose=VERBOSE)
+        PROGRAM = Main(settings_file=SETTINGS_FILE,
+                       skip_rows=SKIP_ROWS,
+                       n_eqtls=N_EQTLS,
+                       n_samples=N_SAMPLES,
+                       verbose=VERBOSE)
         PROGRAM.start()

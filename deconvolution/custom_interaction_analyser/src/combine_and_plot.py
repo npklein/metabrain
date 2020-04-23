@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed: 2020/04/20
+Last Changed: 2020/04/23
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -74,6 +74,7 @@ class CombineAndPlot:
 
         # Get the pickle filenames.
         self.pvalues_outfile = settings.get_setting("actual_pvalues_pickle_filename")
+        self.tvalues_outfile = settings.get_setting("actual_tvalues_pickle_filename")
         self.perm_pvalues_outfile = settings.get_setting("permuted_pvalues_pickle_filename")
 
         # Class variable.
@@ -92,19 +93,32 @@ class CombineAndPlot:
 
         # Combine the pickle files.
         print("Loading data.", flush=True)
-        columns, pvalues_data = self.combine_pickles(self.outdir,
-                                                     self.pvalues_outfile,
-                                                     columns=True)
+        pcolumns, pvalues_data = self.combine_pickles(self.outdir,
+                                                      self.pvalues_outfile,
+                                                      columns=True)
+        tcolumns, tvalues_data = self.combine_pickles(self.outdir,
+                                                      self.tvalues_outfile,
+                                                      columns=True)
         _, perm_pvalues = self.combine_pickles(self.outdir,
                                                self.perm_pvalues_outfile)
 
         # Create a pandas dataframe from the nested list.
         print("Creating p-values dataframe.", flush=True)
-        pvalue_df = self.create_df(pvalues_data, columns)
+        pvalue_df = self.create_df(pvalues_data, pcolumns)
         save_dataframe(df=pvalue_df,
                        outpath=os.path.join(self.outdir,
                                             "pvalue_table.txt.gz"),
                        header=True, index=True)
+
+        # Create a pandas dataframe from the nested list.
+        print("Creating t-values dataframe.", flush=True)
+        tvalue_df = self.create_df(tvalues_data, pcolumns)
+        save_dataframe(df=tvalue_df,
+                       outpath=os.path.join(self.outdir,
+                                            "tvalue_table.txt.gz"),
+                       header=True, index=True)
+
+        exit()
 
         # Create a dataframe with z-scores.
         print("Creating Z-score dataframe.", flush=True)
