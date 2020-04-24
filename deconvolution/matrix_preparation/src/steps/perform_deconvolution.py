@@ -82,20 +82,18 @@ class PerformDeconvolution:
         if self.profile_df is None:
             # Load the celltype profile file.
             print("Loading cell type profile matrix.")
-            profile_df = load_dataframe(self.profile_file,
-                                        header=0, index_col=0)
-
-            # Shift the expression to be all positive.
-            self.profile_df = profile_df + abs(profile_df.values.min())
+            self.profile_df = load_dataframe(self.profile_file,
+                                             header=0, index_col=0)
 
         if self.ct_expr_df is None:
             # Load the celltype expression file.
             print("Loading cell type expression matrix.")
-            ct_expr_df = load_dataframe(self.ct_expr_file,
-                                        header=0, index_col=0)
+            self.ct_expr_df = load_dataframe(self.ct_expr_file,
+                                             header=0, index_col=0)
 
-            # Shift the expression to be all positive.
-            self.ct_expr_df = ct_expr_df + abs(ct_expr_df.values.min())
+        # # Shift the matrices to be all positive.
+        # shifted_ct_expr = self.ct_expr_df.copy()
+        # shifted_ct_expr = shifted_ct_expr + abs(shifted_ct_expr.values.min())
 
         # Convert the profile expression CPM to z-scores.
         self.profile_df = self.normalize(self.profile_df)

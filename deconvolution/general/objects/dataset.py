@@ -1,7 +1,7 @@
 """
 File:         dataset.py
 Created:      2020/03/16
-Last Changed: 2020/04/20
+Last Changed: 2020/04/24
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -25,6 +25,7 @@ import itertools
 import os
 
 # Third party imports.
+import scipy.stats as stats
 
 # Local application imports.
 from general.df_utilities import load_dataframe
@@ -45,6 +46,7 @@ class Dataset:
         self.celltypes = settings.get_setting("celltypes")
         self.cellmap_methods = settings.get_setting("cellmap_method_prefix_and_suffix")
         self.marker_genes = settings.get_setting("marker_genes_prefix")
+        self.signif_cutoff = stats.norm.isf(settings.get_setting("significance_cutoff"))
         nrows = nrows
         if nrows == -1:
             nrows = None
@@ -86,6 +88,9 @@ class Dataset:
 
     def get_marker_genes(self):
         return self.marker_genes
+
+    def get_significance_cutoff(self):
+        return self.signif_cutoff
 
     def get_colormap(self):
         colors = ["#9b59b6", "#3498db", "#e74c3c", "#34495e",

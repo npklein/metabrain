@@ -75,6 +75,12 @@ class main():
                                              "end": "endothelial cell",
                                              "ast": "astrocyte"})
 
+        colormap = {"oligodendrocyte": "#5D9166",
+                    "neuron": "#CC87AF",
+                    "microglia": "#E8C06F",
+                    "endothelial cell": "#F2A7A7",
+                    "astrocyte": "#9B7BB8"}
+
         # Order.
         df.sort_values(["Celltype", "Cell_type_mentions"], inplace=True,
                        ascending=False)
@@ -89,6 +95,7 @@ class main():
         df1 = df.loc[df["x"] <= 5, :].copy()
         df2 = df.loc[df["x"] >= 5, :].copy()
         g = sns.lineplot(x="x", y="Cell_type_mentions", hue="Celltype",
+                         palette=colormap,
                          data=df1, ax=ax)
         sns.lineplot(x="x", y="Cell_type_mentions", hue="Celltype",
                      data=df2, legend=False,

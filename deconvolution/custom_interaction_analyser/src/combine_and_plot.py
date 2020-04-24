@@ -77,10 +77,6 @@ class CombineAndPlot:
         self.tvalues_outfile = settings.get_setting("actual_tvalues_pickle_filename")
         self.perm_pvalues_outfile = settings.get_setting("permuted_pvalues_pickle_filename")
 
-        # Class variable.
-        self.max_col_value = 1001
-        self.precision = 3
-
     def start(self):
         """
         Method to start the combiner.
@@ -112,13 +108,11 @@ class CombineAndPlot:
 
         # Create a pandas dataframe from the nested list.
         print("Creating t-values dataframe.", flush=True)
-        tvalue_df = self.create_df(tvalues_data, pcolumns)
+        tvalue_df = self.create_df(tvalues_data, tcolumns)
         save_dataframe(df=tvalue_df,
                        outpath=os.path.join(self.outdir,
                                             "tvalue_table.txt.gz"),
                        header=True, index=True)
-
-        exit()
 
         # Create a dataframe with z-scores.
         print("Creating Z-score dataframe.", flush=True)
@@ -129,7 +123,7 @@ class CombineAndPlot:
                        header=True, index=True)
 
         # Get the pvalues from the dataframe.
-        pvalues = pvalue_df.melt()["value"].to_list()
+        pvalues = pvalue_df.melt()["value"].values
 
         # Sort the lists.
         print("Sorting p-values.", flush=True)
@@ -138,15 +132,15 @@ class CombineAndPlot:
 
         # Visualise distributions.
         print("Visualizing distributions.", flush=True)
-        self.plot_distributions(perm_pvalues, pvalues, self.n_permutations,
-                                self.outdir)
+        self.plot_distributions(perm_pvalues, pvalues, self.outdir)
 
         # Create the FDR dataframes.
         print("Creating permutation FDR dataframe.", flush=True)
-        perm_fdr_df = self.create_perm_fdr_df(pvalue_df,
-                                              pvalues,
-                                              perm_pvalues,
-                                              self.n_permutations)
+        perm_fdr_df, perm_cutoff = self.create_perm_fdr_df(pvalue_df,
+                                                           pvalues,
+                                                           perm_pvalues,
+                                                           self.n_permutations)
+        print("\tPermutation significance cutoff: {:.2e}".format(perm_cutoff))
         # Write the output file.
         save_dataframe(df=perm_fdr_df,
                        outpath=os.path.join(self.outdir,
@@ -154,19 +148,27 @@ class CombineAndPlot:
                        header=True, index=True)
 
         print("Creating Benjamini-Hochberg FDR dataframe.", flush=True)
-        bh_fdr_df = self.create_bh_fdr_df(pvalue_df, pvalues)
+        bh_fdr_df, bh_cutoff = self.create_bh_fdr_df(pvalue_df, pvalues)
+        print("\tBH significance cutoff: {:.2e}".format(bh_cutoff))
         save_dataframe(df=bh_fdr_df,
                        outpath=os.path.join(self.outdir,
                                             "bh_fdr_table.txt.gz"),
                        header=True, index=True)
 
+        # pvalue_df = pd.read_csv(os.path.join(self.outdir, "pvalue_table.txt.gz"),
+        #                         sep="\t", header=0, index_col=0)
+        # perm_fdr_df = pd.read_csv(os.path.join(self.outdir, "perm_fdr_table.txt.gz"),
+        #                           sep="\t", header=0, index_col=0)
+        # bh_fdr_df = pd.read_csv(os.path.join(self.outdir, "bh_fdr_table.txt.gz"),
+        #                         sep="\t", header=0, index_col=0)
+
         # Compare the two pvalue scores.
-        print("Creating score visualisation.", flush=True)
+        print("Creating score visualisation [1/2].", flush=True)
         self.compare_pvalue_scores(pvalue_df, perm_fdr_df, bh_fdr_df,
                                    self.outdir)
+        print("Creating score visualisation [2/2].", flush=True)
         self.compare_pvalue_scores(pvalue_df, perm_fdr_df, bh_fdr_df,
-                                   self.outdir, stepsize=0.1, max_val=0.05,
-                                   rescale=False)
+                                   self.outdir, max_val=0.05)
 
         # Print the time.
         run_time_min, run_time_sec = divmod(time.time() - start_time, 60)
@@ -192,7 +194,7 @@ class CombineAndPlot:
         data = []
 
         # Combine the found files.
-        for i, fpath in enumerate(glob.glob(os.path.join(indir,
+        for i, fpath in enumerate(glob.glob(os.path.join(indir, filename,
                                                          filename + "*.pkl"))):
             with open(fpath, "rb") as f:
                 content = pickle.load(f)
@@ -272,14 +274,13 @@ class CombineAndPlot:
         return stats.norm.isf(p_value)
 
     @staticmethod
-    def plot_distributions(perm_pvalues, pvalues, n_perm, outdir):
+    def plot_distributions(perm_pvalues, pvalues, outdir):
         """
         Method for visualizing the distribution of the null and alternative
         p-values.
 
         :param perm_pvalues: list, the sorted null model p-values.
         :param pvalues: list, the sorted alternative model p-values.
-        :param n_perm: int, the number of permutations performed.
         :param outdir: string, the output directory for the image.
         """
         # Create bins.
@@ -291,8 +292,6 @@ class CombineAndPlot:
         df = df.divide(df.sum())
         df["sum"] = (df["pvalues"] + df["perm_pvalues"]) / 2
         df["index"] = (bins[:-1] + bins[1:]) / 2
-
-        max_val = df.values.max()
 
         sns.set(rc={'figure.figsize': (18, 9)})
         sns.set_style("ticks")
@@ -351,6 +350,8 @@ class CombineAndPlot:
         count = 1
         total = df.shape[0] * df.shape[1]
 
+        max_signif_pvalue = -np.inf
+
         fdr_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
         for row_index in range(df.shape[0]):
             for col_index in range(df.shape[1]):
@@ -362,15 +363,19 @@ class CombineAndPlot:
                 rank = bisect_left(pvalues, pvalue)
                 perm_rank = bisect_left(perm_pvalues, pvalue)
                 if (rank > 0) and (perm_rank > 0):
-                    fdr_value = (perm_rank / n_perm) / rank
+                    fdr_value = perm_rank / total
                     if fdr_value > 1:
                         fdr_value = 1
                 else:
                     fdr_value = 0
                 fdr_df.iloc[row_index, col_index] = fdr_value
+
+                if fdr_value < 0.05 and pvalue > max_signif_pvalue:
+                    max_signif_pvalue = pvalue
+
                 count += 1
 
-        return fdr_df
+        return fdr_df, max_signif_pvalue
 
     @staticmethod
     def create_bh_fdr_df(df, pvalues):
@@ -386,6 +391,8 @@ class CombineAndPlot:
         """
         count = 1
         total = df.shape[0] * df.shape[1]
+
+        max_signif_pvalue = -np.inf
 
         m = len(pvalues)
         fdr_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
@@ -403,6 +410,10 @@ class CombineAndPlot:
                     fdr_value = 1
                 fdr_values.append((rank, row_index, col_index, fdr_value))
                 fdr_df.iloc[row_index, col_index] = fdr_value
+
+                if fdr_value < 0.05 and pvalue > max_signif_pvalue:
+                    max_signif_pvalue = pvalue
+
                 count += 1
 
         # Make sure the BH FDR is a monotome function. This goes through
@@ -417,10 +428,10 @@ class CombineAndPlot:
             else:
                 prev_fdr_value = fdr_value
 
-        return fdr_df
+        return fdr_df, max_signif_pvalue
 
     def compare_pvalue_scores(self, pvalue_df, perm_fdr, bh_fdr, outdir,
-                              stepsize=0.2, max_val=None, rescale=False):
+                              max_val=1.0):
         """
         Method for comparing the different p-value dataframes.
 
@@ -428,77 +439,106 @@ class CombineAndPlot:
         :param perm_fdr: DataFrame, the permutation FDR dataframe.
         :param bh_fdr: DataFrame, the Benjamini-Hochberg FDR dataframe.
         :param outdir: string, the output directory for the image.
-        :param stepsize: float, the stepsize for the axis ticks.
         :param max_val: float, the maximum p-value to include.
-        :param rescale: boolean, whether or not to convert to -log10 scale.
         """
         # Combine the dataframes into one.
         df = pd.DataFrame({"P-value": pvalue_df.melt()["value"],
                            "Permutation FDR": perm_fdr.melt()["value"],
                            "BH FDR": bh_fdr.melt()["value"]})
 
-        # Rescale the values if need be.
-        if rescale:
-            df = -np.log10(df + 1)
-            df.columns = ["-log10({} + 1)".format(x) for x in df.columns]
-
         # Filter the rows that contain at least one value below the max.
-        if max_val is not None:
-            indices = []
-            for index, row in df.iterrows():
-                add = (row <= max_val).any()
-                indices.append(add)
-            df = df.loc[indices, :]
+        indices = []
+        for index, row in df.iterrows():
+            add = (row["Permutation FDR"] <= max_val) or (row["BH FDR"] <= max_val)
+            indices.append(add)
+        df = df.loc[indices, :]
 
         # Calculate the lower and upper bound of the axis.
-        precision = 10 ^ len(str(float(stepsize)).split(".")[1])
-        xy_min = math.floor(df.values.min() * precision) / precision - stepsize
-        xy_max = math.ceil(df.values.max() * precision) / precision + stepsize
+        precision = 3
+        xy_min = math.floor(df.values.min() * precision) / precision
+        xy_max = math.ceil(df.values.max() * precision) / precision
 
         # Calculate the maximum color value.
-        max_col_value = -np.inf
-        for i in range(3):
-            for j in range(3):
-                if i > j:
-                    new_max = ((df.iloc[:, i] - df.iloc[:, j]) ** 2).max()
-                    if new_max > max_col_value:
-                        max_col_value = new_max
-        self.max_col_value = int(max_col_value * (10 ** self.precision))
+        # val = -np.inf
+        # for i in range(3):
+        #     for j in range(3):
+        #         if i > j:
+        #             new_max = ((df.iloc[:, i] - df.iloc[:, j]) ** 2).max()
+        #             if new_max > val:
+        #                 val = new_max
+        # max_col_value = int(val * (10 ** precision))
 
-        # Create the plot.
-        sns.set()
-        sns.set_style("whitegrid")
-        sns.set_context("paper", rc={"axes.labelsize": 22,
-                                     "axes.fontweight": 'bold',
-                                     'xtick.labelsize': 16,
-                                     'ytick.labelsize': 16})
-        g = sns.pairplot(df, kind='scatter', diag_kind='hist', corner=True,
-                         height=5, aspect=1,
-                         plot_kws={'color': '#FFFFFF'},
-                         diag_kws={'bins': 25, 'color': "#606060"}
-                         )
+        bins = np.linspace(0, max_val, 15)
 
-        # Change the colors.
-        g.map_lower(self.my_scatter)
-        g.map_lower(self.diagonal_line)
-        g.map_lower(self.correlation)
-        g.fig.suptitle('Comparing P-values and FDR-values', y=1.05,
-                       fontsize=30, fontweight='bold')
+        # Plot
+        sns.set(style="ticks", color_codes=True)
+        fig, axes = plt.subplots(ncols=3, nrows=3, figsize=(12, 12))
 
-        # Change the axis ticks.
-        ticks = [round(i / 100, 2) for i in range(int(xy_min*100), int(xy_max*100), int(stepsize*100))]
-        for ax in g.axes.flat:
-            if ax:
-                ax.set_xticks(ticks)
-                ax.set_xlim(xy_min, xy_max)
-                ax.set_xticklabels(ticks, rotation=45)
-                ax.set_yticks(ticks)
-                ax.set_ylim(xy_min, xy_max)
+        for index1 in range(3):
+            x = df.iloc[:, index1]
+            for index2 in range(3):
+                y = df.iloc[:, index2]
+                ax = axes[index2, index1]
+                sns.despine(fig=fig, ax=ax)
+                print("\tPlotting axes[{}:{}, {}:{}]".format(index2, df.columns[index2],
+                                                             index1, df.columns[index1]))
 
-        #plt.tight_layout()
-        g.savefig(os.path.join(outdir, "pvalue_vs_fdr_comparison_"
-                                       "{:.2f}_{:.2f}.png".format(xy_min,
-                                                                  xy_max)))
+                if index2 > index1:
+                    # colormap = self.create_color_map(length=max_col_value,
+                    #                                  precision=precision)
+                    # diff = round((x - y) ** 2, precision)
+                    #
+                    # sns.scatterplot(x=x, y=y, hue=diff, pallete=colormap, ax=ax)
+                    #
+                    # colors = diff.map(colormap)
+                    ax.scatter(x, y, c="cornflowerblue")
+                    ax.plot([xy_min, xy_max], [xy_min, xy_max], ls="--", c=".3")
+
+                    for i in range(int(xy_min * 100), int(xy_max * 100) + 10, 5):
+                        alpha = 0.025
+                        if i % 10 == 0:
+                            alpha = 0.15
+                        ax.axvline(i / 100, ls='-', color="#000000",
+                                   alpha=alpha, zorder=-1)
+                        ax.axhline(i / 100, ls='-', color="#000000",
+                                   alpha=alpha, zorder=-1)
+
+                    ax.set_ylim(xy_min, xy_max)
+                    ax.set_xlim(xy_min, xy_max)
+
+                    ax.set_xlabel(df.columns[index1], fontsize=12, fontweight='bold')
+                    ax.set_ylabel(df.columns[index2], fontsize=12, fontweight='bold')
+
+                elif index2 == index1:
+                    value_bins = pd.cut(y, bins=bins).value_counts().to_frame()
+                    value_bins.columns = ["count"]
+                    value_bins = value_bins.divide(value_bins.sum())
+                    value_bins["index"] = (bins[:-1] + bins[1:]) / 2
+                    value_bins = value_bins.round(2)
+
+                    sns.barplot(x="index", y="count", color='cornflowerblue',
+                                data=value_bins, ax=ax)
+                    ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
+
+                    for i in range(0, 101, 5):
+                        alpha = 0.025
+                        if i % 10 == 0:
+                            alpha = 0.15
+                        ax.axhline(i / 100, ls='-', color="#000000",
+                                   alpha=alpha, zorder=-1)
+
+
+                    ax.set_xlabel(df.columns[index1], fontsize=12, fontweight='bold')
+                    ax.set_ylabel("ratio", fontsize=12, fontweight='bold')
+                else:
+                    ax.set_axis_off()
+
+        fig.align_ylabels(axes[:, 0])
+        fig.align_xlabels(axes[2, :])
+        fig.suptitle('Multiple Testing Comparison', fontsize=20, fontweight='bold')
+        plt.tight_layout()
+        fig.savefig(os.path.join(outdir, "pvalue_vs_fdr_comparison_{}.png".format(max_val)))
+        plt.close()
 
     @staticmethod
     def create_color_map(length, precision):
@@ -508,45 +548,10 @@ class CombineAndPlot:
         palette = list(Color("#D3D3D3").range_to(Color("#000000"), length + 1))
         colors = [x.rgb for x in palette]
         values = [x / (10 ** precision) for x in list(range(0, length + 1))]
-        value_color_map = {}
-        for val, col in zip(values, colors):
-            value_color_map[val] = col
+        value_color_map = {x: y for x, y in zip(values, colors)}
+        for value in [np.nan, -np.inf, np.inf]:
+            value_color_map[value] = Color(rgb=(0.698, 0.133, 0.133))
         return value_color_map
-
-    def my_scatter(self, x, y, **kwargs):
-        """
-        Method for mapping a scatterplot to a FacetGrid. This method includes
-        adding the correct color gradient.
-
-        :param x: Series, the x-axis values.
-        :param y: Series, the y-xis values.
-        """
-        colormap = self.create_color_map(length=self.max_col_value,
-                                         precision=self.precision)
-        diff = round((x - y) ** 2, self.precision)
-        colors = diff.map(colormap).fillna("#FFFFFF")
-        plt.scatter(x, y, c=colors)
-
-    @staticmethod
-    def diagonal_line(*args, **kwargs):
-        """
-        Method for mapping a diagonal line to a FacetGrid.
-        """
-        plt.plot([-1, 2], [-1, 2], ls="--", c=".3")
-
-    @staticmethod
-    def correlation(x, y, **kwargs):
-        """
-        Method for mapping a spearman regression annotation to a FacetGrid.
-
-        :param x: Series, the x-axis values.
-        :param y: Series, the y-xis values.
-        """
-        r, p = stats.spearmanr(x, y)
-        ax = plt.gca()
-        ax.annotate("r = {:.2f} [{}]".format(r, p_value_to_symbol(p)),
-                    xy=(.1, .95), xycoords=ax.transAxes, color='#D7191C',
-                    fontsize=16, fontweight='bold')
 
     def print_arguments(self):
         """

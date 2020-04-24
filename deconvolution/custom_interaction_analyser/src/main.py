@@ -83,6 +83,8 @@ class Main:
         self.perm_tvalues_filename = settings.get_setting("permuted_tvalues_pickle_filename")
         self.perm_orders_filename = settings.get_setting("permutations_order_pickle_filename")
         self.n_permutations = settings.get_setting("n_permutations")
+        self.max_end_time = int(time.time()) + settings.get_setting("max_runtime_in_hours") * 60 * 60
+        self.panic_time = self.max_end_time - (settings.get_setting("panic_time_in_min") * 60)
         self.skip_rows = skip_rows
         self.n_eqtls = n_eqtls
         self.n_samples = n_samples
@@ -128,7 +130,7 @@ class Main:
                              self.perm_orders_filename)
 
         # Load the data
-        print("Loading data")
+        print("Loading data", flush=True)
         cov_df = load_dataframe(self.cov_inpath, header=0, index_col=0)
         tech_cov_df = cov_df.loc[self.tech_covs, :].copy()
         geno_df = load_dataframe(self.geno_inpath, header=0, index_col=0,
@@ -145,13 +147,13 @@ class Main:
         geno_df.replace(-1, np.nan, inplace=True)
 
         # Initialize variables.
-        pvalue_buffer = [["-"] + list(cov_df.index)]
-        tvalue_buffer = [["-"] + list(cov_df.index)]
-        perm_pvalues_buffer = [["-"] + list(cov_df.index)]
-        perm_tvalues_buffer = [["-"] + list(cov_df.index)]
+        pvalue_buffer = [[-1, "-"] + list(cov_df.index)]
+        tvalue_buffer = [[-1, "-"] + list(cov_df.index)]
+        perm_pvalues_buffer = []
+        perm_tvalues_buffer = []
 
         # Start working.
-        print("Starting interaction analyser")
+        print("Starting interaction analyser", flush=True)
         for row_index, eqtl_index in enumerate([i for i in
                                                 range(self.skip_rows,
                                                       self.skip_rows +
@@ -159,7 +161,8 @@ class Main:
             print("\tProcessing eQTL {}/{} "
                   "[{:.2f}%]".format(row_index + 1,
                                      self.n_eqtls,
-                                     (100 / self.n_eqtls) * row_index))
+                                     (100 / self.n_eqtls) * (row_index + 1)),
+                  flush=True)
 
             # Get the complete genotype row for the permutation later.
             genotype_all = geno_df.iloc[row_index, :].copy()
@@ -176,8 +179,8 @@ class Main:
 
             # Check if SNP index are identical.
             if genotype.name != expression.name:
-                print("indices do not match", flush=True)
-                continue
+                print("Error: indices do not match", flush=True)
+                return
 
             # Create the null model. Null model are all the technical
             # covariates multiplied with the genotype + the SNP.
@@ -196,8 +199,8 @@ class Main:
                                   tech_inter_matrix.T])
 
             # Initialize variables.
-            pvalues = [genotype.name]
-            tvalues = [genotype.name]
+            pvalues = [eqtl_index, genotype.name]
+            tvalues = [eqtl_index, genotype.name]
             perm_pvalues = []
             perm_tvalues = []
 
@@ -293,24 +296,27 @@ class Main:
             # Safe the results of the eQTL.
             pvalue_buffer.append(pvalues)
             tvalue_buffer.append(tvalues)
-            perm_pvalues_buffer.append(perm_pvalues)
-            perm_tvalues_buffer.append(perm_tvalues)
+            perm_pvalues_buffer.extend(perm_pvalues)
+            perm_tvalues_buffer.extend(perm_tvalues)
 
-        print("[manager]\tSaving output files")
+            # Check whether we are almost running out of time.
+            if time.time() > self.panic_time:
+                print("Panic!!!", flush=True)
+                break
+
+        print("Saving output files", flush=True)
         if pvalue_buffer:
-            self.dump_pickle(pvalue_buffer, self.outdir, self.pvalues_filename,
-                             unique=True)
+            self.dump_pickle(pvalue_buffer, self.outdir,
+                             self.pvalues_filename, subdir=True, unique=True)
         if tvalue_buffer:
-            self.dump_pickle(tvalue_buffer, self.outdir, self.tvalues_filename,
-                             unique=True)
+            self.dump_pickle(tvalue_buffer, self.outdir,
+                             self.tvalues_filename, subdir=True, unique=True)
         if perm_pvalues_buffer:
             self.dump_pickle(perm_pvalues_buffer, self.outdir,
-                             self.perm_pvalues_filename,
-                             unique=True)
+                             self.perm_pvalues_filename, subdir=True, unique=True)
         if perm_tvalues_buffer:
             self.dump_pickle(perm_tvalues_buffer, self.outdir,
-                             self.perm_tvalues_filename,
-                             unique=True)
+                             self.perm_tvalues_filename, subdir=True, unique=True)
 
         # Print the process time.
         run_time = int(time.time()) - start_time
@@ -342,20 +348,29 @@ class Main:
         return content
 
     @staticmethod
-    def dump_pickle(content, directory, filename, unique=False):
+    def dump_pickle(content, directory, filename, subdir=False, unique=False):
         """
         Method for dumping data to a pickle file.
 
         :param content: , the pickle content.
         :param directory: string, the pickle output directory.
         :param filename: string, the pickle output file.
+        :param subdir: boolean, whether or not to put the file in equally
+                       named subdirectory.
         :param unique: boolean, whether or not to make the filename unique.
         """
+        full_directory = directory
+        if subdir:
+            full_directory = os.path.join(directory, filename)
+
+            if not os.path.exists(full_directory):
+                os.makedirs(full_directory)
+
+        full_filename = filename
         if unique:
-            fpath = os.path.join(directory,
-                                 filename + "{}.pkl".format(int(time.time())))
-        else:
-            fpath = os.path.join(directory, filename + ".pkl")
+            full_filename = "{}_{}".format(filename, int(time.time()))
+
+        fpath = os.path.join(full_directory, full_filename + ".pkl")
 
         with open(fpath, "wb") as f:
             pickle.dump(content, f)
@@ -423,16 +438,16 @@ class Main:
         :return ssr: float, the residual sum of squares of this fit.
         :return tvalue: float, beta  / std error.
         """
-        # Filter on features with no standard deviation.
-        stds = X.std(axis=0) > 0
-        stds['intercept'] = True
-        X = X.loc[:, stds]
+        # # Filter on features with no standard deviation.
+        # stds = X.std(axis=0) > 0
+        # stds['intercept'] = True
+        # X = X.loc[:, stds]
 
         # Perform the Ordinary least squares fit.
         ols = sm.OLS(y.values, X)
         ols_result = ols.fit()
 
-        df = ols_result.df_model
+        df = X.shape[1]
         ssr = ols_result.ssr
 
         tvalue = 0
@@ -491,6 +506,10 @@ class Main:
         """
         Method for printing the variables of the class.
         """
+        panic_time_string = datetime.fromtimestamp(self.panic_time).strftime(
+            "%d-%m-%Y, %H:%M:%S")
+        end_time_string = datetime.fromtimestamp(self.max_end_time).strftime(
+            "%d-%m-%Y, %H:%M:%S")
         print("Arguments:")
         print("  > Genotype datafile: {}".format(self.geno_inpath))
         print("  > Expression datafile: {}".format(self.expr_inpath))
@@ -498,6 +517,8 @@ class Main:
         print("  > Output directory: {}".format(self.outdir))
         print("  > Technical covariates: {}".format(self.tech_covs))
         print("  > Permutations: {}".format(self.n_permutations))
+        print("  > Panic datetime: {}".format(panic_time_string))
+        print("  > Max end datetime: {}".format(end_time_string))
         print("  > Skip rows: {}".format(self.skip_rows))
         print("  > EQTLs: {}".format(self.n_eqtls))
         print("  > Samples: {}".format(self.n_samples))
