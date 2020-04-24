@@ -47,16 +47,12 @@ class InterZscoreDist:
         # Extract the required data.
         print("Loading data")
         self.inter_df = dataset.get_inter_df()
+        self.z_score_cutoff = dataset.get_significance_cutoff()
 
     def start(self):
         print("Plotting interaction matrix z-scores as distribution plot.")
         self.print_arguments()
-
-        # calculate the z-score cutoff.
-        z_score_cutoff = st.norm.ppf(
-            0.05 / (self.inter_df.shape[0] * self.inter_df.shape[1]) / 2)
-
-        self.plot(self.inter_df, z_score_cutoff, self.outdir)
+        self.plot(self.inter_df, self.z_score_cutoff, self.outdir)
 
     @staticmethod
     def plot(df, z_score_cutoff, outdir):

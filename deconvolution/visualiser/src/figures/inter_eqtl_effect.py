@@ -53,6 +53,7 @@ class IntereQTLEffect:
         self.alleles_df = dataset.get_alleles_df()
         self.cov_df = dataset.get_cov_df()
         self.inter_df = dataset.get_inter_df()
+        self.z_score_cutoff = dataset.get_significance_cutoff()
 
         # Create color map.
         self.group_color_map, self.value_color_map = self.create_color_map()
@@ -60,10 +61,6 @@ class IntereQTLEffect:
     def start(self):
         print("Plotting interaction eQTL plots.")
         self.print_arguments()
-
-        # Calculate the z-score cutoff.
-        z_score_cutoff = stats.norm.ppf(
-            0.05 / (self.inter_df.shape[0] * self.inter_df.shape[1]) / 2)
 
         print("Iterating over eQTLs.")
         for i, (index, row) in enumerate(self.eqtl_df.iterrows()):
@@ -126,7 +123,7 @@ class IntereQTLEffect:
             interaction_effect.columns = ["zscore"]
             interaction_effect = interaction_effect.loc[
                                  interaction_effect["zscore"] > abs(
-                                     z_score_cutoff), :]
+                                     self.z_score_cutoff), :]
             interaction_effect = interaction_effect.reindex(
                 interaction_effect["zscore"].abs().sort_values(
                     ascending=False).index)

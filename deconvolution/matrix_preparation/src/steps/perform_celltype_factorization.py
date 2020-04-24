@@ -85,9 +85,6 @@ class PerformCelltypeFactorization:
         ct_expr_df = load_dataframe(inpath=self.ct_expr_file,
                                     header=0, index_col=0)
 
-        # Shift the expression to be all positive.
-        ct_expr_df = ct_expr_df + abs(ct_expr_df.values.min())
-
         if self.profile_df is None:
             # Load the celltype profile file.
             print("Loading cell type profile matrix.")
@@ -100,8 +97,7 @@ class PerformCelltypeFactorization:
         # Construct a dataframe of the first component of each celltype
         # subset expression profile.
         pca_data = []
-        nmf_data = []
-        print("Performing matrix factorization")
+        print("Performing PCA")
         for celltype in self.profile_df.columns:
             print("\tWorking on: {}".format(celltype))
             ct_genes = gene_celltypes[gene_celltypes == celltype].index
@@ -114,19 +110,35 @@ class PerformCelltypeFactorization:
             pca_component_values = [x[0] for x in list(pca_component)]
             pca_data.append(pca_component_values)
 
+        # Create the data frame.
+        celltype_pcs = pd.DataFrame(pca_data,
+                                    index=["{}PCA_{}_PC1".format(*x.split("_")) for x in self.profile_df.columns],
+                                    columns=ct_expr_df.columns)
+
+        # Shift the expression to be all positive.
+        shifted_ct_expr = ct_expr_df.copy()
+        shifted_ct_expr = shifted_ct_expr + abs(shifted_ct_expr.values.min())
+
+        # Construct a dataframe of the first component of each celltype
+        # subset expression profile.
+        nmf_data = []
+        print("Performing NMF")
+        for celltype in self.profile_df.columns:
+            print("\tWorking on: {}".format(celltype))
+            ct_genes = gene_celltypes[gene_celltypes == celltype].index
+            ct_expr = shifted_ct_expr.loc[shifted_ct_expr.index.isin(ct_genes), :]
+            print("\t  N = {}".format(len(ct_expr.index)))
+
             # perform NMF over the expression of these genes.
             print("\t  NMF")
             nmf_component = self.get_first_nmf_component(ct_expr)
             nmf_component_values = [x[0] for x in list(nmf_component)]
             nmf_data.append(nmf_component_values)
 
-        # Create the data frames.
-        celltype_pcs = pd.DataFrame(pca_data,
-                                    index=["{}PCA_{}_PC1".format(*x.split("_")) for x in self.profile_df.columns],
-                                    columns=ct_expr_df.columns)
+        # Create the data frame.
         celltype_cs = pd.DataFrame(nmf_data,
                                    index=["{}NMF_{}_C1".format(*x.split("_")) for x in self.profile_df.columns],
-                                   columns=ct_expr_df.columns)
+                                   columns=shifted_ct_expr.columns)
 
         return ct_expr_df, celltype_pcs, celltype_cs
 

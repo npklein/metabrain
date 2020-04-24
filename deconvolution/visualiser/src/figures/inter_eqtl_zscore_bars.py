@@ -27,7 +27,6 @@ import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import scipy.stats as st
 
 # Local application imports.
 from general.utilities import prepare_output_dir
@@ -48,14 +47,11 @@ class IntereQTLZscoreBars:
         print("Loading data")
         self.eqtl_df = dataset.get_eqtl_df()
         self.inter_df = dataset.get_inter_df()
+        self.z_score_cutoff = dataset.get_significance_cutoff()
 
     def start(self):
         print("Plotting interaction eQTL z-score barplots.")
         self.print_arguments()
-
-        # Calculate the z-score cutoff.
-        z_score_cutoff = st.norm.ppf(
-            0.05 / (self.inter_df.shape[0] * self.inter_df.shape[1]) / 2)
 
         print("Iterating over eQTLs.")
         for i, (index, row) in enumerate(self.eqtl_df.iterrows()):
@@ -81,7 +77,7 @@ class IntereQTLZscoreBars:
                 interaction_effect["zscore"].sort_values().index)
 
             self.plot(i, snp_name, probe_name, hgnc_name, eqtl_type,
-                      z_score_cutoff, interaction_effect, self.outdir)
+                      self.z_score_cutoff, interaction_effect, self.outdir)
 
     @staticmethod
     def plot(i, snp_name, probe_name, hgnc_name, eqtl_type, z_score_cutoff,
