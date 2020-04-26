@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/13
-Last Changed: 2020/04/20
+Last Changed: 2020/04/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -83,9 +83,9 @@ class CommandLineArguments:
                                      "deconvolution_covariate_comparison",
                                      "deconvolution_zscore_comparison",
                                      "simple_eqtl_effect",
+                                     "inter_clustermap",
                                      "inter_zscore_bars",
                                      "inter_zscore_dist",
-                                     "inter_zscore_clustermap",
                                      "inter_zscore_marker_genes",
                                      "inter_eqtl_zscore_bars",
                                      "inter_eqtl_effect",

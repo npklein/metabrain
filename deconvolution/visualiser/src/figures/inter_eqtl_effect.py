@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect.py
 Created:      2020/03/16
-Last Changed: 2020/04/20
+Last Changed: 2020/04/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -209,18 +209,18 @@ class IntereQTLEffect:
                                            eqtl_type,
                                            cov_name,
                                            zscore),
-                fontsize=26, weight='bold', ha='center', va='bottom',
+                fontsize=18, weight='bold', ha='center', va='bottom',
                 transform=ax.transAxes)
         ax.text(0.5, 1.02,
                 'SNPName: {}    ProbeName:{}'.format(snp_name, probe_name),
-                fontsize=20, alpha=0.75, ha='center', va='bottom',
+                fontsize=14, alpha=0.75, ha='center', va='bottom',
                 transform=ax.transAxes)
 
         ax.set_ylabel('{} ({}) expression'.format(probe_name, hgnc_name),
-                      fontsize=18,
+                      fontsize=14,
                       fontweight='bold')
         ax.set_xlabel(cov_name,
-                      fontsize=18,
+                      fontsize=14,
                       fontweight='bold')
 
         # Safe the plot.

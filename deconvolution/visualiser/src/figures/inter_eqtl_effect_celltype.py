@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect_celltype.py
 Created:      2020/04/20
-Last Changed:
+Last Changed: 2020/04/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -29,7 +29,7 @@ from venn import venn
 import matplotlib.pyplot as plt
 
 # Local application imports.
-from general.utilities import prepare_output_dir, p_value_to_symbol
+from general.utilities import prepare_output_dir
 
 
 class IntereQTLEffectCelltype:

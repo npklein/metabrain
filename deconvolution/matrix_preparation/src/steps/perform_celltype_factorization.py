@@ -1,7 +1,7 @@
 """
 File:         perform_celltype_factorization.py
 Created:      2020/04/07
-Last Changed: 2020/04/16
+Last Changed: 2020/04/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -145,7 +145,7 @@ class PerformCelltypeFactorization:
     def save(self):
         save_dataframe(df=self.celltype_pcs, outpath=self.pca_outpath,
                        index=True, header=True)
-        save_dataframe(df=self.celltype_pcs, outpath=self.nmf_outpath,
+        save_dataframe(df=self.celltype_cs, outpath=self.nmf_outpath,
                        index=True, header=True)
 
     @staticmethod

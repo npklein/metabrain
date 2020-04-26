@@ -3,7 +3,7 @@
 """
 File:         marker_genes_selection.py
 Created:      2020/04/08
-Last Changed: 2020/04/20
+Last Changed: 2020/04/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -75,11 +75,12 @@ class main():
                                              "end": "endothelial cell",
                                              "ast": "astrocyte"})
 
-        colormap = {"oligodendrocyte": "#5D9166",
-                    "neuron": "#CC87AF",
-                    "microglia": "#E8C06F",
-                    "endothelial cell": "#F2A7A7",
-                    "astrocyte": "#9B7BB8"}
+        colormap = {
+            "neuron": "#9b59b6",
+            "oligodendrocyte": "#3498db",
+            "endothelial cell": "#e74c3c",
+            "microglia": "#34495e",
+            "astrocyte": "#2ecc71"}
 
         # Order.
         df.sort_values(["Celltype", "Cell_type_mentions"], inplace=True,
