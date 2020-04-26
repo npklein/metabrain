@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/04/23
-Last Changed:
+Last Changed: 2020/04/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -96,7 +96,7 @@ class Main:
         """
         self.print_arguments()
         print("Starting Custom Interaction Analyser "
-              "[{}]".format(datetime.now().strftime("%H:%M:%S")))
+              "[{}]".format(datetime.now().strftime("%d-%m-%Y, %H:%M:%S")))
 
         # Start the timer.
         start_time = int(time.time())
@@ -129,10 +129,60 @@ class Main:
             self.dump_pickle(permutation_orders, self.outdir,
                              self.perm_orders_filename)
 
+        # Start the work.
+        print("Start the analyses", flush=True)
+        pvalue_buffer, tvalue_buffer, perm_pvalues_buffer, perm_tvalues_buffer = self.work(permutation_orders)
+
+        print("Saving output files", flush=True)
+        if pvalue_buffer:
+            self.dump_pickle(pvalue_buffer, self.outdir,
+                             self.pvalues_filename, subdir=True, unique=True)
+        if tvalue_buffer:
+            self.dump_pickle(tvalue_buffer, self.outdir,
+                             self.tvalues_filename, subdir=True, unique=True)
+        if perm_pvalues_buffer:
+            self.dump_pickle(perm_pvalues_buffer, self.outdir,
+                             self.perm_pvalues_filename, subdir=True,
+                             unique=True)
+        if perm_tvalues_buffer:
+            self.dump_pickle(perm_tvalues_buffer, self.outdir,
+                             self.perm_tvalues_filename, subdir=True,
+                             unique=True)
+
+        # Print the process time.
+        run_time = int(time.time()) - start_time
+        run_time_min, run_time_sec = divmod(run_time, 60)
+        run_time_hour, run_time_min = divmod(run_time_min, 60)
+        print("Finished in  {} hour(s), {} minute(s) and "
+              "{} second(s)".format(int(run_time_hour),
+                                    int(run_time_min),
+                                    int(run_time_sec)))
+        print("Received {:.2f} analyses per minute".format((self.n_eqtls * (self.n_permutations + 1)) /
+                                                           (run_time / 60)))
+
+        # Shutdown the manager.
+        print("Shutting down manager [{}]".format(
+            datetime.now().strftime("%d-%m-%Y, %H:%M:%S")), flush=True)
+
+    def work(self, permutation_orders):
+        """
+        Method that does the interaction analysis.
+
+        :param permutation_orders: list, the (permuted) orders for the
+                                   columns (samples).
+        :return pvalue_buffer: list, a nested list with the pvalues for each
+                               eQTL tested.
+        :return tvalue_buffer: list, a nested list with the tvalues for each
+                               eQTL tested.
+        :return perm_pvalues_buffer: list, a nested list with the permutated
+                                     pvalues for each eQTL tested.
+        :return perm_tvalues_buffer: list, a nested list with the permutated
+                                     tvalues for each eQTL tested.
+        """
         # Load the data
         print("Loading data", flush=True)
         cov_df = load_dataframe(self.cov_inpath, header=0, index_col=0)
-        tech_cov_df = cov_df.loc[self.tech_covs, :].copy()
+
         geno_df = load_dataframe(self.geno_inpath, header=0, index_col=0,
                                  skiprows=[i for i in
                                            range(1,  self.skip_rows + 1)],
@@ -141,6 +191,14 @@ class Main:
                                  skiprows=[i for i in
                                            range(1,  self.skip_rows + 1)],
                                  nrows=self.n_eqtls)
+
+        # Split the covariate table into covariates of interest and technical
+        # covariates.
+        print("Splitting covariate table")
+        tech_cov_df = cov_df.loc[self.tech_covs, :].copy()
+        # cov_df.drop(self.tech_covs, axis=0, inplace=True)
+        print("\tTechnical covariates: {}".format(tech_cov_df.shape))
+        print("\tCovariates of interest: {}".format(cov_df.shape))
 
         # Replace -1 with NaN in the genotype dataframe. This way we can
         # drop missing values.
@@ -180,7 +238,7 @@ class Main:
             # Check if SNP index are identical.
             if genotype.name != expression.name:
                 print("Error: indices do not match", flush=True)
-                return
+                continue
 
             # Create the null model. Null model are all the technical
             # covariates multiplied with the genotype + the SNP.
@@ -205,7 +263,11 @@ class Main:
             perm_tvalues = []
 
             # Loop over the covariates.
-            for cov_index in range(cov_df.shape[0]):
+            error = False
+            for cov_index in range(len(cov_df.index)):
+                if error:
+                    break
+
                 # Get the covariate we are processing.
                 covarate = covariates.iloc[cov_index, :]
                 cov_name = covarate.name
@@ -228,6 +290,9 @@ class Main:
                 # Loop over each permutation sample order. The first order
                 # is the normal order and the remainder are random shuffles.
                 for order_id, sample_order in enumerate(permutation_orders):
+                    if error:
+                        break
+
                     if self.verbose:
                         print("Working on 'order_{}'".format(order_id),
                               flush=True)
@@ -255,7 +320,8 @@ class Main:
                     if not inter_of_interest.index.equals(null_matrix.index):
                         print("Error in permutation reordering "
                               "(ID: {})".format(order_id), flush=True)
-                        return
+                        error = True
+                        continue
 
                     # Create the alternative matrix and add the interaction
                     # term.
@@ -280,7 +346,8 @@ class Main:
                     if n_null != n_alt:
                         print("Error due to unequal n_null and n_alt",
                               flush=True)
-                        return
+                        error = True
+                        continue
 
                     # Compare the null and alternative model.
                     fvalue = self.calc_f_value(rss_null, rss_alt,
@@ -293,45 +360,19 @@ class Main:
                     else:
                         perm_pvalues.append(pvalue)
 
+                    # Check whether we are almost running out of time.
+                    if time.time() > self.panic_time:
+                        print("Panic!!!", flush=True)
+                        return pvalue_buffer, tvalue_buffer, perm_pvalues_buffer, perm_tvalues_buffer
+
             # Safe the results of the eQTL.
-            pvalue_buffer.append(pvalues)
-            tvalue_buffer.append(tvalues)
-            perm_pvalues_buffer.extend(perm_pvalues)
-            perm_tvalues_buffer.extend(perm_tvalues)
+            if not error:
+                pvalue_buffer.append(pvalues)
+                tvalue_buffer.append(tvalues)
+                perm_pvalues_buffer.extend(perm_pvalues)
+                perm_tvalues_buffer.extend(perm_tvalues)
 
-            # Check whether we are almost running out of time.
-            if time.time() > self.panic_time:
-                print("Panic!!!", flush=True)
-                break
-
-        print("Saving output files", flush=True)
-        if pvalue_buffer:
-            self.dump_pickle(pvalue_buffer, self.outdir,
-                             self.pvalues_filename, subdir=True, unique=True)
-        if tvalue_buffer:
-            self.dump_pickle(tvalue_buffer, self.outdir,
-                             self.tvalues_filename, subdir=True, unique=True)
-        if perm_pvalues_buffer:
-            self.dump_pickle(perm_pvalues_buffer, self.outdir,
-                             self.perm_pvalues_filename, subdir=True, unique=True)
-        if perm_tvalues_buffer:
-            self.dump_pickle(perm_tvalues_buffer, self.outdir,
-                             self.perm_tvalues_filename, subdir=True, unique=True)
-
-        # Print the process time.
-        run_time = int(time.time()) - start_time
-        run_time_min, run_time_sec = divmod(run_time, 60)
-        run_time_hour, run_time_min = divmod(run_time_min, 60)
-        print("Finished in  {} hour(s), {} minute(s) and "
-              "{} second(s)".format(int(run_time_hour),
-                                    int(run_time_min),
-                                    int(run_time_sec)))
-        print("Received {:.2f} analyses per minute".format(self.n_eqtls /
-                                                           (run_time / 60)))
-
-        # Shutdown the manager.
-        print("Shutting down manager [{}]".format(
-            datetime.now().strftime("%H:%M:%S")), flush=True)
+        return pvalue_buffer, tvalue_buffer, perm_pvalues_buffer, perm_tvalues_buffer
 
     @staticmethod
     def load_pickle(fpath):

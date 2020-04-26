@@ -3,7 +3,7 @@
 """
 File:         create_jobs.py
 Created:      2020/04/22
-Last Changed:
+Last Changed: 2020/04/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -50,11 +50,12 @@ class main():
         self.output_directory = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/jobs/"
         self.name_prefix = "CIA"
         self.time = "05:59:00"
+        self.exclude = None
         self.cores = 1
         self.mem = 2
-        self.count = 20
-        self.start_index = 1000
-        self.stop_index = 10000
+        self.count = 240
+        self.start_index = 12000
+        self.stop_index = 21078
         self.batch_size = 50
         self.samples = 3703
 
@@ -79,6 +80,10 @@ class main():
         if (self.cores - 1) > 0:
             cores = " -c {}".format(self.cores - 1)
 
+        exclude = ""
+        if self.exclude is not None:
+            exclude = "#SBATCH --exclude={}"
+
         lines = ["#!/bin/bash\n",
                  "#SBATCH --job-name={}\n".format(job_name),
                  "#SBATCH --output={}\n".format(out_filepath),
@@ -87,10 +92,10 @@ class main():
                  "#SBATCH --cpus-per-task={}\n".format(self.cores),
                  "#SBATCH --mem={}gb\n".format(self.mem),
                  "#SBATCH --nodes=1\n",
-                 "#SBATCH --exclude=umcg-node008\n",
                  "#SBATCH --open-mode=append\n",
                  "#SBATCH --export=NONE\n",
                  "#SBATCH --get-user-env=L\n",
+                 "{}\n".format(exclude),
                  "\n",
                  "module load Python/3.6.3-foss-2015b\n",
                  "source $HOME/venv/bin/activate\n",

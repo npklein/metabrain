@@ -8,15 +8,21 @@
     "covariates": "create_cov_matrix/covariates_table.txt.gz",
     "markers": "markers_table.txt.gz"
   },
-  "interaction_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/custom_interaction_analyser/output/interaction_table.txt.gz",
+  "interaction_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/custom_interaction_analyser/output_backup_single_core_jobs/interaction_table.txt.gz",
+  "interaction_tvalue_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/custom_interaction_analyser/output_backup_single_core_jobs/tvalue_table.txt.gz",
   "eqtl_celltype_datafile": "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/assign_eqtl_to_celltype/output/eQTLProbesFDR0.05-ProbeLevel-withCelltypes.txt.gz",
   "celltypes": ["Neuron", "Oligodendrocyte", "EndothelialCell", "Microglia", "Astrocyte"],
+  "colormap": {
+    "Neuron": "#9b59b6",
+    "Oligodendrocyte": "#3498db",
+    "EndothelialCell": "#e74c3c",
+    "Microglia": "#34495e",
+    "Astrocyte": "#2ecc71"},
   "cellmap_method_prefix_and_suffix": [
     ["CellMapPCA_", "_PC1"],
-    ["CellMapNMF_", "_C1"],
     ["CellMapNNLS_", ""]
     ],
   "marker_genes_prefix": "McKenzie_",
-  "significance_cutoff": 0.003,
+  "significance_cutoff": 1.93e-03,
   "output_dir": "output"
 }

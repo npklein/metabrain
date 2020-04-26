@@ -1,7 +1,7 @@
 """
 File:         inter_zscores_bars.py
 Created:      2020/03/16
-Last Changed: 2020/04/20
+Last Changed: 2020/04/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -50,6 +50,7 @@ class InterZscoreBars:
         # Extract the required data.
         print("Loading data")
         self.inter_df = dataset.get_inter_df()
+        self.z_score_cutoff = dataset.get_significance_cutoff()
 
     def start(self):
         print("Plotting interaction matrix z-scores as barplot.")
@@ -60,11 +61,10 @@ class InterZscoreBars:
         self.create_plots(data, "Positive ", "[>0]")
 
         print("Plotting significant z-scores.")
-        z_score_cutoff = stats.norm.ppf(0.05 / (self.inter_df.shape[0] * self.inter_df.shape[1]) / 2)
-        self.get_counts(lower_cutoff=z_score_cutoff, upper_cutoff=abs(z_score_cutoff))
+        self.get_counts(lower_cutoff=self.z_score_cutoff, upper_cutoff=abs(self.z_score_cutoff))
         self.create_plots(data, "Significant ",
-                          "[{:.2f} < x < {:.2f}]".format(z_score_cutoff,
-                                                         abs(z_score_cutoff)))
+                          "[{:.2f} < x < {:.2f}]".format(self.z_score_cutoff,
+                                                         abs(self.z_score_cutoff)))
 
     def get_counts(self, lower_cutoff=0, upper_cutoff=0):
         df = self.inter_df.copy()
@@ -118,7 +118,6 @@ class InterZscoreBars:
 
         # Plot.
         sns.set(rc={'figure.figsize': (12, max(0.1 * df.shape[0], 9))})
-        print((12, max(0.1 * df.shape[0], 9)))
         sns.set_style("ticks")
         fig, ax = plt.subplots()
         sns.despine(fig=fig, ax=ax)

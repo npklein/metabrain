@@ -3,7 +3,7 @@
 """
 File:         cellmap_profiles.py
 Created:      2020/04/06
-Last Changed:
+Last Changed: 2020/04/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -66,24 +66,42 @@ class main():
         print("\tLoaded dataframe: {} "
               "with shape: {}".format(os.path.basename(self.profile_path),
                                       df.shape))
+        df.columns = [x.split("_")[1] for x in df]
 
-        print("Filtering genes with 0 std")
-        df = df.loc[df.std(axis=1) > 0, :]
-        df = df.T
-        normalized_df = (df-df.mean()) / df.std()
+        # Convert the profile expression CPM to z-scores.
+        print("Normalize the data")
+        normalized_df = self.normalize(df).T
+        normalized_df.index.name = None
         print("\tNew shape: {}".format(normalized_df.shape))
 
+        # Color map.
+        colormap = {"Neuron": "#9b59b6", "Oligodendrocyte": "#3498db",
+                    "EndothelialCell": "#e74c3c", "Macrophage": "#34495e",
+                    "Astrocyte": "#2ecc71"}
+
+        # Assign colors.
+        col_colors = normalized_df.idxmax(axis=0).map(colormap)
+        col_colors.name = "cell type"
 
         sns.set(color_codes=True)
         g = sns.clustermap(normalized_df, center=0, cmap="RdBu_r",
                            yticklabels=True, xticklabels=False,
+                           col_colors=col_colors,
+                           dendrogram_ratio=(.1, .1),
                            figsize=(12, 9))
-        plt.setp(g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_ymajorticklabels(),
+        plt.setp(
+            g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_ymajorticklabels(),
                                          fontsize=10))
-        g.fig.suptitle('CellMap Profile')
+        g.fig.subplots_adjust(bottom=0.05, top=0.7)
         plt.tight_layout()
-        g.savefig(os.path.join(self.outdir, "cellmap_profile.png"))
+        g.savefig(os.path.join(self.outdir, "cellmap_sc_reference_profile.png"))
         plt.close()
+
+    @staticmethod
+    def normalize(df):
+        df = df.loc[df.std(axis=1) > 0, :]
+        df = df.subtract(df.mean(axis=1), axis=0).divide(df.std(axis=1), axis=0)
+        return df
 
 
 if __name__ == '__main__':

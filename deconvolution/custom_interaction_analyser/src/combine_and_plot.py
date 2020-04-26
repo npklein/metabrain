@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed: 2020/04/23
+Last Changed: 2020/04/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -88,13 +88,17 @@ class CombineAndPlot:
         start_time = time.time()
 
         # Combine the pickle files.
-        print("Loading data.", flush=True)
+        print("Loading pvalue data.", flush=True)
         pcolumns, pvalues_data = self.combine_pickles(self.outdir,
                                                       self.pvalues_outfile,
                                                       columns=True)
+
+        print("Loading tvalue data.", flush=True)
         tcolumns, tvalues_data = self.combine_pickles(self.outdir,
                                                       self.tvalues_outfile,
                                                       columns=True)
+
+        print("Loading permutation pvalue data.", flush=True)
         _, perm_pvalues = self.combine_pickles(self.outdir,
                                                self.perm_pvalues_outfile)
 
@@ -140,7 +144,10 @@ class CombineAndPlot:
                                                            pvalues,
                                                            perm_pvalues,
                                                            self.n_permutations)
-        print("\tPermutation significance cutoff: {:.2e}".format(perm_cutoff))
+        perm_n_signif = self.count_n_significant(pvalues, perm_cutoff)
+        print("\tPermutation FDR: {} p-values < signif. cutoff "
+              "{:.2e} [{:.2f}%]".format(perm_n_signif, perm_cutoff,
+                                        (100 / len(pvalues)) * perm_n_signif))
         # Write the output file.
         save_dataframe(df=perm_fdr_df,
                        outpath=os.path.join(self.outdir,
@@ -149,11 +156,16 @@ class CombineAndPlot:
 
         print("Creating Benjamini-Hochberg FDR dataframe.", flush=True)
         bh_fdr_df, bh_cutoff = self.create_bh_fdr_df(pvalue_df, pvalues)
-        print("\tBH significance cutoff: {:.2e}".format(bh_cutoff))
+        bh_n_signif = self.count_n_significant(pvalues, bh_cutoff)
+        print("\tBH FDR: {} p-values < signif. cutoff "
+              "{:.2e} [{:.2f}%]".format(bh_n_signif, bh_cutoff,
+                                        (100 / len(pvalues)) * bh_n_signif))
         save_dataframe(df=bh_fdr_df,
                        outpath=os.path.join(self.outdir,
                                             "bh_fdr_table.txt.gz"),
                        header=True, index=True)
+
+
 
         # pvalue_df = pd.read_csv(os.path.join(self.outdir, "pvalue_table.txt.gz"),
         #                         sep="\t", header=0, index_col=0)
@@ -429,6 +441,23 @@ class CombineAndPlot:
                 prev_fdr_value = fdr_value
 
         return fdr_df, max_signif_pvalue
+
+    @staticmethod
+    def count_n_significant(sorted_values, threshold):
+        """
+        Method to count the number of values in a sorted list lower than
+        a certain threshhold.
+
+        :param sorted_values: list, sorted list of numbers.
+        :param threshold: float, the cutoff to count the n values below.
+        :return i: int, the number of values < threshold
+        """
+        i = 0
+        for i, value in enumerate(sorted_values):
+            if value >= threshold:
+                break
+
+        return i
 
     def compare_pvalue_scores(self, pvalue_df, perm_fdr, bh_fdr, outdir,
                               max_val=1.0):

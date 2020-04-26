@@ -38,7 +38,7 @@ from .figures.deconvolution_zscore_comparison import DeconvolutionZscoreComparis
 from .figures.simple_eqtl_effect import SimpleeQTLEffect
 from .figures.inter_zscore_bars import InterZscoreBars
 from .figures.inter_zscore_dist import InterZscoreDist
-from .figures.inter_zscore_clustermap import InterZscoreClusterMap
+from .figures.inter_clustermap import InterClusterMap
 from .figures.inter_eqtl_zscore_bars import IntereQTLZscoreBars
 from .figures.inter_zscore_marker_genes import InterZscoreMarkerGenes
 from .figures.inter_eqtl_effect import IntereQTLEffect
@@ -88,7 +88,7 @@ class Main:
         ds = Dataset(settings=self.settings, nrows=self.n_eqtls)
         if self.validate:
             ds.load_all()
-        #
+
         # if ('covariate_comparison' in self.plots) or \
         #         ('all' in self.plots):
         #     print("\n### Covariate Comparison ###\n")
@@ -112,6 +112,8 @@ class Main:
         #     dcc.start()
         #     del dcc
         #
+        # exit()
+
         if ('deconvolution_zscore_comparison' in self.plots) or \
                 ('all' in self.plots):
             print("\n### DECONVOLUTION Z-SCORE COMPARISON ###\n")
@@ -127,6 +129,13 @@ class Main:
             sef.start()
             del sef
 
+        if ('inter_clustermap' in self.plots) or ('all' in self.plots):
+            print("\n### INTERACTION CLUSTERMAP ###\n")
+            icp = InterClusterMap(dataset=ds,
+                                  outdir=self.outdir)
+            icp.start()
+            del icp
+
         if ('inter_zscore_bars' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION Z-SCORE BARPLOT ###\n")
             izb = InterZscoreBars(dataset=ds,
@@ -141,19 +150,12 @@ class Main:
             izd.start()
             del izd
 
-        # if ('inter_zscore_marker_genes' in self.plots) or ('all' in self.plots):
-        #     print("\n### INTERACTION Z-SCORE MARKER GENES ###\n")
-        #     izmg = InterZscoreMarkerGenes(dataset=ds,
-        #                                   outdir=self.outdir)
-        #     izmg.start()
-        #     del izmg
-
-        if ('inter_zscore_clustermap' in self.plots) or ('all' in self.plots):
-            print("\n### INTERACTION Z-SCORE CLUSTERMAP ###\n")
-            izcp = InterZscoreClusterMap(dataset=ds,
-                                         outdir=self.outdir)
-            izcp.start()
-            del izcp
+        if ('inter_zscore_marker_genes' in self.plots) or ('all' in self.plots):
+            print("\n### INTERACTION Z-SCORE MARKER GENES ###\n")
+            izmg = InterZscoreMarkerGenes(dataset=ds,
+                                          outdir=self.outdir)
+            izmg.start()
+            del izmg
 
         if ('inter_eqtl_zscore_bars' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION EQTL Z-SCORE BARS ###\n")
