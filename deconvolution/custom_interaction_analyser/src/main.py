@@ -416,7 +416,7 @@ class Main:
         with open(fpath, "wb") as f:
             pickle.dump(content, f)
         f.close()
-        print("[manager]\t\tcreated {}".format(os.path.basename(fpath)))
+        print("\tcreated {}".format(os.path.basename(fpath)))
 
     def create_perm_orders(self):
         """
