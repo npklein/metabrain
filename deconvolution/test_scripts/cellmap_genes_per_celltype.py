@@ -94,6 +94,10 @@ class main():
         # expr_df = expr_df.set_index("Symbol")
         # expr_df.index.name = "-"
 
+        # Subset the expression genes in the cellmap reference profile.
+        expr_df = expr_df.loc[expr_df.index.isin(profile_df.index), :]
+        self.clustermap(expr_df, "all", self.outdir)
+
         # Find the genes specific to each celltype.
         gene_celltypes = self.normalize(profile_df).idxmax(axis=1)
 
@@ -102,17 +106,22 @@ class main():
             ct_genes = gene_celltypes[gene_celltypes == celltype].index
             ct_expr = expr_df.loc[expr_df.index.isin(ct_genes), :]
 
-            sns.set(color_codes=True)
-            g = sns.clustermap(ct_expr, center=0, cmap="RdBu_r",
-                               yticklabels=True, xticklabels=False,
-                               figsize=(12, (.2 * (len(ct_expr.index)))))
-            plt.setp(g.ax_heatmap.set_yticklabels(
-                g.ax_heatmap.get_ymajorticklabels(),
-                fontsize=10))
-            g.fig.suptitle('CellMap Profile {}'.format(celltype))
-            plt.tight_layout()
-            g.savefig(os.path.join(self.outdir, "{}_expresion_heatmap.png".format(celltype)))
-            plt.close()
+            self.clustermap(ct_expr, celltype, self.outdir)
+
+    @staticmethod
+    def clustermap(df, celltype, outdir):
+        sns.set(color_codes=True)
+        g = sns.clustermap(df, center=0, cmap="RdBu_r",
+                           yticklabels=False, xticklabels=False,
+                           figsize=(12, 9))
+        plt.setp(g.ax_heatmap.set_yticklabels(
+            g.ax_heatmap.get_ymajorticklabels(),
+            fontsize=10))
+        g.fig.suptitle('CellMap Profile {}'.format(celltype))
+        plt.tight_layout()
+        g.savefig(os.path.join(outdir,
+                               "{}_expresion_heatmap.png".format(celltype)))
+        plt.close()
 
     @staticmethod
     def normalize(df):

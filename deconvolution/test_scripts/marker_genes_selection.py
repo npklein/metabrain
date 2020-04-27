@@ -76,11 +76,11 @@ class main():
                                              "ast": "astrocyte"})
 
         colormap = {
-            "neuron": "#9b59b6",
-            "oligodendrocyte": "#3498db",
-            "endothelial cell": "#e74c3c",
-            "microglia": "#34495e",
-            "astrocyte": "#2ecc71"}
+            "neuron": "#b38d84",
+            "oligodendrocyte": "#5d9166",
+            "endothelial cell": "#f2a7a7",
+            "microglia": "#e8c06f",
+            "astrocyte": "#9b7bb8"}
 
         # Order.
         df.sort_values(["Celltype", "Cell_type_mentions"], inplace=True,

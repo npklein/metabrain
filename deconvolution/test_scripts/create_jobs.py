@@ -53,8 +53,8 @@ class main():
         self.exclude = None
         self.cores = 1
         self.mem = 2
-        self.count = 240
-        self.start_index = 12000
+        self.count = 0
+        self.start_index = 0
         self.stop_index = 21078
         self.batch_size = 50
         self.samples = 3703

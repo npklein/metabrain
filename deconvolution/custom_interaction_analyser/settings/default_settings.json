@@ -55,6 +55,6 @@
   "sleep_time_in_sec": 10,
   "print_interval_in_sec": 600,
   "max_time_unresponsive_in_min": 10,
-  "max_runtime_in_hours": 24,
+  "max_runtime_in_hours": 6,
   "panic_time_in_min": 5
 }
