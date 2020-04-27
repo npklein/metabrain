@@ -237,7 +237,7 @@ class Main:
 
             # Check if SNP index are identical.
             if genotype.name != expression.name:
-                print("Error: indices do not match", flush=True)
+                print("\tError: indices do not match", flush=True)
                 continue
 
             # Create the null model. Null model are all the technical
@@ -273,7 +273,7 @@ class Main:
                 cov_name = covarate.name
 
                 if self.verbose:
-                    print("Working on '{}'".format(cov_name), flush=True)
+                    print("\t\tWorking on '{}'".format(cov_name), flush=True)
 
                 # Add the covariate to the null matrix if it isn't already.
                 null_matrix = base_matrix.copy()
@@ -294,7 +294,7 @@ class Main:
                         break
 
                     if self.verbose:
-                        print("Working on 'order_{}'".format(order_id),
+                        print("\t\t\tWorking on 'order_{}'".format(order_id),
                               flush=True)
 
                     # Reorder the covariate based on the sample order.
@@ -318,7 +318,7 @@ class Main:
 
                     # Check if the drop is identical (see above).
                     if not inter_of_interest.index.equals(null_matrix.index):
-                        print("Error in permutation reordering "
+                        print("\t\t\tError in permutation reordering "
                               "(ID: {})".format(order_id), flush=True)
                         error = True
                         continue
@@ -344,7 +344,7 @@ class Main:
 
                     # Make sure the n's are identical.
                     if n_null != n_alt:
-                        print("Error due to unequal n_null and n_alt",
+                        print("\t\t\tError due to unequal n_null and n_alt",
                               flush=True)
                         error = True
                         continue
@@ -362,7 +362,7 @@ class Main:
 
                     # Check whether we are almost running out of time.
                     if time.time() > self.panic_time:
-                        print("Panic!!!", flush=True)
+                        print("\tPanic!!!", flush=True)
                         return pvalue_buffer, tvalue_buffer, perm_pvalues_buffer, perm_tvalues_buffer
 
             # Safe the results of the eQTL.

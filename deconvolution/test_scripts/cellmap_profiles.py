@@ -75,9 +75,9 @@ class main():
         print("\tNew shape: {}".format(normalized_df.shape))
 
         # Color map.
-        colormap = {"Neuron": "#9b59b6", "Oligodendrocyte": "#3498db",
-                    "EndothelialCell": "#e74c3c", "Macrophage": "#34495e",
-                    "Astrocyte": "#2ecc71"}
+        colormap = {"Neuron": "#b38d84", "Oligodendrocyte": "#5d9166",
+                    "EndothelialCell": "#f2a7a7", "Macrophage": "#e8c06f",
+                    "Astrocyte": "#9b7bb8"}
 
         # Assign colors.
         col_colors = normalized_df.idxmax(axis=0).map(colormap)
