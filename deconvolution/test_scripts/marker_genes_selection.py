@@ -34,6 +34,7 @@ import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 # Local application imports.
 
@@ -87,38 +88,47 @@ class main():
                        ascending=False)
         df['x'] = df.groupby('Celltype').cumcount()
 
-        # Plot.
+        print("Plotting.")
+        sns.set(rc={'figure.figsize': (10, 7.5)})
+        sns.set_style("ticks")
         fig, ax = plt.subplots()
         sns.despine(fig=fig, ax=ax)
-        sns.set(rc={'figure.figsize': (12, 9)})
-        sns.set_style("ticks")
 
         df1 = df.loc[df["x"] <= 5, :].copy()
         df2 = df.loc[df["x"] >= 5, :].copy()
         g = sns.lineplot(x="x", y="Cell_type_mentions", hue="Celltype",
-                         palette=colormap,
+                         palette=colormap, linewidth=2,
                          data=df1, ax=ax)
         sns.lineplot(x="x", y="Cell_type_mentions", hue="Celltype",
-                     data=df2, legend=False,
+                     data=df2, legend=False, linewidth=2,
                      palette={i: "#808080" for i in df2["Celltype"].unique()},
                      ax=ax)
         g.set(yscale="log")
-        ax.axvline(5, ls='--', color="#000000", zorder=-1)
 
         ax.text(0.5, 1.08, "Marker Gene - Cell Type Mentions",
-                fontsize=14, weight='bold', ha='center', va='bottom',
+                fontsize=20, weight='bold', ha='center', va='bottom',
                 transform=ax.transAxes)
         ax.text(0.5, 1.02, "McKenzie et al. 2018",
-                fontsize=12, alpha=0.75, ha='center', va='bottom',
+                fontsize=18, alpha=0.75, ha='center', va='bottom',
                 transform=ax.transAxes)
 
         g.set_ylabel("cell type mentions",
-                     fontsize=10,
+                     fontsize=16,
                      fontweight='bold')
-        g.set_xlabel("")
+        g.set_xlabel("index",
+                     fontsize=16,
+                     fontweight='bold')
 
-        ax.axes.xaxis.set_visible(False)
-        plt.legend(loc=1, prop={'size': 5})
+        for i in range(0, 5, 1):
+            ax.axhline(10**i, ls='-', color="#000000", alpha=0.15, zorder=-1)
+        ax.axvline(5, ls='--', color="#000000", zorder=-1)
+
+        handles = []
+        for celltype, color in colormap.items():
+            handles.append(mpatches.Patch(color=color, label=celltype))
+        plt.legend(handles=handles)
+
+        ax.tick_params(labelsize=12)
         plt.setp(ax.get_legend().get_texts(), fontsize='9')
         plt.setp(ax.get_legend().get_title(), fontsize='10', fontweight='bold')
         fig.savefig(os.path.join(self.outdir, "mckenzie_cell_type_mentions.png"))
