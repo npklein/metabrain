@@ -1,7 +1,7 @@
 """
 File:         covariates_explained_by_others.py
 Created:      2020/04/15
-Last Changed:
+Last Changed: 2020/04/28
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -156,7 +156,7 @@ class CovariatesExplainedByOthers:
             sns.barplot(x="value", y="index", data=df.iloc[a:b, :],
                         palette=subset["color"], orient="h", ax=ax)
 
-            new_ylabels = [x.replace(remove, '') for x in subset["index"]]
+            new_ylabels = [x.replace(remove, '').replace("_", " ") for x in subset["index"]]
             ax.set_yticklabels(new_ylabels, fontsize=10)
             ax.set_ylabel(ylabel, fontsize=16, fontweight='bold')
             ax.set_xlabel(xlabel, fontsize=16, fontweight='bold')

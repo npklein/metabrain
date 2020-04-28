@@ -178,13 +178,12 @@ class Main:
             ieed.start()
             del ieed
 
-        # if ('inter_eqtl_effect_marker_vs_comp' in self.plots) or ('all' in self.plots):
-        #     print("\n### INTERACTION EQTL EFFECT MARKER GENES VS COMPS ###\n")
-        #     ieemvc = IntereQTLEffectMarkerVSComp(dataset=ds,
-        #                                          outdir=self.outdir)
-        #     ieemvc.start()
-        #     del ieemvc
-
+        if ('inter_eqtl_effect_marker_vs_comp' in self.plots) or ('all' in self.plots):
+            print("\n### INTERACTION EQTL EFFECT MARKER GENES VS COMPS ###\n")
+            ieemvc = IntereQTLEffectMarkerVSComp(dataset=ds,
+                                                 outdir=self.outdir)
+            ieemvc.start()
+            del ieemvc
 
         if ('inter_eqtl_effect_celltype' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION EQTL EFFECT CELLTYPE ###\n")

@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed: 2020/04/26
+Last Changed: 2020/04/28
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -126,6 +126,12 @@ class CombineAndPlot:
                                             "interaction_table.txt.gz"),
                        header=True, index=True)
 
+        # pvalue_df = pd.read_csv(os.path.join(self.outdir, "pvalue_table.txt.gz"),
+        #                         sep="\t", header=0, index_col=0)
+        # with open(os.path.join(self.outdir, "perm_pvalues.pkl"), "rb") as f:
+        #     perm_pvalues = pickle.load(f)
+        # f.close()
+
         # Get the pvalues from the dataframe.
         pvalues = pvalue_df.melt()["value"].values
 
@@ -164,15 +170,6 @@ class CombineAndPlot:
                        outpath=os.path.join(self.outdir,
                                             "bh_fdr_table.txt.gz"),
                        header=True, index=True)
-
-
-
-        # pvalue_df = pd.read_csv(os.path.join(self.outdir, "pvalue_table.txt.gz"),
-        #                         sep="\t", header=0, index_col=0)
-        # perm_fdr_df = pd.read_csv(os.path.join(self.outdir, "perm_fdr_table.txt.gz"),
-        #                           sep="\t", header=0, index_col=0)
-        # bh_fdr_df = pd.read_csv(os.path.join(self.outdir, "bh_fdr_table.txt.gz"),
-        #                         sep="\t", header=0, index_col=0)
 
         # Compare the two pvalue scores.
         print("Creating score visualisation [1/2].", flush=True)
@@ -302,32 +299,26 @@ class CombineAndPlot:
         df = perm_pvalues_bins.merge(pvalues_bins, left_index=True, right_index=True)
         df.columns = ["perm_pvalues", "pvalues"]
         df = df.divide(df.sum())
-        df["sum"] = (df["pvalues"] + df["perm_pvalues"]) / 2
+        df["sum"] = (df["pvalues"] + df["perm_pvalues"]) - min(df["pvalues"])
         df["index"] = (bins[:-1] + bins[1:]) / 2
 
         sns.set(rc={'figure.figsize': (18, 9)})
         sns.set_style("ticks")
-        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, sharey=False)
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
         for i, ax in enumerate([ax1, ax2, ax3]):
-            left = True
-            if i == 0:
-                left = False
-            sns.despine(fig=fig, ax=ax, left=left)
-            ax.axes.xaxis.set_visible(False)
-            if left:
-                ax.axes.yaxis.set_visible(False)
+            sns.despine(fig=fig, ax=ax)
 
-            for i in range(0, 101, 5):
+            for i in range(0, 1001, 25):
                 alpha = 0.025
-                if i % 10 == 0:
+                if i % 50 == 0:
                     alpha = 0.15
-                ax.axhline(i / 100, ls='-', color="#000000",
+                ax.axhline(i / 1000, ls='-', color="#000000",
                            alpha=alpha, zorder=-1)
 
         sns.barplot(x="index", y="perm_pvalues", color='cornflowerblue', data=df, ax=ax1)
         sns.barplot(x="index", y="pvalues", color='firebrick', data=df, ax=ax2)
         sns.barplot(x="index", y="sum", color='firebrick', data=df, ax=ax3)
-        sns.barplot(x="index", y="perm_pvalues", color='cornflowerblue', data=df / 2, ax=ax3)
+        sns.barplot(x="index", y="perm_pvalues", color='cornflowerblue', data=df, ax=ax3)
 
         for ax, title in zip([ax1, ax2, ax3], ["Null", "Alternative", "Combined"]):
             ax.text(0.5, 1.02,
@@ -341,6 +332,15 @@ class CombineAndPlot:
                           fontsize=12,
                           fontweight='bold')
             ax.set_ylim(0, 0.35)
+
+            labels = ax.get_xticklabels()
+            new_labels = []
+            for i, label in enumerate(labels):
+                if (i == 0) or (i % 3 == 0) or (i == (len(labels) - 1)):
+                    new_labels.append("{:.2f}".format(float(label.get_text())))
+                else:
+                    new_labels.append("")
+            ax.set_xticklabels(new_labels, rotation=45)
 
         plt.tight_layout()
         fig.savefig(os.path.join(outdir, "pvalues_distributions.png"))
