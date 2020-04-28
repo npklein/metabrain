@@ -5,6 +5,7 @@ set -e
 set -u
 
 module load Python
+module load RPlus
 
 #### Only lines that should be changed ####
 # TMPDIR for writing files
@@ -32,6 +33,8 @@ name=
 n_eigenvectors=
 # qos when submitting to cluster
 qos=regular
+# ENSG to hgnc gzipped file (first column ENSG, 3rd column HNCG
+ensg_hgnc_file=
 ####
 
 main(){
@@ -57,10 +60,8 @@ main(){
     9_correlate_eigenvectors
     echo "10_GeneNetwork_predictions"
     10_GeneNetwork_predictions
-    echo "11_bonferonni_correction"
-    11_bonferonni_correction
-    echo "12_WebsiteMatrixCreator"
-    12_WebsiteMatrixCreator
+    echo "11_WebsiteMatrixCreator"
+    11_WebsiteMatrixCreator
 }
 
 
@@ -104,7 +105,7 @@ print_command_arguments(){
 }
 
 9_correlate_eigenvectors(){
-    output_file_step9="$output_dir/9_eigenvector_correlation_matrix/$name.eigenvectors.columnsRowsCenterScaled.correlation.txt"
+    output_file_step9="$output_dir/9_eigenvector_correlation_matrix/$name.${n_eigenvectors}_eigenvectors.columnsRowsCenterScaled.correlation.txt"
     if [ ! -f ${output_file_step9}.gz ];
     then
         echo "${output_file_step9}.gz does not exist yet, start step 9"
@@ -133,63 +134,165 @@ print_command_arguments(){
         cd -
     fi
 
+    python $github_dir/GeneNetwork/table_scripts/remove_gene_version.py $output_dir/7_evd_on_correlation_matrix/${name}.eigenvectors.${n_eigenvectors}_eigenvectors.txt
+
     mkdir -p  $output_dir/10_GeneNetwork_predictions/scripts/
+    job_ids=()
+    outfiles=()
+    # if all output files already made we have to keep track, so a later step can be skipped
+    at_least_1_job_submitted=false
+    cd $output_dir/10_GeneNetwork_predictions/scripts/
     for f in $github_dir/GeneNetwork/GeneNetworkBackend/PathwayMatrix/*matrix.txt;
     do
+        echo "Start predicting with $f"
         matrix_name=$(basename ${f%_matrix.txt})
+        matrix_name=${matrix_name%.matrix.txt}
         mkdir -p $output_dir/10_GeneNetwork_predictions/scripts/
-        outfile="$output_dir/10_GeneNetwork_predictions/${matrix_name}.predictions.txt"
-        if [ ! -f $outfile ];
+        outfile="$output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.txt"
+        echo $matrix_name
+        echo $outfile
+        if [ ! -f $outfile ] && [ ! -f ${outfile}.gz ];
         then
-            rsync -vP $github_dir/GeneNetwork/scripts_per_step/10_GeneNetwork_predictions.sh $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.predictions.sh
-            sed -i "s;REPLACENAME;${matrix_name}.predictions;" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.predictions.sh
-            sed -i "s;REPLACEGENENETWORKDIR;${gene_network_dir};" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.predictions.sh
-            sed -i "s;REPLACEIDENTITYMATRIX;$f;" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.predictions.sh
-            sed -i "s;REPLACEEIGENVECTORS;$output_dir/7_evd_on_correlation_matrix/${name}.eigenvectors.${n_eigenvectors}_eigenvectors.txt;" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.predictions.sh
-            sed -i "s;REPLACEOUT;$outfile;" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.predictions.sh
-            sed -i "s;REPLACEBACKGROUND;${f%matrix.txt}genesInPathways.txt;" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.predictions.sh
-            sed -i "s;REPLACEMEM;${mem};g" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.predictions.sh
-            sed -i "s;REPLACEQOS;${qos};" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.predictions.sh
-            cd $output_dir/10_GeneNetwork_predictions/scripts/
-            jobid=$(sbatch --parsable ${matrix_name}.predictions.sh)
-            echo "job submitted (jobid=$jobid), check if job is running, if so sleep for 10 minutes"
-            startDate=`date`
+            at_least_1_job_submitted=true
+            rsync -vP $github_dir/GeneNetwork/scripts_per_step/10_GeneNetwork_predictions.sh $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
+            sed -i "s;REPLACENAME;${matrix_name}.${n_eigenvectors}_eigenvectors.predictions;g" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
+            sed -i "s;REPLACEGENENETWORKDIR;${gene_network_dir};" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
+            sed -i "s;REPLACEIDENTITYMATRIX;$f;" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
+            sed -i "s;REPLACEEIGENVECTORS;$output_dir/7_evd_on_correlation_matrix/${name}.eigenvectors.${n_eigenvectors}_eigenvectors.txt;g" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
+            sed -i "s;REPLACEOUT;$outfile;" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
+            sed -i "s;REPLACEBACKGROUND;${f%matrix.txt}genesInPathways.txt;g" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
+            sed -i "s;REPLACEMEM;${mem};g" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
+            sed -i "s;REPLACEQOS;${qos};" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
+            job_ids+=("$(sbatch --parsable ${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh)")
+            outfiles+=("$outfile")
+        else
+            echo "$output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.txt exists, skip"
+        fi
+    done
 
-            while [ ! $(squeue -j $jobid | wc -l) -eq 0 ];
+    if [ "$at_least_1_job_submitted" = true ];
+    then
+        echo "sumbitted ${#job_ids[@]} jobs, with job ids ${job_ids}"
+        echo "will loop over all jobs, and wait for each until it is finished"
+        startDate=`date`
+        for jobid in ${job_ids[@]};
+        do
+            echo "Checking if job $jobid is running, if so sleep for 10 minutes"
+            while [ ! $(squeue -j $jobid 2>/dev/null | wc -l ) -le 1 ];
             do
                 echo "--------------------------------"
                 echo "sbatch starting time: $startDate"
                 echo "current time: `date`"
-                echo "Job still running. Sleep 2 minutes"
+                echo "Job $jobid still running. Sleep 2 minutes"
                 sleep 120;
             done
             echo "Done!"
+        done
+        for outfile in ${outfiles[@]};
+        do
             if [ ! -f $outfile ];
             then
                 echo "ERROR: Outputfile $outfile does not exist, check if job exited with an error"
                 exit 1;
             fi
-            grep AUC $name.out | cut -f2,7,11,13 >> ${outfile%.txt}.AUC.txt;
-            cd -
+        done
+    else
+        echo "All output files exist"
+    fi
+    cd -
+
+    for f in $github_dir/GeneNetwork/GeneNetworkBackend/PathwayMatrix/*terms.txt;
+    do
+        matrix_name=$(basename ${f%_terms.txt})
+        matrix_name=${matrix_name%.terms.txt}
+        auc="${output_dir}/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.txt"
+        if [ ! -f $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt ];
+        then
+            Rscript ${github_dir}/GeneNetwork/table_scripts/calculate_bonferonni.R \
+                                          -i $auc \
+                                          -o $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt \
+                                          -t $f
+        fi
+        outfile=$output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.bonSigOnly.txt
+        if [ ! -f $outfile ];
+        then
+            bash ${github_dir}/GeneNetwork/scripts_per_step/11_select_columns.sh -g ${github_dir}/GeneNetwork/ \
+                                                                             -a $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt \
+                                                                             -c $github_dir/GeneNetwork/config_file_templates/ \
+                                                                             -p $project_dir \
+                                                                             -q $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.txt \
+                                                                             -o $outfile
         fi
     done
+
 }
 
-11_bonferonni_correction(){
-    echo "!!!not implemented correctly yet!!!"
-    exit 1;
-}
 
 11_WebsiteMatrixCreator(){
-    echo "!!!not implemented correctly yet!!!"
-    exit 1;
+    echo "# Copy the commented files to your local machine where you cloned molgenis-app-genenetwork in a separate data/ directory, then run this code" > $output_dir/11_ImportToWebsite/populate_database.sh
+    for f in $github_dir/GeneNetwork/GeneNetworkBackend/PathwayMatrix/*.matrix.txt;
+    do
+        matrix_name=$(basename ${f%.matrix.txt})
+        matrix_name=${matrix_name%_matrix.txt}
+        echo $output_dir/11_ImportToWebsite/${matrix_name}.${n_eigenvectors}_eigenvectors_gnInputFormat.txt
+        if [ ! -f $output_dir/11_ImportToWebsite/${matrix_name}.${n_eigenvectors}_eigenvectors.matrix_gnInputFormat.txt ];
+        then
+            bash ${github_dir}/GeneNetwork/scripts_per_step/12_GeneNetwork_WebsiteMatrixCreator.sh  -i $f \
+                                                                                                    -t $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonSigTerms.txt \
+                                                                                                    -a $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt \
+                                                                                                    -z $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.bonSigOnly.txt \
+                                                                                                    -o $output_dir/11_ImportToWebsite/ \
+                                                                                                    -g $github_dir/GeneNetwork/ \
+                                                                                                    -c $github_dir/GeneNetwork/config_file_templates/ \
+                                                                                                    -p $project_dir
+        fi
+        echo "# $github_dir/GeneNetwork/GeneNetworkBackend/PathwayMatrix/${matrix_name}.${n_eigenvectors}_eigenvectors.matrix.txt" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+        echo "# $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonSigTerms.txt" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+        echo "# $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+        echo "# $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.bonSigOnly.txt" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+        echo "# $github_dir/GeneNetwork/GeneNetworkBackend/PathwayMatrix/${matrix_name}.${n_eigenvectors}_eigenvectors.matrix.txt" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+        echo "# $output_dir/11_ImportToWebsite/*" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+    done
+    today=$(date +"%Y-%m-%d")
+    if [ ! -f $output_dir/${today}-list_of_genes.txt ]
+    then
+        echo "extract list of genes"
+        awk '{print $1}' $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.bonSigOnly.txt | tail -n+2 > $output_dir/${today}-list_of_genes.${n_eigenvectors}_eigenvectors.txt
+    fi
+    echo "# $output_dir/list_of_genes.txt" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+
+    echo "# $ensg_hgnc_file" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+    echo "# $output_dir/7_evd_on_correlation_matrix/$name.eigenvectors.${n_eigenvectors}_eigenvectors.txt.gz" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+    echo "# ${output_file_step8}" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+    echo "set -e" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+    echo "set -u" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+
+    for f in $github_dir/GeneNetwork/GeneNetworkBackend/PathwayMatrix/*${n_eigenvectors}_eigenvectors.terms.txt;
+    do
+        matrix_name=$(basename ${f%_terms.txt})
+        matrix_name=${matrix_name%.terms.txt}
+        echo "### $matrix_name ###" >> $output_dir/11_ImportToWebsite/populate_database.sh
+        echo "bash data_scripts/populate.sh \\" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+        echo "  -d /data/$name/ \\" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+        echo "  -g data/list_of_genes.${n_eigenvectors}_eigenvectors.txt \\" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+        echo "  -e data/$(basename $ensg_hgnc_file) \\" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+        echo "  -b ${matrix_name} \\" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+        echo "  -t data/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonSigTerms.txt \\" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+        echo "  -i data/${matrix_name}.${n_eigenvectors}_eigenvectors.matrix.txt \\" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+        echo "  -z data/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.bonSigOnly.txt \\" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+        echo "  -a data/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt \\" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+        echo "  -c data/$name.eigenvectors.${n_eigenvectors}_eigenvectors.txt.gz \\" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+        echo "  -n $n_eigenvectors" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+    done
+
+    echo "Done making all backend files. copy $output_dir/11_ImportToWebsite/populate_database.sh to your local machine to make the webserver"
 }
 
 usage(){
     # print the usage of the programme
     programname=$0
     echo "usage: $programname -t TMPDIR -o output_dir -p project_dir"
-    echo "                    -j jar_dir -g github_dir -v threads"
+    echo "                    -j jar_dir -g github_dir -v threads -e ensg_hgnc_file"
     echo "                    -d GeneNetworkDir -n name -m mem -z n_eigenvectors [-q qos]"
     echo "  -t      TMPDIR where files will be written during runtime"
     echo "  -e      Expression file"
@@ -205,6 +308,7 @@ usage(){
     echo "  -n      Name that will be used in output file. Needs to be same as for the previous script!"
     echo "  -z      Number of eigenvectors to use"
     echo "  -q      qos to use when submitting to cluster"
+    echo "  -e      file with 1st column ensg ID, 3rd column HNGC symbol"
     echo "  -h      display help"
     exit 1
 }
@@ -255,6 +359,9 @@ parse_commandline(){
                                             ;;
             -q | --qos )                    shift
                                             qos=$1
+                                            ;;
+            -e | --ensg_hgnc_file )         shift
+                                            ensg_hgnc_file=$1
                                             ;;
             -h | --help )                   usage
                                             exit
@@ -324,6 +431,12 @@ parse_commandline(){
     if [ -z "$n_eigenvectors" ];
     then
         echo "ERROR: -z/--n_eigenvectors not set!"
+        usage
+        exit 1;
+    fi
+    if [ -z "$ensg_hgnc_file" ];
+    then
+        echo "ERROR: -e/--ensg_hgnc_file not set!"
         usage
         exit 1;
     fi

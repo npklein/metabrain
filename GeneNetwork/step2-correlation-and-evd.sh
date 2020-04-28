@@ -256,7 +256,7 @@ print_command_arguments(){
         echo "job submitted (jobid=$jobid), check if job is running, if so sleep for 10 minutes"
         startDate=`date`
 
-        while [ ! $(squeue -j $jobid | wc -l) -eq 0 ];
+        while [ ! $(squeue -j $jobid 2> /dev/null | wc -l) -le 1 ];
         do
             echo "--------------------------------"
             echo "sbatch starting time: $startDate"

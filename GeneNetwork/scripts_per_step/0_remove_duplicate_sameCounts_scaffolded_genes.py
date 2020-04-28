@@ -6,6 +6,7 @@ parser = argparse.ArgumentParser(description='Remove genes from expression file 
 parser.add_argument('-g','--gtf', help='GTF file')
 parser.add_argument('-e','--expression_file', help='expression file from which to filter genes')
 parser.add_argument('-o','--outfile', help='Outfile to write')
+parser.add_argument('-v','--version', action='store_true', help='Genes have versions', default=False)
 
 args = parser.parse_args()
 
@@ -32,6 +33,8 @@ def parse_gtf():
             if line[2] != 'gene':
                 continue
             gene_id = line[8].split('gene_id "')[1].split('"')[0]
+            if not args.version:
+                gene_id = gene_id.split('.')[0]
             chr = line[0]
             if gene_id not in gene_chr:
                 gene_chr[gene_id] = set()

@@ -7,7 +7,7 @@ set -u
 project_dir=
 outdir=
 config_templates=
-jardir=
+github_dir=
 identity_matrix=
 term_file=
 auc_file=
@@ -16,17 +16,17 @@ main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
 
-    rsync -vP $config_templates/10_config_GeneNetwork.WebsiteMatrixCreator_Server.json $project_dir/configs/
+    rsync -vP $config_templates/12_config_GeneNetwork.WebsiteMatrixCreator_Server.json $project_dir/configs/
 
-    sed -i "s;REPLACETERMFILE;$term_file;" $project_dir/configs/10_config_GeneNetwork.WebsiteMatrixCreator_Server.json
-    sed -i "s;REPLACEIDENTITY;$identity_matrix;" $project_dir/configs/10_config_GeneNetwork.WebsiteMatrixCreator_Server.json
-    sed -i "s;REPLACEAUC;$auc_file;" $project_dir/configs/10_config_GeneNetwork.WebsiteMatrixCreator_Server.json
-    sed -i "s;REPLACEZSCORE;$zscore_matrix;" $project_dir/configs/10_config_GeneNetwork.WebsiteMatrixCreator_Server.json
-    sed -i "s;REPLACEOUTDIR;$outdir;" $project_dir/configs/10_config_GeneNetwork.WebsiteMatrixCreator_Server.json
+    sed -i "s;REPLACETERMFILE;$term_file;" $project_dir/configs/12_config_GeneNetwork.WebsiteMatrixCreator_Server.json
+    sed -i "s;REPLACEIDENTITY;$identity_matrix;" $project_dir/configs/12_config_GeneNetwork.WebsiteMatrixCreator_Server.json
+    sed -i "s;REPLACEAUC;$auc_file;" $project_dir/configs/12_config_GeneNetwork.WebsiteMatrixCreator_Server.json
+    sed -i "s;REPLACEZSCORE;$zscore_matrix;" $project_dir/configs/12_config_GeneNetwork.WebsiteMatrixCreator_Server.json
+    sed -i "s;REPLACEOUTDIR;$outdir;" $project_dir/configs/12_config_GeneNetwork.WebsiteMatrixCreator_Server.json
 
     mkdir -p $(dirname $outdir)
 
-    java -jar $jardir/RunV13.jar $project_dir/configs/9_config_MatrixScripts.GetCols_server.json
+    java -jar $github_dir/RunV13.jar $project_dir/configs/12_config_GeneNetwork.WebsiteMatrixCreator_Server.json
 
 
 }
@@ -34,12 +34,12 @@ main(){
 usage(){
     # print the usage of the programme
     programname=$0
-    echo "usage: $programname -i identity_matrix -t term_file -a auc_file -z zscore_matrix -p project_directory -o output_dir -j jardir"
+    echo "usage: $programname -i identity_matrix -t term_file -a auc_file -z zscore_matrix -p project_directory -o output_dir -g githib_dir"
     echo "  -i      Identitiy matrix"
     echo "  -p      Base of the project_dir where config files will be written"
     echo "  -o      Output directory that will be written"
     echo "  -c      Dir with configuration template files"
-    echo "  -j      Location of V13 jar file"
+    echo "  -g      Location of V13 jar file"
     echo "  -h      display help"
     exit 1
 }
@@ -76,8 +76,8 @@ parse_commandline(){
             -c | --config_templates )   shift
                                         config_templates=$1
                                         ;;
-            -j | --jardir )             shift
-                                        jardir=$1
+            -g | --github_dir )         shift
+                                        github_dir=$1
                                         ;;
             -h | --help )               usage
                                         exit
@@ -126,9 +126,9 @@ parse_commandline(){
         usage
         exit 1;
     fi
-    if [ -z "$jardir" ];
+    if [ -z "$github_dir" ];
     then
-        echo "ERROR: -j/--jardir not set!"
+        echo "ERROR: -g/--github_dir not set!"
         usage
         exit 1;
     fi

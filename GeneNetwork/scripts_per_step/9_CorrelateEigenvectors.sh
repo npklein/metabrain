@@ -17,18 +17,20 @@ main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
 
-    rsync -vP $config_templates/6_CorrelationMatrix.json $project_dir/configs/9_CorrelateEigenvectors.json
-
-    sed -i "s;REPLACEEXPRFILE;$eigenvector_file;" $project_dir/configs/9_CorrelateEigenvectors.json
-    sed -i "s;REPLACEOUTFILE;$outfile;" $project_dir/configs/9_CorrelateEigenvectors.json
-    sed -i "s;REPLACETHREADS;$threads;" $project_dir/configs/9_CorrelateEigenvectors.json
+    eigname=$(basename $eigenvector_file)
+    eigname=${eigname%.gz}
+    eigname=${eigname%.txt}
+    rsync -vP $config_templates/6_CorrelationMatrix.json $project_dir/configs/9_CorrelateEigenvectors.$eigname.json
+    sed -i "s;REPLACEEXPRFILE;$eigenvector_file;" $project_dir/configs/9_CorrelateEigenvectors.$eigname.json
+    sed -i "s;REPLACEOUTFILE;$outfile;" $project_dir/configs/9_CorrelateEigenvectors.$eigname.json
+    sed -i "s;REPLACETHREADS;$threads;" $project_dir/configs/9_CorrelateEigenvectors.$eigname.json
     mkdir -p $(dirname $outfile)
 
     echo "Starting sbatch with:"
     echo "#!/bin/bash
-#SBATCH --job-name=correlation
-#SBATCH --output=$(dirname $outfile)/correlation.out
-#SBATCH --error=$(dirname $outfile)/correlation.err
+#SBATCH --job-name=correlation_$eigname
+#SBATCH --output=$(dirname $outfile)/correlation_$eigname.out
+#SBATCH --error=$(dirname $outfile)/correlation_$eigname.err
 #SBATCH --time=05:59:59
 #SBATCH --cpus-per-task $threads
 #SBATCH --mem ${mem}b
@@ -36,35 +38,36 @@ main(){
 #SBATCH --qos $qos
 
 ml Java;
-java -Xmx$mem -Xms$mem -jar $github_dir/RunV13.jar $project_dir/configs/9_CorrelateEigenvectors.json
+java -Xmx$mem -Xms$mem -jar $github_dir/RunV13.jar $project_dir/configs/9_CorrelateEigenvectors.$eigname.json
 
 if [ $? -eq 0 ];
 then
     echo "success!"
-    touch $(dirname $outfile)/correlation.finished
+    touch $(dirname $outfile)/correlation_$eigname.finished
 else
     echo "error!"
     exit 1;
 fi
 
-" > $(dirname $outfile)/correlation.sh
+" > $(dirname $outfile)/correlation_$eigname.sh
 
     echo "start sbatch with:"
-    echo "sbatch $(dirname $outfile)/correlation.sh"
-    sbatch $(dirname $outfile)/correlation.sh
+    echo "sbatch $(dirname $outfile)/correlation_$eigname.sh"
+    sbatch $(dirname $outfile)/correlation_$eigname.sh
 
     echo "sleep 2 minutes before checking if correlation is done"
     dt=$(date '+%d/%m/%Y %H:%M:%S');
     echo "$dt"
     sleep 120
     echo "done sleeping, check again"
-    while [ ! -f $(dirname $outfile)/correlation.finished ]
+    while [ ! -f $(dirname $outfile)/correlation_$eigname.finished ]
     do
-      echo "$(dirname $outfile)/correlation.finished does not exist yet"
+      echo "$(dirname $outfile)/correlation_$eigname.finished does not exist yet"
       echo "sleep 2 minutes before checking again"
       dt=$(date '+%d/%m/%Y %H:%M:%S');
       echo "$dt"
       sleep 120
+      echo "----------------------------------"
       echo "done sleeping, check again"
     done
 
@@ -73,7 +76,10 @@ fi
         echo "ERROR: $outfile not made!"
         exit 1;
     fi
+    echo "finished, gzip the output file (can take some time)"
     gzip $outfile
+    echo "done gzipping"
+
 }
 
 usage(){

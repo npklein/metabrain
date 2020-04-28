@@ -1,6 +1,9 @@
 #!/bin/bash
 # This runs the complete GeneNetwork processing pipeline
 
+# TODO: because after PCA and smaple removal this has to be rerun, the removing duplicate
+#       samples is in double for the second round. Can organize this better
+
 set -e
 set -u
 
@@ -25,6 +28,8 @@ gtf=
 sample_file=
 # memory to use when doing normalization, PCA etc
 mem=
+# Current step
+step=
 ####
 
 main(){
@@ -76,7 +81,7 @@ print_command_arguments(){
 
 1_select_samples(){
     # Step 1. Select samples from expression file
-    new_output_file_step1=$output_dir/1_selectSamples/$(basename ${outfile_step0%.txt.gz})_extractedColumnsnoVarianceRowsRemoved.txt.gz
+    new_output_file_step1=$output_dir/1_selectSamples_$step/$(basename ${outfile_step0%.txt.gz})_extractedColumnsnoVarianceRowsRemoved.txt.gz
     echo $new_output_file_step1
     if [ ! -f ${new_output_file_step1} ]
     then
@@ -84,15 +89,15 @@ print_command_arguments(){
         bash $github_dir/GeneNetwork/scripts_per_step/1_select_samples.sh \
             -e $outfile_step0 \
             -p $project_dir \
-            -o $TMPDIR/1_selectSamples/ \
+            -o $TMPDIR/1_selectSamples_$step/ \
             -c $github_dir/GeneNetwork/config_file_templates/ \
             -g $github_dir/GeneNetwork/ \
             -s $sample_file
         # input of next file expect postfix of extractedColumnsnoVarianceRowsRemoved.txt.gz but is extractedColumns_noVarRemoved.txt.gz
         # change this
-        f1=$output_dir/1_selectSamples/$(basename ${outfile_step0%.txt.gz})_extractedColumns_noVarRemoved.txt.gz
-        echo  "mv $TMPDIR/1_selectSamples/ $output_dir/"
-        mv $TMPDIR/1_selectSamples/ $output_dir/
+        f1=$output_dir/1_selectSamples_$step/$(basename ${outfile_step0%.txt.gz})_extractedColumns_noVarRemoved.txt.gz
+        echo  "mv $TMPDIR/1_selectSamples_$step/ $output_dir/"
+        mv $TMPDIR/1_selectSamples_$step/ $output_dir/
         mv $f1 $new_output_file_step1
         if [ ! -f ${new_output_file_step1} ];
         then
@@ -105,7 +110,7 @@ print_command_arguments(){
 2_remove_duplicate_samples(){
     # We have some ENA samples in our data, so run for duplicates. Add the relevant input files to the config file
     # Step 2. remove duplicates
-    output_file_step2="${output_dir}/2_removeDuplicates/$(basename ${expression_file%.txt.gz}).duplicateSamplesRemoved_extractedColumns.txt.gz"
+    output_file_step2="${output_dir}/2_removeDuplicates_$step/$(basename ${expression_file%.txt.gz}).duplicateSamplesRemoved_extractedColumns.txt.gz"
     if [ ! -f ${output_file_step2} ];
     then
         echo "start step 2"
@@ -124,7 +129,7 @@ print_command_arguments(){
 3_quantileNormalized(){
     # Step 3. calculate PCs of quantile normalized data. Do visual inspection, if samples need to be removed, rerun with different sample file as input
     # and remake the PC plot. Repeat until no outliers are left over. Then go to next step of GeneNetwork
-    output_file_step3=$output_dir/3_quantileNormalized/$(basename ${output_file_step2%.txt.gz}.QuantileNormalized.txt.gz)
+    output_file_step3=$output_dir/3_quantileNormalized_$step/$(basename ${output_file_step2%.txt.gz}.QuantileNormalized.txt.gz)
     if [ ! -f $output_dir/pca.png ];
     then
        bash $github_dir/GeneNetwork/scripts_per_step/3_PCA_on_quantNormalizedData.sh \
@@ -142,7 +147,7 @@ print_command_arguments(){
 #       sed -i "s;REPLACEPRECOR;$TMPDIR/3_quantileNormalized/pre_Correlation_Or_Covariance.txt;" $TMPDIR/3_quantileNormalized/run_PCA.sh
 #       sbatch --wait $TMPDIR/3_quantileNormalized/run_PCA.sh
 #       wait
-        mv $TMPDIR/3_quantileNormalized/ $output_dir/
+        mv $TMPDIR/3_quantileNormalized_$step/ $output_dir/
     fi
 }
 
@@ -151,12 +156,15 @@ usage(){
     # print the usage of the programme
     programname=$0
     echo "usage: $programname \\"
-    echo "                    -t TMPDIR -e expression_file \\"
+    echo "                    -t TMPDIR -e expression_file\\"
+    echo "                    -s sample_file -q step \\"
     echo "                    -o output_dir -p project_dir \\"
     echo "                    -j jar_dir -g github_dir -m mem \\"
     echo "                    -d GeneNetworkDir -q quant_norm (default: false)"
     echo "  -t      TMPDIR where files will be written during runtime"
     echo "  -e      Expression file"
+    echo "  -s      File with list of samples to include (exclude all others)"
+    echo "  -q      Current step, e.g. 1a or 1b. This way can distinguish between multiple PCA rounds"
     echo "  -p      Base of the project_dir where config files will be written"
     echo "  -o      Output directory where results will be written"
     echo "  -j      Location of RunV13.jar and RunV13.jar"
@@ -204,6 +212,9 @@ parse_commandline(){
                                             ;;
             -s | --sample_file )            shift
                                             sample_file=$1
+                                            ;;
+            -q | --step )                   shift
+                                            step=$1
                                             ;;
             -m | --mem )                    shift
                                             mem=$1
@@ -264,6 +275,12 @@ parse_commandline(){
     if [ -z "$sample_file" ];
     then
         echo "ERROR: -s/--sample_file not set!"
+        usage
+    exit 1;
+    fi
+    if [ -z "$step" ];
+    then
+        echo "ERROR: -q/--step not set!"
         usage
     exit 1;
     fi
