@@ -11,6 +11,7 @@ ml Java
 
 set -e
 set -u
+
 mkdir -p $(dirname REPLACEOUT)
 
 remove=false
@@ -21,18 +22,17 @@ then
     remove=true
 fi
 
+# have to make sure that the input background genes are only genes that are also in eigenvectors
+comm -1 -2 <(awk '{print $1}' REPLACEEIGENVECTORS | sort) <(sort REPLACEBACKGROUND) > $(basename REPLACEBACKGROUND.onlyInEigenvector.txt)
+
 java -jar -XmsREPLACEMEM -XmxREPLACEMEM REPLACEGENENETWORKDIR/GeneNetworkBackend-1.0.7-SNAPSHOT-jar-with-dependencies.jar \
   -e REPLACEEIGENVECTORS \
   -p REPLACEIDENTITYMATRIX \
-  -b REPLACEBACKGROUND \
+  -b $(basename REPLACEBACKGROUND.onlyInEigenvector.txt) \
   -o REPLACEOUT
 
 touch REPLACENAME.finished
 
 
-if [ "$remove" = true ];
-then
-    echo "Removing unzipped eigenvector file"
-    rm REPLACEEIGENVECTORS
-fi
 
+grep AUC REPLACENAME.out | cut -f2,7,11,13 >> $(dirname REPLACEOUT)/REPLACENAME.AUC.txt;

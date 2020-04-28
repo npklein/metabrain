@@ -1,7 +1,7 @@
 archive/
-2020-03-20-idmapping_selected.tab.gz
-2020-03-25-Ensembl2Reactome_All_Levels.txt.gz
-2020-03-25-c2.cp.kegg.v7.0.entrez.gmt.gz
+*-idmapping_selected.tab.gz
+*-Ensembl2Reactome_All_Levels.txt.gz
+*-c2.cp.kegg.v7.0.entrez.gmt.gz
 PathwayMatrix/
-2020-03-25-goa_human.gaf.gz
-2020-03-25-HPO-phenotype-to-genes.txt.gz
+*-goa_human.gaf.gz
+*-HPO-phenotype-to-genes.txt.gz
