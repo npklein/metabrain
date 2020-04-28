@@ -31,14 +31,15 @@ if not os.path.exists(input_file_name):
     with open(input_file_name.rstrip('.gz'), 'rb') as f_in, gzip.open(input_file_name, 'wb') as f_out:
         f_out.writelines(f_in)
 
-    os.remove(input_file.rstrip('.gz'))
+    os.remove(input_file_name.rstrip('.gz'))
+outfile = 'PathwayMatrix/'+input_file_name.replace('.txt.gz','')+'.matrix.txt'
 
 pathway_genes = {}
 pathways = set([])
 print('Start reading '+input_file_name)
 mapped = 0
 not_mapped = 0
-with  gzip.open(input_file_name,'rt') as input_file:
+with gzip.open(input_file_name,'rt') as input_file, open(outfile.replace('matrix.txt','terms.txt'),'w') as out:
     input_file.readline()
     for line in input_file:
         line = line.strip().split('\t')
@@ -51,14 +52,17 @@ with  gzip.open(input_file_name,'rt') as input_file:
             pathway_genes[pathway].add(ncbi_to_ensembl[ncbi_gene])
         else:
             not_mapped += 1
+        if pathway not in pathways:
+            out.write(pathway+'\thttp://www.human-phenotype-ontology.org/hpoweb/showterm?id='+pathway+'\t'+line[1]+'\n')
         pathways.add(pathway)
+        
+exit()
 print('Could not map ID',not_mapped,'times')
 print('Could map ID',mapped,'times')
 
 print('done')
 
 pathways = sorted(pathways)
-outfile = 'PathwayMatrix/'+input_file_name.replace('.txt.gz','')+'.matrix.txt'
 print('start writing matrix')
 with open(args.ordered_gene_list) as input_file, open(outfile,'w') as out, open(outfile.replace('matrix.txt','genesInPathways.txt'),'w') as out2:
     out.write(today)

@@ -37,19 +37,20 @@ if not os.path.exists(input_file):
 
 pathway_genes = {}
 pathways = set([])
+outfile = 'PathwayMatrix/'+today+'-c2.cp.kegg.v'+args.kegg_version+'.matrix.txt'
 
 print('Start reading '+input_file)
-with  gzip.open(input_file,'rt') as input_file:
+with  gzip.open(input_file,'rt') as input_file, open(outfile.replace('matrix.txt','terms.txt'),'w') as out:
     for line in input_file:
         line = line.strip().split('\t')
-        pathway = ' '.join(line[0].replace('KEGG_','').lower().split('_')).capitalize()
+        pathway = line[0] #' '.join(line[0].replace('KEGG_','').lower().split('_')).capitalize()
+        out.write(pathway+'\t'+line[1]+'\t'+' '.join(pathway.lower().replace('kegg_','').split('_')).capitalize()+'\n')
         ncbi_genes = line[2:]
         pathway_genes[pathway] = set([ncbi_to_ensembl[x] for x in ncbi_genes if x in ncbi_to_ensembl])
         pathways.add(pathway)
 print('done')
 
 pathways = sorted(pathways)
-outfile = 'PathwayMatrix/'+today+'c2.cp.kegg.v'+args.kegg_version+'.matrix.txt'
 print('start writing matrix')
 with open(args.ordered_gene_list) as input_file, open(outfile,'w') as out, open(outfile.replace('matrix.txt','genesInPathways.txt'),'w') as out2:
     out.write(today)

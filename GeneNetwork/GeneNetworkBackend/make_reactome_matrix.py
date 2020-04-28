@@ -27,23 +27,26 @@ if not os.path.exists(input_file):
 
 pathway_genes = {}
 pathways = set([])
+outfile = 'PathwayMatrix/'+today+'-Ensembl2Reactome_All_Levels.matrix.txt'
 
 print('Start reading '+input_file)
-with  gzip.open(input_file,'rt') as input_file:
+with  gzip.open(input_file,'rt') as input_file, open(outfile.replace('matrix.txt','terms.txt'),'w') as out:
     for line in input_file:
         line = line.strip().split('\t')
         if line[5] != 'Homo sapiens':
             continue
         ensembl_id = line[0]
         pathway = line[1]
+        if pathway not in pathways:
+            out.write(pathway+'\t'+line[2]+'\t'+line[3]+'\n')
         if pathway not in pathway_genes:
             pathway_genes[pathway] = set([])
         pathway_genes[pathway].add(ensembl_id)
         pathways.add(pathway)
+exit()
 print('done')
 
 pathways = sorted(pathways)
-outfile = 'PathwayMatrix/'+today+'-Ensembl2Reactome_All_Levels.matrix.txt'
 print('start writing matrix')
 with open(args.ordered_gene_list) as input_file, open(outfile,'w') as out, open(outfile.replace('matrix.txt','genesInPathways.txt'),'w') as out2:
     out.write(today)
