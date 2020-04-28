@@ -1,7 +1,7 @@
 """
 File:         perform_deconvolution.py
 Created:      2020/04/08
-Last Changed: 2020/04/16
+Last Changed: 2020/04/28
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -91,39 +91,38 @@ class PerformDeconvolution:
             self.ct_expr_df = load_dataframe(self.ct_expr_file,
                                              header=0, index_col=0)
 
-        # # Shift the matrices to be all positive.
-        # shifted_ct_expr = self.ct_expr_df.copy()
-        # shifted_ct_expr = shifted_ct_expr + abs(shifted_ct_expr.values.min())
-
-        # Convert the profile expression CPM to z-scores.
-        self.profile_df = self.normalize(self.profile_df)
+        # Shift the matrices to be all positive.
+        shifted_ct_expr = self.ct_expr_df.copy()
+        shifted_ct_expr = shifted_ct_expr + abs(shifted_ct_expr.values.min())
+        shifted_profile_df = self.normalize(self.profile_df)
+        shifted_profile_df = shifted_profile_df + abs(shifted_profile_df.values.min())
 
         # Filter on overlap.
-        overlap = np.intersect1d(self.profile_df.index, self.ct_expr_df.index)
-        self.profile_df = self.profile_df.loc[overlap, :]
-        self.ct_expr_df = self.ct_expr_df.loc[overlap, :]
+        overlap = np.intersect1d(shifted_profile_df.index, shifted_ct_expr.index)
+        shifted_profile_df = shifted_profile_df.loc[overlap, :]
+        shifted_ct_expr = shifted_ct_expr.loc[overlap, :]
 
         # Set index name identical.
-        self.profile_df.index.name = "-"
-        self.ct_expr_df.index.name = "-"
+        shifted_profile_df.index.name = "-"
+        shifted_ct_expr.index.name = "-"
 
         # Check if identical.
-        if not self.profile_df.index.equals(self.ct_expr_df.index):
+        if not shifted_profile_df.index.equals(shifted_ct_expr.index):
             print("Invalid order.")
             exit()
 
         # Perform deconvolution per sample.
         decon_data = []
         residuals_data = []
-        for col_id in range(len(self.ct_expr_df.columns)):
-            sample = self.ct_expr_df.iloc[:, col_id]
-            proportions, rnorm = self.nnls(self.profile_df, sample)
+        for col_id in range(len(shifted_ct_expr.columns)):
+            sample = shifted_ct_expr.iloc[:, col_id]
+            proportions, rnorm = self.nnls(shifted_profile_df, sample)
             decon_data.append(proportions)
             residuals_data.append(rnorm)
 
         decon_df = pd.DataFrame(decon_data,
-                                index=self.ct_expr_df.columns,
-                                columns=["{}NNLS_{}".format(*x.split("_")) for x in self.profile_df.columns])
+                                index=shifted_ct_expr.columns,
+                                columns=["{}NNLS_{}".format(*x.split("_")) for x in shifted_profile_df.columns])
 
         print("Estimated weights:")
         print(decon_df)
@@ -134,7 +133,7 @@ class PerformDeconvolution:
         print(decon_df)
 
         # Construct a Series for the residuals.
-        residuals_df = pd.Series(residuals_data, index=self.ct_expr_df.columns)
+        residuals_df = pd.Series(residuals_data, index=shifted_ct_expr.columns)
         print(residuals_df)
         print("Average residual: {:.2f}".format(residuals_df.mean()))
 
@@ -142,9 +141,10 @@ class PerformDeconvolution:
 
     @staticmethod
     def normalize(df):
-        df = df.loc[df.std(axis=1) > 0, :]
-        df = df.subtract(df.mean(axis=1), axis=0).divide(df.std(axis=1), axis=0)
-        return df
+        out_df = df.copy()
+        out_df = out_df.loc[out_df.std(axis=1) > 0, :]
+        out_df = out_df.subtract(out_df.mean(axis=1), axis=0).divide(out_df.std(axis=1), axis=0)
+        return out_df
 
     @staticmethod
     def nnls(A, b):

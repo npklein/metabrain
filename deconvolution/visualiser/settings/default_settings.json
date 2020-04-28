@@ -17,7 +17,8 @@
     "Oligodendrocyte": "#5d9166",
     "EndothelialCell": "#f2a7a7",
     "Microglia": "#e8c06f",
-    "Astrocyte": "#9b7bb8"},
+    "Astrocyte": "#9b7bb8"
+  },
   "cellmap_method_prefix_and_suffix": [
     ["CellMapPCA_", "_PC1"],
     ["CellMapNNLS_", ""]

@@ -20,6 +20,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Standard imports.
+import math
 import os
 
 # Third party imports.
@@ -27,6 +28,7 @@ import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from colour import Color
 
 # Local application imports.
 from general.utilities import prepare_output_dir
@@ -53,6 +55,8 @@ class IntereQTLZscoreBars:
         print("Plotting interaction eQTL z-score barplots.")
         self.print_arguments()
 
+        colormap = self.create_color_map(self.z_score_cutoff)
+
         print("Iterating over eQTLs.")
         for i, (index, row) in enumerate(self.eqtl_df.iterrows()):
             # Extract the usefull information from the row.
@@ -75,26 +79,63 @@ class IntereQTLZscoreBars:
             interaction_effect.columns = ["index", "zscore"]
             interaction_effect = interaction_effect.reindex(
                 interaction_effect["zscore"].sort_values().index)
+            interaction_effect["color"] = [colormap[round(x, 1)] for x in interaction_effect["zscore"]]
 
             self.plot(i, snp_name, probe_name, hgnc_name, eqtl_type,
-                      self.z_score_cutoff, interaction_effect, self.outdir)
+                      self.z_score_cutoff, interaction_effect,
+                      self.outdir)
+            self.plot(i, snp_name, probe_name, hgnc_name, eqtl_type,
+                      self.z_score_cutoff, interaction_effect,
+                      self.outdir, positive=True)
+
+    @staticmethod
+    def create_color_map(signif_cutoff):
+        min_value = -8.3
+        max_value = 385
+
+        blue_values = [x / 10 for x in range(int(min_value * 10), int(signif_cutoff * -10), 1)]
+        blue_colors = [x.rgb for x in list(Color("#6282EA").range_to(Color("#B9D0F9"), len(blue_values)))]
+
+        neg_black_values = [x / 10 for x in range(int(signif_cutoff * -10), 0, 1)]
+        neg_black_colors = [x.rgb for x in list(Color("#000000").range_to(Color("#DCDCDC"), len(neg_black_values)))]
+
+        pos_black_values = [x / 10 for x in range(1, int(signif_cutoff * 10) + 2, 1)]
+        pos_black_colors = [x.rgb for x in list(Color("#DCDCDC").range_to(Color("#000000"), len(pos_black_values)))]
+
+        red_values = [x / 10 for x in range(int(signif_cutoff * 10) + 2, int(max_value * 10), 1)]
+        red_colors = [x.rgb for x in list(Color("#F5C4AC").range_to(Color("#DC5F4B"), len(red_values)))]
+
+        values = blue_values + neg_black_values + ["#DCDCDC"] + pos_black_values + red_values
+        colors = blue_colors + neg_black_colors + [0.0] + pos_black_colors + red_colors
+        value_color_map = {x: y for x, y in zip(values, colors)}
+        return value_color_map
 
     @staticmethod
     def plot(i, snp_name, probe_name, hgnc_name, eqtl_type, z_score_cutoff,
-             df, outdir):
+             df, outdir, positive=False):
+
+        subtitle_str = "+/-"
+        file_suffix = "all"
+        title_distance = 1.5e-2
+        if positive:
+            title_distance = 4e-2
+            subtitle_str = "+"
+            file_suffix = "positive"
+            df = df.loc[df["zscore"] > 0, :]
+
         sns.set(rc={'figure.figsize': (12, (.2 * (len(df.index))))})
         sns.set_style("ticks")
         fig, ax = plt.subplots()
         sns.despine(fig=fig, ax=ax)
 
-        g = sns.barplot(x="zscore", y="index", data=df, palette="coolwarm",
+        g = sns.barplot(x="zscore", y="index", palette=df["color"], data=df,
                         orient="h")
-        g.text(0.5, 1.025,
+        g.text(0.5, 1 + (7.5e-5 * len(df.index)) + title_distance,
                '{} {}-eQTL Interactions'.format(hgnc_name, eqtl_type),
                fontsize=22, weight='bold', ha='center', va='bottom',
                transform=ax.transAxes)
-        g.text(0.5, 1.01,
-               'z-score cutoff = +/- {:.2f}'.format(abs(z_score_cutoff)),
+        g.text(0.5, 1 + (7.5e-5 * len(df.index)),
+               'z-score cutoff = {} {:.2f}'.format(subtitle_str, abs(z_score_cutoff)),
                fontsize=20, alpha=0.75, ha='center', va='bottom',
                transform=ax.transAxes)
         g.set_ylabel('covariate',
@@ -104,18 +145,21 @@ class IntereQTLZscoreBars:
                      fontsize=18,
                      fontweight='bold')
         plt.axvline(x=z_score_cutoff, ls='--', c='black')
-        plt.axvline(x=-1 * z_score_cutoff, ls='--', c='black')
+
+        if not positive:
+            plt.axvline(x=-1 * z_score_cutoff, ls='--', c='black')
         ax.tick_params(labelsize=10)
         ax.set_yticks(range(len(df.index)))
         ax.set_yticklabels(df["index"])
         plt.tight_layout()
         fig.savefig(os.path.join(outdir,
-                                 "{}_inter_eqtl_bars_{}_{}_{}.png".format(i,
-                                                                          snp_name,
-                                                                          probe_name,
-                                                                          hgnc_name)))
+                                 "{}_inter_eqtl_bars"
+                                 "_{}_{}_{}_{}.png".format(i,
+                                                           snp_name,
+                                                           probe_name,
+                                                           hgnc_name,
+                                                           file_suffix)))
         plt.close()
-
 
     def print_arguments(self):
         print("Arguments:")

@@ -1,7 +1,7 @@
 """
 File:         covariate_comparison.py
 Created:      2020/04/15
-Last Changed:
+Last Changed: 2020/04/28
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -127,12 +127,12 @@ class CovariateComparison:
                                 **heatmapkws)
 
                     if xticklabels:
-                        new_xticks = [x.replace(xremove, '') for x in data_subset.columns]
+                        new_xticks = [x.replace(xremove, '').replace("_", " ") for x in data_subset.columns]
                         ax.set_xticklabels(new_xticks, fontsize=14, rotation=90)
                         ax.set_xlabel(xlabel, fontsize=16, fontweight='bold')
 
                     if yticklabels:
-                        new_yticks = [y.replace(yremove, '') for y in data_subset.index]
+                        new_yticks = [y.replace(yremove, '').replace("_", " ") for y in data_subset.index]
                         ax.set_yticklabels(new_yticks, fontsize=14, rotation=0)
                         ax.set_ylabel(ylabel, fontsize=16, fontweight='bold')
 

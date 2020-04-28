@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-File:         cellmap_profiles.py
+File:         cellmap_reference_profile.py
 Created:      2020/04/06
 Last Changed: 2020/04/26
 Author:       M.Vochteloo
@@ -37,6 +37,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy import stats
+import matplotlib.patches as mpatches
 
 # Local application imports.
 
@@ -95,6 +96,18 @@ class main():
         g.fig.subplots_adjust(bottom=0.05, top=0.7)
         plt.tight_layout()
         g.savefig(os.path.join(self.outdir, "cellmap_sc_reference_profile.png"))
+        plt.close()
+
+        sns.set(rc={'figure.figsize': (3, 9)})
+        sns.set_style("ticks")
+        fig, ax = plt.subplots()
+        sns.despine(fig=fig, ax=ax)
+        handles = []
+        for celltype, color in colormap.items():
+            handles.append(mpatches.Patch(color=color, label=celltype))
+        ax.legend(handles=handles)
+        ax.set_axis_off()
+        fig.savefig(os.path.join(self.outdir, "legend.png"))
         plt.close()
 
     @staticmethod

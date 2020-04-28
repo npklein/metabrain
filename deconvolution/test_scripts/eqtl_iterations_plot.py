@@ -3,7 +3,7 @@
 """
 File:         eqtl_iterations_plot.py
 Created:      2020/04/27
-Last Changed:
+Last Changed: 2020/04/28
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -77,7 +77,7 @@ class main():
         df = df.loc[df["count"] > 0, :]
         df.sort_values(by=['iteration'], inplace=True)
 
-        cutoff = 5
+        cutoff = 4
         colors = (['#6495ED'] * cutoff) + (['#808080'] * (df.shape[0] - cutoff))
 
         print("Plotting.")

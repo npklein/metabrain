@@ -1,7 +1,7 @@
 """
 File:         perform_celltype_factorization.py
 Created:      2020/04/07
-Last Changed: 2020/04/26
+Last Changed: 2020/04/28
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -150,9 +150,10 @@ class PerformCelltypeFactorization:
 
     @staticmethod
     def normalize(df):
-        df = df.loc[df.std(axis=1) > 0, :]
-        df = df.subtract(df.mean(axis=1), axis=0).divide(df.std(axis=1), axis=0)
-        return df
+        out_df = df.copy()
+        out_df = out_df.loc[out_df.std(axis=1) > 0, :]
+        out_df = out_df.subtract(out_df.mean(axis=1), axis=0).divide(out_df.std(axis=1), axis=0)
+        return out_df
 
     @staticmethod
     def get_first_pca_component(X):
