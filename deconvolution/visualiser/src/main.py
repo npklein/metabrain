@@ -89,30 +89,28 @@ class Main:
         if self.validate:
             ds.load_all()
 
-        # if ('covariate_comparison' in self.plots) or \
-        #         ('all' in self.plots):
-        #     print("\n### Covariate Comparison ###\n")
-        #     cc = CovariateComparison(dataset=ds, outdir=self.outdir)
-        #     cc.start()
-        #     del cc
-        #
-        # if ('covariates_explained_by_others' in self.plots) or \
-        #         ('all' in self.plots):
-        #     print("\n### Covariates Explained By Others ###\n")
-        #     cebo = CovariatesExplainedByOthers(dataset=ds,
-        #                                        outdir=self.outdir)
-        #     cebo.start()
-        #     del cebo
-        #
-        # if ('deconvolution_covariate_comparison' in self.plots) or \
-        #         ('all' in self.plots):
-        #     print("\n### Deconvolution Covariate Comparison ###\n")
-        #     dcc = DeconvolutionCovariateComparison(dataset=ds,
-        #                                            outdir=self.outdir)
-        #     dcc.start()
-        #     del dcc
-        #
-        # exit()
+        if ('covariate_comparison' in self.plots) or \
+                ('all' in self.plots):
+            print("\n### Covariate Comparison ###\n")
+            cc = CovariateComparison(dataset=ds, outdir=self.outdir)
+            cc.start()
+            del cc
+
+        if ('covariates_explained_by_others' in self.plots) or \
+                ('all' in self.plots):
+            print("\n### Covariates Explained By Others ###\n")
+            cebo = CovariatesExplainedByOthers(dataset=ds,
+                                               outdir=self.outdir)
+            cebo.start()
+            del cebo
+
+        if ('deconvolution_covariate_comparison' in self.plots) or \
+                ('all' in self.plots):
+            print("\n### Deconvolution Covariate Comparison ###\n")
+            dcc = DeconvolutionCovariateComparison(dataset=ds,
+                                                   outdir=self.outdir)
+            dcc.start()
+            del dcc
 
         if ('deconvolution_zscore_comparison' in self.plots) or \
                 ('all' in self.plots):
@@ -178,12 +176,12 @@ class Main:
             ieed.start()
             del ieed
 
-        if ('inter_eqtl_effect_marker_vs_comp' in self.plots) or ('all' in self.plots):
-            print("\n### INTERACTION EQTL EFFECT MARKER GENES VS COMPS ###\n")
-            ieemvc = IntereQTLEffectMarkerVSComp(dataset=ds,
-                                                 outdir=self.outdir)
-            ieemvc.start()
-            del ieemvc
+        # if ('inter_eqtl_effect_marker_vs_comp' in self.plots) or ('all' in self.plots):
+        #     print("\n### INTERACTION EQTL EFFECT MARKER GENES VS COMPS ###\n")
+        #     ieemvc = IntereQTLEffectMarkerVSComp(dataset=ds,
+        #                                          outdir=self.outdir)
+        #     ieemvc.start()
+        #     del ieemvc
 
         if ('inter_eqtl_effect_celltype' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION EQTL EFFECT CELLTYPE ###\n")
