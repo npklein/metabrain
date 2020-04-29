@@ -1,7 +1,7 @@
 """
 File:         covariate_comparison.py
 Created:      2020/04/15
-Last Changed: 2020/04/28
+Last Changed: 2020/04/29
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -142,9 +142,10 @@ class CovariateComparison:
         cax = fig.add_axes([0.9, 0.2, 0.01, 0.7])
         sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
         sm.set_array([])
+        fig.colorbar(sm, cax=cax)
+
         fig.align_ylabels(axes[:, 0])
         fig.align_xlabels(axes[len(indices) - 1, :])
-        fig.colorbar(sm, cax=cax)
         fig.suptitle('Covariate Correlations', fontsize=40, fontweight='bold')
         fig.savefig(os.path.join(outdir, "covariate_comparison.png"))
         plt.close()

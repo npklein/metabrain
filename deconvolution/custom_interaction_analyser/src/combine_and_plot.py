@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed: 2020/04/28
+Last Changed: 2020/04/29
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -206,12 +206,15 @@ class CombineAndPlot:
         for i, fpath in enumerate(glob.glob(os.path.join(indir, filename,
                                                          filename + "*.pkl"))):
             with open(fpath, "rb") as f:
-                content = pickle.load(f)
-                if columns and i == 0:
-                    col_list = content[0]
-                data.extend(content[1:])
-                print("\tLoaded list: {} with length: {}".format(
-                    get_basename(fpath), len(content)))
+                try:
+                    content = pickle.load(f)
+                    if columns and i == 0:
+                        col_list = content[0]
+                    data.extend(content[1:])
+                    print("\tLoaded list: {} with length: {}".format(
+                        get_basename(fpath), len(content)))
+                except EOFError:
+                    print("\tEOFError in: {} ".format(get_basename(fpath)))
             f.close()
 
         return col_list, data

@@ -1,7 +1,7 @@
 """
 File:         dataset.py
 Created:      2020/03/16
-Last Changed: 2020/04/26
+Last Changed: 2020/04/29
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -49,6 +49,7 @@ class Dataset:
         self.cellmap_methods = settings.get_setting("cellmap_method_prefix_and_suffix")
         self.marker_genes = settings.get_setting("marker_genes_prefix")
         self.signif_cutoff = stats.norm.isf(settings.get_setting("significance_cutoff"))
+        self.tech_covs = settings.get_setting("technical_covariates")
         nrows = nrows
         if nrows == -1:
             nrows = None
@@ -98,6 +99,9 @@ class Dataset:
 
     def get_significance_cutoff(self):
         return self.signif_cutoff
+
+    def get_tech_covs(self):
+        return self.tech_covs
 
     def get_eqtl_df(self):
         if self.eqtl_df is None:

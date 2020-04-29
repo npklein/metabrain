@@ -1,7 +1,7 @@
 """
 File:         inter_zscores_bars.py
 Created:      2020/03/16
-Last Changed: 2020/04/26
+Last Changed: 2020/04/29
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -77,12 +77,15 @@ class InterZscoreBars:
         return sums
 
     def create_plots(self, data, title_prefix="", subtitle_suffix=""):
-        self.plot(data, self.outdir, fontsize=5, title_prefix=title_prefix,
+        max_val = max(data["counts"])
+        self.plot(data.copy(), max_val, self.outdir, fontsize=5,
+                  title_prefix=title_prefix, subtitle_suffix=subtitle_suffix)
+        self.plot(data.copy(), max_val, self.outdir, top=10,
+                  fontsize=14, title_prefix=title_prefix,
                   subtitle_suffix=subtitle_suffix)
-        self.plot(data, self.outdir, top=10, fontsize=14,
-                  title_prefix=title_prefix, subtitle_suffix=subtitle_suffix)
-        self.plot(data, self.outdir, bottom=10, fontsize=14,
-                  title_prefix=title_prefix, subtitle_suffix=subtitle_suffix)
+        self.plot(data.copy(), max_val, self.outdir, bottom=10,
+                  fontsize=14, title_prefix=title_prefix,
+                  subtitle_suffix=subtitle_suffix)
 
     @staticmethod
     def create_color_map(values, size=101):
@@ -102,16 +105,22 @@ class InterZscoreBars:
         return color_list
 
     @staticmethod
-    def plot(df, outdir, top=None, bottom=None, fontsize=10, title_prefix="",
+    def plot(df, max_val, outdir, top=None, bottom=None, fontsize=10, title_prefix="",
              subtitle_suffix=""):
         # Prepare the data.
         subtitle = ''
         file_appendix = ''
         if top is not None:
+            df = df.loc[df["counts"] > 0, :]
+            if len(df.index) == 0:
+                return
             df = df.head(top)
             subtitle = 'top {} covariates'.format(top)
             file_appendix = '_top{}'.format(top)
         if bottom is not None:
+            df = df.loc[df["counts"] > 0, :]
+            if len(df.index) == 0:
+                return
             df = df.tail(bottom)
             subtitle = 'bottom {} covariates'.format(bottom)
             file_appendix = '_bottom{}'.format(bottom)
@@ -122,7 +131,7 @@ class InterZscoreBars:
         fig, ax = plt.subplots()
         sns.despine(fig=fig, ax=ax)
 
-        major_ticks = 10 ** (math.floor(math.log10(max(df["counts"].max(), 100))))
+        major_ticks = 10 ** (math.floor(math.log10(max(max_val, 100))))
         minor_ticks = int(major_ticks / 2)
         for i in range(0, int(max(df["counts"])) + (1 * major_ticks), minor_ticks):
             alpha = 0.025
@@ -149,6 +158,7 @@ class InterZscoreBars:
         ax.tick_params(labelsize=fontsize)
         ax.set_yticks(range(len(df.index)))
         ax.set_yticklabels(df["index"])
+        ax.set_xlim(0, max_val)
         plt.tight_layout()
         fig.savefig(os.path.join(outdir,
                                  "{}_cov_zscores_barplot{}.png".format(title_prefix.replace(" ", "").lower(),
