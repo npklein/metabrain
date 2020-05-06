@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed: 2020/04/29
+Last Changed: 2020/05/06
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -43,7 +43,6 @@ import matplotlib.pyplot as plt
 # Local application imports.
 from general.local_settings import LocalSettings
 from general.df_utilities import save_dataframe, get_basename
-from general.utilities import p_value_to_symbol
 
 
 class CombineAndPlot:
@@ -69,10 +68,10 @@ class CombineAndPlot:
         # Prepare an output directory.
         self.outdir = os.path.join(current_dir,
                                    settings.get_setting("output_dir"))
-        if not os.path.exists(self.outdir):
-            print("Error, output directory does not exist.")
 
-        # Get the pickle filenames.
+        # Get the needed settings.
+        self.cov_outdir = settings.get_setting("covariates_folder")
+        self.tech_cov_outdir = settings.get_setting("technical_covariates_folder")
         self.pvalues_outfile = settings.get_setting("actual_pvalues_pickle_filename")
         self.tvalues_outfile = settings.get_setting("actual_tvalues_pickle_filename")
         self.perm_pvalues_outfile = settings.get_setting("permuted_pvalues_pickle_filename")
@@ -87,34 +86,58 @@ class CombineAndPlot:
         # Start the timer.
         start_time = time.time()
 
+        for outdir in [self.cov_outdir, self.tech_cov_outdir]:
+            full_outdir = os.path.join(self.outdir, outdir)
+            if not os.path.exists(full_outdir):
+                print("Error, output directory does not exist.")
+
+            self.work(full_outdir)
+
+        # Print the time.
+        run_time_min, run_time_sec = divmod(time.time() - start_time, 60)
+        run_time_hour, run_time_min = divmod(run_time_min, 60)
+        print("[manager]\tfinished in  {} hour(s), {} minute(s) and "
+              "{} second(s).".format(int(run_time_hour),
+                                     int(run_time_min),
+                                     int(run_time_sec)), flush=True)
+
+    def work(self, workdir):
         # Combine the pickle files.
         print("Loading pvalue data.", flush=True)
-        pcolumns, pvalues_data = self.combine_pickles(self.outdir,
+        pcolumns, pvalues_data = self.combine_pickles(workdir,
                                                       self.pvalues_outfile,
                                                       columns=True)
 
         print("Loading tvalue data.", flush=True)
-        tcolumns, tvalues_data = self.combine_pickles(self.outdir,
+        tcolumns, tvalues_data = self.combine_pickles(workdir,
                                                       self.tvalues_outfile,
                                                       columns=True)
 
         print("Loading permutation pvalue data.", flush=True)
-        _, perm_pvalues = self.combine_pickles(self.outdir,
+        _, perm_pvalues = self.combine_pickles(workdir,
                                                self.perm_pvalues_outfile)
 
         # Create a pandas dataframe from the nested list.
         print("Creating p-values dataframe.", flush=True)
         pvalue_df = self.create_df(pvalues_data, pcolumns)
         save_dataframe(df=pvalue_df,
-                       outpath=os.path.join(self.outdir,
+                       outpath=os.path.join(workdir,
                                             "pvalue_table.txt.gz"),
                        header=True, index=True)
+
+        # Get the pvalues from the dataframe.
+        pvalues = pvalue_df.melt()["value"].values
+
+        # Visualise distributions.
+        print("Visualizing distributions.", flush=True)
+        self.plot_distributions(perm_pvalues, pvalues, workdir)
+
 
         # Create a pandas dataframe from the nested list.
         print("Creating t-values dataframe.", flush=True)
         tvalue_df = self.create_df(tvalues_data, tcolumns)
         save_dataframe(df=tvalue_df,
-                       outpath=os.path.join(self.outdir,
+                       outpath=os.path.join(workdir,
                                             "tvalue_table.txt.gz"),
                        header=True, index=True)
 
@@ -122,27 +145,20 @@ class CombineAndPlot:
         print("Creating Z-score dataframe.", flush=True)
         zscore_df = self.create_zscore_df(pvalue_df)
         save_dataframe(df=zscore_df,
-                       outpath=os.path.join(self.outdir,
+                       outpath=os.path.join(workdir,
                                             "interaction_table.txt.gz"),
                        header=True, index=True)
 
-        # pvalue_df = pd.read_csv(os.path.join(self.outdir, "pvalue_table.txt.gz"),
+        # pvalue_df = pd.read_csv(os.path.join(workdir, "pvalue_table.txt.gz"),
         #                         sep="\t", header=0, index_col=0)
-        # with open(os.path.join(self.outdir, "perm_pvalues.pkl"), "rb") as f:
+        # with open(os.path.join(workdir, "perm_pvalues.pkl"), "rb") as f:
         #     perm_pvalues = pickle.load(f)
         # f.close()
-
-        # Get the pvalues from the dataframe.
-        pvalues = pvalue_df.melt()["value"].values
 
         # Sort the lists.
         print("Sorting p-values.", flush=True)
         perm_pvalues = sorted(perm_pvalues)
         pvalues = sorted(pvalues)
-
-        # Visualise distributions.
-        print("Visualizing distributions.", flush=True)
-        self.plot_distributions(perm_pvalues, pvalues, self.outdir)
 
         # Create the FDR dataframes.
         print("Creating permutation FDR dataframe.", flush=True)
@@ -156,7 +172,7 @@ class CombineAndPlot:
                                         (100 / len(pvalues)) * perm_n_signif))
         # Write the output file.
         save_dataframe(df=perm_fdr_df,
-                       outpath=os.path.join(self.outdir,
+                       outpath=os.path.join(workdir,
                                             "perm_fdr_table.txt.gz"),
                        header=True, index=True)
 
@@ -167,25 +183,17 @@ class CombineAndPlot:
               "{:.2e} [{:.2f}%]".format(bh_n_signif, bh_cutoff,
                                         (100 / len(pvalues)) * bh_n_signif))
         save_dataframe(df=bh_fdr_df,
-                       outpath=os.path.join(self.outdir,
+                       outpath=os.path.join(workdir,
                                             "bh_fdr_table.txt.gz"),
                        header=True, index=True)
 
         # Compare the two pvalue scores.
         print("Creating score visualisation [1/2].", flush=True)
         self.compare_pvalue_scores(pvalue_df, perm_fdr_df, bh_fdr_df,
-                                   self.outdir)
+                                   workdir)
         print("Creating score visualisation [2/2].", flush=True)
         self.compare_pvalue_scores(pvalue_df, perm_fdr_df, bh_fdr_df,
-                                   self.outdir, max_val=0.05)
-
-        # Print the time.
-        run_time_min, run_time_sec = divmod(time.time() - start_time, 60)
-        run_time_hour, run_time_min = divmod(run_time_min, 60)
-        print("[manager]\tfinished in  {} hour(s), {} minute(s) and "
-              "{} second(s).".format(int(run_time_hour),
-                                     int(run_time_min),
-                                     int(run_time_sec)), flush=True)
+                                   workdir, max_val=0.05)
 
     @staticmethod
     def combine_pickles(indir, filename, columns=False):
@@ -302,7 +310,9 @@ class CombineAndPlot:
         df = perm_pvalues_bins.merge(pvalues_bins, left_index=True, right_index=True)
         df.columns = ["perm_pvalues", "pvalues"]
         df = df.divide(df.sum())
-        df["sum"] = (df["pvalues"] + df["perm_pvalues"]) - min(df["pvalues"])
+        lowest_row = df[df["pvalues"] == df["pvalues"].min()]
+        scaler = lowest_row.iloc[0, 1] / lowest_row.iloc[0, 0]
+        df["baseline"] = (df["perm_pvalues"] * scaler)
         df["index"] = (bins[:-1] + bins[1:]) / 2
 
         sns.set(rc={'figure.figsize': (18, 9)})
@@ -320,8 +330,8 @@ class CombineAndPlot:
 
         sns.barplot(x="index", y="perm_pvalues", color='cornflowerblue', data=df, ax=ax1)
         sns.barplot(x="index", y="pvalues", color='firebrick', data=df, ax=ax2)
-        sns.barplot(x="index", y="sum", color='firebrick', data=df, ax=ax3)
-        sns.barplot(x="index", y="perm_pvalues", color='cornflowerblue', data=df, ax=ax3)
+        sns.barplot(x="index", y="pvalues", color='firebrick', data=df, ax=ax3)
+        sns.barplot(x="index", y="baseline", color='cornflowerblue', data=df, ax=ax3)
 
         for ax, title in zip([ax1, ax2, ax3], ["Null", "Alternative", "Combined"]):
             ax.text(0.5, 1.02,
@@ -512,8 +522,7 @@ class CombineAndPlot:
                 y = df.iloc[:, index2]
                 ax = axes[index2, index1]
                 sns.despine(fig=fig, ax=ax)
-                print("\tPlotting axes[{}:{}, {}:{}]".format(index2, df.columns[index2],
-                                                             index1, df.columns[index1]))
+                print("\tPlotting axes[{}, {}]".format(index2, index1))
 
                 if index2 > index1:
                     # colormap = self.create_color_map(length=max_col_value,

@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/23
-Last Changed: 2020/04/10
+Last Changed: 2020/05/06
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -91,16 +91,6 @@ class CommandLineArguments:
                             default=None,
                             help="The number of samples in the input files, "
                                  "default: None (determine manually).")
-        parser.add_argument("-c",
-                            "--cores",
-                            type=int,
-                            default=1,
-                            help="The number of cores to use, "
-                                 "default: 1.")
-        parser.add_argument("-include",
-                            action='store_true',
-                            help="Include previously unfinished wait_list "
-                                 "work.")
         parser.add_argument("-verbose",
                             action='store_true',
                             help="Include steps and command prints, "

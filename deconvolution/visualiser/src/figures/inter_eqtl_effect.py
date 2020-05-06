@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect.py
 Created:      2020/03/16
-Last Changed: 2020/04/26
+Last Changed: 2020/05/01
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -131,8 +131,7 @@ class IntereQTLEffect:
             # Prepare output directory.
             if len(interaction_effect.index) > 0:
                 eqtl_interaction_outdir = os.path.join(self.outdir,
-                                                       "{}_{}".format(i,
-                                                                      snp_name))
+                                                       "{}_{}_{}_{}".format(i, snp_name, probe_name, hgnc_name))
                 if not os.path.exists(eqtl_interaction_outdir):
                     os.makedirs(eqtl_interaction_outdir)
 
@@ -169,8 +168,8 @@ class IntereQTLEffect:
         """
         """
         # calculate axis limits.
-        min = df["expression"].min() * 1.1
-        max = df["expression"].max() * 1.5
+        min = df["expression"].min() * 1.2
+        max = df["expression"].max() * 1.6
 
         sns.set(rc={'figure.figsize': (12, 9)})
         sns.set_style("ticks")
@@ -204,16 +203,15 @@ class IntereQTLEffect:
                 fontweight='bold')
 
         ax.text(0.5, 1.06,
-                '{} {}-eQTL Interaction with {} '
-                '[z-score: {:.2f}]'.format(hgnc_name,
-                                           eqtl_type,
-                                           cov_name,
-                                           zscore),
+                '{} {}-eQTL Interaction with {} '.format(hgnc_name,
+                                                         eqtl_type,
+                                                         cov_name),
                 fontsize=18, weight='bold', ha='center', va='bottom',
                 transform=ax.transAxes)
         ax.text(0.5, 1.02,
-                'SNPName: {}    ProbeName:{}'.format(snp_name, probe_name),
-                fontsize=14, alpha=0.75, ha='center', va='bottom',
+                'SNPName: {}  ProbeName: {}  '
+                'Z-score: {:.2f}'.format(snp_name, probe_name, zscore),
+                fontsize=12, alpha=0.75, ha='center', va='bottom',
                 transform=ax.transAxes)
 
         ax.set_ylabel('{} ({}) expression'.format(probe_name, hgnc_name),
@@ -222,6 +220,9 @@ class IntereQTLEffect:
         ax.set_xlabel(cov_name,
                       fontsize=14,
                       fontweight='bold')
+
+        ax.axvline(0, ls='--', color="#000000", alpha=0.15, zorder=-1)
+        ax.axhline(0, ls='--', color="#000000", alpha=0.15, zorder=-1)
 
         # Safe the plot.
         plt.tight_layout()

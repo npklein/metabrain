@@ -50,6 +50,7 @@ class InterZscoreBars:
         # Extract the required data.
         print("Loading data")
         self.inter_df = dataset.get_inter_df()
+        self.tech_covs = dataset.get_tech_covs()
         self.z_score_cutoff = dataset.get_significance_cutoff()
 
     def start(self):
@@ -68,6 +69,15 @@ class InterZscoreBars:
 
     def get_counts(self, lower_cutoff=0, upper_cutoff=0):
         df = self.inter_df.copy()
+
+        mask = []
+        for index in df.index:
+            if index in self.tech_covs:
+                mask.append(False)
+            else:
+                mask.append(True)
+        df = df.loc[mask, :]
+
         df[(df > lower_cutoff) & (df < upper_cutoff)] = 0
         sums = df.pow(2).sum(axis=1).to_frame().reset_index()
         sums.columns = ["index", "counts"]

@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_zscore_bars.py
 Created:      2020/03/16
-Last Changed: 2020/04/20
+Last Changed: 2020/05/01
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -81,12 +81,20 @@ class IntereQTLZscoreBars:
                 interaction_effect["zscore"].sort_values().index)
             interaction_effect["color"] = [colormap[round(x, 1)] for x in interaction_effect["zscore"]]
 
+            eqtl_interaction_outdir = os.path.join(self.outdir,
+                                                   "{}_{}_{}_{}".format(i,
+                                                                        snp_name,
+                                                                        probe_name,
+                                                                        hgnc_name))
+            if not os.path.exists(eqtl_interaction_outdir):
+                os.makedirs(eqtl_interaction_outdir)
+
             self.plot(i, snp_name, probe_name, hgnc_name, eqtl_type,
                       self.z_score_cutoff, interaction_effect,
-                      self.outdir)
+                      eqtl_interaction_outdir)
             self.plot(i, snp_name, probe_name, hgnc_name, eqtl_type,
                       self.z_score_cutoff, interaction_effect,
-                      self.outdir, positive=True)
+                      eqtl_interaction_outdir, positive=True)
 
     @staticmethod
     def create_color_map(signif_cutoff):
@@ -105,8 +113,8 @@ class IntereQTLZscoreBars:
         red_values = [x / 10 for x in range(int(signif_cutoff * 10) + 2, int(max_value * 10), 1)]
         red_colors = [x.rgb for x in list(Color("#F5C4AC").range_to(Color("#DC5F4B"), len(red_values)))]
 
-        values = blue_values + neg_black_values + ["#DCDCDC"] + pos_black_values + red_values
-        colors = blue_colors + neg_black_colors + [0.0] + pos_black_colors + red_colors
+        values = blue_values + neg_black_values + [0.0] + pos_black_values + red_values
+        colors = blue_colors + neg_black_colors + ["#DCDCDC"] + pos_black_colors + red_colors
         value_color_map = {x: y for x, y in zip(values, colors)}
         return value_color_map
 
