@@ -55,8 +55,8 @@ class main():
         self.mem = 2
         self.count = 0
         self.start_index = 0
-        self.stop_index = 21078
-        self.batch_size = 50
+        self.stop_index = 100
+        self.batch_size = 10
         self.samples = 3703
 
     def start(self):

@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/04/23
-Last Changed: 2020/04/26
+Last Changed: 2020/05/06
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -38,6 +38,7 @@ import statsmodels.api as sm
 from functools import reduce
 
 # Local application imports.
+from .storage import Storage
 from general.local_settings import LocalSettings
 from general.utilities import check_file_exists, prepare_output_dir
 from general.df_utilities import load_dataframe
@@ -77,6 +78,8 @@ class Main:
         self.expr_inpath = settings.get_setting("expression_datafile")
         self.cov_inpath = settings.get_setting("covariates_datafile")
         self.tech_covs = settings.get_setting("technical_covariates")
+        self.cov_outdir = settings.get_setting("covariates_folder")
+        self.tech_cov_outdir = settings.get_setting("technical_covariates_folder")
         self.pvalues_filename = settings.get_setting("actual_pvalues_pickle_filename")
         self.tvalues_filename = settings.get_setting("actual_tvalues_pickle_filename")
         self.perm_pvalues_filename = settings.get_setting("permuted_pvalues_pickle_filename")
@@ -131,21 +134,25 @@ class Main:
 
         # Start the work.
         print("Start the analyses", flush=True)
-        pvalue_buffer, tvalue_buffer, perm_pvalues_buffer, perm_tvalues_buffer = self.work(permutation_orders)
+        storage = self.work(permutation_orders)
+        tc_container = storage.get_tech_cov_container()
+        c_container = storage.get_cov_container()
 
         print("Saving output files", flush=True)
-        if pvalue_buffer:
-            self.dump_pickle(pvalue_buffer, self.outdir,
-                             self.pvalues_filename, subdir=True, unique=True)
-        if tvalue_buffer:
-            self.dump_pickle(tvalue_buffer, self.outdir,
-                             self.tvalues_filename, subdir=True, unique=True)
-        if perm_pvalues_buffer:
-            self.dump_pickle(perm_pvalues_buffer, self.outdir,
+        for container, outdir in zip([tc_container, c_container], [self.tech_cov_outdir, self.cov_outdir]):
+            full_outdir = os.path.join(self.outdir, outdir)
+            prepare_output_dir(full_outdir)
+
+            self.dump_pickle(container.get_pvalues(), full_outdir,
+                             self.pvalues_filename, subdir=True,
+                             unique=True)
+            self.dump_pickle(container.get_tvalues(), full_outdir,
+                             self.tvalues_filename, subdir=True,
+                             unique=True)
+            self.dump_pickle(container.get_perm_pvalues(), full_outdir,
                              self.perm_pvalues_filename, subdir=True,
                              unique=True)
-        if perm_tvalues_buffer:
-            self.dump_pickle(perm_tvalues_buffer, self.outdir,
+            self.dump_pickle(container.get_perm_tvalues(), full_outdir,
                              self.perm_tvalues_filename, subdir=True,
                              unique=True)
 
@@ -168,16 +175,7 @@ class Main:
         """
         Method that does the interaction analysis.
 
-        :param permutation_orders: list, the (permuted) orders for the
-                                   columns (samples).
-        :return pvalue_buffer: list, a nested list with the pvalues for each
-                               eQTL tested.
-        :return tvalue_buffer: list, a nested list with the tvalues for each
-                               eQTL tested.
-        :return perm_pvalues_buffer: list, a nested list with the permutated
-                                     pvalues for each eQTL tested.
-        :return perm_tvalues_buffer: list, a nested list with the permutated
-                                     tvalues for each eQTL tested.
+        :param storage: object, a storage object containing all results.
         """
         # Load the data
         print("Loading data", flush=True)
@@ -204,11 +202,9 @@ class Main:
         # drop missing values.
         geno_df.replace(-1, np.nan, inplace=True)
 
-        # Initialize variables.
-        pvalue_buffer = [[-1, "-"] + list(cov_df.index)]
-        tvalue_buffer = [[-1, "-"] + list(cov_df.index)]
-        perm_pvalues_buffer = []
-        perm_tvalues_buffer = []
+        # Initialize the storage object.
+        covs = list(set(cov_df.index).symmetric_difference(set(self.tech_covs)))
+        storage = Storage(tech_covs=self.tech_covs, covs=covs)
 
         # Start working.
         print("Starting interaction analyser", flush=True)
@@ -217,7 +213,7 @@ class Main:
                                                       self.skip_rows +
                                                       self.n_eqtls)]):
             print("\tProcessing eQTL {}/{} "
-                  "[{:.2f}%]".format(row_index + 1,
+                  "[{:.0f}%]".format(row_index + 1,
                                      self.n_eqtls,
                                      (100 / self.n_eqtls) * (row_index + 1)),
                   flush=True)
@@ -257,15 +253,11 @@ class Main:
                                   tech_inter_matrix.T])
 
             # Initialize variables.
-            pvalues = [eqtl_index, genotype.name]
-            tvalues = [eqtl_index, genotype.name]
-            perm_pvalues = []
-            perm_tvalues = []
+            storage.add_row(eqtl_index, genotype.name)
 
             # Loop over the covariates.
-            error = False
             for cov_index in range(len(cov_df.index)):
-                if error:
+                if storage.has_error():
                     break
 
                 # Get the covariate we are processing.
@@ -290,7 +282,7 @@ class Main:
                 # Loop over each permutation sample order. The first order
                 # is the normal order and the remainder are random shuffles.
                 for order_id, sample_order in enumerate(permutation_orders):
-                    if error:
+                    if storage.has_error():
                         break
 
                     if self.verbose:
@@ -320,7 +312,7 @@ class Main:
                     if not inter_of_interest.index.equals(null_matrix.index):
                         print("\t\t\tError in permutation reordering "
                               "(ID: {})".format(order_id), flush=True)
-                        error = True
+                        storage.set_error()
                         continue
 
                     # Create the alternative matrix and add the interaction
@@ -337,16 +329,13 @@ class Main:
                                                                 inter_name)
 
                     # Safe the t-values.
-                    if order_id == 0:
-                        tvalues.append(tvalue)
-                    else:
-                        perm_tvalues.append(tvalue)
+                    storage.add_value(cov_name, order_id, "tvalue", tvalue)
 
                     # Make sure the n's are identical.
                     if n_null != n_alt:
                         print("\t\t\tError due to unequal n_null and n_alt",
                               flush=True)
-                        error = True
+                        storage.set_error()
                         continue
 
                     # Compare the null and alternative model.
@@ -355,24 +344,17 @@ class Main:
                     pvalue = self.get_p_value(fvalue, df_null, df_alt, n_null)
 
                     # Safe the p-values.
-                    if order_id == 0:
-                        pvalues.append(pvalue)
-                    else:
-                        perm_pvalues.append(pvalue)
+                    storage.add_value(cov_name, order_id, "pvalue", pvalue)
 
                     # Check whether we are almost running out of time.
                     if time.time() > self.panic_time:
                         print("\tPanic!!!", flush=True)
-                        return pvalue_buffer, tvalue_buffer, perm_pvalues_buffer, perm_tvalues_buffer
+                        return storage
 
             # Safe the results of the eQTL.
-            if not error:
-                pvalue_buffer.append(pvalues)
-                tvalue_buffer.append(tvalues)
-                perm_pvalues_buffer.extend(perm_pvalues)
-                perm_tvalues_buffer.extend(perm_tvalues)
+            storage.store_row()
 
-        return pvalue_buffer, tvalue_buffer, perm_pvalues_buffer, perm_tvalues_buffer
+        return storage
 
     @staticmethod
     def load_pickle(fpath):

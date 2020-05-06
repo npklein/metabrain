@@ -3,7 +3,7 @@
 """
 File:         custom_interaction_analyser.py
 Created:      2020/03/23
-Last Changed: 2020/04/23
+Last Changed: 2020/05/06
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -61,19 +61,7 @@ if __name__ == '__main__':
         SKIP_ROWS = CLA.get_argument("skip_rows")
         N_EQTLS = CLA.get_argument("n_eqtls")
         N_SAMPLES = CLA.get_argument("n_samples")
-        CORES = CLA.get_argument("cores")
-        INCLUDE = CLA.get_argument("include")
         VERBOSE = CLA.get_argument("verbose")
-
-        # # Start the program.
-        # PROGRAM = Manager(settings_file=SETTINGS_FILE,
-        #                   skip_rows=SKIP_ROWS,
-        #                   n_eqtls=N_EQTLS,
-        #                   n_samples=N_SAMPLES,
-        #                   cores=CORES,
-        #                   include=INCLUDE,
-        #                   verbose=VERBOSE)
-        # PROGRAM.start()
 
         # Start the program.
         PROGRAM = Main(settings_file=SETTINGS_FILE,

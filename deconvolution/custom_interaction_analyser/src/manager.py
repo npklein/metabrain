@@ -1,5 +1,5 @@
 """
-File:         manager.py
+File:         manager.py [DECOMMISSIONED]
 Created:      2020/04/01
 Last Changed: 2020/04/23
 Author:       M.Vochteloo

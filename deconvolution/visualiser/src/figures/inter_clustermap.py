@@ -58,34 +58,58 @@ class InterClusterMap:
         print("Plotting interaction clustermap")
         self.print_arguments()
 
-        # Plot the z-score matrix.
-        print("Plotting the z-score interaction matrix.")
-        self.plot(self.inter_df, self.outdir, self.tech_covs, self.colormap,
-                  "zscore", vmin=-8.21, vmax=38.45)
-        self.plot_colorbar(-8.21, 38.45, self.outdir, "zscore")
-
-        # Plot the t-value matrix.
-        print("Plotting t-value interaction matrix.")
-        self.plot(self.inter_tvalue_df, self.outdir, self.tech_covs,
-                  self.colormap, "tvalue")
-        self.plot_colorbar(self.inter_tvalue_df.values.min(),
-                           self.inter_tvalue_df.values.max(),
-                           self.outdir,
-                           "tvalue")
+        #self.visualize_matrix()
+        self.visualize_matrix(exclude_tech_covs=True)
 
         # Plot the legend.
         self.plot_legend(self.colormap, self.outdir)
 
+    def visualize_matrix(self, exclude_tech_covs=False):
+        suffix = "_incl_tech_covs"
+        if exclude_tech_covs:
+            suffix = ""
+
+        # Plot the z-score matrix.
+        print("Plotting the z-score interaction matrix.")
+        self.plot(self.inter_df, self.outdir, self.tech_covs, self.colormap,
+                  outfile_prefix="zscore", exclude_tech_covs=exclude_tech_covs)
+        self.plot_colorbar(self.inter_df.values.min(),
+                           self.inter_df.values.max(),
+                           self.outdir,
+                           "zscore" + suffix)
+
+        # Plot the t-value matrix.
+        print("Plotting t-value interaction matrix.")
+        self.plot(self.inter_tvalue_df, self.outdir, self.tech_covs,
+                  self.colormap, outfile_prefix="tvalue" + suffix,
+                  exclude_tech_covs=exclude_tech_covs)
+        self.plot_colorbar(self.inter_tvalue_df.values.min(),
+                           self.inter_tvalue_df.values.max(),
+                           self.outdir,
+                           "tvalue" + suffix)
+
     @staticmethod
     def plot(df, outdir, tech_covs, colormap, outfile_prefix="",
-             vmin=None, vmax=None):
+             vmin=None, vmax=None, exclude_tech_covs=False):
+
+        if exclude_tech_covs:
+            mask = []
+            for index in df.index:
+                if index in tech_covs:
+                    mask.append(False)
+                else:
+                    mask.append(True)
+            df = df.loc[mask, :].copy()
+
         # Create the row colors.
-        row_colors = []
-        for x in df.index:
-            if x in tech_covs:
-                row_colors.append(colormap["technical covariate"])
-            else:
-                row_colors.append(colormap["covariate of interest"])
+        row_colors = None
+        if not exclude_tech_covs:
+            row_colors = []
+            for x in df.index:
+                if x in tech_covs:
+                    row_colors.append(colormap["technical covariate"])
+                else:
+                    row_colors.append(colormap["covariate of interest"])
 
         # Plot.
         sns.set(color_codes=True)

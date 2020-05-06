@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/04/19
-Last Changed: 2020/04/20
+Last Changed: 2020/05/06
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -45,7 +45,6 @@ class Main:
         Initializer of the class.
 
         :param settings_file: string, the name of the settings file.
-
         """
         # Define the current directory.
         current_dir = str(Path(__file__).parent.parent)
@@ -115,6 +114,9 @@ class Main:
         save_dataframe(eqtl_df, self.output_filepath, header=True, index=False)
 
     def print_arguments(self):
+        """
+        Method for printing the variables of the class.
+        """
         print("Arguments:")
         print("  > Output directory: {}".format(self.outdir))
         print("  > EQTL data file: {}".format(self.eqtl_filepath))

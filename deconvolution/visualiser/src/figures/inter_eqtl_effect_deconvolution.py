@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect_deconvolution.py
 Created:      2020/03/17
-Last Changed: 2020/04/20
+Last Changed: 2020/05/01
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -83,7 +83,7 @@ class IntereQTLEffectDeconvolution:
             probe_name = row["ProbeName"]
             hgnc_name = row["HGNCName"]
 
-            print("\tWorking on: {}\t{}\t{} [{}/{} "
+            print("\tWorking on: {}\t{}\t{}\t[{}/{}: "
                   "{:.2f}%]".format(snp_name, probe_name, hgnc_name,
                                     i + 1,
                                     self.eqtl_df.shape[0],
