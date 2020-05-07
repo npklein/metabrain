@@ -1,7 +1,11 @@
 # Deconvolution  
+This directory contains code written for the cell type deconvolution of bulk RNA-seq data. This project is part of my graduation internship for the master Data Science for Life Sciences at the Hanze University of Applied Sciences. For more information, please see my thesis.
+
 
 ## Introduction
+The goal of this project is to find interaction effects between eQTLS and covariates. Each step of the pipeline is called from the base directory. Each step also contains a command line argument to adjust to settings file. With this option, any setting can be altered by simply copying the default settings and replacing the variables as you please. Make sure to call the program with the right settings using the **-s** / **--settings** command line option.
 
+Some test scripts and job files are also part of this repository. These files consist code not worthy of a complete step in the pipeline but are still relevant to the project.
 
 ## Prerequisites  
 
@@ -16,10 +20,12 @@ The program requires the following packages to be installed:
  * seaborn ([v0.10.0](https://github.com/mwaskom/seaborn); [BSD 3-Clause License](https://github.com/mwaskom/seaborn/blob/master/LICENSE))  
  * scikit-learn ([v0.22.2.post1](https://scikit-learn.org/stable/whats_new.html); [BSD 3-Clause License](https://github.com/scikit-learn/scikit-learn/blob/master/COPYING))
  * colour ([v0.1.5](https://pypi.org/project/colour/#history); [BSD 3-Clause License](https://pypi.org/project/colour/))  
- * xlrd ([v1.2.0](https://pypi.org/project/xlrd/#history); [BSD License](https://pypi.org/project/xlrd/)) 
+ * xlrd* ([v1.2.0](https://pypi.org/project/xlrd/#history); [BSD License](https://pypi.org/project/xlrd/)) 
  * venn [v0.1.3](https://pypi.org/project/venn/#history); [GPLv3](https://pypi.org/project/venn/))
   
 See 'Installing' on how to install these packages.
+
+\* xlrd is only used on one of the test-scripts and is not required for the main program. 
 
 ## Installing  
 
@@ -50,6 +56,13 @@ pip install -r requirements.txt
 ## Usage  
   
 ### Step 1: Matrix Preparation  
+
+This step creates ordered matrices based on an eQTL file. For each eQTL, the corresponding genotype dosage values and gene expression values are matched. Furthermore, sample identifiers are made uniform.
+  
+This step also performs marker gene extractions, marker gene factorization, and partial deconvolution; all being part of the covariate matrix creation. 
+   
+ Other decommissioned steps involve masking the sample identifiers of the matrices, as well as creating groupings of non-NA containing eQTLs, and a correlation matrix for z-score comparison. 
+
 Settings: [default_settings.json]('matrix_preparation/settings/default_settings.json')  
 Syntax:
 ```console  
@@ -62,7 +75,12 @@ Options:
  
   
 ### Step 2: Analyse Interactions 
-#### Method A: [eQTLInteractionAnalyser](https://github.com/molgenis/systemsgenetics/wiki/Discovery-of-hidden-confounders-of-QTLs))
+
+This step performs multiple regression (MLR) analysis on the ordered expression/genotype matrix for each covariate in the covariate matrix (data from step 1). Each covariate is tested for having an interaction effect with the eQTL. Two distinct methods are implemented: (1) a wrapper around the java bases [eQTLInteractionAnalyser](https://github.com/molgenis/systemsgenetics/wiki/Discovery-of-hidden-confounders-of-QTLs) implementation developed by Patrick Deelen, and (2) my own custom implementation.  
+
+My own implementation also performs permutation based FDR in the MLR analysis. Results are separated on technical covariates and covariates of interest. The former of which is used to validate the model.
+
+#### Method A: [eQTLInteractionAnalyser](https://github.com/molgenis/systemsgenetics/wiki/Discovery-of-hidden-confounders-of-QTLs)
 ##### Step A1: Analyse Interaction per Group
 Settings: [default_settings.json]('analyse_interactions/settings/default_settings.json')  
 Syntax:
@@ -76,7 +94,7 @@ Options:
  * **-force**: Force the program to redo all steps, default: False.
  * **-verbose**: Include steps and command prints, default: False. 
  
-### Step A2: Merge Groups  
+#### Step A2: Merge Groups  
 Settings: [default_settings.json]('merge_groups/settings/default_settings.json')  
 Syntax:
 ```console  
@@ -93,8 +111,7 @@ Options:
 Settings: [default_settings.json]('custom_interaction_analyser/settings/default_settings.json')  
 
 ##### Step B1: Analyse All Interaction 
-This step performs the interaction analyses on a partition of the complete 
-dataframe and saves the result as pickled files.
+This step performs the interaction analyses on a partition of the complete data frame and saves the result as pickled files.
   
 Syntax:
 ```console  
@@ -120,10 +137,8 @@ python3 ./custom_interaction_analyser.py -sr 50 -ne 100
  * Job3:   
    ...  
    
-##### Step B2: Combin the Resuts
-This step loads the pickled data and combines them into a complete interaction
-matrix. Also multi testing corrections are performed and these values are
-compared and visualised.
+##### Step B2: Combine the Resuts
+This step loads the pickled data and combines them into a complete interaction matrix. Also multiple-testing corrections are performed and the resulting FDR are compared to the original p-values. This code also creates a few visualizations of the interaction data.
   
 Syntax:
 ```console  
@@ -133,6 +148,9 @@ Options:
  * **-combine**: Combine the created files, alternative functionality. Default: False.    
   
 ### Step 3: visualiser  
+
+This step takes the results from the previous two steps and creates visualizations of it. Each plot can be called separately.
+
 Settings: [default_settings.json]('visualiser/settings/default_settings.json')  
 Syntax:
 ```console  
