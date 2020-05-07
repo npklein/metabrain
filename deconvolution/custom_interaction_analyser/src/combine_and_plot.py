@@ -108,15 +108,6 @@ class CombineAndPlot:
                                                       self.pvalues_outfile,
                                                       columns=True)
 
-        print("Loading tvalue data.", flush=True)
-        tcolumns, tvalues_data = self.combine_pickles(workdir,
-                                                      self.tvalues_outfile,
-                                                      columns=True)
-
-        print("Loading permutation pvalue data.", flush=True)
-        _, perm_pvalues = self.combine_pickles(workdir,
-                                               self.perm_pvalues_outfile)
-
         # Create a pandas dataframe from the nested list.
         print("Creating p-values dataframe.", flush=True)
         pvalue_df = self.create_df(pvalues_data, pcolumns)
@@ -128,10 +119,18 @@ class CombineAndPlot:
         # Get the pvalues from the dataframe.
         pvalues = pvalue_df.melt()["value"].values
 
+        print("Loading permutation pvalue data.", flush=True)
+        _, perm_pvalues = self.combine_pickles(workdir,
+                                               self.perm_pvalues_outfile)
+
         # Visualise distributions.
         print("Visualizing distributions.", flush=True)
         self.plot_distributions(perm_pvalues, pvalues, workdir)
 
+        print("Loading tvalue data.", flush=True)
+        tcolumns, tvalues_data = self.combine_pickles(workdir,
+                                                      self.tvalues_outfile,
+                                                      columns=True)
 
         # Create a pandas dataframe from the nested list.
         print("Creating t-values dataframe.", flush=True)

@@ -203,8 +203,16 @@ class Main:
         geno_df.replace(-1, np.nan, inplace=True)
 
         # Initialize the storage object.
-        covs = list(set(cov_df.index).symmetric_difference(set(self.tech_covs)))
-        storage = Storage(tech_covs=self.tech_covs, covs=covs)
+        tech_cov_names = []
+        cov_names = []
+        for rowname in cov_df.index:
+            if rowname in self.tech_covs:
+                tech_cov_names.append(rowname)
+            else:
+                cov_names.append(rowname)
+        print(tech_cov_names)
+        print(cov_names)
+        storage = Storage(tech_covs=tech_cov_names, covs=cov_names)
 
         # Start working.
         print("Starting interaction analyser", flush=True)
@@ -256,13 +264,9 @@ class Main:
             storage.add_row(eqtl_index, genotype.name)
 
             # Loop over the covariates.
-            for cov_index in range(len(cov_df.index)):
+            for cov_name, covariate in cov_df.iterrows():
                 if storage.has_error():
                     break
-
-                # Get the covariate we are processing.
-                covarate = covariates.iloc[cov_index, :]
-                cov_name = covarate.name
 
                 if self.verbose:
                     print("\t\tWorking on '{}'".format(cov_name), flush=True)
@@ -270,7 +274,8 @@ class Main:
                 # Add the covariate to the null matrix if it isn't already.
                 null_matrix = base_matrix.copy()
                 if cov_name not in null_matrix.columns:
-                    null_matrix = null_matrix.merge(covarate.to_frame(),
+                    covariate_df = covariate.copy()
+                    null_matrix = null_matrix.merge(covariate_df.to_frame(),
                                                     left_index=True,
                                                     right_index=True)
 
@@ -292,7 +297,7 @@ class Main:
                     # Reorder the covariate based on the sample order.
                     # Make sure the labels are in the same order, just
                     # shuffle the values.
-                    covariate_all = cov_df.iloc[cov_index, :].copy()
+                    covariate_all = covariate.copy()
                     covariate_all_index = covariate_all.index
                     covariate_all = covariate_all.reindex(
                         covariate_all.index[sample_order])
@@ -398,7 +403,9 @@ class Main:
         with open(fpath, "wb") as f:
             pickle.dump(content, f)
         f.close()
-        print("\tcreated {}".format(os.path.basename(fpath)))
+
+        print_str = os.path.join(os.path.basename(os.path.dirname(fpath)), os.path.basename(fpath))
+        print("\tcreated {}".format(print_str))
 
     def create_perm_orders(self):
         """
