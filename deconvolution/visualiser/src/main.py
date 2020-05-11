@@ -112,6 +112,8 @@ class Main:
             dcc.start()
             del dcc
 
+        exit()
+
         if ('deconvolution_zscore_comparison' in self.plots) or \
                 ('all' in self.plots):
             print("\n### DECONVOLUTION Z-SCORE COMPARISON ###\n")

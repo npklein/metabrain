@@ -132,7 +132,6 @@ class CreateMatrices:
             # Get the row info.
             snp_name = row["SNPName"]
             probe_name = row["ProbeName"]
-            hgnc_name = row["HGNCName"]
 
             # Used for development.
             # snp_name = "10:100145864:rs4919426:T_C"

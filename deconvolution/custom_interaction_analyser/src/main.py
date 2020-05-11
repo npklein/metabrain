@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/04/23
-Last Changed: 2020/05/06
+Last Changed: 2020/05/11
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -192,17 +192,17 @@ class Main:
 
         # Split the covariate table into covariates of interest and technical
         # covariates.
-        print("Splitting covariate table")
+        print("Extracting technical covariates data frame")
         tech_cov_df = cov_df.loc[self.tech_covs, :].copy()
         # cov_df.drop(self.tech_covs, axis=0, inplace=True)
-        print("\tTechnical covariates: {}".format(tech_cov_df.shape))
-        print("\tCovariates of interest: {}".format(cov_df.shape))
+        print("\tShape: {}".format(tech_cov_df.shape))
 
         # Replace -1 with NaN in the genotype dataframe. This way we can
         # drop missing values.
         geno_df.replace(-1, np.nan, inplace=True)
 
         # Initialize the storage object.
+        print("Creating storage object")
         tech_cov_names = []
         cov_names = []
         for rowname in cov_df.index:
@@ -210,9 +210,8 @@ class Main:
                 tech_cov_names.append(rowname)
             else:
                 cov_names.append(rowname)
-        print(tech_cov_names)
-        print(cov_names)
         storage = Storage(tech_covs=tech_cov_names, covs=cov_names)
+        storage.print_info()
 
         # Start working.
         print("Starting interaction analyser", flush=True)
@@ -264,9 +263,13 @@ class Main:
             storage.add_row(eqtl_index, genotype.name)
 
             # Loop over the covariates.
-            for cov_name, covariate in cov_df.iterrows():
+            for cov_index in range(len(cov_df.index)):
                 if storage.has_error():
                     break
+
+                # Get the covariate we are processing.
+                covariate = covariates.iloc[cov_index, :]
+                cov_name = covariate.name
 
                 if self.verbose:
                     print("\t\tWorking on '{}'".format(cov_name), flush=True)
@@ -297,14 +300,14 @@ class Main:
                     # Reorder the covariate based on the sample order.
                     # Make sure the labels are in the same order, just
                     # shuffle the values.
-                    covariate_all = covariate.copy()
+                    covariate_all = cov_df.iloc[cov_index, :].copy()
                     covariate_all_index = covariate_all.index
                     covariate_all = covariate_all.reindex(
                         covariate_all.index[sample_order])
                     covariate_all.index = covariate_all_index
 
                     # Calculate the interaction effect of the covariate of
-                    # interest. Then drop the na's from the interaction
+                    # interest. Then drop the NA's from the interaction
                     # term.
                     inter_of_interest = covariate_all * genotype_all
                     inter_name = "{}_X_SNP".format(cov_name)

@@ -1,7 +1,7 @@
 """
 File:         create_cov_matrices.py
 Created:      2020/03/12
-Last Changed: 2020/04/15
+Last Changed: 2020/05/11
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -51,7 +51,6 @@ class CreateCovMatrix:
         :param outdir: string, the output directory.
         """
         self.cov_file = settings["covariate_datafile"]
-        self.cov_exclude = settings["covariate_exclude"]
         self.cohorts = settings["cohorts"]
         self.pheno_file = settings["phenotype_datafile"]
         self.eig_file = settings["eigenvectors_datafile"]
@@ -91,7 +90,7 @@ class CreateCovMatrix:
         print("Loading covariate matrix.")
         cov_df = load_dataframe(inpath=self.cov_file, header=0, index_col=0)
         cohorts_df = cov_df.loc[:, self.cohorts]
-        cov_df = cov_df.drop(self.cohorts + self.cov_exclude, axis=1)
+        cov_df = cov_df.drop(self.cohorts, axis=1)
 
         # validate the cohorts.
         print("Validating cohorts.")
@@ -178,7 +177,6 @@ class CreateCovMatrix:
     def print_arguments(self):
         print("Arguments:")
         print("  > Covariates input file: {}".format(self.cov_file))
-        print("  > Covariate exludes: {}".format(self.cov_exclude))
         print("  > Cohorts: {}".format(self.cohorts))
         print("  > Phenotype input file: {}".format(self.pheno_file))
         print("  > Eigenvectors input file: {}".format(self.eig_file))

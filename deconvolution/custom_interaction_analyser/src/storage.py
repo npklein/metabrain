@@ -1,7 +1,7 @@
 """
 File:         storage.py
 Created:      2020/05/06
-Last Changed:
+Last Changed: 2020/05/11
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -82,3 +82,9 @@ class Storage:
 
     def get_cov_container(self):
         return self.cov_container
+
+    def print_info(self):
+        print("Storage info:")
+        print("\t{} Technical covariates".format(len(self.tech_covs)))
+        print("\t{} Covariates of interest".format(len(self.covs)))
+        print("")

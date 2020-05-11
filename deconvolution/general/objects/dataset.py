@@ -41,15 +41,21 @@ class Dataset:
         self.expr_filename = filenames["expression"]
         self.cov_filename = filenames["covariates"]
         self.markers_filename = filenames["markers"]
-        self.inter_filename = settings.get_setting("interaction_datafile")
-        self.inter_tval_filename = settings.get_setting("interaction_tvalue_datafile")
+
+        self.inter_input_dir = settings.get_setting("interaction_input_dir")
+        inter_subdirs = settings.get_setting("interaction_input_subfolders")
+        self.inter_cov_subdir = inter_subdirs["covariates_of_interest"]
+        self.inter_tech_cov_subdir = inter_subdirs["technical_covariates"]
+        inter_filenames = settings.get_setting("interaction_filenames")
+        self.zscore_filename = inter_filenames["zscores"]
+        self.tvalue_filename = inter_filenames["tvalues"]
+
         self.eqtl_celltype = settings.get_setting("eqtl_celltype_datafile")
         self.celltypes = settings.get_setting("celltypes")
         self.colormap = settings.get_setting("colormap")
         self.cellmap_methods = settings.get_setting("cellmap_method_prefix_and_suffix")
         self.marker_genes = settings.get_setting("marker_genes_prefix")
         self.signif_cutoff = stats.norm.isf(settings.get_setting("significance_cutoff"))
-        self.tech_covs = settings.get_setting("technical_covariates")
         nrows = nrows
         if nrows == -1:
             nrows = None
@@ -64,8 +70,10 @@ class Dataset:
         self.alleles_df = None
         self.expr_df = None
         self.cov_df = None
-        self.inter_df = None
-        self.inter_tval_df = None
+        self.inter_cov_zscore_df = None
+        self.inter_tech_cov_zscore_df = None
+        self.inter_cov_tvalue_df = None
+        self.inter_tech_cov_tvalue_df = None
         self.eqtl_ct_df = None
         self.marker_df = None
 
@@ -78,8 +86,10 @@ class Dataset:
         self.get_alleles_df()
         self.get_expr_df()
         self.get_cov_df()
-        self.get_inter_df()
-        self.get_inter_tval_df()
+        self.get_inter_cov_zscore_df()
+        self.get_inter_tech_cov_zscore_df()
+        self.get_inter_cov_tvalue_df()
+        self.get_inter_tech_cov_tvalue_df()
         self.get_eqtl_ct_df()
         self.get_marker_df()
         print("Validation finished.")
@@ -99,9 +109,6 @@ class Dataset:
 
     def get_significance_cutoff(self):
         return self.signif_cutoff
-
-    def get_tech_covs(self):
-        return self.tech_covs
 
     def get_eqtl_df(self):
         if self.eqtl_df is None:
@@ -154,27 +161,49 @@ class Dataset:
             self.validate()
         return self.cov_df
 
-    def get_inter_df(self):
-        if self.inter_df is None:
-            self.inter_df = load_dataframe(inpath=os.path.join(self.input_dir,
-                                                          self.inter_filename),
-                                           header=0,
-                                           index_col=0)
-
-            self.inter_df.dropna(axis='columns', inplace=True)
+    def get_inter_cov_zscore_df(self):
+        if self.inter_cov_zscore_df is None:
+            self.inter_cov_zscore_df = load_dataframe(
+                inpath=os.path.join(self.inter_input_dir,
+                                    self.inter_cov_subdir,
+                                    self.zscore_filename),
+                header=0,
+                index_col=0)
             self.validate()
-        return self.inter_df
+        return self.inter_cov_zscore_df
 
-    def get_inter_tval_df(self):
-        if self.inter_tval_df is None:
-            self.inter_tval_df = load_dataframe(inpath=os.path.join(self.input_dir,
-                                                                    self.inter_tval_filename),
-                                                header=0,
-                                                index_col=0)
-
-            self.inter_tval_df.dropna(axis='columns', inplace=True)
+    def get_inter_tech_cov_zscore_df(self):
+        if self.inter_tech_cov_zscore_df is None:
+            self.inter_tech_cov_zscore_df = load_dataframe(
+                inpath=os.path.join(self.inter_input_dir,
+                                    self.inter_tech_cov_subdir,
+                                    self.zscore_filename),
+                header=0,
+                index_col=0)
             self.validate()
-        return self.inter_tval_df
+        return self.inter_tech_cov_zscore_df
+
+    def get_inter_cov_tvalue_df(self):
+        if self.inter_cov_tvalue_df is None:
+            self.inter_cov_tvalue_df = load_dataframe(
+                inpath=os.path.join(self.inter_input_dir,
+                                    self.inter_cov_subdir,
+                                    self.tvalue_filename),
+                header=0,
+                index_col=0)
+            self.validate()
+        return self.inter_cov_tvalue_df
+
+    def get_inter_tech_cov_tvalue_df(self):
+        if self.inter_tech_cov_tvalue_df is None:
+            self.inter_tech_cov_tvalue_df = load_dataframe(
+                inpath=os.path.join(self.inter_input_dir,
+                                    self.inter_tech_cov_subdir,
+                                    self.tvalue_filename),
+                header=0,
+                index_col=0)
+            self.validate()
+        return self.inter_tech_cov_tvalue_df
 
     def get_eqtl_ct_df(self):
         if self.eqtl_ct_df is None:

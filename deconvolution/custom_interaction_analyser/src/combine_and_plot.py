@@ -96,7 +96,7 @@ class CombineAndPlot:
         # Print the time.
         run_time_min, run_time_sec = divmod(time.time() - start_time, 60)
         run_time_hour, run_time_min = divmod(run_time_min, 60)
-        print("[manager]\tfinished in  {} hour(s), {} minute(s) and "
+        print("finished in  {} hour(s), {} minute(s) and "
               "{} second(s).".format(int(run_time_hour),
                                      int(run_time_min),
                                      int(run_time_sec)), flush=True)
@@ -314,25 +314,41 @@ class CombineAndPlot:
         df["baseline"] = (df["perm_pvalues"] * scaler)
         df["index"] = (bins[:-1] + bins[1:]) / 2
 
+        # Set the step sizes.
+        multiplication = [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.1]
+        step_sizes = sorted([(x * y) for x in [1, 2, 2.5, 5]
+                             for y in multiplication])
+
+        # Plot.
         sns.set(rc={'figure.figsize': (18, 9)})
         sns.set_style("ticks")
         fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
-        for i, ax in enumerate([ax1, ax2, ax3]):
-            sns.despine(fig=fig, ax=ax)
-
-            for i in range(0, 1001, 25):
-                alpha = 0.025
-                if i % 50 == 0:
-                    alpha = 0.15
-                ax.axhline(i / 1000, ls='-', color="#000000",
-                           alpha=alpha, zorder=-1)
 
         sns.barplot(x="index", y="perm_pvalues", color='cornflowerblue', data=df, ax=ax1)
         sns.barplot(x="index", y="pvalues", color='firebrick', data=df, ax=ax2)
         sns.barplot(x="index", y="pvalues", color='firebrick', data=df, ax=ax3)
         sns.barplot(x="index", y="baseline", color='cornflowerblue', data=df, ax=ax3)
 
-        for ax, title in zip([ax1, ax2, ax3], ["Null", "Alternative", "Combined"]):
+        for ax, title, ymax in zip([ax1, ax2, ax3],
+                                   ["Null", "Alternative", "Combined"],
+                                   [df["perm_pvalues"].max(), df["pvalues"].max(), df["pvalues"].max()]):
+            sns.despine(fig=fig, ax=ax)
+
+            # Determine the step size.
+            distances = pd.Series([abs(x - (ymax / 10)) for x in step_sizes])
+            index = distances.idxmin()
+            if isinstance(index, list):
+                index = index[0]
+            step_size = int(step_sizes[index] * 1000)
+
+            for i in range(0, 1001, step_size):
+                alpha = 0.025
+                if i % (step_size * 2) == 0:
+                    alpha = 0.15
+                if i / 1000 < ymax:
+                    ax.axhline(i / 1000, ls='-', color="#000000",
+                               alpha=alpha, zorder=-1)
+
             ax.text(0.5, 1.02,
                     '{} Distribution'.format(title),
                     fontsize=16, weight='bold', ha='center', va='bottom',
@@ -343,7 +359,6 @@ class CombineAndPlot:
             ax.set_ylabel('ratio',
                           fontsize=12,
                           fontweight='bold')
-            ax.set_ylim(0, 0.35)
 
             labels = ax.get_xticklabels()
             new_labels = []
@@ -355,7 +370,7 @@ class CombineAndPlot:
             ax.set_xticklabels(new_labels, rotation=45)
 
         plt.tight_layout()
-        fig.savefig(os.path.join(outdir, "pvalues_distributions.png"))
+        fig.savefig(os.path.join(outdir, "pvalues_distributions.pdf"), format='pdf', dpi=1200)
         plt.close()
 
     @staticmethod
@@ -483,14 +498,14 @@ class CombineAndPlot:
         :param max_val: float, the maximum p-value to include.
         """
         # Combine the dataframes into one.
-        df = pd.DataFrame({"P-value": pvalue_df.melt()["value"],
-                           "Permutation FDR": perm_fdr.melt()["value"],
+        df = pd.DataFrame({"p-value": pvalue_df.melt()["value"],
+                           "permutation FDR": perm_fdr.melt()["value"],
                            "BH FDR": bh_fdr.melt()["value"]})
 
         # Filter the rows that contain at least one value below the max.
         indices = []
         for index, row in df.iterrows():
-            add = (row["Permutation FDR"] <= max_val) or (row["BH FDR"] <= max_val)
+            add = (row["permutation FDR"] <= max_val) or (row["BH FDR"] <= max_val)
             indices.append(add)
         df = df.loc[indices, :]
 
@@ -498,16 +513,6 @@ class CombineAndPlot:
         precision = 3
         xy_min = math.floor(df.values.min() * precision) / precision
         xy_max = math.ceil(df.values.max() * precision) / precision
-
-        # Calculate the maximum color value.
-        # val = -np.inf
-        # for i in range(3):
-        #     for j in range(3):
-        #         if i > j:
-        #             new_max = ((df.iloc[:, i] - df.iloc[:, j]) ** 2).max()
-        #             if new_max > val:
-        #                 val = new_max
-        # max_col_value = int(val * (10 ** precision))
 
         bins = np.linspace(0, max_val, 15)
 
@@ -524,14 +529,16 @@ class CombineAndPlot:
                 print("\tPlotting axes[{}, {}]".format(index2, index1))
 
                 if index2 > index1:
-                    # colormap = self.create_color_map(length=max_col_value,
-                    #                                  precision=precision)
-                    # diff = round((x - y) ** 2, precision)
-                    #
-                    # sns.scatterplot(x=x, y=y, hue=diff, pallete=colormap, ax=ax)
-                    #
-                    # colors = diff.map(colormap)
-                    ax.scatter(x, y, c="cornflowerblue")
+                    # Calculate the difference between x and y and create a
+                    # colormap accordingly.
+                    diff = round((x - y) ** 2, precision)
+                    max_col_value = math.ceil(diff.max() * (10 ** precision))
+                    colormap = self.create_color_map(length=max_col_value,
+                                                     precision=precision)
+                    colors = diff.map(colormap)
+
+                    # Plot.
+                    ax.scatter(x, y, c=colors.values)
                     ax.plot([xy_min, xy_max], [xy_min, xy_max], ls="--", c=".3")
 
                     for i in range(int(xy_min * 100), int(xy_max * 100) + 10, 5):
@@ -556,7 +563,7 @@ class CombineAndPlot:
                     value_bins["index"] = (bins[:-1] + bins[1:]) / 2
                     value_bins = value_bins.round(2)
 
-                    sns.barplot(x="index", y="count", color='cornflowerblue',
+                    sns.barplot(x="index", y="count", color='#696969',
                                 data=value_bins, ax=ax)
                     ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
 
@@ -577,7 +584,7 @@ class CombineAndPlot:
         fig.align_xlabels(axes[2, :])
         fig.suptitle('Multiple Testing Comparison', fontsize=20, fontweight='bold')
         plt.tight_layout()
-        fig.savefig(os.path.join(outdir, "pvalue_vs_fdr_comparison_{}.png".format(max_val)))
+        fig.savefig(os.path.join(outdir, "pvalue_vs_fdr_comparison_{}.pdf".format(max_val)), format='pdf', dpi=1200)
         plt.close()
 
     @staticmethod
@@ -589,8 +596,8 @@ class CombineAndPlot:
         colors = [x.rgb for x in palette]
         values = [x / (10 ** precision) for x in list(range(0, length + 1))]
         value_color_map = {x: y for x, y in zip(values, colors)}
-        for value in [np.nan, -np.inf, np.inf]:
-            value_color_map[value] = Color(rgb=(0.698, 0.133, 0.133))
+        # for value in [np.nan, -np.inf, np.inf]:
+        #     value_color_map[value] = Color(rgb=(0.698, 0.133, 0.133))
         return value_color_map
 
     def print_arguments(self):
