@@ -63,7 +63,7 @@ This step also performs marker gene extractions, marker gene factorization, and 
    
  Other decommissioned steps involve masking the sample identifiers of the matrices, as well as creating groupings of non-NA containing eQTLs, and a correlation matrix for z-score comparison. 
 
-Settings: [default_settings.json]('matrix_preparation/settings/default_settings.json')  
+Settings: [default_settings.json](matrix_preparation/settings/default_settings.json)  
 Syntax:
 ```console  
 python3 ./matrix_preparation.py
@@ -82,7 +82,7 @@ My own implementation also performs permutation based FDR in the MLR analysis. R
 
 #### Method A: [eQTLInteractionAnalyser](https://github.com/molgenis/systemsgenetics/wiki/Discovery-of-hidden-confounders-of-QTLs)
 ##### Step A1: Analyse Interaction per Group
-Settings: [default_settings.json]('analyse_interactions/settings/default_settings.json')  
+Settings: [default_settings.json](analyse_interactions/settings/default_settings.json)  
 Syntax:
 ```console  
 python3 ./analyse_interactions.py
@@ -95,7 +95,7 @@ Options:
  * **-verbose**: Include steps and command prints, default: False. 
  
 #### Step A2: Merge Groups  
-Settings: [default_settings.json]('merge_groups/settings/default_settings.json')  
+Settings: [default_settings.json](merge_groups/settings/default_settings.json)  
 Syntax:
 ```console  
 python3 ./merge_groups.py
@@ -108,7 +108,7 @@ Options:
     
 
 ### Method B: Custom Interaction Analyser
-Settings: [default_settings.json]('custom_interaction_analyser/settings/default_settings.json')  
+Settings: [default_settings.json](custom_interaction_analyser/settings/default_settings.json)  
 
 ##### Step B1: Analyse All Interaction 
 This step performs the interaction analyses on a partition of the complete data frame and saves the result as pickled files.
@@ -151,7 +151,7 @@ Options:
 
 This step takes the results from the previous two steps and creates visualizations of it. Each plot can be called separately.
 
-Settings: [default_settings.json]('visualiser/settings/default_settings.json')  
+Settings: [default_settings.json](visualiser/settings/default_settings.json)  
 Syntax:
 ```console  
 python3 ./visualiser.py
