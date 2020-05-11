@@ -1,7 +1,7 @@
 """
 File:         inter_clustermap.py
 Created:      2020/03/16
-Last Changed: 2020/04/29
+Last Changed: 2020/05/11
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -23,13 +23,11 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 import os
 
 # Third party imports.
-import scipy.stats as stats
 import numpy as np
 import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 
 # Local application imports.
 from general.utilities import prepare_output_dir
@@ -48,73 +46,36 @@ class InterClusterMap:
 
         # Extract the required data.
         print("Loading data")
-        self.inter_df = dataset.get_inter_df()
-        self.inter_tvalue_df = dataset.get_inter_tval_df()
-        self.tech_covs = dataset.get_tech_covs()
-        self.colormap = {"technical covariate": "cornflowerblue",
-                         "covariate of interest": "firebrick"}
+        self.inter_cov_zscore_df = dataset.get_inter_cov_zscore_df()
+        self.inter_tech_cov_zscore_df = dataset.get_inter_tech_cov_zscore_df()
+        self.inter_cov_tvalue_df = dataset.get_inter_cov_tvalue_df()
+        self.inter_tech_cov_tvalue_df = dataset.get_inter_tech_cov_tvalue_df()
 
     def start(self):
         print("Plotting interaction clustermap")
         self.print_arguments()
 
-        #self.visualize_matrix()
-        self.visualize_matrix(exclude_tech_covs=True)
+        self.visualize_matrix(self.inter_cov_zscore_df, self.outdir, outfile_prefix="cov_zscore")
+        self.visualize_matrix(self.inter_tech_cov_zscore_df, self.outdir, outfile_prefix="tech_cov_zscore")
+        self.visualize_matrix(self.inter_cov_tvalue_df, self.outdir, outfile_prefix="cov_zscore")
+        self.visualize_matrix(self.inter_tech_cov_tvalue_df, self.outdir, outfile_prefix="tech_cov_zscore")
 
-        # Plot the legend.
-        self.plot_legend(self.colormap, self.outdir)
+    def visualize_matrix(self, df, outdir, outfile_prefix="", vmin=None, vmax=None):
+        self.plot(df=df, outdir=outdir, outfile_prefix=outfile_prefix,
+                  vmin=vmin, vmax=vmax)
 
-    def visualize_matrix(self, exclude_tech_covs=False):
-        suffix = "_incl_tech_covs"
-        if exclude_tech_covs:
-            suffix = ""
+        if vmin is None:
+            vmin = df.values.min()
+        if vmax is None:
+            vmax = df.values.max()
 
-        # Plot the z-score matrix.
-        print("Plotting the z-score interaction matrix.")
-        self.plot(self.inter_df, self.outdir, self.tech_covs, self.colormap,
-                  outfile_prefix="zscore", exclude_tech_covs=exclude_tech_covs)
-        self.plot_colorbar(self.inter_df.values.min(),
-                           self.inter_df.values.max(),
-                           self.outdir,
-                           "zscore" + suffix)
-
-        # Plot the t-value matrix.
-        print("Plotting t-value interaction matrix.")
-        self.plot(self.inter_tvalue_df, self.outdir, self.tech_covs,
-                  self.colormap, outfile_prefix="tvalue" + suffix,
-                  exclude_tech_covs=exclude_tech_covs)
-        self.plot_colorbar(self.inter_tvalue_df.values.min(),
-                           self.inter_tvalue_df.values.max(),
-                           self.outdir,
-                           "tvalue" + suffix)
+        self.plot_colorbar(vmin=vmin, vmax=vmax, outdir=outdir, name_prefix=outfile_prefix)
 
     @staticmethod
-    def plot(df, outdir, tech_covs, colormap, outfile_prefix="",
-             vmin=None, vmax=None, exclude_tech_covs=False):
-
-        if exclude_tech_covs:
-            mask = []
-            for index in df.index:
-                if index in tech_covs:
-                    mask.append(False)
-                else:
-                    mask.append(True)
-            df = df.loc[mask, :].copy()
-
-        # Create the row colors.
-        row_colors = None
-        if not exclude_tech_covs:
-            row_colors = []
-            for x in df.index:
-                if x in tech_covs:
-                    row_colors.append(colormap["technical covariate"])
-                else:
-                    row_colors.append(colormap["covariate of interest"])
-
-        # Plot.
+    def plot(df, outdir, outfile_prefix="", vmin=None, vmax=None):
         sns.set(color_codes=True)
         g = sns.clustermap(df, center=0, cmap="RdBu_r",
-                           vmin=vmin, vmax=vmax, row_colors=row_colors,
+                           vmin=vmin, vmax=vmax,
                            yticklabels=True, xticklabels=False,
                            dendrogram_ratio=(.1, .1),
                            figsize=(12, (.2 * (len(df.index)))))
@@ -134,23 +95,11 @@ class InterClusterMap:
         ax1.remove()
         plt.savefig(os.path.join(outdir, "{}_colorbar.png".format(name_prefix)), bbox_inches='tight')
 
-    @staticmethod
-    def plot_legend(colormap, outdir):
-        sns.set(rc={'figure.figsize': (3, 9)})
-        sns.set_style("ticks")
-        fig, ax = plt.subplots()
-        sns.despine(fig=fig, ax=ax)
-        handles = []
-        for name, color in colormap.items():
-            handles.append(mpatches.Patch(color=color, label=name))
-        ax.legend(handles=handles)
-        ax.set_axis_off()
-        fig.savefig(os.path.join(outdir, "legend.png"))
-        plt.close()
-
     def print_arguments(self):
         print("Arguments:")
-        print("  > Interaction z-score matrix shape: {}".format(self.inter_df.shape))
-        print("  > Interaction t-value matrix shape: {}".format(self.inter_tvalue_df.shape))
+        print("  > Cov interaction z-score matrix shape: {}".format(self.inter_cov_zscore_df.shape))
+        print("  > Tech.cov interaction z-score matrix shape: {}".format(self.inter_tech_cov_zscore_df.shape))
+        print("  > Cov interaction t-value matrix shape: {}".format(self.inter_cov_tvalue_df.shape))
+        print("  > Tech.cov interaction t-value matrix shape: {}".format(self.inter_tech_cov_tvalue_df.shape))
         print("  > Output directory: {}".format(self.outdir))
         print("")

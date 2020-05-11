@@ -20,6 +20,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Standard imports.
+import math
 import os
 
 # Third party imports.
@@ -140,7 +141,7 @@ class DeconvolutionCovariateComparison:
         fig.align_xlabels(axes[len(indices) - 1, :])
         fig.colorbar(sm, cax=cax)
         fig.suptitle('Deconvolution Covariate Correlations', fontsize=40, fontweight='bold')
-        fig.savefig(os.path.join(outdir, "deconvolution_covariate_comparison.png"))
+        fig.savefig(os.path.join(outdir, "deconvolution_covariate_comparison.pdf"), format='pdf', dpi=600)
         plt.close()
 
     def print_arguments(self):

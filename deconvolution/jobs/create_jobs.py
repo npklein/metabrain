@@ -3,7 +3,7 @@
 """
 File:         create_jobs.py
 Created:      2020/04/22
-Last Changed: 2020/04/26
+Last Changed: 2020/05/11
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -55,9 +55,10 @@ class main():
         self.mem = 2
         self.count = 0
         self.start_index = 0
-        self.stop_index = 100
-        self.batch_size = 10
+        self.stop_index = 10000
+        self.batch_size = 50
         self.samples = 3703
+        self.settings_file = "cis_settings"
 
     def start(self):
         start_indices = [i for i in range(self.start_index, self.stop_index, self.batch_size)]
@@ -100,7 +101,7 @@ class main():
                  "module load Python/3.6.3-foss-2015b\n",
                  "source $HOME/venv/bin/activate\n",
                  "\n",
-                 "python3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/custom_interaction_analyser.py{} -ne {} -ns {}{}\n".format(skip_rows, batch_size, self.samples, cores),
+                 "python3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/custom_interaction_analyser.py -s {}{} -ne {} -ns {}{}\n".format(self.settings_file, skip_rows, batch_size, self.samples, cores),
                  "\n",
                  "deactivate\n"]
 

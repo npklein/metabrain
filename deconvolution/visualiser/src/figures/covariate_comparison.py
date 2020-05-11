@@ -147,7 +147,7 @@ class CovariateComparison:
         fig.align_ylabels(axes[:, 0])
         fig.align_xlabels(axes[len(indices) - 1, :])
         fig.suptitle('Covariate Correlations', fontsize=40, fontweight='bold')
-        fig.savefig(os.path.join(outdir, "covariate_comparison.png"))
+        fig.savefig(os.path.join(outdir, "covariate_comparison.pdf"), format='pdf', dpi=600)
         plt.close()
 
     def print_arguments(self):
