@@ -1,7 +1,7 @@
 """
 File:         inter_clustermap.py
 Created:      2020/03/16
-Last Changed: 2020/05/11
+Last Changed: 2020/05/12
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -57,8 +57,8 @@ class InterClusterMap:
 
         self.visualize_matrix(self.inter_cov_zscore_df, self.outdir, outfile_prefix="cov_zscore")
         self.visualize_matrix(self.inter_tech_cov_zscore_df, self.outdir, outfile_prefix="tech_cov_zscore")
-        self.visualize_matrix(self.inter_cov_tvalue_df, self.outdir, outfile_prefix="cov_zscore")
-        self.visualize_matrix(self.inter_tech_cov_tvalue_df, self.outdir, outfile_prefix="tech_cov_zscore")
+        self.visualize_matrix(self.inter_cov_tvalue_df, self.outdir, outfile_prefix="cov_tvalue")
+        self.visualize_matrix(self.inter_tech_cov_tvalue_df, self.outdir, outfile_prefix="tech_cov_tvalue")
 
     def visualize_matrix(self, df, outdir, outfile_prefix="", vmin=None, vmax=None):
         self.plot(df=df, outdir=outdir, outfile_prefix=outfile_prefix,

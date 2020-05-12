@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed: 2020/05/06
+Last Changed: 2020/05/12
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -25,6 +25,7 @@ from __future__ import print_function
 from pathlib import Path
 from bisect import bisect_left
 from colour import Color
+from itertools import groupby, count
 import pickle
 import math
 import glob
@@ -116,6 +117,12 @@ class CombineAndPlot:
                                             "pvalue_table.txt.gz"),
                        header=True, index=True)
 
+        # pvalue_df = pd.read_csv(os.path.join(workdir, "pvalue_table.txt.gz"),
+        #                         sep="\t", header=0, index_col=0)
+        # with open(os.path.join(workdir, "perm_pvalues.pkl"), "rb") as f:
+        #     perm_pvalues = pickle.load(f)
+        # f.close()
+
         # Get the pvalues from the dataframe.
         pvalues = pvalue_df.melt()["value"].values
 
@@ -126,6 +133,8 @@ class CombineAndPlot:
         # Visualise distributions.
         print("Visualizing distributions.", flush=True)
         self.plot_distributions(perm_pvalues, pvalues, workdir)
+
+        # return
 
         print("Loading tvalue data.", flush=True)
         tcolumns, tvalues_data = self.combine_pickles(workdir,
@@ -147,12 +156,6 @@ class CombineAndPlot:
                        outpath=os.path.join(workdir,
                                             "interaction_table.txt.gz"),
                        header=True, index=True)
-
-        # pvalue_df = pd.read_csv(os.path.join(workdir, "pvalue_table.txt.gz"),
-        #                         sep="\t", header=0, index_col=0)
-        # with open(os.path.join(workdir, "perm_pvalues.pkl"), "rb") as f:
-        #     perm_pvalues = pickle.load(f)
-        # f.close()
 
         # Sort the lists.
         print("Sorting p-values.", flush=True)
@@ -226,8 +229,7 @@ class CombineAndPlot:
 
         return col_list, data
 
-    @staticmethod
-    def create_df(data, columns):
+    def create_df(self, data, columns):
         """
         Method for creating a pandas dataframe from a nested list.
 
@@ -242,13 +244,24 @@ class CombineAndPlot:
         reference = set(np.arange(df.index.min(), df.index.max() + 1))
         missing = list(df.index.symmetric_difference(reference))
         duplicated = list(df.index[df.index.duplicated(keep="first")])
-        print("\tMissing indices: {}".format(missing))
-        print("\tDuplicate indices: {}".format(duplicated))
+        print("\tMissing indices: {}".format(self.group_consecutive_numbers(missing)))
+        print("\tDuplicate indices: {}".format(self.group_consecutive_numbers(duplicated)))
+
+        df.drop_duplicates(keep="first", inplace=True)
+
+        duplicated = list(df.index[df.index.duplicated(keep="first")])
+        print("\tUniquely duplicates indices: {}".format(self.group_consecutive_numbers(duplicated)))
 
         df.set_index("-", inplace=True)
         df = df.T
 
         return df
+
+    @staticmethod
+    def group_consecutive_numbers(numbers):
+        groups = groupby(numbers, key=lambda item, c=count(): item - next(c))
+        tmp = [list(g) for k, g in groups]
+        return [str(x[0]) if len(x) == 1 else "{}-{}".format(x[0], x[-1]) for x in tmp]
 
     def create_zscore_df(self, df):
         """
@@ -356,7 +369,7 @@ class CombineAndPlot:
             ax.set_xlabel('p-value',
                           fontsize=12,
                           fontweight='bold')
-            ax.set_ylabel('ratio',
+            ax.set_ylabel('proportion',
                           fontsize=12,
                           fontweight='bold')
 
@@ -370,7 +383,7 @@ class CombineAndPlot:
             ax.set_xticklabels(new_labels, rotation=45)
 
         plt.tight_layout()
-        fig.savefig(os.path.join(outdir, "pvalues_distributions.pdf"), format='pdf', dpi=1200)
+        fig.savefig(os.path.join(outdir, "pvalues_distributions.png"))
         plt.close()
 
     @staticmethod
@@ -584,7 +597,7 @@ class CombineAndPlot:
         fig.align_xlabels(axes[2, :])
         fig.suptitle('Multiple Testing Comparison', fontsize=20, fontweight='bold')
         plt.tight_layout()
-        fig.savefig(os.path.join(outdir, "pvalue_vs_fdr_comparison_{}.pdf".format(max_val)), format='pdf', dpi=1200)
+        fig.savefig(os.path.join(outdir, "pvalue_vs_fdr_comparison_{}.png".format(max_val)))
         plt.close()
 
     @staticmethod
@@ -596,8 +609,8 @@ class CombineAndPlot:
         colors = [x.rgb for x in palette]
         values = [x / (10 ** precision) for x in list(range(0, length + 1))]
         value_color_map = {x: y for x, y in zip(values, colors)}
-        # for value in [np.nan, -np.inf, np.inf]:
-        #     value_color_map[value] = Color(rgb=(0.698, 0.133, 0.133))
+        for value in [np.nan, -np.inf, np.inf]:
+            value_color_map[value] = Color(rgb=(0.698, 0.133, 0.133))
         return value_color_map
 
     def print_arguments(self):

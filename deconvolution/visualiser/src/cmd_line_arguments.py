@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/13
-Last Changed: 2020/04/26
+Last Changed: 2020/05/12
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -85,6 +85,7 @@ class CommandLineArguments:
                                      "simple_eqtl_effect",
                                      "inter_clustermap",
                                      "inter_zscore_bars",
+                                     "inter_pvalue_boxplot",
                                      "inter_zscore_dist",
                                      "inter_zscore_marker_genes",
                                      "inter_eqtl_zscore_bars",

@@ -1,7 +1,7 @@
 """
 File:         inter_zscores_bars.py
 Created:      2020/03/16
-Last Changed: 2020/04/29
+Last Changed: 2020/05/12
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -49,35 +49,44 @@ class InterZscoreBars:
 
         # Extract the required data.
         print("Loading data")
-        self.inter_df = dataset.get_inter_df()
-        self.tech_covs = dataset.get_tech_covs()
+        self.inter_cov_zscore_df = dataset.get_inter_cov_zscore_df()
+        self.inter_tech_cov_zscore_df = dataset.get_inter_tech_cov_zscore_df()
         self.z_score_cutoff = dataset.get_significance_cutoff()
 
     def start(self):
         print("Plotting interaction matrix z-scores as barplot.")
         self.print_arguments()
 
-        print("Plotting positive z-scores.")
-        data = self.get_counts(lower_cutoff=-np.inf, upper_cutoff=0)
-        self.create_plots(data, "Positive ", "[>0]")
+        print("Plotting covariates of interest")
+        self.plot_bars(self.inter_cov_zscore_df, fontsize=5, outdir="covariates")
 
-        print("Plotting significant z-scores.")
-        self.get_counts(lower_cutoff=self.z_score_cutoff, upper_cutoff=abs(self.z_score_cutoff))
-        self.create_plots(data, "Significant ",
+        print("Plotting technical covariates")
+        self.plot_bars(self.inter_tech_cov_zscore_df, fontsize=10, outdir="technical_covariates")
+
+    def plot_bars(self, df, outdir, fontsize=10):
+        full_outdir = os.path.join(self.outdir, outdir)
+        if not os.path.exists(full_outdir):
+            os.makedirs(full_outdir)
+
+        print("\tPlotting negative z-scores.")
+        data = self.get_counts(df, lower_cutoff=0, upper_cutoff=np.inf)
+        self.create_plots(data, full_outdir, fontsize,
+                          "Negative ", "[<0]")
+
+        print("\tPlotting positive z-scores.")
+        data = self.get_counts(df, lower_cutoff=-np.inf, upper_cutoff=0)
+        self.create_plots(data, full_outdir, fontsize,
+                          "Positive ", "[>0]")
+
+        print("\tPlotting significant z-scores.")
+        self.get_counts(df, lower_cutoff=self.z_score_cutoff,
+                        upper_cutoff=abs(self.z_score_cutoff))
+        self.create_plots(data, full_outdir, fontsize, "Significant ",
                           "[{:.2f} < x < {:.2f}]".format(self.z_score_cutoff,
                                                          abs(self.z_score_cutoff)))
 
-    def get_counts(self, lower_cutoff=0, upper_cutoff=0):
-        df = self.inter_df.copy()
-
-        mask = []
-        for index in df.index:
-            if index in self.tech_covs:
-                mask.append(False)
-            else:
-                mask.append(True)
-        df = df.loc[mask, :]
-
+    def get_counts(self, data, lower_cutoff=0, upper_cutoff=0):
+        df = data.copy()
         df[(df > lower_cutoff) & (df < upper_cutoff)] = 0
         sums = df.pow(2).sum(axis=1).to_frame().reset_index()
         sums.columns = ["index", "counts"]
@@ -86,14 +95,15 @@ class InterZscoreBars:
 
         return sums
 
-    def create_plots(self, data, title_prefix="", subtitle_suffix=""):
+    def create_plots(self, data, outdir, fontsize=10,
+                     title_prefix="", subtitle_suffix=""):
         max_val = max(data["counts"])
-        self.plot(data.copy(), max_val, self.outdir, fontsize=5,
+        self.plot(data.copy(), max_val, outdir, fontsize=fontsize,
                   title_prefix=title_prefix, subtitle_suffix=subtitle_suffix)
-        self.plot(data.copy(), max_val, self.outdir, top=10,
+        self.plot(data.copy(), max_val, outdir, top=10,
                   fontsize=14, title_prefix=title_prefix,
                   subtitle_suffix=subtitle_suffix)
-        self.plot(data.copy(), max_val, self.outdir, bottom=10,
+        self.plot(data.copy(), max_val, outdir, bottom=10,
                   fontsize=14, title_prefix=title_prefix,
                   subtitle_suffix=subtitle_suffix)
 
@@ -177,6 +187,7 @@ class InterZscoreBars:
 
     def print_arguments(self):
         print("Arguments:")
-        print("  > Interaction matrix shape: {}".format(self.inter_df.shape))
+        print("  > Cov interaction z-score matrix shape: {}".format(self.inter_cov_zscore_df.shape))
+        print("  > Tech.cov interaction z-score matrix shape: {}".format(self.inter_tech_cov_zscore_df.shape))
         print("  > Output directory: {}".format(self.outdir))
         print("")
