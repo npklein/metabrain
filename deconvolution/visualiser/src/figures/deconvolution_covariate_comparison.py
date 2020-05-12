@@ -1,7 +1,7 @@
 """
 File:         deconvolution_covariate_comparison.py
 Created:      2020/04/15
-Last Changed: 2020/04/28
+Last Changed: 2020/05/12
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -75,14 +75,14 @@ class DeconvolutionCovariateComparison:
     def plot(corr_df, pval_df, outdir):
         print("Plotting")
 
-        indices = [(93, 98, "McKenzie\nMG", "McKenzie_"),
-                   (98, 103, "McKenzie\nMG", "McKenzie_"),
-                   (103, 108, "McKenzie\nMG", "McKenzie_"),
-                   (108, 113, "McKenzie\nMG", "McKenzie_"),
-                   (113, 118, "McKenzie\nMG", "McKenzie_"),
-                   (118, 123, "CellMap\nPCA", "CellMapPCA_"),
-                   (123, 128, "CellMap\nNMF", "CellMapNMF_"),
-                   (128, 133, "CellMap\nNNLS", "CellMapNNLS_")]
+        indices = [(95, 100, "McKenzie\nMG", "McKenzie_"),
+                   (100, 105, "McKenzie\nMG", "McKenzie_"),
+                   (105, 110, "McKenzie\nMG", "McKenzie_"),
+                   (110, 115, "McKenzie\nMG", "McKenzie_"),
+                   (115, 120, "McKenzie\nMG", "McKenzie_"),
+                   (120, 125, "CellMap\nPCA", "CellMapPCA_"),
+                   (125, 130, "CellMap\nNMF", "CellMapNMF_"),
+                   (130, 135, "CellMap\nNNLS", "CellMapNNLS_")]
 
         cmap = plt.cm.RdBu_r
         norm = matplotlib.colors.Normalize(vmin=-1, vmax=1)
@@ -141,7 +141,7 @@ class DeconvolutionCovariateComparison:
         fig.align_xlabels(axes[len(indices) - 1, :])
         fig.colorbar(sm, cax=cax)
         fig.suptitle('Deconvolution Covariate Correlations', fontsize=40, fontweight='bold')
-        fig.savefig(os.path.join(outdir, "deconvolution_covariate_comparison.pdf"), format='pdf', dpi=600)
+        fig.savefig(os.path.join(outdir, "deconvolution_covariate_comparison.png"))
         plt.close()
 
     def print_arguments(self):

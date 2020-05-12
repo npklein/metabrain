@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/04/23
-Last Changed: 2020/05/11
+Last Changed: 2020/05/12
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -139,22 +139,27 @@ class Main:
         c_container = storage.get_cov_container()
 
         print("Saving output files", flush=True)
+        filename_suffix = "{}_{}".format(self.skip_rows, self.n_eqtls)
         for container, outdir in zip([tc_container, c_container], [self.tech_cov_outdir, self.cov_outdir]):
             full_outdir = os.path.join(self.outdir, outdir)
             prepare_output_dir(full_outdir)
 
             self.dump_pickle(container.get_pvalues(), full_outdir,
-                             self.pvalues_filename, subdir=True,
-                             unique=True)
+                             self.pvalues_filename,
+                             filename_suffix=filename_suffix,
+                             subdir=True, unique=True)
             self.dump_pickle(container.get_tvalues(), full_outdir,
-                             self.tvalues_filename, subdir=True,
-                             unique=True)
+                             self.tvalues_filename,
+                             filename_suffix=filename_suffix,
+                             subdir=True, unique=True)
             self.dump_pickle(container.get_perm_pvalues(), full_outdir,
-                             self.perm_pvalues_filename, subdir=True,
-                             unique=True)
+                             self.perm_pvalues_filename,
+                             filename_suffix=filename_suffix,
+                             subdir=True, unique=True)
             self.dump_pickle(container.get_perm_tvalues(), full_outdir,
-                             self.perm_tvalues_filename, subdir=True,
-                             unique=True)
+                             self.perm_tvalues_filename,
+                             filename_suffix=filename_suffix,
+                             subdir=True, unique=True)
 
         # Print the process time.
         run_time = int(time.time()) - start_time
@@ -379,13 +384,15 @@ class Main:
         return content
 
     @staticmethod
-    def dump_pickle(content, directory, filename, subdir=False, unique=False):
+    def dump_pickle(content, directory, filename, filename_suffix="",
+                    subdir=False, unique=False):
         """
         Method for dumping data to a pickle file.
 
         :param content: , the pickle content.
         :param directory: string, the pickle output directory.
         :param filename: string, the pickle output file.
+        :param filename_suffix: string, a suffix for the output filename.
         :param subdir: boolean, whether or not to put the file in equally
                        named subdirectory.
         :param unique: boolean, whether or not to make the filename unique.
@@ -397,9 +404,11 @@ class Main:
             if not os.path.exists(full_directory):
                 os.makedirs(full_directory)
 
-        full_filename = filename
+        full_filename = "{}_{}".format(filename, filename_suffix)
         if unique:
-            full_filename = "{}_{}".format(filename, int(time.time()))
+            full_filename = "{}_{}_{}".format(filename,
+                                              filename_suffix,
+                                              int(time.time()))
 
         fpath = os.path.join(full_directory, full_filename + ".pkl")
 
@@ -407,7 +416,8 @@ class Main:
             pickle.dump(content, f)
         f.close()
 
-        print_str = os.path.join(os.path.basename(os.path.dirname(fpath)), os.path.basename(fpath))
+        print_str = os.path.join(os.path.basename(os.path.dirname(fpath)),
+                                 os.path.basename(fpath))
         print("\tcreated {}".format(print_str))
 
     def create_perm_orders(self):

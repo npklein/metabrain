@@ -1,7 +1,7 @@
 """
 File:         dataset.py
 Created:      2020/03/16
-Last Changed: 2020/04/29
+Last Changed: 2020/05/12
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -47,6 +47,7 @@ class Dataset:
         self.inter_cov_subdir = inter_subdirs["covariates_of_interest"]
         self.inter_tech_cov_subdir = inter_subdirs["technical_covariates"]
         inter_filenames = settings.get_setting("interaction_filenames")
+        self.pvalue_filename = inter_filenames["pvalues"]
         self.zscore_filename = inter_filenames["zscores"]
         self.tvalue_filename = inter_filenames["tvalues"]
 
@@ -70,6 +71,8 @@ class Dataset:
         self.alleles_df = None
         self.expr_df = None
         self.cov_df = None
+        self.inter_cov_pvalue_df = None
+        self.inter_tech_cov_pvalue_df = None
         self.inter_cov_zscore_df = None
         self.inter_tech_cov_zscore_df = None
         self.inter_cov_tvalue_df = None
@@ -86,6 +89,8 @@ class Dataset:
         self.get_alleles_df()
         self.get_expr_df()
         self.get_cov_df()
+        self.get_inter_cov_pvalue_df()
+        self.get_inter_tech_cov_pvalue_df()
         self.get_inter_cov_zscore_df()
         self.get_inter_tech_cov_zscore_df()
         self.get_inter_cov_tvalue_df()
@@ -160,6 +165,28 @@ class Dataset:
                                          index_col=0)
             self.validate()
         return self.cov_df
+
+    def get_inter_cov_pvalue_df(self):
+        if self.inter_cov_pvalue_df is None:
+            self.inter_cov_pvalue_df = load_dataframe(
+                inpath=os.path.join(self.inter_input_dir,
+                                    self.inter_cov_subdir,
+                                    self.pvalue_filename),
+                header=0,
+                index_col=0)
+            self.validate()
+        return self.inter_cov_pvalue_df
+
+    def get_inter_tech_cov_pvalue_df(self):
+        if self.inter_tech_cov_pvalue_df is None:
+            self.inter_tech_cov_pvalue_df = load_dataframe(
+                inpath=os.path.join(self.inter_input_dir,
+                                    self.inter_tech_cov_subdir,
+                                    self.pvalue_filename),
+                header=0,
+                index_col=0)
+            self.validate()
+        return self.inter_tech_cov_pvalue_df
 
     def get_inter_cov_zscore_df(self):
         if self.inter_cov_zscore_df is None:
@@ -238,16 +265,5 @@ class Dataset:
                     not a.columns.identical(b.columns):
                 print("Order of samples are not identical.")
                 exit()
-
-        if self.inter_df is not None:
-            for df in [self.eqtl_df, self.geno_df, self.alleles_df,
-                       self.expr_df, self.eqtl_ct_df]:
-                if df is not None:
-                    subset = self.inter_df.iloc[:, :self.nrows].copy()
-                    for i, colname in enumerate(subset.columns):
-                        if not colname.startswith(df.index[i]):
-                            print("Order of eQTLs is not identical (2).")
-                            exit()
-                    del subset
 
         print("\tValid.")

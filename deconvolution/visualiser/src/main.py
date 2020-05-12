@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/13
-Last Changed: 2020/04/17
+Last Changed: 2020/05/12
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -37,6 +37,7 @@ from .figures.covariates_explained_by_others import CovariatesExplainedByOthers
 from .figures.deconvolution_zscore_comparison import DeconvolutionZscoreComparison
 from .figures.simple_eqtl_effect import SimpleeQTLEffect
 from .figures.inter_zscore_bars import InterZscoreBars
+from .figures.inter_pvalue_boxplot import InterPvalueBoxplot
 from .figures.inter_zscore_dist import InterZscoreDist
 from .figures.inter_clustermap import InterClusterMap
 from .figures.inter_eqtl_zscore_bars import IntereQTLZscoreBars
@@ -112,7 +113,7 @@ class Main:
             dcc.start()
             del dcc
 
-        exit()
+        # exit()
 
         if ('deconvolution_zscore_comparison' in self.plots) or \
                 ('all' in self.plots):
@@ -142,6 +143,13 @@ class Main:
                                   outdir=self.outdir)
             izb.start()
             del izb
+
+        if ('inter_pvalue_boxplot' in self.plots) or ('all' in self.plots):
+            print("\n### INTERACTION P-VALUE BOXPLOT ###\n")
+            ipb = InterPvalueBoxplot(dataset=ds,
+                                     outdir=self.outdir)
+            ipb.start()
+            del ipb
 
         if ('inter_zscore_dist' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION Z-SCORE DISTRIBUTION PLOT ###\n")

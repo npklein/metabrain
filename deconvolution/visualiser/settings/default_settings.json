@@ -15,6 +15,7 @@
     "technical_covariates": "technical_covariates"
   },
   "interaction_filenames": {
+    "pvalues": "",
     "zscores": "",
     "tvalues": ""
   },

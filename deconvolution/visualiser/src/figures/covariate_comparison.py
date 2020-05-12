@@ -1,7 +1,7 @@
 """
 File:         covariate_comparison.py
 Created:      2020/04/15
-Last Changed: 2020/04/29
+Last Changed: 2020/05/12
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -74,16 +74,16 @@ class CovariateComparison:
     def plot(corr_df, pval_df, outdir):
         print("Plotting")
 
-        indices = [(0, 18, "Tech. Cov.", ""),
-                   (18, 22, "MDS", "MDS"),
-                   (22, 40, "Cohorts", ""),
-                   (40, 41, "Sex", ""),
-                   (41, 91, "PCs", "Comp"),
-                   (91, 93, "PCA", ""),
-                   (93, 118, "McKenzie\nMG", "McKenzie_"),
-                   (118, 123, "CellMap\nPCA", "CellMapPCA_"),
-                   (123, 128, "CellMap\nNMF", "CellMapNMF_"),
-                   (128, 133, "CellMap\nNNLS", "CellMapNNLS_")]
+        indices = [(0, 20, "Tech. Cov.", ""),
+                   (20, 24, "MDS", "MDS"),
+                   (24, 42, "Cohorts", ""),
+                   (42, 43, "Sex", ""),
+                   (43, 93, "PCs", "Comp"),
+                   (93, 95, "PCA", ""),
+                   (95, 120, "McKenzie\nMG", "McKenzie_"),
+                   (120, 125, "CellMap\nPCA", "CellMapPCA_"),
+                   (125, 130, "CellMap\nNMF", "CellMapNMF_"),
+                   (130, 135, "CellMap\nNNLS", "CellMapNNLS_")]
 
         gridspec_kw = {"height_ratios": [x[1] - x[0] for x in indices],
                        "width_ratios": [x[1] - x[0] for x in indices]}
@@ -147,7 +147,7 @@ class CovariateComparison:
         fig.align_ylabels(axes[:, 0])
         fig.align_xlabels(axes[len(indices) - 1, :])
         fig.suptitle('Covariate Correlations', fontsize=40, fontweight='bold')
-        fig.savefig(os.path.join(outdir, "covariate_comparison.pdf"), format='pdf', dpi=600)
+        fig.savefig(os.path.join(outdir, "covariate_comparison.png"))
         plt.close()
 
     def print_arguments(self):
