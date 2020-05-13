@@ -1,7 +1,7 @@
 """
 File:         combine_eqtlprobes.py
 Created:      2020/03/12
-Last Changed: 2020/03/19
+Last Changed: 2020/05/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -43,6 +43,9 @@ class CombineEQTLProbes:
         self.iter_dirname = settings["iteration_dirname"]
         self.n_iterations = settings["iterations"]
         self.in_filename = settings["in_filename"]
+        self.snp_to_gwasid_filename = settings["snp_to_gwasid_filename"]
+        self.gwasid_to_trait_filename = settings["gwasid_to_trait_filename"]
+        self.trait = settings["trait"]
         self.force = force
 
         # Prepare an output directory.
@@ -64,7 +67,12 @@ class CombineEQTLProbes:
                                               index_col=False)
         else:
             # Load each GTE file.
-            self.eqtl_probes = self.combine_files()
+            print("Loading GTE files.")
+            combined_eqtl_probes = self.combine_files()
+            if self.trait != "" and self.trait is not None:
+                print("Filtering on trait: {}".format(self.trait))
+                combined_eqtl_probes = self.filter_on_trait(combined_eqtl_probes)
+            self.eqtl_probes = combined_eqtl_probes
             self.save()
 
     def combine_files(self):
@@ -82,6 +90,46 @@ class CombineEQTLProbes:
         combined.drop_duplicates(inplace=True)
 
         return combined
+
+    def filter_on_trait(self, df):
+        tmp1 = load_dataframe(inpath=self.gwasid_to_trait_filename, header=0,
+                              index_col=False)
+        gwas_to_trait = pd.Series(tmp1["Trait"].values, index=tmp1["ID"]).to_dict()
+        del tmp1
+
+        gwas_map = {}
+        disease_map = {}
+        tmp2 = load_dataframe(inpath=self.snp_to_gwasid_filename, header=0,
+                              index_col=False, low_memory=False)
+
+        for index, row in tmp2.iterrows():
+            rs = row["RsID"]
+            id = row["ID"]
+
+            gwasses = gwas_map.get(rs)
+            if gwasses is None:
+                gwasses = id
+            else:
+                gwasses = "{}, {}".format(gwasses, id)
+            gwas_map[rs] = gwasses
+
+            diseases = disease_map.get(rs)
+            if id in gwas_to_trait.keys():
+                trait = gwas_to_trait.get(id)
+                if diseases is None:
+                    diseases = trait
+                else:
+                    diseases = "{}, {}".format(diseases, trait)
+            disease_map[rs] = diseases
+
+        df["GWASIDS"] = df["SNPName"].map(gwas_map, na_action="")
+        df["Trait"] = df["SNPName"].map(disease_map, na_action="")
+
+        # Subset.
+        df.dropna(subset=['Trait'], inplace=True)
+        df = df[df['Trait'].str.contains(self.trait)]
+
+        return df
 
     def save(self):
         save_dataframe(df=self.eqtl_probes, outpath=self.outpath,

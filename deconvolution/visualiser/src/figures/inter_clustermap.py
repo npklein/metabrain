@@ -1,7 +1,7 @@
 """
 File:         inter_clustermap.py
 Created:      2020/03/16
-Last Changed: 2020/05/12
+Last Changed: 2020/05/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -20,6 +20,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Standard imports.
+import sys
 import os
 
 # Third party imports.
@@ -52,6 +53,8 @@ class InterClusterMap:
         self.inter_tech_cov_tvalue_df = dataset.get_inter_tech_cov_tvalue_df()
 
     def start(self):
+        sys.setrecursionlimit(10000)
+
         print("Plotting interaction clustermap")
         self.print_arguments()
 
@@ -61,13 +64,15 @@ class InterClusterMap:
         self.visualize_matrix(self.inter_tech_cov_tvalue_df, self.outdir, outfile_prefix="tech_cov_tvalue")
 
     def visualize_matrix(self, df, outdir, outfile_prefix="", vmin=None, vmax=None):
-        self.plot(df=df, outdir=outdir, outfile_prefix=outfile_prefix,
+        clean_df = df.dropna(axis=1)
+
+        self.plot(df=clean_df, outdir=outdir, outfile_prefix=outfile_prefix,
                   vmin=vmin, vmax=vmax)
 
         if vmin is None:
-            vmin = df.values.min()
+            vmin = clean_df.values.min()
         if vmax is None:
-            vmax = df.values.max()
+            vmax = clean_df.values.max()
 
         self.plot_colorbar(vmin=vmin, vmax=vmax, outdir=outdir, name_prefix=outfile_prefix)
 

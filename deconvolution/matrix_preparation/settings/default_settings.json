@@ -8,7 +8,10 @@
     "input_directory": "",
     "iteration_dirname": "",
     "in_filename": "",
-    "iterations": 1
+    "iterations": 1,
+    "snp_to_gwasid_filename": "",
+    "gwasid_to_trait_filename": "",
+    "trait": ""
   },
   "create_matrices": {
     "genotype_datafile": "",

@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/04/23
-Last Changed: 2020/05/12
+Last Changed: 2020/05/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -242,11 +242,6 @@ class Main:
             expression = expr_df.iloc[row_index, eqtl_indices].copy()
             technical_covs = tech_cov_df.iloc[:, eqtl_indices].copy()
             covariates = cov_df.iloc[:, eqtl_indices].copy()
-
-            # Check if SNP index are identical.
-            if genotype.name != expression.name:
-                print("\tError: indices do not match", flush=True)
-                continue
 
             # Create the null model. Null model are all the technical
             # covariates multiplied with the genotype + the SNP.
@@ -517,9 +512,9 @@ class Main:
         """
         if df1 >= df2:
             return np.nan
-        if rss2 >= rss1:
-            return 0
         if df2 >= n:
+            return np.nan
+        if rss2 >= rss1:
             return 0
 
         return ((rss1 - rss2) / (df2 - df1)) / (rss2 / (n - df2))
@@ -542,6 +537,13 @@ class Main:
         # Lower and upper limit of cdf
         # stats.f.cdf(69, dfn=1, dfd=3661) = 0.9999999999999999
         # stats.f.cdf(1e-320, dfn=1, dfd=3661) = 1.0730071046473278e-160
+
+        if f_value == np.nan:
+            return np.nan
+        if df1 >= df2:
+            return np.nan
+        if df2 >= n:
+            return np.nan
 
         return stats.f.sf(f_value, dfn=(df2 - df1), dfd=(n - df2))
 

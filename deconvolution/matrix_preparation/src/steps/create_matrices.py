@@ -1,7 +1,7 @@
 """
 File:         create_matrices.py
 Created:      2020/03/12
-Last Changed: 2020/04/07
+Last Changed: 2020/05/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -166,7 +166,7 @@ class CreateMatrices:
                 print("Probe: {} gives 0 or >1 expression "
                       "profiles.".format(probe_name))
                 continue
-            expr_str = snp_name + "\t" + "\t".join(
+            expr_str = probe_name + "\t" + "\t".join(
                 expression.iloc[0, :].astype(str).values) + "\n"
             expr_str_buffer.append(expr_str)
 

@@ -189,6 +189,8 @@ class CombineAndPlot:
                                             "bh_fdr_table.txt.gz"),
                        header=True, index=True)
 
+        #return
+
         # Compare the two pvalue scores.
         print("Creating score visualisation [1/2].", flush=True)
         self.compare_pvalue_scores(pvalue_df, perm_fdr_df, bh_fdr_df,
@@ -237,23 +239,37 @@ class CombineAndPlot:
         :param columns: list, the column names.
         :return df: DataFrame, the created pandas dataframe.
         """
+        # Crate the data frame.
         df = pd.DataFrame(data, columns=columns)
-        df.set_index(df.columns[0], inplace=True)
-        df.sort_index(inplace=True)
+        order_col = df.columns[0]
+        df.sort_values(by=order_col, inplace=True)
+        print("\tInput shape: {}".format(df.shape))
 
-        reference = set(np.arange(df.index.min(), df.index.max() + 1))
-        missing = list(df.index.symmetric_difference(reference))
-        duplicated = list(df.index[df.index.duplicated(keep="first")])
+        # Check what eQTLs are present, missing, duplicated.
+        reference = set(np.arange(df[order_col].min(), df[order_col].max() + 1))
+        present = set(df[order_col])
+        print("\tPresent indices: {}".format(self.group_consecutive_numbers(present)))
+        missing = list(set(df[order_col]).symmetric_difference(reference))
         print("\tMissing indices: {}".format(self.group_consecutive_numbers(missing)))
+        duplicated = list(df.loc[df.duplicated([order_col]), order_col].values)
         print("\tDuplicate indices: {}".format(self.group_consecutive_numbers(duplicated)))
 
-        df.drop_duplicates(keep="first", inplace=True)
+        # Remove duplicate eQTLs.
+        df.drop_duplicates(subset=order_col, keep="first", inplace=True)
 
-        duplicated = list(df.index[df.index.duplicated(keep="first")])
-        print("\tUniquely duplicates indices: {}".format(self.group_consecutive_numbers(duplicated)))
+        # Insert missing eQTLs.
+        if len(missing) > 0:
+            print("\tInserting missing indices")
+            missing_df = pd.Series(missing).to_frame()
+            missing_df.columns = [order_col]
+            df = pd.concat([df, missing_df], axis=0).reset_index(drop=True)
+            df.sort_values(by=order_col, inplace=True)
 
+        # Remove the eQTL order column and set the SNPName as index.
+        df.drop([order_col], axis=1, inplace=True)
         df.set_index("-", inplace=True)
         df = df.T
+        print("\tOutput shape: {}".format(df.shape))
 
         return df
 
@@ -492,12 +508,14 @@ class CombineAndPlot:
         :param threshold: float, the cutoff to count the n values below.
         :return i: int, the number of values < threshold
         """
-        i = 0
-        for i, value in enumerate(sorted_values):
-            if value >= threshold:
-                break
+        count = 0
+        for value in sorted_values:
+            if value != np.nan:
+                count += 1
+                if value > threshold:
+                    break
 
-        return i
+        return count
 
     def compare_pvalue_scores(self, pvalue_df, perm_fdr, bh_fdr, outdir,
                               max_val=1.0):
@@ -514,6 +532,8 @@ class CombineAndPlot:
         df = pd.DataFrame({"p-value": pvalue_df.melt()["value"],
                            "permutation FDR": perm_fdr.melt()["value"],
                            "BH FDR": bh_fdr.melt()["value"]})
+        df[(df > 1.0) | (df < 0.0)] = np.nan
+        df.dropna(how="any", inplace=True)
 
         # Filter the rows that contain at least one value below the max.
         indices = []
@@ -548,7 +568,7 @@ class CombineAndPlot:
                     max_col_value = math.ceil(diff.max() * (10 ** precision))
                     colormap = self.create_color_map(length=max_col_value,
                                                      precision=precision)
-                    colors = diff.map(colormap)
+                    colors = diff.map(colormap, na_action=Color(rgb=(0.698, 0.133, 0.133)))
 
                     # Plot.
                     ax.scatter(x, y, c=colors.values)
@@ -605,12 +625,10 @@ class CombineAndPlot:
         """
         Method for creating a color gradient for the p-values.
         """
-        palette = list(Color("#D3D3D3").range_to(Color("#000000"), length + 1))
+        palette = list(Color("#D3D3D3").range_to(Color("#000000"), length + 2))
         colors = [x.rgb for x in palette]
-        values = [x / (10 ** precision) for x in list(range(0, length + 1))]
+        values = [x / (10 ** precision) for x in list(range(0, length + 2))]
         value_color_map = {x: y for x, y in zip(values, colors)}
-        for value in [np.nan, -np.inf, np.inf]:
-            value_color_map[value] = Color(rgb=(0.698, 0.133, 0.133))
         return value_color_map
 
     def print_arguments(self):
