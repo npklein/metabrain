@@ -20,13 +20,18 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Standard imports.
+import math
 import os
 
 # Third party imports.
+import numpy as np
+import pandas as pd
+import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
 from venn import venn
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 
 # Local application imports.
 from general.utilities import prepare_output_dir
@@ -55,31 +60,63 @@ class IntereQTLEffectCelltype:
         print("Plotting cell type mediated interaction eQTLs")
         self.print_arguments()
 
-        celltype_mediated_eqtls = []
+        # Set the SNP-gene combination as index.
+        self.eqtl_ct_df.index = self.eqtl_ct_df["SNPName"] + "_" + self.eqtl_ct_df["ProbeName"]
 
-        print("Plotting marker genes.")
+        print("Plotting deconvolution methods")
+        celltype_mediated_eqtls = []
+        for (prefix, suffix) in self.cellmap_methods:
+            data = {}
+
+            for celltype in self.celltypes:
+                method_celltype = celltype
+                if method_celltype == "Microglia":
+                    method_celltype = "Macrophage"
+
+                df = self.eqtl_ct_df.loc[:, prefix + method_celltype + suffix]
+                eqtls = set(df.loc[df == 1].index.values)
+                celltype_mediated_eqtls.extend(eqtls)
+                data[method_celltype] = eqtls
+
+            # Plot.
+            self.plot_data(data, prefix.replace("_", "") + suffix, None,
+                           self.outdir, self.colormap, use_pallette=True)
+
+        print("Plotting marker genes")
+        data = {}
         for celltype in self.celltypes:
             df = self.eqtl_ct_df.loc[:, self.eqtl_ct_df.columns.str.startswith(self.marker_genes + celltype + "_")]
-            df.index = self.eqtl_ct_df["SNPName"]
+            best_marker = df.sum(axis=0).idxmax()
+            eqtls = set(df.loc[df[best_marker] == 1].index.values)
+            data[celltype] = eqtls
+
+            eqtls = set(df.loc[df.sum(axis=1) > 0].index.values)
+            celltype_mediated_eqtls.extend(eqtls)
+
+        self.plot_data(data, self.marker_genes, None,
+                       self.outdir, self.colormap, use_pallette=True)
+
+        print("Plotting marker genes separately")
+        for celltype in self.celltypes:
+            df = self.eqtl_ct_df.loc[:, self.eqtl_ct_df.columns.str.startswith(self.marker_genes + celltype + "_")]
             data = {}
             for column in df:
                 gene_name = column.split("_")[2]
                 eqtls = set(df.loc[df[column] == 1, column].index.values)
-                celltype_mediated_eqtls.extend(eqtls)
                 data[gene_name] = eqtls
-            self.plot_venn(data,
+            self.plot_data(data,
                            "{}{}".format(self.marker_genes, celltype),
-                           self.outdir)
+                           celltype,
+                           self.outdir, self.colormap)
 
-        print("Plotting deconvolution methods.")
+        print("Plotting all methods combined")
+        celltype_data = {}
         for celltype in self.celltypes:
             data = {}
 
             # Add the marker genes.
             marker_df = self.eqtl_ct_df.loc[:, self.marker_genes + celltype]
-            marker_df.index = self.eqtl_ct_df["SNPName"]
             eqtls = set(marker_df.loc[marker_df == 1].index.values)
-            celltype_mediated_eqtls.extend(eqtls)
             data[self.marker_genes.replace("_", "")] = eqtls
 
             method_celltype = celltype
@@ -91,35 +128,107 @@ class IntereQTLEffectCelltype:
             # Add the deconvolution methods.
             for (prefix, suffix) in self.cellmap_methods:
                 df = self.eqtl_ct_df.loc[:, prefix + method_celltype + suffix]
-                df.index = self.eqtl_ct_df["SNPName"]
                 eqtls = set(df.loc[df == 1].index.values)
-                celltype_mediated_eqtls.extend(eqtls)
                 data[prefix.replace("_", "") + suffix] = eqtls
 
             # Plot.
-            self.plot_venn(data,
-                           title,
-                           self.outdir)
+            self.plot_data(data, title, celltype, self.outdir, self.colormap)
 
-        print("Plotting all eQTLs.")
-        data = {"cis-eQTL" : set(self.eqtl_ct_df["SNPName"].values),
-                "cell type mediated": set(celltype_mediated_eqtls)}
-        self.plot_venn(data,
-                       "all_cis-eQTLs",
-                       self.outdir)
+            all_eQTLs_of_celltype = []
+            for value in data.values():
+                all_eQTLs_of_celltype.extend(value)
+            celltype_data[celltype] = set(all_eQTLs_of_celltype)
+
+        print("Plotting all celltypes combined")
+        self.plot_data(celltype_data, "Cell-Type_eQTLs", None, self.outdir,
+                       self.colormap, use_pallette=True)
+
+        print("Plotting all eQTLs")
+        total = len(set(self.eqtl_ct_df.index.values))
+        part = len(set(celltype_mediated_eqtls))
+        self.plot_pie(total, part, self.outdir)
 
     @staticmethod
-    def plot_venn(data, title, outdir):
-        fig, ax = plt.subplots(1, 1, figsize=(12, 9))
-        venn(data, fontsize=14, legend_loc="upper right", ax=ax)
-        ax.text(0.5, 1.05,
-                title,
-                fontsize=20, weight='bold', ha='center', va='bottom',
-                transform=ax.transAxes)
-        plt.tight_layout()
+    def plot_data(data, title, celltype, outdir, colormap, use_pallette=False):
+        sums = []
+        for key, value in data.items():
+            sums.append([key, len(value)])
+        df = pd.DataFrame(sums, columns=["name", "value"])
+
+        color = 'cornflowerblue'
+        if celltype in colormap:
+            color = colormap[celltype]
+
+        sns.set(rc={'figure.figsize': (18, 9)})
+        sns.set_style("ticks")
+        fig, (ax1, ax2) = plt.subplots(1, 2, gridspec_kw={"width_ratios": [0.4, 0.6]})
+        plt.subplots_adjust(top=0.9, bottom=0.1, wspace=0.01, hspace=0.01)
+
+        sns.despine(fig=fig, ax=ax1)
+
+        major_ticks = 10 ** (math.floor(math.log10(max(df["value"].max(), 100))))
+        minor_ticks = int(major_ticks / 2)
+        for i in range(0, int(max(df["value"])) + (1 * major_ticks), minor_ticks):
+            alpha = 0.025
+            if i % major_ticks == 0:
+                alpha = 0.15
+            ax1.axvline(i, ls='-', color="#000000", alpha=alpha, zorder=-1)
+
+        if use_pallette:
+            g = sns.barplot(x="value", y="name", palette=colormap, orient="h",
+                            data=df, ax=ax1)
+        else:
+            g = sns.barplot(x="value", y="name", color=color, orient="h",
+                            data=df, ax=ax1)
+
+        g.set_xlabel('n signif. interactions',
+                     fontsize=14,
+                     fontweight='bold')
+        g.set_ylabel('',
+                     fontsize=14,
+                     fontweight='bold')
+        ax1.tick_params(labelsize=14)
+        #ax1.set_xticklabels(ax1.get_xmajorticklabels(), rotation=45)
+
+        if use_pallette:
+            colors = []
+            for key in data.keys():
+                colors.append(colormap[key])
+            venn(data, fontsize=12,  cmap=ListedColormap(colors), alpha=0.6, legend_loc="upper right", ax=ax2)
+        else:
+            venn(data, fontsize=12, legend_loc="upper right", ax=ax2)
+
+        ax1.text(1.25, 1.05,
+                 '{}'.format(title.replace("_", " ")),
+                 fontsize=22, weight='bold', ha='center', va='bottom',
+                 transform=ax1.transAxes)
+
         fig.savefig(os.path.join(outdir,
                                  "{}.png".format(title)))
         plt.close()
+
+    @staticmethod
+    def plot_pie(total, part, outdir):
+        labels = ['YES', 'NO']
+        sizes = [part, total - part]
+        explode = (0.1, 0)
+
+        fig, ax = plt.subplots()
+        _, _, autotexts = ax.pie(sizes,
+                                 explode=explode,
+                                 labels=labels,
+                                 colors=["#6495ED", "#808080"],
+                                 startangle=90,
+                                 autopct=lambda pct: "{:.1f}%\n(n={:d})".format(pct, int(pct / 100. * sum(sizes))),
+                                 textprops=dict(fontweight="bold",
+                                                fontsize=20))
+        for autotext in autotexts:
+            autotext.set_color('white')
+        ax.axis('equal')
+
+        fig.suptitle("Cell-Type Mediated eQTLs", fontsize=20, fontweight='bold')
+        fig.savefig(os.path.join(outdir, "all_cis-eQTLs.png"))
+        plt.show()
 
     def print_arguments(self):
         print("Arguments:")

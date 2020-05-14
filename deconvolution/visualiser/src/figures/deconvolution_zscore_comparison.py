@@ -1,7 +1,7 @@
 """
 File:         deconvolution_zscore_comparison.py
 Created:      2020/04/07
-Last Changed: 2020/04/20
+Last Changed: 2020/05/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -24,6 +24,7 @@ import math
 import os
 
 # Third party imports.
+import pandas as pd
 import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
@@ -48,7 +49,7 @@ class DeconvolutionZscoreComparison:
 
         # Extract the required data.
         print("Loading data")
-        self.inter_df = dataset.get_inter_df()
+        self.inter_df = dataset.get_inter_cov_zscore_df()
         self.celltypes = dataset.get_celltypes()
         self.cellmap_methods = dataset.get_cellmap_methods()
         self.marker_genes = dataset.get_marker_genes()
@@ -72,7 +73,7 @@ class DeconvolutionZscoreComparison:
 
             # Plot vs marker genes.
             marker_df = self.inter_df.loc[self.inter_df.index.str.startswith(self.marker_genes), :]
-            print("{} vs {}_MarkerGenes".format(method1[0], self.marker_genes))
+            print("{} vs {}MarkerGenes".format(method1[0], self.marker_genes))
             self.compare_cellmap_with_marker_genes(method1, method1_df,
                                                    self.marker_genes, marker_df,
                                                    self.celltypes, self.color_map,
@@ -106,19 +107,23 @@ class DeconvolutionZscoreComparison:
             method1_data = method1_df.loc[method1[0] + method_celltype + method1[1], :]
             method2_data = method2_df.loc[method2[0] + method_celltype + method2[1], :]
 
+            df = pd.DataFrame({method1_name: method1_data, method2_name: method2_data})
+            df.dropna(inplace=True)
+
             # Get the color.
             color = color_map[celltype]
 
             # Calculate the correlation.
-            coef, p = stats.spearmanr(method1_data, method2_data)
+            coef, p = stats.spearmanr(df[method1_name], df[method2_name])
 
             # Creat the subplot.
             ax = fig.add_subplot(grid[row_index, col_index])
             sns.despine(fig=fig, ax=ax)
 
             # Plot.
-            g = sns.regplot(x=method1_data,
-                            y=method2_data,
+            g = sns.regplot(x=method1_name,
+                            y=method2_name,
+                            data=df,
                             scatter_kws={'facecolors': '#000000',
                                          'edgecolor': '#000000',
                                          'alpha': 0.5},
@@ -196,16 +201,20 @@ class DeconvolutionZscoreComparison:
 
             # Loop over each marker gene.
             for marker_gene, marker_data in marker_data.iterrows():
+                df = pd.DataFrame({method_name: method_data, marker_gene: marker_data})
+                df.dropna(inplace=True)
+
                 # Calculate the correlation.
-                coef, p = stats.spearmanr(method_data, marker_data)
+                coef, p = stats.spearmanr(df[method_name], df[marker_gene])
 
                 # Creat the subplot.
                 ax = fig.add_subplot(grid[row_index, col_index])
                 sns.despine(fig=fig, ax=ax)
 
                 # Plot.
-                g = sns.regplot(x=method_data,
-                                y=marker_data,
+                g = sns.regplot(x=method_name,
+                                y=marker_gene,
+                                data=df,
                                 scatter_kws={'facecolors': '#000000',
                                              'edgecolor': '#000000',
                                              'alpha': 0.5},
