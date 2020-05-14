@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/04/19
-Last Changed: 2020/05/06
+Last Changed: 2020/05/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -26,7 +26,6 @@ from pathlib import Path
 import os
 
 # Third party imports.
-import pandas as pd
 import scipy.stats as st
 
 # Local application imports.
@@ -57,13 +56,15 @@ class Main:
                                    settings.get_setting("output_dir"))
         prepare_output_dir(self.outdir)
 
-        # Get the input file.
+        # Get the settings.
         self.eqtl_filepath = settings.get_setting("eqtl_datafile")
         self.interaction_filepath = settings.get_setting("interaction_datafile")
         self.marker_genes = settings.get_setting("marker_genes")
         self.marker_genes_min_true = settings.get_setting("marker_genes_min_true")
         self.decon_methods = settings.get_setting("deconvolution_methods")
         self.output_filepath = os.path.join(self.outdir, settings.get_setting("output_filename"))
+        self.signif_cutoff = st.norm.isf(
+            settings.get_setting("significance_cutoff"))
 
     def start(self):
         """
@@ -90,15 +91,12 @@ class Main:
                 print("Input files do not match.")
                 exit()
 
-        # Calculate the z-score cutoff.
-        z_score_cutoff = st.norm.ppf(0.05 / (inter_df.shape[0] * inter_df.shape[1]) / 2)
-
         # Loop over the marker genes.
         marker_data = inter_df.loc[inter_df.index.str.startswith(self.marker_genes), :]
         celltypes = set([x.split("_")[1] for x in marker_data.index])
         for celltype in celltypes:
             celltype_data = marker_data.loc[marker_data.index.str.startswith(self.marker_genes + celltype), :]
-            signif_inter = (celltype_data > abs(z_score_cutoff)).astype(int)
+            signif_inter = (celltype_data > abs(self.signif_cutoff)).astype(int)
             eqtl_df.loc[:, self.marker_genes + celltype] = (signif_inter.sum() >= self.marker_genes_min_true).astype(int)
 
         # Loop over each deconvolution method.
@@ -108,7 +106,7 @@ class Main:
             method_data = inter_df.loc[inter_df.index.str.startswith(prefix), :]
 
             for (index, z_scores) in method_data.iterrows():
-                eqtl_df.loc[:, index] = (z_scores > abs(z_score_cutoff)).astype(int)
+                eqtl_df.loc[:, index] = (z_scores > abs(self.signif_cutoff)).astype(int)
 
         # Save the new dataframe.
         save_dataframe(eqtl_df, self.output_filepath, header=True, index=False)

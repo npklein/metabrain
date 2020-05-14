@@ -78,12 +78,16 @@ class InterZscoreBars:
         self.create_plots(data, full_outdir, fontsize,
                           "Positive ", "[>0]")
 
+        pos_z_score_cutoff = abs(self.z_score_cutoff)
+        neg_z_score_cutoff = -1 * pos_z_score_cutoff
+
         print("\tPlotting significant z-scores.")
-        self.get_counts(df, lower_cutoff=self.z_score_cutoff,
-                        upper_cutoff=abs(self.z_score_cutoff))
+        self.get_counts(df,
+                        lower_cutoff=neg_z_score_cutoff,
+                        upper_cutoff=pos_z_score_cutoff)
         self.create_plots(data, full_outdir, fontsize, "Significant ",
-                          "[{:.2f} < x < {:.2f}]".format(self.z_score_cutoff,
-                                                         abs(self.z_score_cutoff)))
+                          "[{:.2f} < x < {:.2f}]".format(neg_z_score_cutoff,
+                                                         pos_z_score_cutoff))
 
     def get_counts(self, data, lower_cutoff=0, upper_cutoff=0):
         df = data.copy()

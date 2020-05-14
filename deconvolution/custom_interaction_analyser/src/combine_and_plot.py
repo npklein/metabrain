@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed: 2020/05/12
+Last Changed: 2020/05/14
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -462,7 +462,7 @@ class CombineAndPlot:
 
         max_signif_pvalue = -np.inf
 
-        m = len(pvalues)
+        m = np.count_nonzero(~np.isnan(pvalues))
         fdr_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
         fdr_values = []
         for row_index in range(df.shape[0]):

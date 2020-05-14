@@ -1,7 +1,7 @@
 """
 File:         combine_eqtlprobes.py
 Created:      2020/03/12
-Last Changed: 2020/05/13
+Last Changed: 2020/05/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -127,7 +127,8 @@ class CombineEQTLProbes:
 
         # Subset.
         df.dropna(subset=['Trait'], inplace=True)
-        df = df[df['Trait'].str.contains(self.trait)]
+        df = df[df['Trait'].str.contains(self.trait, case=False)]
+        df.reset_index(drop=True, inplace=True)
 
         return df
 

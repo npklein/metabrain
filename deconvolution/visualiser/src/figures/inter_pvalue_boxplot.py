@@ -1,7 +1,7 @@
 """
 File:         inter_pvalue_boxplot.py
 Created:      2020/05/12
-Last Changed:
+Last Changed: 2020/05/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -70,14 +70,7 @@ class InterPvalueBoxplot:
         tech_cov_df["type"] = "Technical Covariate"
 
         df = pd.concat([cov_df, tech_cov_df], axis=0)
-        print(df)
-
-        for variable in ["ENA-EU", "PF_HQ_ALIGNED_BASES", "PF_HQ_ALIGNED_Q20_BASES"]:
-            tmp = df.loc[df["variable"] == variable, :].copy()
-            all = tmp.shape[0]
-            tmp2 = tmp.loc[tmp["value"] == 1.0, :].copy()
-            one = tmp2.shape[0]
-            print("Variable: {}, all: {}, none: {}, [{:.2f}%]".format(variable, all, one, ((100 / all) * one)))
+        df.dropna(inplace=True)
 
         group_df = df.copy()
         group_df = group_df.groupby("variable").agg({"value": ["median", self.percentile(25)]})
@@ -85,7 +78,14 @@ class InterPvalueBoxplot:
         group_df.sort_values(['median', 'percentile(25)'], ascending=[True, True], inplace=True)
         print(group_df)
 
-        exit()
+        interest = group_df.loc[(group_df["median"] == 1.0) & (group_df["percentile(25)"] > 0.99), :].index
+
+        for variable in interest:
+            tmp = df.loc[df["variable"] == variable, :].copy()
+            all = tmp.shape[0]
+            tmp2 = tmp.loc[tmp["value"] == 1.0, :].copy()
+            one = tmp2.shape[0]
+            print("Variable: {}\tall: {}\tnone: {}\t[{:.2f}%]".format(variable, all, one, ((100 / all) * one)))
 
         self.plot(df, group_df.index, self.outdir)
 
