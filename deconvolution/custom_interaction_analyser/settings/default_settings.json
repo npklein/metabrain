@@ -1,7 +1,10 @@
 {
-  "genotye_datafile": "",
-  "expression_datafile": "",
-  "covariates_datafile": "",
+  "input_dir": "",
+  "filenames": {
+    "genotype":  "",
+    "expression": "",
+    "covariates": ""
+  },
   "output_dir": "output",
   "technical_covariates": [],
   "covariates_folder": "covariates",

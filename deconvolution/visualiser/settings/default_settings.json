@@ -19,7 +19,6 @@
     "zscores": "",
     "tvalues": ""
   },
-  "eqtl_celltype_datafile": "",
   "celltypes": ["CellTypeA"],
   "colormap": {
     "CellTypeA": "#hexcode",
