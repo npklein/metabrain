@@ -1,7 +1,7 @@
 """
 File:         inter_zscores_dist.py
 Created:      2020/03/16
-Last Changed: 2020/03/23
+Last Changed: 2020/05/12
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -46,7 +46,7 @@ class InterZscoreDist:
 
         # Extract the required data.
         print("Loading data")
-        self.inter_df = dataset.get_inter_df()
+        self.inter_df = dataset.get_inter_cov_zscore_df()
         self.z_score_cutoff = dataset.get_significance_cutoff()
 
     def start(self):

@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_zscore_bars.py
 Created:      2020/03/16
-Last Changed: 2020/05/01
+Last Changed: 2020/05/12
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -20,10 +20,10 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Standard imports.
-import math
 import os
 
 # Third party imports.
+import pandas as pd
 import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
@@ -48,7 +48,7 @@ class IntereQTLZscoreBars:
         # Extract the required data.
         print("Loading data")
         self.eqtl_df = dataset.get_eqtl_df()
-        self.inter_df = dataset.get_inter_df()
+        self.inter_df = dataset.get_inter_cov_zscore_df()
         self.z_score_cutoff = dataset.get_significance_cutoff()
 
     def start(self):
@@ -96,27 +96,44 @@ class IntereQTLZscoreBars:
                       self.z_score_cutoff, interaction_effect,
                       eqtl_interaction_outdir, positive=True)
 
-    @staticmethod
-    def create_color_map(signif_cutoff):
+    def create_color_map(self, signif_cutoff):
         min_value = -8.3
         max_value = 385
 
         blue_values = [x / 10 for x in range(int(min_value * 10), int(signif_cutoff * -10), 1)]
         blue_colors = [x.rgb for x in list(Color("#6282EA").range_to(Color("#B9D0F9"), len(blue_values)))]
+        blue_colors = self.check_for_neg_rgv(blue_colors)
 
         neg_black_values = [x / 10 for x in range(int(signif_cutoff * -10), 0, 1)]
         neg_black_colors = [x.rgb for x in list(Color("#000000").range_to(Color("#DCDCDC"), len(neg_black_values)))]
+        neg_black_colors = self.check_for_neg_rgv(neg_black_colors)
 
         pos_black_values = [x / 10 for x in range(1, int(signif_cutoff * 10) + 2, 1)]
         pos_black_colors = [x.rgb for x in list(Color("#DCDCDC").range_to(Color("#000000"), len(pos_black_values)))]
+        pos_black_colors = self.check_for_neg_rgv(pos_black_colors)
 
         red_values = [x / 10 for x in range(int(signif_cutoff * 10) + 2, int(max_value * 10), 1)]
         red_colors = [x.rgb for x in list(Color("#F5C4AC").range_to(Color("#DC5F4B"), len(red_values)))]
+        red_colors = self.check_for_neg_rgv(red_colors)
 
         values = blue_values + neg_black_values + [0.0] + pos_black_values + red_values
-        colors = blue_colors + neg_black_colors + ["#DCDCDC"] + pos_black_colors + red_colors
+        colors = blue_colors + neg_black_colors + [Color(rgb=(0.863, 0.863, 0.863)).rgb] + pos_black_colors + red_colors
         value_color_map = {x: y for x, y in zip(values, colors)}
         return value_color_map
+
+    @staticmethod
+    def check_for_neg_rgv(colors):
+        copy = colors.copy()
+        for i, (r, g, b) in enumerate(copy):
+            if r < 0:
+                r = 0
+            if g < 0:
+                g = 0
+            if b < 0:
+                b = 0
+            colors[i] = (r, g, b)
+
+        return colors
 
     @staticmethod
     def plot(i, snp_name, probe_name, hgnc_name, eqtl_type, z_score_cutoff,

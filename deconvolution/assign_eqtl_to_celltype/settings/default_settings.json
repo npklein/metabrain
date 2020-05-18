@@ -1,9 +1,0 @@
-{
-   "output_dir": "output",
-   "eqtl_datafile": "",
-   "interaction_datafile": "",
-   "marker_genes": "",
-   "marker_genes_min_true": 1,
-   "deconvolution_methods": ["Method1", "..."],
-   "output_filename": "eQTLProbesFDR0.05-ProbeLevel-withCelltypes.txt.gz"
-}

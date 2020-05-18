@@ -1,7 +1,7 @@
 """
 File:         inter_zscores_bars.py
 Created:      2020/03/16
-Last Changed: 2020/05/12
+Last Changed: 2020/05/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo

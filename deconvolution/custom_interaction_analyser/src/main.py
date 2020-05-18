@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/04/23
-Last Changed: 2020/05/13
+Last Changed: 2020/05/18
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -74,9 +74,11 @@ class Main:
         prepare_output_dir(self.outdir)
 
         # Safe settings.
-        self.geno_inpath = settings.get_setting("genotye_datafile")
-        self.expr_inpath = settings.get_setting("expression_datafile")
-        self.cov_inpath = settings.get_setting("covariates_datafile")
+        input_dir = settings.get_setting("input_dir")
+        filenames = settings.get_setting("filenames")
+        self.geno_inpath = os.path.join(input_dir, filenames["genotype"])
+        self.expr_inpath = os.path.join(input_dir, filenames["expression"])
+        self.cov_inpath = os.path.join(input_dir, filenames["covariates"])
         self.tech_covs = settings.get_setting("technical_covariates")
         self.cov_outdir = settings.get_setting("covariates_folder")
         self.tech_cov_outdir = settings.get_setting("technical_covariates_folder")

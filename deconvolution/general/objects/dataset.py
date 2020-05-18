@@ -1,7 +1,7 @@
 """
 File:         dataset.py
 Created:      2020/03/16
-Last Changed: 2020/05/12
+Last Changed: 2020/05/18
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -25,6 +25,7 @@ import itertools
 import os
 
 # Third party imports.
+import pandas as pd
 import scipy.stats as stats
 
 # Local application imports.
@@ -51,7 +52,6 @@ class Dataset:
         self.zscore_filename = inter_filenames["zscores"]
         self.tvalue_filename = inter_filenames["tvalues"]
 
-        self.eqtl_celltype = settings.get_setting("eqtl_celltype_datafile")
         self.celltypes = settings.get_setting("celltypes")
         self.colormap = settings.get_setting("colormap")
         self.cellmap_methods = settings.get_setting("cellmap_method_prefix_and_suffix")
@@ -77,7 +77,7 @@ class Dataset:
         self.inter_tech_cov_zscore_df = None
         self.inter_cov_tvalue_df = None
         self.inter_tech_cov_tvalue_df = None
-        self.eqtl_ct_df = None
+        self.eqtl_and_interactions_df = None
         self.marker_df = None
 
     def load_all(self):
@@ -95,7 +95,7 @@ class Dataset:
         self.get_inter_tech_cov_zscore_df()
         self.get_inter_cov_tvalue_df()
         self.get_inter_tech_cov_tvalue_df()
-        self.get_eqtl_ct_df()
+        self.get_eqtl_and_interactions_df()
         self.get_marker_df()
         print("Validation finished.")
         exit()
@@ -115,15 +115,17 @@ class Dataset:
     def get_significance_cutoff(self):
         return self.signif_cutoff
 
-    def get_eqtl_df(self):
+    def get_eqtl_df(self, get_all=False):
         if self.eqtl_df is None:
+            if get_all:
+                nrows = None
+            else:
+                nrows = self.nrows
             self.eqtl_df = load_dataframe(inpath=os.path.join(self.input_dir,
                                                               self.eqtl_filename),
                                           header=0,
                                           index_col=False,
-                                          nrows=self.nrows)
-            self.eqtl_df.index = self.eqtl_df["SNPName"]
-            self.eqtl_df.index.name = "-"
+                                          nrows=nrows)
             self.validate()
         return self.eqtl_df
 
@@ -232,14 +234,38 @@ class Dataset:
             self.validate()
         return self.inter_tech_cov_tvalue_df
 
-    def get_eqtl_ct_df(self):
-        if self.eqtl_ct_df is None:
-            self.eqtl_ct_df = load_dataframe(inpath=os.path.join(self.input_dir,
-                                                                 self.eqtl_celltype),
-                                             header=0,
-                                             index_col=0)
-            self.validate()
-        return self.eqtl_ct_df
+    def get_eqtl_and_interactions_df(self):
+        self.get_eqtl_df(get_all=True)
+        self.get_inter_cov_zscore_df()
+
+        # Copy the matrices.
+        df1 = self.eqtl_df.copy()
+        df2 = self.inter_cov_zscore_df.copy().T
+
+        # Check if the files math up.
+        if df1.shape[0] != df2.shape[0]:
+            print("Input files do not match (1).")
+            exit()
+        for i in range(df1.shape[1]):
+            if not df2.index[i].startswith(df1["SNPName"][i]):
+                print("Input files do not match (2).")
+                exit()
+
+        # Reset the indices.
+        df1.reset_index(drop=True, inplace=True)
+        df2.reset_index(drop=True, inplace=True)
+
+        # Replace the z-scores with 1's and 0's (significant vs not-siginifcant)
+        df2[df2 <= self.signif_cutoff] = 0
+        df2[df2 > self.signif_cutoff] = 1
+        df2 = df2.fillna(0).astype('int8')
+
+        # Combine.
+        self.eqtl_and_interactions_df = pd.concat([df1, df2], axis=1)
+        self.eqtl_and_interactions_df.index = self.eqtl_and_interactions_df["SNPName"] + "_" + self.eqtl_and_interactions_df["ProbeName"]
+        del df1, df2
+
+        return self.eqtl_and_interactions_df
 
     def get_marker_df(self):
         if self.marker_df is None:
@@ -251,13 +277,28 @@ class Dataset:
         return self.marker_df
 
     def validate(self):
-        dfs = [self.eqtl_df, self.geno_df, self.alleles_df, self.expr_df,
-               self.eqtl_ct_df]
-        for (a, b) in list(itertools.combinations(dfs, 2)):
-            if a is not None and b is not None and \
-                    not a.index.identical(b.index):
-                print("Order of eQTLs is not identical (1).")
-                exit()
+        if self.eqtl_df is not None:
+            if self.geno_df is not None:
+                reference = self.eqtl_df["SNPName"]
+                reference.index.name = "-"
+                alternative = pd.Series(self.geno_df.index)
+                alternative.index.name = "-"
+                if not alternative.equals(reference):
+                    print("Order of SNPs in eqtl_df and geno_df "
+                          "are not identical.")
+            if self.expr_df is not None:
+                reference = self.eqtl_df["ProbeName"]
+                reference.index.name = "-"
+                alternative = pd.Series(self.expr_df.index)
+                alternative.index.name = "-"
+                if not alternative.equals(reference):
+                    print("Order of Probes in eqtl_df and expr_df "
+                          "are not identical.")
+
+        if self.geno_df is not None and self.alleles_df is not None:
+            if not self.geno_df.index.identical(self.alleles_df.index):
+                print("Order of SNPs in geno_df and alleles_df are not "
+                      "identical.")
 
         dfs = [self.geno_df, self.expr_df, self.cov_df]
         for (a, b) in list(itertools.combinations(dfs, 2)):

@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect_celltype.py
 Created:      2020/04/20
-Last Changed: 2020/04/26
+Last Changed: 2020/05/18
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -50,18 +50,16 @@ class IntereQTLEffectCelltype:
 
         # Extract the required data.
         print("Loading data")
-        self.eqtl_ct_df = dataset.get_eqtl_ct_df()
+        self.eqtlinter_df = dataset.get_eqtl_and_interactions_df()
         self.celltypes = dataset.get_celltypes()
         self.cellmap_methods = dataset.get_cellmap_methods()
         self.marker_genes = dataset.get_marker_genes()
+        self.z_score_cutoff = dataset.get_significance_cutoff()
         self.colormap = dataset.get_colormap()
 
     def start(self):
         print("Plotting cell type mediated interaction eQTLs")
         self.print_arguments()
-
-        # Set the SNP-gene combination as index.
-        self.eqtl_ct_df.index = self.eqtl_ct_df["SNPName"] + "_" + self.eqtl_ct_df["ProbeName"]
 
         print("Plotting deconvolution methods")
         celltype_mediated_eqtls = []
@@ -73,7 +71,7 @@ class IntereQTLEffectCelltype:
                 if method_celltype == "Microglia":
                     method_celltype = "Macrophage"
 
-                df = self.eqtl_ct_df.loc[:, prefix + method_celltype + suffix]
+                df = self.eqtlinter_df.loc[:, prefix + method_celltype + suffix].copy()
                 eqtls = set(df.loc[df == 1].index.values)
                 celltype_mediated_eqtls.extend(eqtls)
                 data[method_celltype] = eqtls
@@ -85,7 +83,7 @@ class IntereQTLEffectCelltype:
         print("Plotting marker genes")
         data = {}
         for celltype in self.celltypes:
-            df = self.eqtl_ct_df.loc[:, self.eqtl_ct_df.columns.str.startswith(self.marker_genes + celltype + "_")]
+            df = self.eqtlinter_df.loc[:, self.eqtlinter_df.columns.str.startswith(self.marker_genes + celltype + "_")].copy()
             best_marker = df.sum(axis=0).idxmax()
             eqtls = set(df.loc[df[best_marker] == 1].index.values)
             data[celltype] = eqtls
@@ -98,7 +96,7 @@ class IntereQTLEffectCelltype:
 
         print("Plotting marker genes separately")
         for celltype in self.celltypes:
-            df = self.eqtl_ct_df.loc[:, self.eqtl_ct_df.columns.str.startswith(self.marker_genes + celltype + "_")]
+            df = self.eqtlinter_df.loc[:, self.eqtlinter_df.columns.str.startswith(self.marker_genes + celltype + "_")].copy()
             data = {}
             for column in df:
                 gene_name = column.split("_")[2]
@@ -115,8 +113,9 @@ class IntereQTLEffectCelltype:
             data = {}
 
             # Add the marker genes.
-            marker_df = self.eqtl_ct_df.loc[:, self.marker_genes + celltype]
-            eqtls = set(marker_df.loc[marker_df == 1].index.values)
+            marker_df = self.eqtlinter_df.loc[:, self.eqtlinter_df.columns.str.startswith(self.marker_genes + celltype + "_")].copy()
+            best_marker = marker_df.sum(axis=0).idxmax()
+            eqtls = set(marker_df.loc[marker_df[best_marker] == 1].index.values)
             data[self.marker_genes.replace("_", "")] = eqtls
 
             method_celltype = celltype
@@ -127,7 +126,7 @@ class IntereQTLEffectCelltype:
 
             # Add the deconvolution methods.
             for (prefix, suffix) in self.cellmap_methods:
-                df = self.eqtl_ct_df.loc[:, prefix + method_celltype + suffix]
+                df = self.eqtlinter_df.loc[:, prefix + method_celltype + suffix].copy()
                 eqtls = set(df.loc[df == 1].index.values)
                 data[prefix.replace("_", "") + suffix] = eqtls
 
@@ -144,7 +143,7 @@ class IntereQTLEffectCelltype:
                        self.colormap, use_pallette=True)
 
         print("Plotting all eQTLs")
-        total = len(set(self.eqtl_ct_df.index.values))
+        total = len(set(self.eqtlinter_df.index.values))
         part = len(set(celltype_mediated_eqtls))
         self.plot_pie(total, part, self.outdir)
 
@@ -154,6 +153,35 @@ class IntereQTLEffectCelltype:
         for key, value in data.items():
             sums.append([key, len(value)])
         df = pd.DataFrame(sums, columns=["name", "value"])
+
+        overlap = pd.DataFrame(np.nan, index=data.keys(), columns=data.keys())
+        for i, key1 in enumerate(overlap.index):
+            for j, key2 in enumerate(overlap.columns):
+                value1 = data[key1]
+                value2 = data[key2]
+
+                if len(value1) == 0 or len(value2) == 0:
+                    continue
+
+                n = len(set(value1).intersection(set(value2)))
+                overlap.iloc[i, j] = round(n / len(value1), 2)
+
+        sns.set(color_codes=True)
+        g = sns.clustermap(overlap, center=0, cmap="RdBu_r",
+                           row_cluster=False, col_cluster=False,
+                           yticklabels=True, xticklabels=True, square=True,
+                           vmin=0, vmax=1, annot=overlap, fmt='',
+                           annot_kws={"size": 16, "color": "#000000"},
+                           figsize=(12, 12))
+        plt.setp(
+            g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_ymajorticklabels(),
+                                         fontsize=20, rotation=0))
+        plt.setp(
+            g.ax_heatmap.set_xticklabels(g.ax_heatmap.get_xmajorticklabels(),
+                                         fontsize=20, rotation=45))
+        g.fig.suptitle('eQTL Overlap', fontsize=25, fontweight='bold')
+        g.savefig(os.path.join(outdir, "{}_overlap.png".format(title)))
+        plt.close()
 
         color = 'cornflowerblue'
         if celltype in colormap:
@@ -232,7 +260,7 @@ class IntereQTLEffectCelltype:
 
     def print_arguments(self):
         print("Arguments:")
-        print("  > eQTL matrix shape: {}".format(self.eqtl_ct_df.shape))
+        print("  > eQTL and interaction matrix shape: {}".format(self.eqtlinter_df.shape))
         print("  > Celltypes: {}".format(self.celltypes))
         print("  > CellMap Methods: {}".format(self.cellmap_methods))
         print("  > Marker Genes: {}".format(self.marker_genes))

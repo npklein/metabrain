@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect.py
 Created:      2020/03/16
-Last Changed: 2020/05/01
+Last Changed: 2020/05/12
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -52,7 +52,7 @@ class IntereQTLEffect:
         self.expr_df = dataset.get_expr_df()
         self.alleles_df = dataset.get_alleles_df()
         self.cov_df = dataset.get_cov_df()
-        self.inter_df = dataset.get_inter_df()
+        self.inter_df = dataset.get_inter_cov_zscore_df()
         self.z_score_cutoff = dataset.get_significance_cutoff()
 
         # Create color map.
