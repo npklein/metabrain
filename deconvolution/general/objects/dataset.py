@@ -1,7 +1,7 @@
 """
 File:         dataset.py
 Created:      2020/03/16
-Last Changed: 2020/05/18
+Last Changed: 2020/05/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -115,17 +115,13 @@ class Dataset:
     def get_significance_cutoff(self):
         return self.signif_cutoff
 
-    def get_eqtl_df(self, get_all=False):
+    def get_eqtl_df(self):
         if self.eqtl_df is None:
-            if get_all:
-                nrows = None
-            else:
-                nrows = self.nrows
             self.eqtl_df = load_dataframe(inpath=os.path.join(self.input_dir,
                                                               self.eqtl_filename),
                                           header=0,
                                           index_col=False,
-                                          nrows=nrows)
+                                          nrows=self.nrows)
             self.validate()
         return self.eqtl_df
 
@@ -235,12 +231,14 @@ class Dataset:
         return self.inter_tech_cov_tvalue_df
 
     def get_eqtl_and_interactions_df(self):
-        self.get_eqtl_df(get_all=True)
-        self.get_inter_cov_zscore_df()
-
-        # Copy the matrices.
-        df1 = self.eqtl_df.copy()
-        df2 = self.inter_cov_zscore_df.copy().T
+        # Get the complete input dataframes.
+        df1 = load_dataframe(inpath=os.path.join(self.input_dir,
+                                                 self.eqtl_filename),
+                             header=0, index_col=False)
+        df2 = load_dataframe(inpath=os.path.join(self.inter_input_dir,
+                                                 self.inter_cov_subdir,
+                                                 self.zscore_filename),
+                             header=0, index_col=0).T
 
         # Check if the files math up.
         if df1.shape[0] != df2.shape[0]:
@@ -262,7 +260,7 @@ class Dataset:
 
         # Combine.
         self.eqtl_and_interactions_df = pd.concat([df1, df2], axis=1)
-        self.eqtl_and_interactions_df.index = self.eqtl_and_interactions_df["SNPName"] + "_" + self.eqtl_and_interactions_df["ProbeName"]
+        self.eqtl_and_interactions_df.index = self.eqtl_and_interactions_df.index.astype(str) + "_" + self.eqtl_and_interactions_df["SNPName"] + "_" + self.eqtl_and_interactions_df["ProbeName"]
         del df1, df2
 
         return self.eqtl_and_interactions_df

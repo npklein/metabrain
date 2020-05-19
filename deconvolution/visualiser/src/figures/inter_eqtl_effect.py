@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect.py
 Created:      2020/03/16
-Last Changed: 2020/05/12
+Last Changed: 2020/05/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -89,27 +89,16 @@ class IntereQTLEffect:
 
             # Get the allele data.
             (alleles, minor_allele) = self.alleles_df.iloc[i, :]
+            major_allele = alleles.replace(minor_allele, "").replace("/", "")
 
-            # Determine the genotype order.
-            first_allele = snp_name.split(":")[-1].split("_")[0]
-            second_allele = snp_name.split(":")[-1].split("_")[1]
-
-            # Check if the major / minor allele gentoypes are correct.
+            # Check if we need to flip the genotypes.
             counts = data["group"].value_counts()
-            minor_genotype = counts.idxmin()
-
-            # Flip the alleles.
-            if ((minor_allele == first_allele) and not (
-                    minor_genotype == 0.0)) \
-                    or ((minor_allele == second_allele) and not (
-                    minor_genotype == 2.0)):
-                # Flip the genotypes in order to get the genotype labels
-                # correct.
+            if counts.idxmin() != 2.0:
                 data["genotype"] = 2.0 - data["genotype"]
                 data["group"] = 2.0 - data["group"]
-            allele_map = {0.0: "{}/{}".format(first_allele, first_allele),
-                          1.0: "{}/{}".format(first_allele, second_allele),
-                          2.0: "{}/{}".format(second_allele, second_allele)}
+            allele_map = {0.0: "{}/{}".format(major_allele, major_allele),
+                          1.0: "{}/{}".format(major_allele, minor_allele),
+                          2.0: "{}/{}".format(minor_allele, minor_allele)}
             data["alleles"] = data["group"].map(allele_map)
 
             # Add the color.

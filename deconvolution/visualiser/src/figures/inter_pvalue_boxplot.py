@@ -1,7 +1,7 @@
 """
 File:         inter_pvalue_boxplot.py
 Created:      2020/05/12
-Last Changed: 2020/05/15
+Last Changed: 2020/05/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -106,10 +106,7 @@ class InterPvalueBoxplot:
         sns.boxplot(x="value", y="variable", hue="type", data=data,
                     palette={"Covariate": "cornflowerblue",
                              "Technical Covariate": "firebrick"},
-                    order=order, showfliers = False)
-
-        # sns.swarmplot(x="value", y="variable", data=data, order=order,
-        #               size=2, color=".3", linewidth=0)
+                    order=order, showfliers=False)
 
         ax.text(0.5, 1.02,
                 'Covariate Interactions P-Values',
@@ -124,7 +121,6 @@ class InterPvalueBoxplot:
         ax.tick_params(labelsize=10)
         ax.set_xlim(0, 1)
         plt.tight_layout()
-        ax.set(ylabel="")
         fig.savefig(os.path.join(outdir, "pvalues_boxplot.png"))
         plt.close()
 
