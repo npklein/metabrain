@@ -86,7 +86,7 @@ class InterZscoreBars:
                                lower_cutoff=-np.inf,
                                upper_cutoff=pos_z_score_cutoff)
         self.create_plots(data, full_outdir, fontsize, "Significant ",
-                          "[x>{:.2f}]".format(pos_z_score_cutoff))
+                          "[>{:.2f}]".format(pos_z_score_cutoff))
 
     def get_counts(self, data, lower_cutoff=0, upper_cutoff=0):
         df = data.copy()
