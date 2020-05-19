@@ -1,7 +1,7 @@
 """
 File:         inter_zscores_bars.py
 Created:      2020/03/16
-Last Changed: 2020/05/15
+Last Changed: 2020/05/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -82,12 +82,11 @@ class InterZscoreBars:
         neg_z_score_cutoff = -1 * pos_z_score_cutoff
 
         print("\tPlotting significant z-scores.")
-        self.get_counts(df,
-                        lower_cutoff=neg_z_score_cutoff,
-                        upper_cutoff=pos_z_score_cutoff)
+        data = self.get_counts(df,
+                               lower_cutoff=-np.inf,
+                               upper_cutoff=pos_z_score_cutoff)
         self.create_plots(data, full_outdir, fontsize, "Significant ",
-                          "[{:.2f} < x < {:.2f}]".format(neg_z_score_cutoff,
-                                                         pos_z_score_cutoff))
+                          "[x>{:.2f}]".format(pos_z_score_cutoff))
 
     def get_counts(self, data, lower_cutoff=0, upper_cutoff=0):
         df = data.copy()
@@ -120,6 +119,8 @@ class InterZscoreBars:
 
         start = 0
         stop = math.ceil(max(values))
+        if start == stop:
+            return ["#8ABBDB"] * len(values)
         step = (stop - start) / size
 
         color_list = []

@@ -1,7 +1,7 @@
 """
 File:         simple_eqtl_effect.py
 Created:      2020/03/16
-Last Changed: 2020/04/20
+Last Changed: 2020/05/18
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -87,32 +87,21 @@ class SimpleeQTLEffect:
 
             # Get the allele data.
             (alleles, minor_allele) = self.alleles_df.iloc[i, :]
+            major_allele = alleles.replace(minor_allele, "").replace("/", "")
 
-            # Determine the genotype order.
-            first_allele = snp_name.split(":")[-1].split("_")[0]
-            second_allele = snp_name.split(":")[-1].split("_")[1]
-
-            # Check if the major / minor allele gentoypes are correct.
+            # Check if we need to flip the genotypes.
             counts = data["group"].value_counts()
-            minor_genotype = counts.idxmin()
-
-            # Determine the minor allele frequency.
-            minor_allele_frequency = ((counts[minor_genotype] * 2) +
-                                      counts[1.0]) / (data.shape[0] * 2)
-
-            # Flip the alleles.
-            if ((minor_allele == first_allele) and not (
-                    minor_genotype == 0.0)) \
-                    or ((minor_allele == second_allele) and not (
-                    minor_genotype == 2.0)):
-                # Flip the genotypes in order to get the genotype labels
-                # correct.
+            if counts.idxmin() != 2.0:
                 data["genotype"] = 2.0 - data["genotype"]
                 data["group"] = 2.0 - data["group"]
-            allele_map = {0.0: "{}/{}".format(first_allele, first_allele),
-                          1.0: "{}/{}".format(first_allele, second_allele),
-                          2.0: "{}/{}".format(second_allele, second_allele)}
+            allele_map = {0.0: "{}/{}".format(major_allele, major_allele),
+                          1.0: "{}/{}".format(major_allele, minor_allele),
+                          2.0: "{}/{}".format(minor_allele, minor_allele)}
             data["alleles"] = data["group"].map(allele_map)
+
+            # Determine the minor allele frequency.
+            minor_allele_frequency = ((counts[2.0] * 2) +
+                                      counts[1.0]) / (data.shape[0] * 2)
 
             # Add the color.
             data["round_geno"] = data["genotype"].round(2)
@@ -122,8 +111,7 @@ class SimpleeQTLEffect:
 
             # Plot a simple eQTL effect.
             self.plot(i, p_value, snp_name, probe_name, hgnc_name, eqtl_type,
-                      data, minor_allele, minor_allele_frequency,
-                      first_allele, second_allele,
+                      data, minor_allele, minor_allele_frequency, allele_map,
                       self.outdir)
 
     @staticmethod
@@ -144,8 +132,7 @@ class SimpleeQTLEffect:
 
     @staticmethod
     def plot(i, p_value, snp_name, probe_name, hgnc_name, eqtl_type, df,
-             minor_allele, minor_allele_frequency, first_allele,
-             second_allele, outdir):
+             minor_allele, minor_allele_frequency, allele_map, outdir):
         """
         """
         # Calculate the correlation.
@@ -174,9 +161,7 @@ class SimpleeQTLEffect:
 
         # Set the other aesthetics.
         ax.set_xticks(range(3))
-        ax.set_xticklabels(["{}/{}".format(first_allele, first_allele),
-                            "{}/{}".format(first_allele, second_allele),
-                            "{}/{}".format(second_allele, second_allele)])
+        ax.set_xticklabels([allele_map[0.0], allele_map[1.0], allele_map[2.0]])
         ax.text(0.5, 1.06,
                 '{} {}-eQTL [{}]'.format(hgnc_name, eqtl_type,
                                          p_value_to_symbol(p_value)),

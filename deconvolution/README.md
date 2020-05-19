@@ -34,7 +34,7 @@ Installing and running the program can be done by executing the following steps:
 **Step 1: acquire the source files**      
 Either [clone](https://bitbucket.org/martijnvochteloo/programming1/commits/all) or [download](https://bitbucket.org/martijnvochteloo/programming1/downloads/) the source files.
 
-**Step 2: creating the virtual environment [OPTINAL]**    
+**Step 2: creating the virtual environment [OPTIONAL]**    
 1) Open JetBrains PyCharm  
 2) Click on 'File' -> 'Settings' (Ctrl + Alt + S) -> 'Project: progr1' -> 'Project Interpreter'  
 3) Add a new interperter by pressing the gear icon -> 'Add'  

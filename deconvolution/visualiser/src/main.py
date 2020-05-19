@@ -89,29 +89,29 @@ class Main:
         ds = Dataset(settings=self.settings, nrows=self.n_eqtls)
         if self.validate:
             ds.load_all()
-
-        if ('covariate_comparison' in self.plots) or \
-                ('all' in self.plots):
-            print("\n### Covariate Comparison ###\n")
-            cc = CovariateComparison(dataset=ds, outdir=self.outdir)
-            cc.start()
-            del cc
-
-        if ('covariates_explained_by_others' in self.plots) or \
-                ('all' in self.plots):
-            print("\n### Covariates Explained By Others ###\n")
-            cebo = CovariatesExplainedByOthers(dataset=ds,
-                                               outdir=self.outdir)
-            cebo.start()
-            del cebo
-
-        if ('deconvolution_covariate_comparison' in self.plots) or \
-                ('all' in self.plots):
-            print("\n### Deconvolution Covariate Comparison ###\n")
-            dcc = DeconvolutionCovariateComparison(dataset=ds,
-                                                   outdir=self.outdir)
-            dcc.start()
-            del dcc
+        #
+        # if ('covariate_comparison' in self.plots) or \
+        #         ('all' in self.plots):
+        #     print("\n### Covariate Comparison ###\n")
+        #     cc = CovariateComparison(dataset=ds, outdir=self.outdir)
+        #     cc.start()
+        #     del cc
+        #
+        # if ('covariates_explained_by_others' in self.plots) or \
+        #         ('all' in self.plots):
+        #     print("\n### Covariates Explained By Others ###\n")
+        #     cebo = CovariatesExplainedByOthers(dataset=ds,
+        #                                        outdir=self.outdir)
+        #     cebo.start()
+        #     del cebo
+        #
+        # if ('deconvolution_covariate_comparison' in self.plots) or \
+        #         ('all' in self.plots):
+        #     print("\n### Deconvolution Covariate Comparison ###\n")
+        #     dcc = DeconvolutionCovariateComparison(dataset=ds,
+        #                                            outdir=self.outdir)
+        #     dcc.start()
+        #     del dcc
 
         # exit()
 
@@ -158,12 +158,12 @@ class Main:
             izd.start()
             del izd
 
-        if ('inter_zscore_marker_genes' in self.plots) or ('all' in self.plots):
-            print("\n### INTERACTION Z-SCORE MARKER GENES ###\n")
-            izmg = InterZscoreMarkerGenes(dataset=ds,
-                                          outdir=self.outdir)
-            izmg.start()
-            del izmg
+        # if ('inter_zscore_marker_genes' in self.plots) or ('all' in self.plots):
+        #     print("\n### INTERACTION Z-SCORE MARKER GENES ###\n")
+        #     izmg = InterZscoreMarkerGenes(dataset=ds,
+        #                                   outdir=self.outdir)
+        #     izmg.start()
+        #     del izmg
 
         if ('inter_eqtl_zscore_bars' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION EQTL Z-SCORE BARS ###\n")

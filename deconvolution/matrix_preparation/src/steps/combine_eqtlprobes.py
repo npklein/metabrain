@@ -67,7 +67,7 @@ class CombineEQTLProbes:
                                               index_col=False)
         else:
             # Load each GTE file.
-            print("Loading GTE files.")
+            print("Loading eQTLprobes files.")
             combined_eqtl_probes = self.combine_files()
             if self.trait != "" and self.trait is not None:
                 print("Filtering on trait: {}".format(self.trait))
