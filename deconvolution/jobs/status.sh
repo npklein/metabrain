@@ -1,9 +1,9 @@
 #!/bin/bash
 
 LOG_DIR=/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/jobs/output/
-JOB_PREFIX=CIA
-START=200
-END=418
+JOB_PREFIX=$1
+START=$2
+END=$3
 
 TOTAL_DONE=0
 TOTAL_EQTLS=0

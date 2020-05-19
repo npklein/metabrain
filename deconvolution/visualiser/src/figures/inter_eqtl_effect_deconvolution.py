@@ -106,7 +106,10 @@ class IntereQTLEffectDeconvolution:
 
             # Check if we need to flip the genotypes.
             counts = data["group"].value_counts()
-            if counts.idxmin() != 2.0:
+            if counts.idxmin() == 1.0:
+                print("Can't plot because flip is uncertain.")
+                continue
+            elif counts.idxmin() == 0.0:
                 data["genotype"] = 2.0 - data["genotype"]
                 data["group"] = 2.0 - data["group"]
             allele_map = {0.0: "{}/{}".format(major_allele, major_allele),
