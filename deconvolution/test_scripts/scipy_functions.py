@@ -28,7 +28,6 @@ from pathlib import Path
 import os
 
 # Third party imports.
-import scipy.stats as stats
 import numpy as np
 import pandas as pd
 import seaborn as sns

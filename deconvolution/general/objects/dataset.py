@@ -1,7 +1,7 @@
 """
 File:         dataset.py
 Created:      2020/03/16
-Last Changed: 2020/05/19
+Last Changed: 2020/05/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -33,7 +33,7 @@ from general.df_utilities import load_dataframe
 
 
 class Dataset:
-    def __init__(self, settings, nrows):
+    def __init__(self, settings, nrows, interest):
         self.input_dir = settings.get_setting("input_dir")
         filenames = settings.get_setting("filenames")
         self.eqtl_filename = filenames["eqtl"]
@@ -57,12 +57,15 @@ class Dataset:
         self.cellmap_methods = settings.get_setting("cellmap_method_prefix_and_suffix")
         self.marker_genes = settings.get_setting("marker_genes_prefix")
         self.signif_cutoff = stats.norm.isf(settings.get_setting("significance_cutoff"))
+        self.interest = interest
         nrows = nrows
         if nrows == -1:
             nrows = None
         elif nrows <= 0:
             print("Unexpected argument for -n / --n_eqtls: '{}'".format(nrows))
             exit()
+        if self.interest is not None:
+            nrows = max(self.interest) + 1
         self.nrows = nrows
 
         # Declare empty variables.
@@ -117,41 +120,58 @@ class Dataset:
 
     def get_eqtl_df(self):
         if self.eqtl_df is None:
-            self.eqtl_df = load_dataframe(inpath=os.path.join(self.input_dir,
-                                                              self.eqtl_filename),
-                                          header=0,
-                                          index_col=False,
-                                          nrows=self.nrows)
+            eqtl_df = load_dataframe(inpath=os.path.join(self.input_dir,
+                                                         self.eqtl_filename),
+                                     header=0,
+                                     index_col=False,
+                                     nrows=self.nrows)
+            if self.interest is not None:
+                eqtl_df = eqtl_df.iloc[self.interest, :]
+            self.eqtl_df = eqtl_df
+
             self.validate()
         return self.eqtl_df
 
     def get_geno_df(self):
         if self.geno_df is None:
-            self.geno_df = load_dataframe(inpath=os.path.join(self.input_dir,
-                                                              self.geno_filename),
-                                          header=0,
-                                          index_col=0,
-                                          nrows=self.nrows)
+            geno_df = load_dataframe(inpath=os.path.join(self.input_dir,
+                                                         self.geno_filename),
+                                     header=0,
+                                     index_col=0,
+                                     nrows=self.nrows)
+            if self.interest is not None:
+                geno_df = geno_df.iloc[self.interest, :]
+            self.geno_df = geno_df
+
             self.validate()
         return self.geno_df
 
     def get_alleles_df(self):
         if self.alleles_df is None:
-            self.alleles_df = load_dataframe(inpath=os.path.join(self.input_dir,
-                                                                 self.alleles_filename),
-                                             header=0,
-                                             index_col=0,
-                                             nrows=self.nrows)
+            alleles_df = load_dataframe(inpath=os.path.join(self.input_dir,
+                                                            self.alleles_filename),
+                                        header=0,
+                                        index_col=0,
+                                        nrows=self.nrows)
+            if self.interest is not None:
+                alleles_df = alleles_df.iloc[self.interest, :]
+            self.alleles_df = alleles_df
+
             self.validate()
         return self.alleles_df
 
     def get_expr_df(self):
         if self.expr_df is None:
-            self.expr_df = load_dataframe(inpath=os.path.join(self.input_dir,
-                                                              self.expr_filename),
-                                          header=0,
-                                          index_col=0,
-                                          nrows=self.nrows)
+            expr_df = load_dataframe(inpath=os.path.join(self.input_dir,
+                                                         self.expr_filename),
+                                     header=0,
+                                     index_col=0,
+                                     nrows=self.nrows)
+
+            if self.interest is not None:
+                expr_df = expr_df.iloc[self.interest, :]
+            self.expr_df = expr_df
+
             self.validate()
         return self.expr_df
 

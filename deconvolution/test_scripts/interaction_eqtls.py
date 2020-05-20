@@ -3,7 +3,7 @@
 """
 File:         interaction_eqtls.py
 Created:      2020/05/01
-Last Changed: 2020/05/19
+Last Changed: 2020/05/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -100,30 +100,24 @@ class main():
 
             # Create a flip column.
             print("Determining flip columns.")
-            zscore_flip_list = []
-            tvalue_flip_list = []
+            flip_list = []
             for i in range(len(eqtl_df.index)):
-                zscore_flip = 1
-                tvalue_flip = 1
+                flip = 1
                 genotype = geno_df.iloc[i, :].round(0)
                 counts = genotype.value_counts()
-                if -1 in counts.index:
-                    counts = counts.drop([-1], axis=0)
+                for x in [0.0, 1.0, 2.0]:
+                    if x not in counts:
+                        counts.loc[x] = 0
 
-                if counts.idxmin() == 1.0:
-                    zscore_flip = 0
-                    tvalue_flip = 0
+                zero_geno_count = (counts[0.0] * 2) + counts[1.0]
+                two_geno_count = (counts[2.0] * 2) + counts[1.0]
+                if two_geno_count > zero_geno_count:
+                    flip = -1
 
-                elif counts.idxmin() == 0.0:
-                    tvalue_flip = -1
+                flip_list.append(flip)
 
-                zscore_flip_list.append(zscore_flip)
-                tvalue_flip_list.append(tvalue_flip)
-
-            print("Z-score flips:")
-            print(pd.Series(zscore_flip_list).value_counts())
-            print("T-value flips:")
-            print(pd.Series(tvalue_flip_list).value_counts())
+            print("Flips:")
+            print(pd.Series(flip_list).value_counts())
 
             print("Working on column:")
             for col in self.cols_of_interest:
@@ -133,8 +127,8 @@ class main():
                 neg_filename = os.path.join(outdir, "{}_negative.txt".format(col))
 
                 df = eqtl_df.copy()
-                df["zscore"] = (inter_df.loc[col, :].values * zscore_flip_list)
-                df["tvalue"] = (tvalue_df.loc[col, :].values * tvalue_flip_list)
+                df["zscore"] = inter_df.loc[col, :].values
+                df["tvalue"] = (tvalue_df.loc[col, :].values * flip_list)
 
                 df = df.loc[df.loc[:, "zscore"] > 2.49, :]
 

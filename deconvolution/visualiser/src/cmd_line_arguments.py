@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/13
-Last Changed: 2020/05/12
+Last Changed: 2020/05/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -93,6 +93,7 @@ class CommandLineArguments:
                                      "inter_eqtl_effect_deconvolution",
                                      "inter_eqtl_effect_marker_vs_comp",
                                      "inter_eqtl_effect_celltype",
+                                     "inter_eqtl_celltype_details"
                                      ],
                             help="The name of the figures to be created, "
                                  "default: 'all'.")
@@ -102,6 +103,14 @@ class CommandLineArguments:
                             default=1,
                             help="The number of eQTLs to visualise, "
                                  "default: 1.")
+        parser.add_argument("-i",
+                            "--interest",
+                            nargs="+",
+                            type=int,
+                            default=None,
+                            help="The indices of the eQTLS to visualise,"
+                                 "default: None. If set, -n / --n_eqtls is "
+                                 "discarded.")
         parser.add_argument("-validate",
                             action='store_true',
                             help="Validate that the input matrices match "
