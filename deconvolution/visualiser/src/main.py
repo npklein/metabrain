@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/13
-Last Changed: 2020/05/12
+Last Changed: 2020/05/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -46,6 +46,7 @@ from .figures.inter_eqtl_effect import IntereQTLEffect
 from .figures.inter_eqtl_effect_deconvolution import IntereQTLEffectDeconvolution
 from .figures.inter_eqtl_effect_marker_vs_comp import IntereQTLEffectMarkerVSComp
 from .figures.inter_eqtl_effect_celltype import IntereQTLEffectCelltype
+from .figures.inter_eqtl_celltype_details import IntereQTLCelltypeDetails
 
 
 class Main:
@@ -53,13 +54,14 @@ class Main:
     Main: this class is the main class that calls all other functionality.
     """
 
-    def __init__(self, settings_file, plots, n_eqtls, validate):
+    def __init__(self, settings_file, plots, n_eqtls, interest, validate):
         """
         Initializer of the class.
 
         :param settings_file: string, the name of the settings file.
         :param plots: list, the names of the plots to create.
-        :param n_eqtls: int, the number of equals to load.
+        :param n_eqtls: int, the number of equals to plot.
+        :param interest: list, the indices of equals to plot.
         :param validate: boolean, whether or not to validate the input.
         """
         # Define the current directory.
@@ -71,6 +73,7 @@ class Main:
         # Load the variables.
         self.plots = plots
         self.n_eqtls = n_eqtls
+        self.interest = interest
         self.validate = validate
 
         # Prepare an output directory.
@@ -86,7 +89,8 @@ class Main:
         self.print_arguments()
 
         # Create the dataset object.
-        ds = Dataset(settings=self.settings, nrows=self.n_eqtls)
+        ds = Dataset(settings=self.settings, nrows=self.n_eqtls,
+                     interest=self.interest)
         if self.validate:
             ds.load_all()
         #
@@ -200,9 +204,17 @@ class Main:
             ieec.start()
             del ieec
 
+        if ('inter_eqtl_celltype_details' in self.plots) or ('all' in self.plots):
+            print("\n### INTERACTION EQTL EFFECT CELLTYPE DETAILS ###\n")
+            iecd = IntereQTLCelltypeDetails(dataset=ds, outdir=self.outdir)
+            iecd.start()
+            del iecd
+
     def print_arguments(self):
         print("Arguments:")
         print("  > Output directory: {}".format(self.outdir))
         print("  > Plots: {}".format(self.plots))
+        print("  > N eQTLS: {}".format(self.n_eqtls))
+        print("  > Interest: {}".format(self.interest))
         print("  > Validate: {}".format(self.validate))
         print("")

@@ -1,7 +1,7 @@
 """
 File:         simple_eqtl_effect.py
 Created:      2020/03/16
-Last Changed: 2020/05/18
+Last Changed: 2020/05/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -75,8 +75,8 @@ class SimpleeQTLEffect:
                                     (100 / self.eqtl_df.shape[0]) * (i + 1)))
 
             # Get the genotype / expression data.
-            genotype = self.geno_df.iloc[i, :].T.to_frame()
-            expression = self.expr_df.iloc[i, :].T.to_frame()
+            genotype = self.geno_df.iloc[index, :].T.to_frame()
+            expression = self.expr_df.iloc[index, :].T.to_frame()
             data = genotype.merge(expression, left_index=True, right_index=True)
             data.columns = ["genotype", "expression"]
             data["group"] = data["genotype"].round(0)
@@ -86,17 +86,20 @@ class SimpleeQTLEffect:
                             (data['genotype'] <= 2.0), :]
 
             # Get the allele data.
-            (alleles, minor_allele) = self.alleles_df.iloc[i, :]
+            (alleles, minor_allele) = self.alleles_df.iloc[index, :]
             major_allele = alleles.replace(minor_allele, "").replace("/", "")
 
             # Check if we need to flip the genotypes.
             counts = data["group"].value_counts()
-            if counts.idxmin() == 1.0:
-                print("Can't plot because flip is uncertain.")
-                continue
-            elif counts.idxmin() == 0.0:
+            for x in [0.0, 1.0, 2.0]:
+                if x not in counts:
+                    counts.loc[x] = 0
+            zero_geno_count = (counts[0.0] * 2) + counts[1.0]
+            two_geno_count = (counts[2.0] * 2) + counts[1.0]
+            if two_geno_count > zero_geno_count:
                 data["genotype"] = 2.0 - data["genotype"]
                 data["group"] = 2.0 - data["group"]
+
             allele_map = {0.0: "{}/{}".format(major_allele, major_allele),
                           1.0: "{}/{}".format(major_allele, minor_allele),
                           2.0: "{}/{}".format(minor_allele, minor_allele)}
@@ -113,7 +116,7 @@ class SimpleeQTLEffect:
             data.drop(["round_geno"], axis=1, inplace=True)
 
             # Plot a simple eQTL effect.
-            self.plot(i, p_value, snp_name, probe_name, hgnc_name, eqtl_type,
+            self.plot(index, p_value, snp_name, probe_name, hgnc_name, eqtl_type,
                       data, minor_allele, minor_allele_frequency, allele_map,
                       self.outdir)
 

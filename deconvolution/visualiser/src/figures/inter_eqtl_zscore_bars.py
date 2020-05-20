@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_zscore_bars.py
 Created:      2020/03/16
-Last Changed: 2020/05/12
+Last Changed: 2020/05/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -72,7 +72,7 @@ class IntereQTLZscoreBars:
                                     (100 / self.eqtl_df.shape[0]) * (i + 1)))
 
             # Check if the SNP has an interaction effect.
-            interaction_effect = self.inter_df.iloc[:, i].to_frame()
+            interaction_effect = self.inter_df.iloc[:, index].to_frame()
             # if interaction_effect.columns[0] in ["7:144177389:rs6464583:A_G_G", "9:32886201:rs10971181:T_C_C", "22:16717912:rs2078647:A_G_G", "15:33985176:rs11856529:A_G_G"]:
 
             interaction_effect.reset_index(inplace=True)

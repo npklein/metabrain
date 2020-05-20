@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect.py
 Created:      2020/03/16
-Last Changed: 2020/05/19
+Last Changed: 2020/05/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -77,8 +77,8 @@ class IntereQTLEffect:
                                     (100 / self.eqtl_df.shape[0]) * (i + 1)))
 
             # Get the genotype / expression data.
-            genotype = self.geno_df.iloc[i, :].T.to_frame()
-            expression = self.expr_df.iloc[i, :].T.to_frame()
+            genotype = self.geno_df.iloc[index, :].T.to_frame()
+            expression = self.expr_df.iloc[index, :].T.to_frame()
             data = genotype.merge(expression, left_index=True, right_index=True)
             data.columns = ["genotype", "expression"]
             data["group"] = data["genotype"].round(0)
@@ -88,17 +88,20 @@ class IntereQTLEffect:
                             (data['genotype'] <= 2.0), :]
 
             # Get the allele data.
-            (alleles, minor_allele) = self.alleles_df.iloc[i, :]
+            (alleles, minor_allele) = self.alleles_df.iloc[index, :]
             major_allele = alleles.replace(minor_allele, "").replace("/", "")
 
             # Check if we need to flip the genotypes.
             counts = data["group"].value_counts()
-            if counts.idxmin() == 1.0:
-                print("Can't plot because flip is uncertain.")
-                continue
-            elif counts.idxmin() == 0.0:
+            for x in [0.0, 1.0, 2.0]:
+                if x not in counts:
+                    counts.loc[x] = 0
+            zero_geno_count = (counts[0.0] * 2) + counts[1.0]
+            two_geno_count = (counts[2.0] * 2) + counts[1.0]
+            if two_geno_count > zero_geno_count:
                 data["genotype"] = 2.0 - data["genotype"]
                 data["group"] = 2.0 - data["group"]
+
             allele_map = {0.0: "{}/{}".format(major_allele, major_allele),
                           1.0: "{}/{}".format(major_allele, minor_allele),
                           2.0: "{}/{}".format(minor_allele, minor_allele)}
@@ -111,7 +114,7 @@ class IntereQTLEffect:
             data.drop(["round_geno"], axis=1, inplace=True)
 
             # Check if the SNP has an interaction effect.
-            interaction_effect = self.inter_df.iloc[:, i].to_frame()
+            interaction_effect = self.inter_df.iloc[:, index].to_frame()
             interaction_effect.columns = ["zscore"]
             interaction_effect = interaction_effect.loc[
                                  interaction_effect["zscore"] > abs(
@@ -123,18 +126,18 @@ class IntereQTLEffect:
             # Prepare output directory.
             if len(interaction_effect.index) > 0:
                 eqtl_interaction_outdir = os.path.join(self.outdir,
-                                                       "{}_{}_{}_{}".format(i, snp_name, probe_name, hgnc_name))
+                                                       "{}_{}_{}_{}".format(index, snp_name, probe_name, hgnc_name))
                 if not os.path.exists(eqtl_interaction_outdir):
                     os.makedirs(eqtl_interaction_outdir)
 
                 count = 0
-                for index, (row,) in interaction_effect.iterrows():
+                for index2, (row,) in interaction_effect.iterrows():
                     eqtl_data = data.copy()
-                    cov_data = self.cov_df.loc[index].to_frame()
+                    cov_data = self.cov_df.loc[index2].to_frame()
                     eqtl_data = eqtl_data.merge(cov_data, left_index=True,
                                                 right_index=True)
                     self.plot(snp_name, probe_name, hgnc_name, eqtl_type,
-                              eqtl_data, index, row, count,
+                              eqtl_data, index2, row, count,
                               eqtl_interaction_outdir)
                     count += 1
 
