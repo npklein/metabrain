@@ -90,8 +90,8 @@ class IntereQTLEffectDeconvolution:
                                     (100 / self.eqtl_df.shape[0]) * (i + 1)))
 
             # Get the genotype / expression data.
-            genotype = self.geno_df.iloc[index, :].T.to_frame()
-            expression = self.expr_df.iloc[index, :].T.to_frame()
+            genotype = self.geno_df.iloc[i, :].T.to_frame()
+            expression = self.expr_df.iloc[i, :].T.to_frame()
             data = genotype.merge(expression, left_index=True, right_index=True)
             data.columns = ["genotype", "expression"]
             data["group"] = data["genotype"].round(0)
@@ -101,7 +101,7 @@ class IntereQTLEffectDeconvolution:
                             (data['genotype'] <= 2.0), :]
 
             # Get the allele data.
-            (alleles, minor_allele) = self.alleles_df.iloc[index, :]
+            (alleles, minor_allele) = self.alleles_df.iloc[i, :]
             major_allele = alleles.replace(minor_allele, "").replace("/", "")
 
             # Check if we need to flip the genotypes.
@@ -127,7 +127,7 @@ class IntereQTLEffectDeconvolution:
             data.drop(["round_geno"], axis=1, inplace=True)
 
             # Get the interaction zscores
-            interaction_effect = self.inter_df.iloc[:, index].to_frame()
+            interaction_effect = self.inter_df.iloc[:, i].to_frame()
             interaction_effect = interaction_effect.loc[deconvolution_indices, :]
             interaction_effect.columns = ["zscore"]
 
