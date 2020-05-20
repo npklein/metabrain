@@ -50,6 +50,7 @@ class IntereQTLCelltypeDetails:
         # Extract the required data.
         print("Loading data")
         self.eqtl_df = dataset.get_eqtl_df()
+        self.geno_df = dataset.get_geno_df()
         self.zscore_df = dataset.get_inter_cov_zscore_df()
         self.tvalue_df = dataset.get_inter_cov_tvalue_df()
         self.cellmap_methods = dataset.get_cellmap_methods()
@@ -77,6 +78,18 @@ class IntereQTLCelltypeDetails:
                                     self.eqtl_df.shape[0],
                                     (100 / self.eqtl_df.shape[0]) * (i + 1)))
 
+            # Check if we need to flip the genotypes.
+            genotype = self.geno_df.iloc[i, :]
+            counts = genotype.value_counts()
+            for x in [0.0, 1.0, 2.0]:
+                if x not in counts:
+                    counts.loc[x] = 0
+            zero_geno_count = (counts[0.0] * 2) + counts[1.0]
+            two_geno_count = (counts[2.0] * 2) + counts[1.0]
+            flip = 1
+            if two_geno_count > zero_geno_count:
+                flip = -1
+
             # Prepare output directory.
             eqtl_outdir = os.path.join(self.outdir,
                                        "{}_{}_{}_{}".format(index, snp_name,
@@ -90,15 +103,17 @@ class IntereQTLCelltypeDetails:
 
                 tvalues = self.tvalue_df.loc[
                           self.tvalue_df.index.str.startswith(prefix), :].copy()
-                tvalues = tvalues.iloc[:, index].to_frame()
+                tvalues = tvalues.iloc[:, i]
+                tvalues = tvalues * flip
+                tvalues = tvalues.to_frame()
 
                 zscores = self.zscore_df.loc[
                           self.zscore_df.index.str.startswith(prefix), :].copy()
-                zscores = zscores.iloc[:, index].to_frame()
+                zscores = zscores.iloc[:, i].to_frame()
 
                 df = tvalues.merge(zscores, left_index=True, right_index=True)
                 df.columns = ["tvalue", "zscore"]
-                df.index = ["{}".format(index.replace(prefix, "").replace(suffix, "")) for index in df.index]
+                df.index = ["{}".format(x.replace(prefix, "").replace(suffix, "")) for x in df.index]
 
                 self.plot_forest(snp_name, probe_name, hgnc_name, name, df,
                                  self.z_score_cutoff, eqtl_outdir)
@@ -213,6 +228,7 @@ class IntereQTLCelltypeDetails:
     def print_arguments(self):
         print("Arguments:")
         print("  > eQTL matrix shape: {}".format(self.eqtl_df.shape))
+        print("  > Genotype matrix shape: {}".format(self.geno_df.shape))
         print("  > Z-score matrix shape: {}".format(self.zscore_df.shape))
         print("  > T-value matrix shape: {}".format(self.tvalue_df.shape))
         print("  > CellMap Methods: {}".format(self.cellmap_methods))

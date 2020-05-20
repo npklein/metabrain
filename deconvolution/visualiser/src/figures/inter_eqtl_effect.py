@@ -77,8 +77,8 @@ class IntereQTLEffect:
                                     (100 / self.eqtl_df.shape[0]) * (i + 1)))
 
             # Get the genotype / expression data.
-            genotype = self.geno_df.iloc[index, :].T.to_frame()
-            expression = self.expr_df.iloc[index, :].T.to_frame()
+            genotype = self.geno_df.iloc[i, :].T.to_frame()
+            expression = self.expr_df.iloc[i, :].T.to_frame()
             data = genotype.merge(expression, left_index=True, right_index=True)
             data.columns = ["genotype", "expression"]
             data["group"] = data["genotype"].round(0)
@@ -88,7 +88,7 @@ class IntereQTLEffect:
                             (data['genotype'] <= 2.0), :]
 
             # Get the allele data.
-            (alleles, minor_allele) = self.alleles_df.iloc[index, :]
+            (alleles, minor_allele) = self.alleles_df.iloc[i, :]
             major_allele = alleles.replace(minor_allele, "").replace("/", "")
 
             # Check if we need to flip the genotypes.
@@ -114,7 +114,7 @@ class IntereQTLEffect:
             data.drop(["round_geno"], axis=1, inplace=True)
 
             # Check if the SNP has an interaction effect.
-            interaction_effect = self.inter_df.iloc[:, index].to_frame()
+            interaction_effect = self.inter_df.iloc[:, i].to_frame()
             interaction_effect.columns = ["zscore"]
             interaction_effect = interaction_effect.loc[
                                  interaction_effect["zscore"] > abs(
@@ -136,9 +136,15 @@ class IntereQTLEffect:
                     cov_data = self.cov_df.loc[index2].to_frame()
                     eqtl_data = eqtl_data.merge(cov_data, left_index=True,
                                                 right_index=True)
-                    self.plot(snp_name, probe_name, hgnc_name, eqtl_type,
-                              eqtl_data, index2, row, count,
-                              eqtl_interaction_outdir)
+
+                    if len(eqtl_data[index2].value_counts().index) == 2:
+                        self.plot_box(snp_name, probe_name, hgnc_name,
+                                      eqtl_type, eqtl_data, index2, row, count,
+                                      allele_map, eqtl_interaction_outdir)
+                    else:
+                        self.plot_inter(snp_name, probe_name, hgnc_name, eqtl_type,
+                                        eqtl_data, index2, row, count,
+                                        eqtl_interaction_outdir)
                     count += 1
 
     @staticmethod
@@ -158,13 +164,18 @@ class IntereQTLEffect:
         return group_color_map, value_color_map
 
     @staticmethod
-    def plot(snp_name, probe_name, hgnc_name, eqtl_type, df, cov_name, zscore,
+    def plot_inter(snp_name, probe_name, hgnc_name, eqtl_type, df, cov_name, zscore,
              count, outdir):
-        """
-        """
         # calculate axis limits.
-        min = df["expression"].min() * 1.2
-        max = df["expression"].max() * 1.6
+        ymin_value = df["expression"].min()
+        ymin = ymin_value - abs(ymin_value * 0.2)
+        ymax_value = df["expression"].max()
+        ymax = ymax_value + abs(ymax_value * 0.6)
+
+        xmin_value = df[cov_name].min()
+        xmin = xmin_value - max(abs(xmin_value * 0.1), 0.05)
+        xmax_value = df[cov_name].max()
+        xmax = xmax_value + max(abs(xmax_value * 0.1), 0.05)
 
         sns.set(rc={'figure.figsize': (12, 9)})
         sns.set_style("ticks")
@@ -187,7 +198,7 @@ class IntereQTLEffect:
                         )
 
             # Add the text.
-            ax.set(ylim=(min, max))
+            ax.set(xlim=(xmin, xmax), ylim=(ymin, ymax))
             ax.annotate(
                 '{}: r = {:.2e} [{}]'.format(allele, coef, p_value_to_symbol(p)),
                 xy=(0.03, 0.94 - ((i / 100) * 4)),
@@ -216,8 +227,73 @@ class IntereQTLEffect:
                       fontsize=14,
                       fontweight='bold')
 
-        ax.axvline(0, ls='--', color="#000000", alpha=0.15, zorder=-1)
-        ax.axhline(0, ls='--', color="#000000", alpha=0.15, zorder=-1)
+        # ax.axvline(0, ls='--', color="#000000", alpha=0.15, zorder=-1)
+        # ax.axhline(0, ls='--', color="#000000", alpha=0.15, zorder=-1)
+
+        # Safe the plot.
+        plt.tight_layout()
+        fig.savefig(os.path.join(outdir,
+                                 "{}_inter_eqtl_{}_{}_{}_{}.png".format(
+                                     count,
+                                     snp_name,
+                                     probe_name,
+                                     hgnc_name,
+                                     cov_name)))
+        plt.close()
+
+    @staticmethod
+    def plot_box(snp_name, probe_name, hgnc_name, eqtl_type, df, cov_name, zscore,
+             count, allele_map, outdir):
+        print(df)
+
+        palette = None
+        if cov_name == "SEX":
+            palette = {0.0: "#ADD8E6", 1.0: "#FFC0CB"}
+
+        # Prepare the figure.
+        sns.set(rc={'figure.figsize': (12, 9)})
+        sns.set_style("ticks")
+        fig, ax = plt.subplots()
+        sns.despine(fig=fig, ax=ax)
+
+        sns.swarmplot(x="group", y="expression", hue=cov_name, data=df,
+                      dodge=True, color=".20", edgecolor="#808080", size=2,
+                      ax=ax)
+        sns.boxplot(x="group", y="expression", hue=cov_name, dodge=True,
+                    zorder=-1, boxprops=dict(alpha=.8), showfliers=False,
+                    data=df, palette=palette, ax=ax)
+
+        # plt.setp(ax.artists, edgecolor='k', facecolor='w')
+        # plt.setp(ax.lines, color='k')
+
+        # Set the other aesthetics.
+        ax.set_xticks(range(3))
+        ax.set_xticklabels([allele_map[0.0], allele_map[1.0], allele_map[2.0]])
+
+        ax.text(0.5, 1.06,
+                '{} {}-eQTL Interaction with {} '.format(hgnc_name,
+                                                         eqtl_type,
+                                                         cov_name),
+                fontsize=18, weight='bold', ha='center', va='bottom',
+                transform=ax.transAxes)
+        ax.text(0.5, 1.02,
+                'SNPName: {}  ProbeName: {}  '
+                'Z-score: {:.2f}'.format(snp_name, probe_name, zscore),
+                fontsize=12, alpha=0.75, ha='center', va='bottom',
+                transform=ax.transAxes)
+
+        ax.set_ylabel('{} ({}) expression'.format(probe_name, hgnc_name),
+                      fontsize=14,
+                      fontweight='bold')
+        ax.set_xlabel('',
+                      fontsize=14,
+                      fontweight='bold')
+        ax.tick_params(axis='x', labelsize=14)
+        ax.tick_params(axis='y', labelsize=10)
+
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles[:2], labels[:2],
+                  loc='center left', bbox_to_anchor=(1, 0.5))
 
         # Safe the plot.
         plt.tight_layout()

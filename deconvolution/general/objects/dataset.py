@@ -186,67 +186,95 @@ class Dataset:
 
     def get_inter_cov_pvalue_df(self):
         if self.inter_cov_pvalue_df is None:
-            self.inter_cov_pvalue_df = load_dataframe(
+            inter_cov_pvalue_df = load_dataframe(
                 inpath=os.path.join(self.inter_input_dir,
                                     self.inter_cov_subdir,
                                     self.pvalue_filename),
                 header=0,
                 index_col=0)
+            if self.interest is not None:
+                inter_cov_pvalue_df = inter_cov_pvalue_df.iloc[:, self.interest]
+            self.inter_cov_pvalue_df = inter_cov_pvalue_df
+
             self.validate()
         return self.inter_cov_pvalue_df
 
     def get_inter_tech_cov_pvalue_df(self):
         if self.inter_tech_cov_pvalue_df is None:
-            self.inter_tech_cov_pvalue_df = load_dataframe(
+            inter_tech_cov_pvalue_df = load_dataframe(
                 inpath=os.path.join(self.inter_input_dir,
                                     self.inter_tech_cov_subdir,
                                     self.pvalue_filename),
                 header=0,
                 index_col=0)
+            if self.interest is not None:
+                inter_tech_cov_pvalue_df = inter_tech_cov_pvalue_df.iloc[:, self.interest]
+            self.inter_tech_cov_pvalue_df = inter_tech_cov_pvalue_df
+
             self.validate()
         return self.inter_tech_cov_pvalue_df
 
     def get_inter_cov_zscore_df(self):
         if self.inter_cov_zscore_df is None:
-            self.inter_cov_zscore_df = load_dataframe(
+            inter_cov_zscore_df = load_dataframe(
                 inpath=os.path.join(self.inter_input_dir,
                                     self.inter_cov_subdir,
                                     self.zscore_filename),
                 header=0,
                 index_col=0)
+            if self.interest is not None:
+                inter_cov_zscore_df = inter_cov_zscore_df.iloc[:,
+                                           self.interest]
+            self.inter_cov_zscore_df = inter_cov_zscore_df
+
             self.validate()
         return self.inter_cov_zscore_df
 
     def get_inter_tech_cov_zscore_df(self):
         if self.inter_tech_cov_zscore_df is None:
-            self.inter_tech_cov_zscore_df = load_dataframe(
+            inter_tech_cov_zscore_df = load_dataframe(
                 inpath=os.path.join(self.inter_input_dir,
                                     self.inter_tech_cov_subdir,
                                     self.zscore_filename),
                 header=0,
                 index_col=0)
+            if self.interest is not None:
+                inter_tech_cov_zscore_df = inter_tech_cov_zscore_df.iloc[:,
+                                           self.interest]
+            self.inter_tech_cov_zscore_df = inter_tech_cov_zscore_df
+
             self.validate()
         return self.inter_tech_cov_zscore_df
 
     def get_inter_cov_tvalue_df(self):
         if self.inter_cov_tvalue_df is None:
-            self.inter_cov_tvalue_df = load_dataframe(
+            inter_cov_tvalue_df = load_dataframe(
                 inpath=os.path.join(self.inter_input_dir,
                                     self.inter_cov_subdir,
                                     self.tvalue_filename),
                 header=0,
                 index_col=0)
+            if self.interest is not None:
+                inter_cov_tvalue_df = inter_cov_tvalue_df.iloc[:,
+                                           self.interest]
+            self.inter_cov_tvalue_df = inter_cov_tvalue_df
+
             self.validate()
         return self.inter_cov_tvalue_df
 
     def get_inter_tech_cov_tvalue_df(self):
         if self.inter_tech_cov_tvalue_df is None:
-            self.inter_tech_cov_tvalue_df = load_dataframe(
+            inter_tech_cov_tvalue_df = load_dataframe(
                 inpath=os.path.join(self.inter_input_dir,
                                     self.inter_tech_cov_subdir,
                                     self.tvalue_filename),
                 header=0,
                 index_col=0)
+            if self.interest is not None:
+                inter_tech_cov_tvalue_df = inter_tech_cov_tvalue_df.iloc[:,
+                                           self.interest]
+            self.inter_tech_cov_tvalue_df = inter_tech_cov_tvalue_df
+
             self.validate()
         return self.inter_tech_cov_tvalue_df
 
@@ -297,18 +325,17 @@ class Dataset:
     def validate(self):
         if self.eqtl_df is not None:
             if self.geno_df is not None:
-                reference = self.eqtl_df["SNPName"]
-                reference.index.name = "-"
-                alternative = pd.Series(self.geno_df.index)
-                alternative.index.name = "-"
+                reference = self.eqtl_df["SNPName"].copy()
+                reference.rename("-", inplace=True)
+                alternative = pd.Series(self.geno_df.index, index=reference.index, name="-")
                 if not alternative.equals(reference):
                     print("Order of SNPs in eqtl_df and geno_df "
                           "are not identical.")
+                    exit()
             if self.expr_df is not None:
-                reference = self.eqtl_df["ProbeName"]
-                reference.index.name = "-"
-                alternative = pd.Series(self.expr_df.index)
-                alternative.index.name = "-"
+                reference = self.eqtl_df["ProbeName"].copy()
+                reference.rename("-", inplace=True)
+                alternative = pd.Series(self.expr_df.index, index=reference.index, name="-")
                 if not alternative.equals(reference):
                     print("Order of Probes in eqtl_df and expr_df "
                           "are not identical.")

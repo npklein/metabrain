@@ -75,8 +75,8 @@ class SimpleeQTLEffect:
                                     (100 / self.eqtl_df.shape[0]) * (i + 1)))
 
             # Get the genotype / expression data.
-            genotype = self.geno_df.iloc[index, :].T.to_frame()
-            expression = self.expr_df.iloc[index, :].T.to_frame()
+            genotype = self.geno_df.iloc[i, :].T.to_frame()
+            expression = self.expr_df.iloc[i, :].T.to_frame()
             data = genotype.merge(expression, left_index=True, right_index=True)
             data.columns = ["genotype", "expression"]
             data["group"] = data["genotype"].round(0)
@@ -86,7 +86,7 @@ class SimpleeQTLEffect:
                             (data['genotype'] <= 2.0), :]
 
             # Get the allele data.
-            (alleles, minor_allele) = self.alleles_df.iloc[index, :]
+            (alleles, minor_allele) = self.alleles_df.iloc[i, :]
             major_allele = alleles.replace(minor_allele, "").replace("/", "")
 
             # Check if we need to flip the genotypes.
@@ -174,7 +174,7 @@ class SimpleeQTLEffect:
                 fontsize=22, weight='bold', ha='center', va='bottom',
                 transform=ax.transAxes)
         ax.text(0.5, 1.02,
-                'r = {:.2f} [{}]    minor allele frquency '
+                'r = {:.2f} [{}]    minor allele frequency '
                 '{} = {:.2f}'.format(coef,
                                      p_value_to_symbol(p),
                                      minor_allele,
