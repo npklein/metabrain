@@ -1,7 +1,7 @@
 """
 File:         simple_eqtl_effect.py
 Created:      2020/03/16
-Last Changed: 2020/05/20
+Last Changed: 2020/05/21
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -106,8 +106,7 @@ class SimpleeQTLEffect:
             data["alleles"] = data["group"].map(allele_map)
 
             # Determine the minor allele frequency.
-            minor_allele_frequency = ((counts[2.0] * 2) +
-                                      counts[1.0]) / (data.shape[0] * 2)
+            minor_allele_frequency = min(zero_geno_count, two_geno_count) / (zero_geno_count + two_geno_count)
 
             # Add the color.
             data["round_geno"] = data["genotype"].round(2)

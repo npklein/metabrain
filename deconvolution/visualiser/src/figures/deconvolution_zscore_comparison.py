@@ -1,7 +1,7 @@
 """
 File:         deconvolution_zscore_comparison.py
 Created:      2020/04/07
-Last Changed: 2020/05/15
+Last Changed: 2020/05/21
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -113,27 +113,32 @@ class DeconvolutionZscoreComparison:
             # Get the color.
             color = color_map[celltype]
 
-            # Calculate the correlation.
-            coef, p = stats.spearmanr(df[method1_name], df[method2_name])
-
             # Creat the subplot.
             ax = fig.add_subplot(grid[row_index, col_index])
             sns.despine(fig=fig, ax=ax)
 
-            # Plot.
-            g = sns.regplot(x=method1_name,
-                            y=method2_name,
-                            data=df,
-                            scatter_kws={'facecolors': '#000000',
-                                         'edgecolor': '#000000',
-                                         'alpha': 0.5},
-                            line_kws={"color": color},
-                            ax=ax
-                            )
+            coef_str = "NA"
+            p_str = "NA"
+            if len(df.index) > 1:
+                # Calculate the correlation.
+                coef, p = stats.spearmanr(df[method1_name], df[method2_name])
+                coef_str = "{:.2f}".format(coef)
+                p_str = p_value_to_symbol(p)
+
+                # Plot.
+                g = sns.regplot(x=method1_name,
+                                y=method2_name,
+                                data=df,
+                                scatter_kws={'facecolors': '#000000',
+                                             'edgecolor': '#000000',
+                                             'alpha': 0.5},
+                                line_kws={"color": color},
+                                ax=ax
+                                )
 
             # Add the text.
             ax.annotate(
-                'r = {:.2f} [{}]'.format(coef, p_value_to_symbol(p)),
+                'r = {} [{}]'.format(coef_str, p_str),
                 xy=(0.03, 0.94),
                 xycoords=ax.transAxes,
                 color=color,
@@ -204,27 +209,32 @@ class DeconvolutionZscoreComparison:
                 df = pd.DataFrame({method_name: method_data, marker_gene: marker_data})
                 df.dropna(inplace=True)
 
-                # Calculate the correlation.
-                coef, p = stats.spearmanr(df[method_name], df[marker_gene])
-
                 # Creat the subplot.
                 ax = fig.add_subplot(grid[row_index, col_index])
                 sns.despine(fig=fig, ax=ax)
 
-                # Plot.
-                g = sns.regplot(x=method_name,
-                                y=marker_gene,
-                                data=df,
-                                scatter_kws={'facecolors': '#000000',
-                                             'edgecolor': '#000000',
-                                             'alpha': 0.5},
-                                line_kws={"color": color},
-                                ax=ax
-                                )
+                coef_str = "NA"
+                p_str = "NA"
+                if len(df.index) > 1:
+                    # Calculate the correlation.
+                    coef, p = stats.spearmanr(df[method_name], df[marker_gene])
+                    coef_str = "{:.2f}".format(coef)
+                    p_str = p_value_to_symbol(p)
+
+                    # Plot.
+                    g = sns.regplot(x=method_name,
+                                    y=marker_gene,
+                                    data=df,
+                                    scatter_kws={'facecolors': '#000000',
+                                                 'edgecolor': '#000000',
+                                                 'alpha': 0.5},
+                                    line_kws={"color": color},
+                                    ax=ax
+                                    )
 
                 # Add the text.
                 ax.annotate(
-                    'r = {:.2f} [{}]'.format(coef, p_value_to_symbol(p)),
+                    'r = {} [{}]'.format(coef_str, p_str),
                     xy=(0.03, 0.94),
                     xycoords=ax.transAxes,
                     color=color,
