@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect_deconvolution.py
 Created:      2020/03/17
-Last Changed: 2020/05/20
+Last Changed: 2020/05/21
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -191,27 +191,31 @@ class IntereQTLEffectDeconvolution:
 
                 # Plot the groups.
                 for i, allele in enumerate(data["alleles"].unique()):
-
-                    # Calculate the correlation.
                     subset = df.loc[df["alleles"] == allele, :].copy()
-                    coef, p = stats.spearmanr(subset["expression"],
-                                              subset[cov_name])
                     color = subset["group_hue"][0]
 
-                    # Plot.
-                    sns.regplot(x=cov_name, y="expression", data=subset,
-                                scatter_kws={'facecolors': subset['value_hue'],
-                                             'edgecolors': subset['group_hue'],
-                                             'alpha': 0.75},
-                                line_kws={"color": color, "alpha": 0.75},
-                                ax=ax
-                                )
+                    coef_str = "NA"
+                    p_str = "NA"
+                    if len(subset.index) > 1:
+                        # Calculate the correlation.
+                        coef, p = stats.spearmanr(subset["expression"],
+                                                  subset[cov_name])
+                        coef_str = "{:.2f}".format(coef)
+                        p_str = p_value_to_symbol(p)
+
+                        # Plot.
+                        sns.regplot(x=cov_name, y="expression", data=subset,
+                                    scatter_kws={'facecolors': subset['value_hue'],
+                                                 'edgecolors': subset['group_hue'],
+                                                 'alpha': 0.75},
+                                    line_kws={"color": color, "alpha": 0.75},
+                                    ax=ax
+                                    )
 
                     # Add the text.
                     ax.set(ylim=(min, max))
                     ax.annotate(
-                        '{}: r = {:.2f} [{}]'.format(allele, coef,
-                                                     p_value_to_symbol(p)),
+                        '{}: r = {} [{}]'.format(allele, coef_str, p_str),
                         xy=(0.03, 0.94 - ((i / 100) * 4)),
                         xycoords=ax.transAxes,
                         color=color,
