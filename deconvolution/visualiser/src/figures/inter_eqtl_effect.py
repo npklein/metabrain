@@ -156,6 +156,7 @@ class IntereQTLEffect:
                     else:
                         self.plot_inter(snp_name, probe_name, hgnc_name, eqtl_type,
                                         eqtl_data, index2, row, count,
+                                        allele_map, self.group_color_map,
                                         eqtl_interaction_outdir)
                     count += 1
 
@@ -177,7 +178,7 @@ class IntereQTLEffect:
 
     @staticmethod
     def plot_inter(snp_name, probe_name, hgnc_name, eqtl_type, df, cov_name, zscore,
-             count, outdir):
+             count, allele_map, group_color_map, outdir):
         # calculate axis limits.
         ymin_value = df["expression"].min()
         ymin = ymin_value - abs(ymin_value * 0.2)
@@ -195,10 +196,9 @@ class IntereQTLEffect:
         sns.despine(fig=fig, ax=ax)
 
         for i, genotype in enumerate([0.0, 1.0, 2.0]):
-            # Calculate the correlation.
             subset = df.loc[df["round_geno"] == genotype, :].copy()
-            color = subset["group_hue"][0]
-            allele = subset["alleles"][0]
+            color = group_color_map[genotype]
+            allele = allele_map[genotype]
 
             coef_str = "NA"
             p_str = "NA"
