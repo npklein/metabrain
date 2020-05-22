@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect_deconvolution.py
 Created:      2020/03/17
-Last Changed: 2020/05/21
+Last Changed: 2020/05/22
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -101,8 +101,11 @@ class IntereQTLEffectDeconvolution:
                             (data['genotype'] <= 2.0), :]
 
             # Get the allele data.
-            (alleles, minor_allele) = self.alleles_df.iloc[i, :]
-            major_allele = alleles.replace(minor_allele, "").replace("/", "")
+            (alleles, _) = self.alleles_df.iloc[i, :]
+            # A/T = 0.0/2.0
+            # by default we assume T = 2.0 to be minor
+            minor_allele = alleles[-1]
+            major_allele = alleles[0]
 
             # Check if we need to flip the genotypes.
             counts = data["group"].value_counts()
@@ -112,6 +115,9 @@ class IntereQTLEffectDeconvolution:
             zero_geno_count = (counts[0.0] * 2) + counts[1.0]
             two_geno_count = (counts[2.0] * 2) + counts[1.0]
             if two_geno_count > zero_geno_count:
+                # Turns out that 0.0 was the minor.
+                minor_allele = alleles[0]
+                major_allele = alleles[-1]
                 data["genotype"] = 2.0 - data["genotype"]
                 data["group"] = 2.0 - data["group"]
 

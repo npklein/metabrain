@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_celltype_details.py
 Created:      2020/05/20
-Last Changed:
+Last Changed: 2020/05/22
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -99,6 +99,8 @@ class IntereQTLCelltypeDetails:
 
             # Iterate over the rows.
             for (prefix, suffix) in methods:
+                if prefix != "CellMapNNLS_":
+                    continue
                 name = prefix.replace("_", "") + suffix
 
                 tvalues = self.tvalue_df.loc[

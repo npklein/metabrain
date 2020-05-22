@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect.py
 Created:      2020/03/16
-Last Changed: 2020/05/21
+Last Changed: 2020/05/22
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -88,8 +88,11 @@ class IntereQTLEffect:
                             (data['genotype'] <= 2.0), :]
 
             # Get the allele data.
-            (alleles, minor_allele) = self.alleles_df.iloc[i, :]
-            major_allele = alleles.replace(minor_allele, "").replace("/", "")
+            (alleles, _) = self.alleles_df.iloc[i, :]
+            # A/T = 0.0/2.0
+            # by default we assume T = 2.0 to be minor
+            minor_allele = alleles[-1]
+            major_allele = alleles[0]
 
             # Check if we need to flip the genotypes.
             counts = data["group"].value_counts()
@@ -99,6 +102,9 @@ class IntereQTLEffect:
             zero_geno_count = (counts[0.0] * 2) + counts[1.0]
             two_geno_count = (counts[2.0] * 2) + counts[1.0]
             if two_geno_count > zero_geno_count:
+                # Turns out that 0.0 was the minor.
+                minor_allele = alleles[0]
+                major_allele = alleles[-1]
                 data["genotype"] = 2.0 - data["genotype"]
                 data["group"] = 2.0 - data["group"]
 
@@ -111,7 +117,6 @@ class IntereQTLEffect:
             data["round_geno"] = data["genotype"].round(2)
             data["value_hue"] = data["round_geno"].map(self.value_color_map)
             data["group_hue"] = data["group"].map(self.group_color_map)
-            data.drop(["round_geno"], axis=1, inplace=True)
 
             # Check if the SNP has an interaction effect.
             interaction_effect = self.inter_df.iloc[:, i].to_frame()
@@ -132,6 +137,13 @@ class IntereQTLEffect:
 
                 count = 0
                 for index2, (row,) in interaction_effect.iterrows():
+                    if index2 not in ["SEX", "CellMapNNLS_Astrocyte",
+                                      "CellMapNNLS_EndothelialCell",
+                                      "CellMapNNLS_Macrophage",
+                                      "CellMapNNLS_Neuron",
+                                      "CellMapNNLS_Oligodendrocyte"]:
+                        continue
+
                     eqtl_data = data.copy()
                     cov_data = self.cov_df.loc[index2].to_frame()
                     eqtl_data = eqtl_data.merge(cov_data, left_index=True,
@@ -182,10 +194,11 @@ class IntereQTLEffect:
         fig, ax = plt.subplots()
         sns.despine(fig=fig, ax=ax)
 
-        for i, allele in enumerate(df["alleles"].unique()):
+        for i, genotype in enumerate([0.0, 1.0, 2.0]):
             # Calculate the correlation.
-            subset = df.loc[df["alleles"] == allele, :].copy()
+            subset = df.loc[df["round_geno"] == genotype, :].copy()
             color = subset["group_hue"][0]
+            allele = subset["alleles"][0]
 
             coef_str = "NA"
             p_str = "NA"
