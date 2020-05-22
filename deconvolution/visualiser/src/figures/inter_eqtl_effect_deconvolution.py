@@ -138,7 +138,8 @@ class IntereQTLEffectDeconvolution:
             interaction_effect.columns = ["zscore"]
 
             self.plot(snp_name, probe_name, hgnc_name, data, decon_df,
-                      interaction_effect, self.celltypes, index, self.outdir)
+                      interaction_effect, self.celltypes, index, allele_map,
+                      self.group_color_map, self.outdir)
 
     @staticmethod
     def create_color_map():
@@ -158,7 +159,8 @@ class IntereQTLEffectDeconvolution:
 
     @staticmethod
     def plot(snp_name, probe_name, hgnc_name, data, decon_df,
-             zscores, celltypes, count, outdir):
+             zscores, celltypes, count, allele_map, group_color_map,
+             outdir):
         """
         """
         # Calculate number of rows / columns.
@@ -196,9 +198,10 @@ class IntereQTLEffectDeconvolution:
                 sns.despine(fig=fig, ax=ax)
 
                 # Plot the groups.
-                for i, allele in enumerate(data["alleles"].unique()):
-                    subset = df.loc[df["alleles"] == allele, :].copy()
-                    color = subset["group_hue"][0]
+                for i, genotype in enumerate([0.0, 1.0, 2.0]):
+                    subset = df.loc[df["round_geno"] == genotype, :].copy()
+                    color = group_color_map[genotype]
+                    allele = allele_map[genotype]
 
                     coef_str = "NA"
                     p_str = "NA"
