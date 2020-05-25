@@ -1,7 +1,7 @@
 """
 File:         deconvolution_covariate_comparison.py
 Created:      2020/04/15
-Last Changed: 2020/05/12
+Last Changed: 2020/05/25
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -37,15 +37,17 @@ from general.utilities import prepare_output_dir, p_value_to_symbol
 
 
 class DeconvolutionCovariateComparison:
-    def __init__(self, dataset, outdir):
+    def __init__(self, dataset, outdir, extension):
         """
         The initializer for the class.
 
         :param dataset: Dataset, the input data.
         :param outdir: string, the output directory.
+        :param extension: str, the output figure file type extension.
         """
         self.outdir = os.path.join(outdir, 'deconvolution_covariate_comparison')
         prepare_output_dir(self.outdir)
+        self.extension = extension
 
         # Extract the required data.
         print("Loading data")
@@ -55,7 +57,7 @@ class DeconvolutionCovariateComparison:
         print("Plotting deconvolution convariate comparison.")
         self.print_arguments()
         corr_df, pval_df = self.correlate(self.cov_df)
-        self.plot(corr_df, pval_df, self.outdir)
+        self.plot(corr_df, pval_df, self.outdir, self.extension)
 
     @staticmethod
     def correlate(df):
@@ -72,7 +74,7 @@ class DeconvolutionCovariateComparison:
         return corr_df, pval_df
 
     @staticmethod
-    def plot(corr_df, pval_df, outdir):
+    def plot(corr_df, pval_df, outdir, extension):
         print("Plotting")
 
         indices = [(95, 100, "McKenzie\nMG", "McKenzie_"),
@@ -141,7 +143,7 @@ class DeconvolutionCovariateComparison:
         fig.align_xlabels(axes[len(indices) - 1, :])
         fig.colorbar(sm, cax=cax)
         fig.suptitle('Deconvolution Covariate Correlations', fontsize=40, fontweight='bold')
-        fig.savefig(os.path.join(outdir, "deconvolution_covariate_comparison.png"))
+        fig.savefig(os.path.join(outdir, "deconvolution_covariate_comparison.{}".format(extension)))
         plt.close()
 
     def print_arguments(self):

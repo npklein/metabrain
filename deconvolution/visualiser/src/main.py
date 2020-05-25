@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/13
-Last Changed: 2020/05/22
+Last Changed: 2020/05/25
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -41,10 +41,8 @@ from .figures.inter_pvalue_boxplot import InterPvalueBoxplot
 from .figures.inter_zscore_dist import InterZscoreDist
 from .figures.inter_clustermap import InterClusterMap
 from .figures.inter_eqtl_zscore_bars import IntereQTLZscoreBars
-from .figures.inter_zscore_marker_genes import InterZscoreMarkerGenes
 from .figures.inter_eqtl_effect import IntereQTLEffect
 from .figures.inter_eqtl_effect_deconvolution import IntereQTLEffectDeconvolution
-from .figures.inter_eqtl_effect_marker_vs_comp import IntereQTLEffectMarkerVSComp
 from .figures.inter_eqtl_effect_celltype import IntereQTLEffectCelltype
 from .figures.inter_eqtl_celltype_details import IntereQTLCelltypeDetails
 
@@ -54,7 +52,8 @@ class Main:
     Main: this class is the main class that calls all other functionality.
     """
 
-    def __init__(self, settings_file, plots, n_eqtls, interest, validate):
+    def __init__(self, settings_file, plots, n_eqtls, interest, extension,
+                 validate):
         """
         Initializer of the class.
 
@@ -62,6 +61,7 @@ class Main:
         :param plots: list, the names of the plots to create.
         :param n_eqtls: int, the number of equals to plot.
         :param interest: list, the indices of equals to plot.
+        :param extension: str, the output figure file type extension.
         :param validate: boolean, whether or not to validate the input.
         """
         # Define the current directory.
@@ -74,6 +74,7 @@ class Main:
         self.plots = plots
         self.n_eqtls = n_eqtls
         self.interest = interest
+        self.extension = extension
         self.validate = validate
 
         # Prepare an output directory.
@@ -97,7 +98,8 @@ class Main:
         if ('covariate_comparison' in self.plots) or \
                 ('all' in self.plots):
             print("\n### Covariate Comparison ###\n")
-            cc = CovariateComparison(dataset=ds, outdir=self.outdir)
+            cc = CovariateComparison(dataset=ds, outdir=self.outdir,
+                                     extension=self.extension)
             cc.start()
             del cc
 
@@ -105,7 +107,8 @@ class Main:
                 ('all' in self.plots):
             print("\n### Covariates Explained By Others ###\n")
             cebo = CovariatesExplainedByOthers(dataset=ds,
-                                               outdir=self.outdir)
+                                               outdir=self.outdir,
+                                               extension=self.extension)
             cebo.start()
             del cebo
 
@@ -113,7 +116,8 @@ class Main:
                 ('all' in self.plots):
             print("\n### Deconvolution Covariate Comparison ###\n")
             dcc = DeconvolutionCovariateComparison(dataset=ds,
-                                                   outdir=self.outdir)
+                                                   outdir=self.outdir,
+                                                   extension=self.extension)
             dcc.start()
             del dcc
 
@@ -121,90 +125,89 @@ class Main:
                 ('all' in self.plots):
             print("\n### DECONVOLUTION Z-SCORE COMPARISON ###\n")
             dzc = DeconvolutionZscoreComparison(dataset=ds,
-                                                outdir=self.outdir)
+                                                outdir=self.outdir,
+                                                extension=self.extension)
             dzc.start()
             del dzc
 
         if ('simple_eqtl_effect' in self.plots) or ('all' in self.plots):
             print("\n### SIMPLE EQTL EFFECT ###\n")
             sef = SimpleeQTLEffect(dataset=ds,
-                                   outdir=self.outdir)
+                                   outdir=self.outdir,
+                                   extension=self.extension)
             sef.start()
             del sef
 
         if ('inter_clustermap' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION CLUSTERMAP ###\n")
             icp = InterClusterMap(dataset=ds,
-                                  outdir=self.outdir)
+                                  outdir=self.outdir,
+                                  extension=self.extension)
             icp.start()
             del icp
 
         if ('inter_zscore_bars' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION Z-SCORE BARPLOT ###\n")
             izb = InterZscoreBars(dataset=ds,
-                                  outdir=self.outdir)
+                                  outdir=self.outdir,
+                                  extension=self.extension)
             izb.start()
             del izb
 
         if ('inter_pvalue_boxplot' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION P-VALUE BOXPLOT ###\n")
             ipb = InterPvalueBoxplot(dataset=ds,
-                                     outdir=self.outdir)
+                                     outdir=self.outdir,
+                                     extension=self.extension)
             ipb.start()
             del ipb
 
         if ('inter_zscore_dist' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION Z-SCORE DISTRIBUTION PLOT ###\n")
             izd = InterZscoreDist(dataset=ds,
-                                  outdir=self.outdir)
+                                  outdir=self.outdir,
+                                  extension=self.extension)
             izd.start()
             del izd
 
-        # if ('inter_zscore_marker_genes' in self.plots) or ('all' in self.plots):
-        #     print("\n### INTERACTION Z-SCORE MARKER GENES ###\n")
-        #     izmg = InterZscoreMarkerGenes(dataset=ds,
-        #                                   outdir=self.outdir)
-        #     izmg.start()
-        #     del izmg
 
         if ('inter_eqtl_zscore_bars' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION EQTL Z-SCORE BARS ###\n")
             iezb = IntereQTLZscoreBars(dataset=ds,
-                                       outdir=self.outdir)
+                                       outdir=self.outdir,
+                                       extension=self.extension)
             iezb.start()
             del iezb
 
         if ('inter_eqtl_effect' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION EQTL EFFECT ###\n")
             iee = IntereQTLEffect(dataset=ds,
-                                  outdir=self.outdir)
+                                  outdir=self.outdir,
+                                  extension=self.extension)
             iee.start()
             del iee
 
         if ('inter_eqtl_effect_deconvolution' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION EQTL EFFECT DECONVOLUTION ###\n")
             ieed = IntereQTLEffectDeconvolution(dataset=ds,
-                                                outdir=self.outdir)
+                                                outdir=self.outdir,
+                                                extension=self.extension)
             ieed.start()
             del ieed
-
-        # if ('inter_eqtl_effect_marker_vs_comp' in self.plots) or ('all' in self.plots):
-        #     print("\n### INTERACTION EQTL EFFECT MARKER GENES VS COMPS ###\n")
-        #     ieemvc = IntereQTLEffectMarkerVSComp(dataset=ds,
-        #                                          outdir=self.outdir)
-        #     ieemvc.start()
-        #     del ieemvc
 
         if ('inter_eqtl_effect_celltype' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION EQTL EFFECT CELLTYPE ###\n")
             ieec = IntereQTLEffectCelltype(dataset=ds,
-                                           outdir=self.outdir)
+                                           outdir=self.outdir,
+                                           extension=self.extension)
             ieec.start()
             del ieec
 
         if ('inter_eqtl_celltype_details' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION EQTL EFFECT CELLTYPE DETAILS ###\n")
-            iecd = IntereQTLCelltypeDetails(dataset=ds, outdir=self.outdir)
+            iecd = IntereQTLCelltypeDetails(dataset=ds,
+                                            outdir=self.outdir,
+                                            extension=self.extension)
             iecd.start()
             del iecd
 

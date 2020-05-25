@@ -1,7 +1,7 @@
 """
 File:         inter_clustermap.py
 Created:      2020/03/16
-Last Changed: 2020/05/13
+Last Changed: 2020/05/25
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -35,15 +35,17 @@ from general.utilities import prepare_output_dir
 
 
 class InterClusterMap:
-    def __init__(self, dataset, outdir):
+    def __init__(self, dataset, outdir, extension):
         """
         The initializer for the class.
 
         :param dataset: Dataset, the input data.
         :param outdir: string, the output directory.
+        :param extension: str, the output figure file type extension.
         """
         self.outdir = os.path.join(outdir, 'inter_clustermap')
         prepare_output_dir(self.outdir)
+        self.extension = extension
 
         # Extract the required data.
         print("Loading data")
@@ -66,18 +68,19 @@ class InterClusterMap:
     def visualize_matrix(self, df, outdir, outfile_prefix="", vmin=None, vmax=None):
         clean_df = df.dropna(axis=1)
 
-        self.plot(df=clean_df, outdir=outdir, outfile_prefix=outfile_prefix,
-                  vmin=vmin, vmax=vmax)
+        self.plot(df=clean_df, outdir=outdir, extension=self.extension,
+                  outfile_prefix=outfile_prefix, vmin=vmin, vmax=vmax)
 
         if vmin is None:
             vmin = clean_df.values.min()
         if vmax is None:
             vmax = clean_df.values.max()
 
-        self.plot_colorbar(vmin=vmin, vmax=vmax, outdir=outdir, name_prefix=outfile_prefix)
+        self.plot_colorbar(vmin=vmin, vmax=vmax, outdir=outdir,
+                           name_prefix=outfile_prefix, extension=self.extension)
 
     @staticmethod
-    def plot(df, outdir, outfile_prefix="", vmin=None, vmax=None):
+    def plot(df, outdir, extension, outfile_prefix="", vmin=None, vmax=None):
         sns.set(color_codes=True)
         g = sns.clustermap(df, center=0, cmap="RdBu_r",
                            vmin=vmin, vmax=vmax,
@@ -88,17 +91,17 @@ class InterClusterMap:
         plt.setp(
             g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_ymajorticklabels(),
                                          fontsize=10))
-        g.savefig(os.path.join(outdir, "{}_clustermap.png".format(outfile_prefix)))
+        g.savefig(os.path.join(outdir, "{}_clustermap.{}".format(outfile_prefix, extension)))
         plt.close()
 
     @staticmethod
-    def plot_colorbar(vmin, vmax, outdir, name_prefix):
+    def plot_colorbar(vmin, vmax, outdir, name_prefix, extension):
         a = np.array([[vmin, 0, vmax]])
         fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(3, 9))
         img = sns.heatmap(a, center=0, vmin=vmin, vmax=vmax, cmap="RdBu_r",
                           ax=ax1, cbar_ax=ax2)
         ax1.remove()
-        plt.savefig(os.path.join(outdir, "{}_colorbar.png".format(name_prefix)), bbox_inches='tight')
+        plt.savefig(os.path.join(outdir, "{}_colorbar.{}".format(name_prefix, extension)), bbox_inches='tight')
 
     def print_arguments(self):
         print("Arguments:")

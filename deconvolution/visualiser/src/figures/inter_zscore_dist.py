@@ -1,7 +1,7 @@
 """
 File:         inter_zscores_dist.py
 Created:      2020/03/16
-Last Changed: 2020/05/12
+Last Changed: 2020/05/25
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -34,15 +34,17 @@ from general.utilities import prepare_output_dir
 
 
 class InterZscoreDist:
-    def __init__(self, dataset, outdir):
+    def __init__(self, dataset, outdir, extension):
         """
         The initializer for the class.
 
         :param dataset: Dataset, the input data.
         :param outdir: string, the output directory.
+        :param extension: str, the output figure file type extension.
         """
         self.outdir = os.path.join(outdir, 'inter_zscore_dist')
         prepare_output_dir(self.outdir)
+        self.extension = extension
 
         # Extract the required data.
         print("Loading data")
@@ -52,10 +54,10 @@ class InterZscoreDist:
     def start(self):
         print("Plotting interaction matrix z-scores as distribution plot.")
         self.print_arguments()
-        self.plot(self.inter_df, self.z_score_cutoff, self.outdir)
+        self.plot(self.inter_df, self.z_score_cutoff, self.outdir, self.extension)
 
     @staticmethod
-    def plot(df, z_score_cutoff, outdir):
+    def plot(df, z_score_cutoff, outdir, extension):
         sns.set(style="ticks", color_codes=True)
         df = df.T
         dfm = df.melt(var_name='columns')
@@ -66,7 +68,7 @@ class InterZscoreDist:
         g.map(plt.axvline, x=-1 * z_score_cutoff, ls='--', c='red')
         g.set_titles('{col_name}')
         plt.tight_layout()
-        g.savefig(os.path.join(outdir, "cov_zscore_distributions.png"))
+        g.savefig(os.path.join(outdir, "cov_zscore_distributions.{}".format(extension)))
         plt.close()
 
     def print_arguments(self):

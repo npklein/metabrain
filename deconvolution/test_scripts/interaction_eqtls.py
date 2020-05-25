@@ -161,10 +161,10 @@ class main():
                                              two_geno_count) / sum
 
                 eqtl_geno_info.append(
-                    [geno_flip, eqtl_flip, sum / 2, minor_allele_frequency])
+                    [geno_flip, eqtl_flip, sum / 2, minor_allele_letter, minor_allele_frequency])
             eqtl_geno_info_df = pd.DataFrame(eqtl_geno_info,
                                              columns=["geno_flip", "eqtl_flip",
-                                                      "N", "MAF"])
+                                                      "N", "MA", "MAF"])
 
             print("Geno info:")
             for label, col in zip(["genotype", "eQTL"],
@@ -220,6 +220,9 @@ class main():
 
                 if len(working_df.index) <= 0:
                     continue
+
+                # print(working_df.loc[working_df["HGNCName"] == "HLA-DQA2", ["SNPName", "ProbeName", "HGNCName", "N", "MA", "MAF", "main_zscore", "inter_tvalue"]])
+                #continue
 
                 if combined_df is None:
                     working_df.reset_index(inplace=True, drop=False)
@@ -285,6 +288,7 @@ class main():
                         "CellMapNNLS_Neuron": "neuron",
                         "CellMapNNLS_Oligodendrocyte": "oligo"}
 
+            # print(combined_df.loc[combined_df["HGNCName"] == "HLA-DQA2", ["index", "SNPName",  "ProbeName", "HGNCName", "N", "MA", "MAF", "main_zscore", "inter_tvalue"]])
             if combined_df is not None and len(combined_df.index) > 0:
                 combined_df = combined_df.loc[combined_df["cell"] != "SEX", :]
                 if len(combined_df.index) > 0:

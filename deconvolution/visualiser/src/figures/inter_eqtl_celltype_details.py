@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_celltype_details.py
 Created:      2020/05/20
-Last Changed: 2020/05/22
+Last Changed: 2020/05/25
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -37,15 +37,17 @@ from general.utilities import prepare_output_dir
 
 
 class IntereQTLCelltypeDetails:
-    def __init__(self, dataset, outdir):
+    def __init__(self, dataset, outdir, extension):
         """
         The initializer for the class.
 
         :param dataset: Dataset, the input data.
         :param outdir: string, the output directory.
+        :param extension: str, the output figure file type extension.
         """
         self.outdir = os.path.join(outdir, 'inter_eqtl_celltype_details')
         prepare_output_dir(self.outdir)
+        self.extension = extension
 
         # Extract the required data.
         print("Loading data")
@@ -118,11 +120,11 @@ class IntereQTLCelltypeDetails:
                 df.index = ["{}".format(x.replace(prefix, "").replace(suffix, "")) for x in df.index]
 
                 self.plot_forest(snp_name, probe_name, hgnc_name, name, df,
-                                 self.z_score_cutoff, eqtl_outdir)
+                                 self.z_score_cutoff, eqtl_outdir, self.extension)
 
     @staticmethod
     def plot_forest(snp_name, probe_name, hgnc_name, method, data,
-                    z_score_cutoff, outdir):
+                    z_score_cutoff, outdir, extension):
         hue_list = []
         for zscore in data["zscore"]:
             add = "not signif."
@@ -176,11 +178,11 @@ class IntereQTLCelltypeDetails:
         ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
         plt.tight_layout()
-        fig.savefig(os.path.join(outdir, method + "_stripplot.png"))
+        fig.savefig(os.path.join(outdir, method + "_stripplot.{}".format(extension)))
         plt.close()
 
     @staticmethod
-    def plot_radar(name, df, outdir):
+    def plot_radar(name, df, outdir, extension):
         max_val = math.ceil(df.values.max())
         steps = [round(x, 2) for x in np.linspace(0, max_val, 4)]
 
@@ -224,7 +226,7 @@ class IntereQTLCelltypeDetails:
             labels.append(lab)
         ax.set_xticklabels([])
 
-        plt.savefig(os.path.join(outdir, name + "_radarplot.png"))
+        plt.savefig(os.path.join(outdir, name + "_radarplot.{}".format(extension)))
         plt.close()
 
     def print_arguments(self):

@@ -1,7 +1,7 @@
 """
 File:         deconvolution_zscore_comparison.py
 Created:      2020/04/07
-Last Changed: 2020/05/21
+Last Changed: 2020/05/25
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -36,16 +36,18 @@ from general.utilities import prepare_output_dir, p_value_to_symbol
 
 
 class DeconvolutionZscoreComparison:
-    def __init__(self, dataset, outdir):
+    def __init__(self, dataset, outdir, extension):
         """
         The initializer for the class.
 
         :param dataset: Dataset, the input data.
         :param outdir: string, the output directory.
+        :param extension: str, the output figure file type extension.
         """
         self.outdir = os.path.join(outdir,
                                    'deconvolution_zscore_comparison')
         prepare_output_dir(self.outdir)
+        self.extension = extension
 
         # Extract the required data.
         print("Loading data")
@@ -69,7 +71,8 @@ class DeconvolutionZscoreComparison:
                     print("{} vs {}".format(method1[0], method2[0]))
                     self.compare_cellmap_method(method1, method1_df, method2,
                                                 method2_df, self.celltypes,
-                                                self.color_map, self.outdir)
+                                                self.color_map, self.outdir,
+                                                self.extension)
 
             # Plot vs marker genes.
             marker_df = self.inter_df.loc[self.inter_df.index.str.startswith(self.marker_genes), :]
@@ -77,11 +80,11 @@ class DeconvolutionZscoreComparison:
             self.compare_cellmap_with_marker_genes(method1, method1_df,
                                                    self.marker_genes, marker_df,
                                                    self.celltypes, self.color_map,
-                                                   self.outdir)
+                                                   self.outdir, self.extension)
 
     @staticmethod
     def compare_cellmap_method(method1, method1_df, method2, method2_df,
-                               celltypes, color_map, outdir):
+                               celltypes, color_map, outdir, extension):
         nplots = len(method1_df.index)
 
         ncols = 3
@@ -169,15 +172,16 @@ class DeconvolutionZscoreComparison:
         # Safe the plot.
         plt.tight_layout()
         fig.savefig(os.path.join(outdir,
-                                 "{}_vs_{}.png".format(method1_name.split("_")[0],
-                                                       method2_name.split("_")[0])))
+                                 "{}_vs_{}.{}".format(method1_name.split("_")[0],
+                                                      method2_name.split("_")[0],
+                                                      extension)))
         plt.close()
 
 
     @staticmethod
     def compare_cellmap_with_marker_genes(method, method_df, marker_genes_prefix,
                                           marker_df, celltypes, color_map,
-                                          outdir):
+                                          outdir, extension):
         nplots = len(celltypes)
 
         method_name = method[0].split("_")[0]
@@ -268,8 +272,10 @@ class DeconvolutionZscoreComparison:
         # Safe the plot.
         plt.tight_layout()
         fig.savefig(os.path.join(outdir,
-                                 "{}_vs_{}MarkerGenes.png".format(method_name.split("_")[0],
-                                                       marker_genes_prefix)))
+                                 "{}_vs_{}"
+                                 "MarkerGenes.{}".format(method_name.split("_")[0],
+                                                         marker_genes_prefix,
+                                                         extension)))
         plt.close()
 
     def print_arguments(self):

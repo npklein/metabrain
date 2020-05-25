@@ -28,8 +28,10 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib
+import itertools
 
 matplotlib.use('Agg')
+import upsetplot as up
 from venn import venn
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
@@ -40,15 +42,17 @@ from general.utilities import prepare_output_dir
 
 
 class IntereQTLEffectCelltype:
-    def __init__(self, dataset, outdir):
+    def __init__(self, dataset, outdir, extension):
         """
         The initializer for the class.
 
         :param dataset: Dataset, the input data.
         :param outdir: string, the output directory.
+        :param extension: str, the output figure file type extension.
         """
         self.outdir = os.path.join(outdir, 'inter_eqtl_effect_celltype')
         prepare_output_dir(self.outdir)
+        self.extension = extension
 
         # Extract the required data.
         print("Loading data")
@@ -85,8 +89,10 @@ class IntereQTLEffectCelltype:
             # Plot.
             overlap_vals = self.plot_data(data,
                                           prefix.replace("_", "") + suffix,
-                                          None, self.outdir, self.colormap,
-                                          use_pallette=True)
+                                          None, self.outdir, self.extension,
+                                          self.colormap, use_pallette=True)
+            self.upsetplot(data, prefix.replace("_", "") + suffix,
+                           self.outdir, self.extension)
 
             overview_data[name] = data
             overview_overlap[name] = overlap_vals
@@ -106,18 +112,20 @@ class IntereQTLEffectCelltype:
             celltype_mediated_eqtls.update(eqtls)
 
         overlap_vals = self.plot_data(data, name, None, self.outdir,
-                                      self.colormap, use_pallette=True)
+                                      self.extension, self.colormap,
+                                      use_pallette=True)
+        self.upsetplot(data, name, self.outdir, self.extension)
         overview_data[name] = data
         overview_overlap[name] = overlap_vals
 
         print("Plotting overview data.")
         self.plot_overview(overview_data, overview_overlap, self.celltypes,
-                           self.outdir, self.colormap)
+                           self.outdir, self.extension, self.colormap)
 
         print("Plotting all eQTLs.")
         total = len(set(self.eqtlinter_df.index.values))
         part = len(celltype_mediated_eqtls)
-        self.plot_pie(total, part, self.outdir)
+        self.plot_pie(total, part, self.outdir, self.extension)
 
         print("Plotting {} marker genes separately".format(self.marker_genes))
         for celltype in self.celltypes:
@@ -130,7 +138,9 @@ class IntereQTLEffectCelltype:
                 eqtls = set(df.loc[df[column] == 1, column].index.values)
                 data[gene_name] = eqtls
             _ = self.plot_data(data, "{}{}".format(self.marker_genes, celltype),
-                               celltype, self.outdir, self.colormap)
+                               celltype, self.outdir, self.extension, self.colormap)
+            self.upsetplot(data, "{}{}".format(self.marker_genes, celltype),
+                           self.outdir, self.extension)
 
         print("Plotting all methods combined")
         celltype_data = {}
@@ -160,7 +170,8 @@ class IntereQTLEffectCelltype:
 
             # Plot.
             _ = self.plot_data(data, title, celltype, self.outdir,
-                               self.colormap)
+                               self.extension, self.colormap)
+            self.upsetplot(data, title, self.outdir, self.extension)
 
             all_eQTLs_of_celltype = []
             for value in data.values():
@@ -169,10 +180,11 @@ class IntereQTLEffectCelltype:
 
         print("Plotting all celltypes combined")
         _ = self.plot_data(celltype_data, "Cell-Type_eQTLs", None, self.outdir,
-                           self.colormap, use_pallette=True)
+                           self.extension, self.colormap, use_pallette=True)
+        self.upsetplot(celltype_data, "Cell-Type_eQTLs", self.outdir, self.extension)
 
     @staticmethod
-    def plot_data(data, title, celltype, outdir, colormap, use_pallette=False):
+    def plot_data(data, title, celltype, outdir, extension, colormap, use_pallette=False):
         sums = []
         for key, value in data.items():
             sums.append([key, len(value)])
@@ -209,7 +221,7 @@ class IntereQTLEffectCelltype:
             g.ax_heatmap.set_xticklabels(g.ax_heatmap.get_xmajorticklabels(),
                                          fontsize=20, rotation=45))
         g.fig.suptitle('eQTL Overlap', fontsize=25, fontweight='bold')
-        g.savefig(os.path.join(outdir, "{}_overlap.png".format(title)))
+        g.savefig(os.path.join(outdir, "{}_overlap.{}".format(title, extension)))
         plt.close()
 
         color = 'cornflowerblue'
@@ -265,13 +277,13 @@ class IntereQTLEffectCelltype:
                  transform=ax1.transAxes)
 
         fig.savefig(os.path.join(outdir,
-                                 "{}.png".format(title)))
+                                 "{}.{}".format(title, extension)))
         plt.close()
 
         return overlap_values
 
     @staticmethod
-    def plot_overview(data, overlap, celltypes, outdir, colormap):
+    def plot_overview(data, overlap, celltypes, outdir, extension, colormap):
         boxplot_data = []
         for key, value in overlap.items():
             for row in value:
@@ -377,11 +389,11 @@ class IntereQTLEffectCelltype:
         ax2.tick_params(labelsize=14)
         ax2.set_ylim(0, 1)
         plt.tight_layout()
-        fig.savefig(os.path.join(outdir, "overview.png"))
+        fig.savefig(os.path.join(outdir, "overview.{}".format(extension)))
         plt.close()
 
     @staticmethod
-    def plot_pie(total, part, outdir):
+    def plot_pie(total, part, outdir, extension):
         labels = ['YES', 'NO']
         sizes = [part, total - part]
         explode = (0.1, 0)
@@ -401,8 +413,65 @@ class IntereQTLEffectCelltype:
         ax.axis('equal')
 
         fig.suptitle("Cell-Type Mediated eQTLs", fontsize=20, fontweight='bold')
-        fig.savefig(os.path.join(outdir, "all_cis-eQTLs.png"))
+        fig.savefig(os.path.join(outdir, "all_cis-eQTLs.{}".format(extension)))
         plt.show()
+
+    def upsetplot(self, data, title, outdir, extension):
+        counts = self.count(data)
+        up.plot(counts, sort_by='cardinality')
+        plt.suptitle('{}'.format(title.replace("_", " ")), fontsize=18, fontweight='bold')
+        plt.savefig(os.path.join(outdir, "{}_upsetplot.{}".format(title, extension)))
+        plt.show()
+
+    @staticmethod
+    def count(input_data):
+        combinations = []
+        cols = list(input_data.keys())
+        for i in range(1, len(cols) + 1):
+            combinations.extend(list(itertools.combinations(cols, i)))
+
+        abbreviations = {"Neuron": "neuro", "Oligodendrocyte": "oligo", "EndothelialCell": "endo", "Microglia": "micro", "Macrophage": "macro", "Astrocyte": "astro"}
+        abbr_cols = []
+        for col in cols:
+            if col in abbreviations.keys():
+                abbr_cols.append(abbreviations[col])
+            else:
+                abbr_cols.append(col)
+
+        indices = []
+        data = []
+        for combination in combinations:
+            index = []
+            for col in cols:
+                if col in combination:
+                    index.append(True)
+                else:
+                    index.append(False)
+
+            background = set()
+            for key in cols:
+                if key not in combination:
+                    work_set = input_data[key].copy()
+                    background.update(work_set)
+
+            overlap = None
+            for key in combination:
+                work_set = input_data[key].copy()
+                if overlap is None:
+                    overlap = work_set
+                else:
+                    overlap = overlap.intersection(work_set)
+
+            duplicate_set = overlap.intersection(background)
+            length = len(overlap) - len(duplicate_set)
+
+            indices.append(index)
+            data.append(length)
+
+        s = pd.Series(data, index=pd.MultiIndex.from_tuples(indices, names=abbr_cols))
+        s.name = "value"
+        print(s)
+        return s
 
     def print_arguments(self):
         print("Arguments:")

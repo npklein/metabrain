@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect_deconvolution.py
 Created:      2020/03/17
-Last Changed: 2020/05/22
+Last Changed: 2020/05/25
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -27,6 +27,7 @@ import os
 from scipy import stats
 import seaborn as sns
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
@@ -35,15 +36,17 @@ from general.utilities import prepare_output_dir, p_value_to_symbol
 
 
 class IntereQTLEffectDeconvolution:
-    def __init__(self, dataset, outdir):
+    def __init__(self, dataset, outdir, extension):
         """
         The initializer for the class.
 
         :param dataset: Dataset, the input data.
         :param outdir: string, the output directory.
+        :param extension: str, the output figure file type extension.
         """
         self.outdir = os.path.join(outdir, 'inter_eqtl_effect_deconvolution')
         prepare_output_dir(self.outdir)
+        self.extension = extension
 
         # Extract the required data.
         print("Loading data")
@@ -69,7 +72,8 @@ class IntereQTLEffectDeconvolution:
         deconvolution_indices = []
         for index in self.cov_df.index:
             for decon_prefix in [x[0] for x in self.cellmap_methods]:
-                if index.startswith(decon_prefix) or index.startswith(self.marker_genes):
+                if index.startswith(decon_prefix) or index.startswith(
+                        self.marker_genes):
                     deconvolution_indices.append(index)
                     break
 
@@ -134,12 +138,13 @@ class IntereQTLEffectDeconvolution:
 
             # Get the interaction zscores
             interaction_effect = self.inter_df.iloc[:, i].to_frame()
-            interaction_effect = interaction_effect.loc[deconvolution_indices, :]
+            interaction_effect = interaction_effect.loc[deconvolution_indices,
+                                 :]
             interaction_effect.columns = ["zscore"]
 
             self.plot(snp_name, probe_name, hgnc_name, data, decon_df,
                       interaction_effect, self.celltypes, index, allele_map,
-                      self.group_color_map, self.outdir)
+                      self.group_color_map, self.outdir, self.extension)
 
     @staticmethod
     def create_color_map():
@@ -160,7 +165,7 @@ class IntereQTLEffectDeconvolution:
     @staticmethod
     def plot(snp_name, probe_name, hgnc_name, data, decon_df,
              zscores, celltypes, count, allele_map, group_color_map,
-             outdir):
+             outdir, extension):
         """
         """
         # Calculate number of rows / columns.
@@ -186,7 +191,8 @@ class IntereQTLEffectDeconvolution:
                 method_celltype = "Macrophage"
 
             celltype_df = decon_df.loc[decon_df.index.str.contains(celltype) |
-                                       decon_df.index.str.contains(method_celltype), :]
+                                       decon_df.index.str.contains(
+                                           method_celltype), :]
 
             for cov_name, cov_data in celltype_df.iterrows():
                 # Combine the data.
@@ -214,9 +220,10 @@ class IntereQTLEffectDeconvolution:
 
                         # Plot.
                         sns.regplot(x=cov_name, y="expression", data=subset,
-                                    scatter_kws={'facecolors': subset['value_hue'],
-                                                 'edgecolors': subset['group_hue'],
-                                                 'alpha': 0.75},
+                                    scatter_kws={
+                                        'facecolors': subset['value_hue'],
+                                        'edgecolors': subset['group_hue'],
+                                        'alpha': 0.75},
                                     line_kws={"color": color, "alpha": 0.75},
                                     ax=ax
                                     )
@@ -237,13 +244,15 @@ class IntereQTLEffectDeconvolution:
                         fontsize=26, weight='bold', ha='center', va='bottom',
                         transform=ax.transAxes)
                 ax.text(0.5, 1.02,
-                        '[z-score: {:.2f}]'.format(zscores.at[cov_name, "zscore"]),
+                        '[z-score: {:.2f}]'.format(
+                            zscores.at[cov_name, "zscore"]),
                         fontsize=20, alpha=0.75, ha='center', va='bottom',
                         transform=ax.transAxes)
 
-                ax.set_ylabel('{} ({}) expression'.format(probe_name, hgnc_name),
-                              fontsize=18,
-                              fontweight='bold')
+                ax.set_ylabel(
+                    '{} ({}) expression'.format(probe_name, hgnc_name),
+                    fontsize=18,
+                    fontweight='bold')
                 ax.set_xlabel(cov_name,
                               fontsize=18,
                               fontweight='bold')
@@ -255,11 +264,12 @@ class IntereQTLEffectDeconvolution:
         # Safe the plot.
         plt.tight_layout()
         fig.savefig(os.path.join(outdir,
-                                 "{}_inter_eqtl_{}_{}_{}_deconvolution.png".format(
+                                 "{}_inter_eqtl_{}_{}_{}_deconvolution.{}".format(
                                      count,
                                      snp_name,
                                      probe_name,
-                                     hgnc_name)))
+                                     hgnc_name,
+                                     extension)))
         plt.close()
 
     def print_arguments(self):
