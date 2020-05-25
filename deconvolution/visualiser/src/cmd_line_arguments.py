@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/13
-Last Changed: 2020/05/20
+Last Changed: 2020/05/25
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -111,6 +111,12 @@ class CommandLineArguments:
                             help="The indices of the eQTLS to visualise,"
                                  "default: None. If set, -n / --n_eqtls is "
                                  "discarded.")
+        parser.add_argument("-e",
+                            "--extension",
+                            type=str,
+                            default="png",
+                            choices=["eps", "pdf", "pgf", "png", "ps", "raw", "rgba", "svg", "svgz"],
+                            help="The output file format, default: 'png'")
         parser.add_argument("-validate",
                             action='store_true',
                             help="Validate that the input matrices match "

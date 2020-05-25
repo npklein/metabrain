@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect.py
 Created:      2020/03/16
-Last Changed: 2020/05/22
+Last Changed: 2020/05/25
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -26,6 +26,7 @@ import os
 # Third party imports.
 import seaborn as sns
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -35,15 +36,17 @@ from general.utilities import prepare_output_dir, p_value_to_symbol
 
 
 class IntereQTLEffect:
-    def __init__(self, dataset, outdir):
+    def __init__(self, dataset, outdir, extension):
         """
         The initializer for the class.
 
         :param dataset: Dataset, the input data.
         :param outdir: string, the output directory.
+        :param extension: str, the output figure file type extension.
         """
         self.outdir = os.path.join(outdir, 'inter_eqtl_effect')
         prepare_output_dir(self.outdir)
+        self.extension = extension
 
         # Extract the required data.
         print("Loading data")
@@ -131,7 +134,10 @@ class IntereQTLEffect:
             # Prepare output directory.
             if len(interaction_effect.index) > 0:
                 eqtl_interaction_outdir = os.path.join(self.outdir,
-                                                       "{}_{}_{}_{}".format(index, snp_name, probe_name, hgnc_name))
+                                                       "{}_{}_{}_{}".format(
+                                                           index, snp_name,
+                                                           probe_name,
+                                                           hgnc_name))
                 if not os.path.exists(eqtl_interaction_outdir):
                     os.makedirs(eqtl_interaction_outdir)
 
@@ -152,12 +158,13 @@ class IntereQTLEffect:
                     if len(eqtl_data[index2].value_counts().index) == 2:
                         self.plot_box(snp_name, probe_name, hgnc_name,
                                       eqtl_type, eqtl_data, index2, row, count,
-                                      allele_map, eqtl_interaction_outdir)
+                                      allele_map, eqtl_interaction_outdir,
+                                      self.extension)
                     else:
-                        self.plot_inter(snp_name, probe_name, hgnc_name, eqtl_type,
-                                        eqtl_data, index2, row, count,
-                                        allele_map, self.group_color_map,
-                                        eqtl_interaction_outdir)
+                        self.plot_inter(snp_name, probe_name, hgnc_name,
+                                        eqtl_type, eqtl_data, index2, row,
+                                        count, allele_map, self.group_color_map,
+                                        eqtl_interaction_outdir, self.extension)
                     count += 1
 
     @staticmethod
@@ -177,8 +184,8 @@ class IntereQTLEffect:
         return group_color_map, value_color_map
 
     @staticmethod
-    def plot_inter(snp_name, probe_name, hgnc_name, eqtl_type, df, cov_name, zscore,
-             count, allele_map, group_color_map, outdir):
+    def plot_inter(snp_name, probe_name, hgnc_name, eqtl_type, df, cov_name,
+                   zscore, count, allele_map, group_color_map, outdir, extension):
         # calculate axis limits.
         ymin_value = df["expression"].min()
         ymin = ymin_value - abs(ymin_value * 0.2)
@@ -204,7 +211,8 @@ class IntereQTLEffect:
             p_str = "NA"
             if len(subset.index) > 1:
                 # Regression.
-                coef, p = stats.spearmanr(subset["expression"], subset[cov_name])
+                coef, p = stats.spearmanr(subset["expression"],
+                                          subset[cov_name])
                 coef_str = "{:.2f}".format(coef)
                 p_str = p_value_to_symbol(p)
 
@@ -253,17 +261,18 @@ class IntereQTLEffect:
         # Safe the plot.
         plt.tight_layout()
         fig.savefig(os.path.join(outdir,
-                                 "{}_inter_eqtl_{}_{}_{}_{}.png".format(
+                                 "{}_inter_eqtl_{}_{}_{}_{}.{}".format(
                                      count,
                                      snp_name,
                                      probe_name,
                                      hgnc_name,
-                                     cov_name)))
+                                     cov_name,
+                                     extension)))
         plt.close()
 
     @staticmethod
-    def plot_box(snp_name, probe_name, hgnc_name, eqtl_type, df, cov_name, zscore,
-             count, allele_map, outdir):
+    def plot_box(snp_name, probe_name, hgnc_name, eqtl_type, df, cov_name,
+                 zscore, count, allele_map, outdir, extension):
         palette = None
         if cov_name == "SEX":
             palette = {0.0: "#ADD8E6", 1.0: "#FFC0CB"}
@@ -316,12 +325,13 @@ class IntereQTLEffect:
         # Safe the plot.
         plt.tight_layout()
         fig.savefig(os.path.join(outdir,
-                                 "{}_inter_eqtl_{}_{}_{}_{}.png".format(
+                                 "{}_inter_eqtl_{}_{}_{}_{}.{}".format(
                                      count,
                                      snp_name,
                                      probe_name,
                                      hgnc_name,
-                                     cov_name)))
+                                     cov_name,
+                                     extension)))
         plt.close()
 
     def print_arguments(self):

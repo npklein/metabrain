@@ -1,7 +1,7 @@
 """
 File:         simple_eqtl_effect.py
 Created:      2020/03/16
-Last Changed: 2020/05/22
+Last Changed: 2020/05/25
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -26,6 +26,7 @@ import os
 # Third party imports.
 import seaborn as sns
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -35,15 +36,17 @@ from general.utilities import prepare_output_dir, p_value_to_symbol
 
 
 class SimpleeQTLEffect:
-    def __init__(self, dataset, outdir):
+    def __init__(self, dataset, outdir, extension):
         """
         The initializer for the class.
 
         :param dataset: Dataset, the input data.
         :param outdir: string, the output directory.
+        :param extension: str, the output figure file type extension.
         """
         self.outdir = os.path.join(outdir, 'simple_eqtl_effect')
         prepare_output_dir(self.outdir)
+        self.extension = extension
 
         # Extract the required data.
         print("Loading data")
@@ -112,7 +115,8 @@ class SimpleeQTLEffect:
             data["alleles"] = data["group"].map(allele_map)
 
             # Determine the minor allele frequency.
-            minor_allele_frequency = min(zero_geno_count, two_geno_count) / (zero_geno_count + two_geno_count)
+            minor_allele_frequency = min(zero_geno_count, two_geno_count) / (
+                        zero_geno_count + two_geno_count)
 
             # Add the color.
             data["round_geno"] = data["genotype"].round(2)
@@ -121,9 +125,10 @@ class SimpleeQTLEffect:
             data.drop(["round_geno"], axis=1, inplace=True)
 
             # Plot a simple eQTL effect.
-            self.plot(index, p_value, snp_name, probe_name, hgnc_name, eqtl_type,
+            self.plot(index, p_value, snp_name, probe_name, hgnc_name,
+                      eqtl_type,
                       data, minor_allele, minor_allele_frequency, allele_map,
-                      self.group_color_map, self.outdir)
+                      self.group_color_map, self.outdir, self.extension)
 
     @staticmethod
     def create_color_map():
@@ -144,7 +149,7 @@ class SimpleeQTLEffect:
     @staticmethod
     def plot(i, p_value, snp_name, probe_name, hgnc_name, eqtl_type, df,
              minor_allele, minor_allele_frequency, allele_map, group_color_map,
-             outdir):
+             outdir, extension):
         """
         """
         # Calculate the correlation.
@@ -161,6 +166,7 @@ class SimpleeQTLEffect:
         sns.regplot(x="genotype", y="expression", data=df,
                     scatter_kws={'facecolors': df['value_hue'],
                                  'edgecolors': "#808080"},
+                    line_kws={"color": "#000000"},
                     ax=ax
                     )
         sns.boxplot(x="group", y="expression", data=df,
@@ -196,10 +202,11 @@ class SimpleeQTLEffect:
                       fontweight='bold')
 
         # Safe the plot.
-        fig.savefig(os.path.join(outdir, "{}_{}_{}_{}.png".format(i,
-                                                                  snp_name,
-                                                                  probe_name,
-                                                                  hgnc_name)))
+        fig.savefig(os.path.join(outdir, "{}_{}_{}_{}.{}".format(i,
+                                                                 snp_name,
+                                                                 probe_name,
+                                                                 hgnc_name,
+                                                                 extension)))
         plt.close()
 
     def print_arguments(self):

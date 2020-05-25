@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_zscore_bars.py
 Created:      2020/03/16
-Last Changed: 2020/05/21
+Last Changed: 2020/05/25
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -26,6 +26,7 @@ import os
 import pandas as pd
 import seaborn as sns
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from colour import Color
@@ -35,15 +36,17 @@ from general.utilities import prepare_output_dir
 
 
 class IntereQTLZscoreBars:
-    def __init__(self, dataset, outdir):
+    def __init__(self, dataset, outdir, extension):
         """
         The initializer for the class.
 
         :param dataset: Dataset, the input data.
         :param outdir: string, the output directory.
+        :param extension: str, the output figure file type extension.
         """
         self.outdir = os.path.join(outdir, 'inter_eqtl_zscore_bars')
         prepare_output_dir(self.outdir)
+        self.extension = extension
 
         # Extract the required data.
         print("Loading data")
@@ -79,7 +82,8 @@ class IntereQTLZscoreBars:
             interaction_effect.columns = ["index", "zscore"]
             interaction_effect = interaction_effect.reindex(
                 interaction_effect["zscore"].sort_values().index)
-            interaction_effect["color"] = [colormap[round(x, 1)] for x in interaction_effect["zscore"]]
+            interaction_effect["color"] = [colormap[round(x, 1)] for x in
+                                           interaction_effect["zscore"]]
 
             eqtl_interaction_outdir = os.path.join(self.outdir,
                                                    "{}_{}_{}_{}".format(index,
@@ -91,33 +95,44 @@ class IntereQTLZscoreBars:
 
             self.plot(index, snp_name, probe_name, hgnc_name, eqtl_type,
                       self.z_score_cutoff, interaction_effect,
-                      eqtl_interaction_outdir)
+                      eqtl_interaction_outdir, self.extension)
             self.plot(index, snp_name, probe_name, hgnc_name, eqtl_type,
                       self.z_score_cutoff, interaction_effect,
-                      eqtl_interaction_outdir, positive=True)
+                      eqtl_interaction_outdir, self.extension, positive=True)
 
     def create_color_map(self, signif_cutoff):
         min_value = -8.3
         max_value = 385
 
-        blue_values = [x / 10 for x in range(int(min_value * 10), int(signif_cutoff * -10), 1)]
-        blue_colors = [x.rgb for x in list(Color("#6282EA").range_to(Color("#B9D0F9"), len(blue_values)))]
+        blue_values = [x / 10 for x in
+                       range(int(min_value * 10), int(signif_cutoff * -10), 1)]
+        blue_colors = [x.rgb for x in list(
+            Color("#6282EA").range_to(Color("#B9D0F9"), len(blue_values)))]
         blue_colors = self.check_for_neg_rgv(blue_colors)
 
-        neg_black_values = [x / 10 for x in range(int(signif_cutoff * -10), 0, 1)]
-        neg_black_colors = [x.rgb for x in list(Color("#000000").range_to(Color("#DCDCDC"), len(neg_black_values)))]
+        neg_black_values = [x / 10 for x in
+                            range(int(signif_cutoff * -10), 0, 1)]
+        neg_black_colors = [x.rgb for x in list(
+            Color("#000000").range_to(Color("#DCDCDC"), len(neg_black_values)))]
         neg_black_colors = self.check_for_neg_rgv(neg_black_colors)
 
-        pos_black_values = [x / 10 for x in range(1, int(signif_cutoff * 10) + 2, 1)]
-        pos_black_colors = [x.rgb for x in list(Color("#DCDCDC").range_to(Color("#000000"), len(pos_black_values)))]
+        pos_black_values = [x / 10 for x in
+                            range(1, int(signif_cutoff * 10) + 2, 1)]
+        pos_black_colors = [x.rgb for x in list(
+            Color("#DCDCDC").range_to(Color("#000000"), len(pos_black_values)))]
         pos_black_colors = self.check_for_neg_rgv(pos_black_colors)
 
-        red_values = [x / 10 for x in range(int(signif_cutoff * 10) + 2, int(max_value * 10), 1)]
-        red_colors = [x.rgb for x in list(Color("#F5C4AC").range_to(Color("#DC5F4B"), len(red_values)))]
+        red_values = [x / 10 for x in
+                      range(int(signif_cutoff * 10) + 2, int(max_value * 10),
+                            1)]
+        red_colors = [x.rgb for x in list(
+            Color("#F5C4AC").range_to(Color("#DC5F4B"), len(red_values)))]
         red_colors = self.check_for_neg_rgv(red_colors)
 
-        values = blue_values + neg_black_values + [0.0] + pos_black_values + red_values
-        colors = blue_colors + neg_black_colors + [Color(rgb=(0.863, 0.863, 0.863)).rgb] + pos_black_colors + red_colors
+        values = blue_values + neg_black_values + [
+            0.0] + pos_black_values + red_values
+        colors = blue_colors + neg_black_colors + [Color(
+            rgb=(0.863, 0.863, 0.863)).rgb] + pos_black_colors + red_colors
         value_color_map = {x: y for x, y in zip(values, colors)}
         return value_color_map
 
@@ -137,7 +152,7 @@ class IntereQTLZscoreBars:
 
     @staticmethod
     def plot(i, snp_name, probe_name, hgnc_name, eqtl_type, z_score_cutoff,
-             df, outdir, positive=False):
+             df, outdir, extension, positive=False):
 
         subtitle_str = "+/-"
         file_suffix = "all"
@@ -160,7 +175,8 @@ class IntereQTLZscoreBars:
                fontsize=22, weight='bold', ha='center', va='bottom',
                transform=ax.transAxes)
         g.text(0.5, 1 + (7.5e-5 * len(df.index)),
-               'z-score cutoff = {} {:.2f}'.format(subtitle_str, abs(z_score_cutoff)),
+               'z-score cutoff = {} {:.2f}'.format(subtitle_str,
+                                                   abs(z_score_cutoff)),
                fontsize=20, alpha=0.75, ha='center', va='bottom',
                transform=ax.transAxes)
         g.set_ylabel('covariate',
@@ -179,11 +195,12 @@ class IntereQTLZscoreBars:
         plt.tight_layout()
         fig.savefig(os.path.join(outdir,
                                  "{}_inter_eqtl_bars"
-                                 "_{}_{}_{}_{}.png".format(i,
-                                                           snp_name,
-                                                           probe_name,
-                                                           hgnc_name,
-                                                           file_suffix)))
+                                 "_{}_{}_{}_{}.{}".format(i,
+                                                          snp_name,
+                                                          probe_name,
+                                                          hgnc_name,
+                                                          file_suffix,
+                                                          extension)))
         plt.close()
 
     def print_arguments(self):

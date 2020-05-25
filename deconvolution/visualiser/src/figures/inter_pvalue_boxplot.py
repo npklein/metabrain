@@ -1,7 +1,7 @@
 """
 File:         inter_pvalue_boxplot.py
 Created:      2020/05/12
-Last Changed: 2020/05/19
+Last Changed: 2020/05/25
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -36,15 +36,17 @@ from general.utilities import prepare_output_dir
 
 
 class InterPvalueBoxplot:
-    def __init__(self, dataset, outdir):
+    def __init__(self, dataset, outdir, extension):
         """
         The initializer for the class.
 
         :param dataset: Dataset, the input data.
         :param outdir: string, the output directory.
+        :param extension: str, the output figure file type extension.
         """
         self.outdir = os.path.join(outdir, 'inter_pvalue_boxplot')
         prepare_output_dir(self.outdir)
+        self.extension = extension
 
         # Extract the required data.
         print("Loading data")
@@ -87,10 +89,10 @@ class InterPvalueBoxplot:
             one = tmp2.shape[0]
             print("Variable: {}\tall: {}\tnone: {}\t[{:.2f}%]".format(variable, all, one, ((100 / all) * one)))
 
-        self.plot(df, group_df.index, self.outdir)
+        self.plot(df, group_df.index, self.outdir, self.extension)
 
     @staticmethod
-    def plot(data, order, outdir):
+    def plot(data, order, outdir, extension):
         sns.set(rc={'figure.figsize': (
         12, max(0.2 * len(data["variable"].unique()), 9))})
         sns.set_style("ticks")
@@ -121,7 +123,7 @@ class InterPvalueBoxplot:
         ax.tick_params(labelsize=10)
         ax.set_xlim(0, 1)
         plt.tight_layout()
-        fig.savefig(os.path.join(outdir, "pvalues_boxplot.png"))
+        fig.savefig(os.path.join(outdir, "pvalues_boxplot.{}".format(extension)))
         plt.close()
 
     def print_arguments(self):

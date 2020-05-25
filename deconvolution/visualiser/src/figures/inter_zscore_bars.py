@@ -1,7 +1,7 @@
 """
 File:         inter_zscores_bars.py
 Created:      2020/03/16
-Last Changed: 2020/05/19
+Last Changed: 2020/05/25
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -37,15 +37,17 @@ from general.utilities import prepare_output_dir
 
 
 class InterZscoreBars:
-    def __init__(self, dataset, outdir):
+    def __init__(self, dataset, outdir, extension):
         """
         The initializer for the class.
 
         :param dataset: Dataset, the input data.
         :param outdir: string, the output directory.
+        :param extension: str, the output figure file type extension.
         """
         self.outdir = os.path.join(outdir, 'inter_zscore_bars')
         prepare_output_dir(self.outdir)
+        self.extension = extension
 
         # Extract the required data.
         print("Loading data")
@@ -101,12 +103,12 @@ class InterZscoreBars:
     def create_plots(self, data, outdir, fontsize=10,
                      title_prefix="", subtitle_suffix=""):
         max_val = max(data["counts"])
-        self.plot(data.copy(), max_val, outdir, fontsize=fontsize,
+        self.plot(data.copy(), max_val, outdir, self.extension, fontsize=fontsize,
                   title_prefix=title_prefix, subtitle_suffix=subtitle_suffix)
-        self.plot(data.copy(), max_val, outdir, top=10,
+        self.plot(data.copy(), max_val, outdir, self.extension, top=10,
                   fontsize=14, title_prefix=title_prefix,
                   subtitle_suffix=subtitle_suffix)
-        self.plot(data.copy(), max_val, outdir, bottom=10,
+        self.plot(data.copy(), max_val, outdir, self.extension, bottom=10,
                   fontsize=14, title_prefix=title_prefix,
                   subtitle_suffix=subtitle_suffix)
 
@@ -130,8 +132,8 @@ class InterZscoreBars:
         return color_list
 
     @staticmethod
-    def plot(df, max_val, outdir, top=None, bottom=None, fontsize=10, title_prefix="",
-             subtitle_suffix=""):
+    def plot(df, max_val, outdir, extension, top=None, bottom=None,
+             fontsize=10, title_prefix="", subtitle_suffix=""):
         # Prepare the data.
         subtitle = ''
         file_appendix = ''
@@ -186,8 +188,8 @@ class InterZscoreBars:
         ax.set_xlim(0, max_val)
         plt.tight_layout()
         fig.savefig(os.path.join(outdir,
-                                 "{}_cov_zscores_barplot{}.png".format(title_prefix.replace(" ", "").lower(),
-                                                                       file_appendix)))
+                                 "{}_cov_zscores_barplot{}.{}".format(title_prefix.replace(" ", "").lower(),
+                                                                       file_appendix, extension)))
         plt.close()
 
     def print_arguments(self):

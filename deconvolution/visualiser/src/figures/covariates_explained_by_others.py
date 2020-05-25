@@ -1,7 +1,7 @@
 """
 File:         covariates_explained_by_others.py
 Created:      2020/04/15
-Last Changed: 2020/05/12
+Last Changed: 2020/05/25
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -29,6 +29,7 @@ from sklearn.metrics import r2_score
 from colour import Color
 import seaborn as sns
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
@@ -37,20 +38,65 @@ from general.utilities import prepare_output_dir
 
 
 class CovariatesExplainedByOthers:
-    def __init__(self, dataset, outdir):
+    def __init__(self, dataset, outdir, extension):
         """
         The initializer for the class.
 
         :param dataset: Dataset, the input data.
         :param outdir: string, the output directory.
+        :param extension: str, the output figure file type format.
         """
         self.outdir = os.path.join(outdir, 'covariates_explained_by_others')
         prepare_output_dir(self.outdir)
+        self.extension = extension
 
         # Extract the required data.
         print("Loading data")
         self.cov_df = dataset.get_cov_df()
         self.colormap = self.create_color_map()
+        self.tech_covs = ["PCT_CODING_BASES",
+                          "PCT_MRNA_BASES",
+                          "PCT_INTRONIC_BASES",
+                          "MEDIAN_3PRIME_BIAS",
+                          "PCT_USABLE_BASES",
+                          "PCT_INTERGENIC_BASES",
+                          "PCT_UTR_BASES",
+                          "PF_HQ_ALIGNED_READS",
+                          "PCT_READS_ALIGNED_IN_PAIRS",
+                          "PCT_CHIMERAS",
+                          "PF_READS_IMPROPER_PAIRS",
+                          "PF_HQ_ALIGNED_Q20_BASES",
+                          "PF_HQ_ALIGNED_BASES",
+                          "PCT_PF_READS_IMPROPER_PAIRS",
+                          "PF_READS_ALIGNED",
+                          "avg_mapped_read_length",
+                          "avg_input_read_length",
+                          "uniquely_mapped",
+                          "total_reads",
+                          "Total.Sequences_R1",
+                          "MDS1",
+                          "MDS2",
+                          "MDS3",
+                          "MDS4",
+                          "AMPAD-MSBB-V2-AFR",
+                          "CMC-AFR",
+                          "LIBD_1M-AFR",
+                          "LIBD_h650-AFR",
+                          "AMPAD-MAYO-V2-EUR",
+                          "AMPAD-MSBB-V2-EUR",
+                          "AMPAD-ROSMAP-V2-EUR",
+                          "BrainGVEX-V2-EUR",
+                          "CMC-EUR",
+                          "GTEx-EUR",
+                          "GVEx",
+                          "LIBD_1M-EUR",
+                          "LIBD_h650-EUR",
+                          "NABEC-H550-EUR",
+                          "NABEC-H610-EUR",
+                          "TargetALS-EUR",
+                          "UCLA_ASD-EUR",
+                          "ENA-EU"
+                          ]
 
     @staticmethod
     def create_color_map():
@@ -67,20 +113,26 @@ class CovariatesExplainedByOthers:
     def start(self):
         print("Plotting if covariates are explained by other covariates.")
         self.print_arguments()
-        r2_df = self.model(self.cov_df)
+
+        null_matrix = self.cov_df.loc[self.tech_covs, :].copy()
+
+        r2_df = self.model(null_matrix.T, self.cov_df)
 
         with pd.option_context('display.max_rows', None,
                                'display.max_columns', None):
             print(r2_df)
 
-        self.plot(r2_df, self.outdir)
+        self.plot(r2_df, self.outdir, self.extension)
 
-    def model(self, cov_df):
+    def model(self, null_matrix, cov_df):
         print("Modelling each covariate with a linear model of the others.")
         r2_data = []
-        for index in cov_df.index:
-            X = cov_df.loc[cov_df.index != index, :].T
-            y = cov_df.loc[index, :]
+        for index, y in cov_df.iterrows():
+            X = null_matrix.copy()
+            if index in X.columns:
+                X.drop([index], axis=1, inplace=True)
+            print(X)
+            print(y)
             score = self.create_model(X, y)
             color = self.colormap[round(score, 2)]
             r2_data.append([index, score, color])
@@ -112,7 +164,7 @@ class CovariatesExplainedByOthers:
         return score
 
     @staticmethod
-    def plot(df, outdir):
+    def plot(df, outdir, extension):
         print("Plotting")
 
         indices = [(0, 20, "Tech. Cov.", ""),
@@ -156,15 +208,17 @@ class CovariatesExplainedByOthers:
             sns.barplot(x="value", y="index", data=df.iloc[a:b, :],
                         palette=subset["color"], orient="h", ax=ax)
 
-            new_ylabels = [x.replace(remove, '').replace("_", " ") for x in subset["index"]]
+            new_ylabels = [x.replace(remove, '').replace("_", " ") for x in
+                           subset["index"]]
             ax.set_yticklabels(new_ylabels, fontsize=10)
             ax.set_ylabel(ylabel, fontsize=16, fontweight='bold')
             ax.set_xlabel(xlabel, fontsize=16, fontweight='bold')
             ax.set(xlim=(0, 1))
 
         fig.align_ylabels(axes[:, 1])
-        fig.suptitle('Variance Explained by other Covariates', fontsize=25, fontweight='bold')
-        fig.savefig(os.path.join(outdir, "covariates_explained_by_others.png"))
+        fig.suptitle('Variance Explained by other Covariates', fontsize=25,
+                     fontweight='bold')
+        fig.savefig(os.path.join(outdir, "covariates_explained_by_others.{}".format(extension)))
         plt.close()
 
     def print_arguments(self):
