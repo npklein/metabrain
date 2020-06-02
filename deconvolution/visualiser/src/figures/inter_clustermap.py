@@ -51,8 +51,8 @@ class InterClusterMap:
         print("Loading data")
         self.inter_cov_zscore_df = dataset.get_inter_cov_zscore_df()
         self.inter_tech_cov_zscore_df = dataset.get_inter_tech_cov_zscore_df()
-        self.inter_cov_tvalue_df = dataset.get_inter_cov_tvalue_df()
-        self.inter_tech_cov_tvalue_df = dataset.get_inter_tech_cov_tvalue_df()
+        self.inter_cov_inter_tvalue_df = dataset.get_inter_cov_inter_tvalue_df()
+        self.inter_tech_cov_inter_tvalue_df = dataset.get_inter_tech_cov_inter_tvalue_df()
 
     def start(self):
         sys.setrecursionlimit(10000)
@@ -62,8 +62,8 @@ class InterClusterMap:
 
         self.visualize_matrix(self.inter_cov_zscore_df, self.outdir, outfile_prefix="cov_zscore")
         self.visualize_matrix(self.inter_tech_cov_zscore_df, self.outdir, outfile_prefix="tech_cov_zscore")
-        self.visualize_matrix(self.inter_cov_tvalue_df, self.outdir, outfile_prefix="cov_tvalue")
-        self.visualize_matrix(self.inter_tech_cov_tvalue_df, self.outdir, outfile_prefix="tech_cov_tvalue")
+        self.visualize_matrix(self.inter_cov_inter_tvalue_df, self.outdir, outfile_prefix="cov_tvalue")
+        self.visualize_matrix(self.inter_tech_cov_inter_tvalue_df, self.outdir, outfile_prefix="tech_cov_tvalue")
 
     def visualize_matrix(self, df, outdir, outfile_prefix="", vmin=None, vmax=None):
         clean_df = df.dropna(axis=1)
@@ -107,7 +107,7 @@ class InterClusterMap:
         print("Arguments:")
         print("  > Cov interaction z-score matrix shape: {}".format(self.inter_cov_zscore_df.shape))
         print("  > Tech.cov interaction z-score matrix shape: {}".format(self.inter_tech_cov_zscore_df.shape))
-        print("  > Cov interaction t-value matrix shape: {}".format(self.inter_cov_tvalue_df.shape))
-        print("  > Tech.cov interaction t-value matrix shape: {}".format(self.inter_tech_cov_tvalue_df.shape))
+        print("  > Cov interaction t-value matrix shape: {}".format(self.inter_cov_inter_tvalue_df.shape))
+        print("  > Tech.cov interaction t-value matrix shape: {}".format(self.inter_tech_cov_inter_tvalue_df.shape))
         print("  > Output directory: {}".format(self.outdir))
         print("")

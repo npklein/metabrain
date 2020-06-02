@@ -1,7 +1,7 @@
 """
 File:         deconvolution_zscore_comparison.py
 Created:      2020/04/07
-Last Changed: 2020/05/25
+Last Changed: 2020/06/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -87,7 +87,7 @@ class DeconvolutionZscoreComparison:
                                celltypes, color_map, outdir, extension):
         nplots = len(method1_df.index)
 
-        ncols = 3
+        ncols = 1
         nrows = math.ceil(nplots / ncols)
 
         method1_name = method1[0].split("_")[0]

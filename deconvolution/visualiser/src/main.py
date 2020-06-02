@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/13
-Last Changed: 2020/05/25
+Last Changed: 2020/06/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -31,6 +31,7 @@ import os
 from general.utilities import prepare_output_dir
 from general.local_settings import LocalSettings
 from general.objects.dataset import Dataset
+from .figures.cohort_clustermap import CohortClustermap
 from .figures.covariate_comparison import CovariateComparison
 from .figures.deconvolution_covariate_comparison import DeconvolutionCovariateComparison
 from .figures.covariates_explained_by_others import CovariatesExplainedByOthers
@@ -95,13 +96,21 @@ class Main:
         if self.validate:
             ds.load_all()
 
+        if ('cohort_clustermap' in self.plots) or \
+                ('all' in self.plots):
+            print("\n### Cohort Clustermap ###\n")
+            cocl = CohortClustermap(dataset=ds, outdir=self.outdir,
+                                    extension=self.extension)
+            cocl.start()
+            del cocl
+
         if ('covariate_comparison' in self.plots) or \
                 ('all' in self.plots):
             print("\n### Covariate Comparison ###\n")
-            cc = CovariateComparison(dataset=ds, outdir=self.outdir,
-                                     extension=self.extension)
-            cc.start()
-            del cc
+            coco = CovariateComparison(dataset=ds, outdir=self.outdir,
+                                       extension=self.extension)
+            coco.start()
+            del coco
 
         if ('covariates_explained_by_others' in self.plots) or \
                 ('all' in self.plots):
@@ -169,7 +178,6 @@ class Main:
                                   extension=self.extension)
             izd.start()
             del izd
-
 
         if ('inter_eqtl_zscore_bars' in self.plots) or ('all' in self.plots):
             print("\n### INTERACTION EQTL Z-SCORE BARS ###\n")

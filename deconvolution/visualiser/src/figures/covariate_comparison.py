@@ -50,13 +50,14 @@ class CovariateComparison:
 
         # Extract the required data.
         print("Loading data")
+        self.groups = dataset.get_groups()
         self.cov_df = dataset.get_cov_df()
 
     def start(self):
         print("Plotting convariate comparison.")
         self.print_arguments()
         corr_df, pval_df = self.correlate(self.cov_df)
-        self.plot(corr_df, pval_df, self.outdir, self.extension)
+        self.plot(corr_df, pval_df, self.groups, self.outdir, self.extension)
 
     @staticmethod
     def correlate(df):
@@ -73,22 +74,11 @@ class CovariateComparison:
         return corr_df, pval_df
 
     @staticmethod
-    def plot(corr_df, pval_df, outdir, extension):
+    def plot(corr_df, pval_df, groups, outdir, extension):
         print("Plotting")
 
-        indices = [(0, 20, "Tech. Cov.", ""),
-                   (20, 24, "MDS", "MDS"),
-                   (24, 42, "Cohorts", ""),
-                   (42, 43, "Sex", ""),
-                   (43, 93, "PCs", "Comp"),
-                   (93, 95, "PCA", ""),
-                   (95, 120, "McKenzie\nMG", "McKenzie_"),
-                   (120, 125, "CellMap\nPCA", "CellMapPCA_"),
-                   (125, 130, "CellMap\nNMF", "CellMapNMF_"),
-                   (130, 135, "CellMap\nNNLS", "CellMapNNLS_")]
-
-        gridspec_kw = {"height_ratios": [x[1] - x[0] for x in indices],
-                       "width_ratios": [x[1] - x[0] for x in indices]}
+        gridspec_kw = {"height_ratios": [x[1] - x[0] for x in groups],
+                       "width_ratios": [x[1] - x[0] for x in groups]}
 
         cmap = plt.cm.RdBu_r
         norm = matplotlib.colors.Normalize(vmin=-1, vmax=1)
@@ -98,21 +88,21 @@ class CovariateComparison:
                           annot_kws={"size": 12, "color": "#808080"})
 
         sns.set(style="ticks", color_codes=True)
-        fig, axes = plt.subplots(ncols=len(indices), nrows=len(indices),
+        fig, axes = plt.subplots(ncols=len(groups), nrows=len(groups),
                                  figsize=(101, 73), gridspec_kw=gridspec_kw)
         plt.subplots_adjust(left=0.2, right=0.87, bottom=0.2, top=0.95,
                             wspace=0.1, hspace=0.1)
 
-        for i in range(len(indices)):
-            (ra, rb, ylabel, yremove) = indices[i]
-            for j in range(len(indices)):
-                (ca, cb, xlabel, xremove) = indices[j]
+        for i in range(len(groups)):
+            (ra, rb, ylabel, yremove) = groups[i]
+            for j in range(len(groups)):
+                (ca, cb, xlabel, xremove) = groups[j]
                 ax = axes[i, j]
 
                 if i >= j:
                     print("\tPlotting axes[{}, {}]".format(i, j))
                     xticklabels = False
-                    if i == (len(indices) - 1):
+                    if i == (len(groups) - 1):
                         xticklabels = True
                     yticklabels = False
                     if j == 0:
@@ -147,13 +137,14 @@ class CovariateComparison:
         fig.colorbar(sm, cax=cax)
 
         fig.align_ylabels(axes[:, 0])
-        fig.align_xlabels(axes[len(indices) - 1, :])
+        fig.align_xlabels(axes[len(groups) - 1, :])
         fig.suptitle('Covariate Correlations', fontsize=40, fontweight='bold')
         fig.savefig(os.path.join(outdir, "covariate_comparison.{}".format(extension)))
         plt.close()
 
     def print_arguments(self):
         print("Arguments:")
+        print("  > Groups: {}".format(self.groups))
         print("  > Covariate matrix shape: {}".format(self.cov_df.shape))
         print("  > Output directory: {}".format(self.outdir))
         print("")

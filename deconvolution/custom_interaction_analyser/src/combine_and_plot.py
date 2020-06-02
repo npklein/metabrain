@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed: 2020/05/14
+Last Changed: 2020/06/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -74,7 +74,8 @@ class CombineAndPlot:
         self.cov_outdir = settings.get_setting("covariates_folder")
         self.tech_cov_outdir = settings.get_setting("technical_covariates_folder")
         self.pvalues_outfile = settings.get_setting("actual_pvalues_pickle_filename")
-        self.tvalues_outfile = settings.get_setting("actual_tvalues_pickle_filename")
+        self.snp_tvalues_outfile = settings.get_setting("snp_tvalues_pickle_filename")
+        self.inter_tvalues_outfile = settings.get_setting("inter_tvalues_pickle_filename")
         self.perm_pvalues_outfile = settings.get_setting("permuted_pvalues_pickle_filename")
 
     def start(self):
@@ -103,6 +104,11 @@ class CombineAndPlot:
                                      int(run_time_sec)), flush=True)
 
     def work(self, workdir):
+
+        # pvalue_df = pd.read_csv(os.path.join(workdir, "pvalue_table.txt.gz"), sep="\t", header=0, index_col=0)
+        # perm_fdr_df = pd.read_csv(os.path.join(workdir, "perm_fdr_table.txt.gz"), sep="\t", header=0, index_col=0)
+        # bh_fdr_df = pd.read_csv(os.path.join(workdir, "bh_fdr_table.txt.gz"), sep="\t", header=0, index_col=0)
+
         # Combine the pickle files.
         print("Loading pvalue data.", flush=True)
         pcolumns, pvalues_data = self.combine_pickles(workdir,
@@ -129,6 +135,9 @@ class CombineAndPlot:
         print("Loading permutation pvalue data.", flush=True)
         _, perm_pvalues = self.combine_pickles(workdir,
                                                self.perm_pvalues_outfile)
+        # with open(os.path.join(workdir, "perm_pvalues.pkl"), "wb") as f:
+        #      pickle.dump(perm_pvalues, f)
+        # f.close()
 
         # Visualise distributions.
         print("Visualizing distributions.", flush=True)
@@ -136,17 +145,28 @@ class CombineAndPlot:
 
         # return
 
-        print("Loading tvalue data.", flush=True)
-        tcolumns, tvalues_data = self.combine_pickles(workdir,
-                                                      self.tvalues_outfile,
-                                                      columns=True)
+        print("Loading SNP tvalue data.", flush=True)
+        snp_tcolumns, snp_tvalues_data = self.combine_pickles(workdir,
+                                                              self.snp_tvalues_outfile,
+                                                              columns=True)
 
         # Create a pandas dataframe from the nested list.
-        print("Creating t-values dataframe.", flush=True)
-        tvalue_df = self.create_df(tvalues_data, tcolumns)
-        save_dataframe(df=tvalue_df,
-                       outpath=os.path.join(workdir,
-                                            "tvalue_table.txt.gz"),
+        print("Creating SNP t-values dataframe.", flush=True)
+        snp_tvalue_df = self.create_df(snp_tvalues_data, snp_tcolumns)
+        save_dataframe(df=snp_tvalue_df,
+                       outpath=os.path.join(workdir, "snp_tvalue_table.txt.gz"),
+                       header=True, index=True)
+
+        print("Loading inter tvalue data.", flush=True)
+        inter_tcolumns, inter_tvalues_data = self.combine_pickles(workdir,
+                                                                  self.inter_tvalues_outfile,
+                                                                  columns=True)
+
+        # Create a pandas dataframe from the nested list.
+        print("Creating inter t-values dataframe.", flush=True)
+        inter_tvalue_df = self.create_df(inter_tvalues_data, inter_tcolumns)
+        save_dataframe(df=inter_tvalue_df,
+                       outpath=os.path.join(workdir, "inter_tvalue_table.txt.gz"),
                        header=True, index=True)
 
         # Create a dataframe with z-scores.
@@ -195,9 +215,6 @@ class CombineAndPlot:
         print("Creating score visualisation [1/2].", flush=True)
         self.compare_pvalue_scores(pvalue_df, perm_fdr_df, bh_fdr_df,
                                    workdir)
-        print("Creating score visualisation [2/2].", flush=True)
-        self.compare_pvalue_scores(pvalue_df, perm_fdr_df, bh_fdr_df,
-                                   workdir, max_val=0.05)
 
     @staticmethod
     def combine_pickles(indir, filename, columns=False):
@@ -431,7 +448,7 @@ class CombineAndPlot:
                 rank = bisect_left(pvalues, pvalue)
                 perm_rank = bisect_left(perm_pvalues, pvalue)
                 if (rank > 0) and (perm_rank > 0):
-                    fdr_value = perm_rank / total
+                    fdr_value = (perm_rank / n_perm) / rank
                     if fdr_value > 1:
                         fdr_value = 1
                 else:
@@ -518,7 +535,7 @@ class CombineAndPlot:
         return count
 
     def compare_pvalue_scores(self, pvalue_df, perm_fdr, bh_fdr, outdir,
-                              max_val=1.0):
+                              a=0.05):
         """
         Method for comparing the different p-value dataframes.
 
@@ -526,7 +543,7 @@ class CombineAndPlot:
         :param perm_fdr: DataFrame, the permutation FDR dataframe.
         :param bh_fdr: DataFrame, the Benjamini-Hochberg FDR dataframe.
         :param outdir: string, the output directory for the image.
-        :param max_val: float, the maximum p-value to include.
+        :param a: float, the singificance cut-off.
         """
         # Combine the dataframes into one.
         df = pd.DataFrame({"p-value": pvalue_df.melt()["value"],
@@ -534,66 +551,76 @@ class CombineAndPlot:
                            "BH FDR": bh_fdr.melt()["value"]})
         df[(df > 1.0) | (df < 0.0)] = np.nan
         df.dropna(how="any", inplace=True)
+        df = df.T
 
-        # Filter the rows that contain at least one value below the max.
-        indices = []
-        for index, row in df.iterrows():
-            add = (row["permutation FDR"] <= max_val) or (row["BH FDR"] <= max_val)
-            indices.append(add)
-        df = df.loc[indices, :]
-
-        # Calculate the lower and upper bound of the axis.
-        precision = 3
-        xy_min = math.floor(df.values.min() * precision) / precision
-        xy_max = math.ceil(df.values.max() * precision) / precision
-
-        bins = np.linspace(0, max_val, 15)
+        bins = np.linspace(0, 1.0, 15)
 
         # Plot
         sns.set(style="ticks", color_codes=True)
-        fig, axes = plt.subplots(ncols=3, nrows=3, figsize=(12, 12))
+        fig, axes = plt.subplots(ncols=3, nrows=4, figsize=(12, 12),
+                                 gridspec_kw={"height_ratios": [0.01, 0.33, 0.33, 0.33]})
 
-        for index1 in range(3):
-            x = df.iloc[:, index1]
-            for index2 in range(3):
-                y = df.iloc[:, index2]
-                ax = axes[index2, index1]
+        for i in range(3):
+            ax = axes[0, i]
+            ax.set_axis_off()
+
+        for index1, (label1, row1) in enumerate(df.iterrows()):
+            for index2, (label2, row2) in enumerate(df.iterrows()):
+                ax = axes[index2+1, index1]
                 sns.despine(fig=fig, ax=ax)
                 print("\tPlotting axes[{}, {}]".format(index2, index1))
 
-                if index2 > index1:
+                plot_df = pd.DataFrame({label2: row2.copy(), label1: row1.copy()})
+
+                if index2 != index1:
+                    if index2 < index1:
+                        plot_df = plot_df.loc[plot_df.max(axis=1) <= a, :]
+
+                    # Calculate the lower and upper bound of the axis.
+                    xy_min = plot_df.values.min()
+                    xy_max = plot_df.values.max()
+
                     # Calculate the difference between x and y and create a
                     # colormap accordingly.
-                    diff = round((x - y) ** 2, precision)
+                    precision = 3
+                    diff = round((plot_df[label2] - plot_df[label1]) ** 2, precision)
                     max_col_value = math.ceil(diff.max() * (10 ** precision))
-                    colormap = self.create_color_map(length=max_col_value,
-                                                     precision=precision)
+                    colormap = self.create_color_map(length=max_col_value, precision=precision)
                     colors = diff.map(colormap, na_action=Color(rgb=(0.698, 0.133, 0.133)))
 
                     # Plot.
-                    ax.scatter(x, y, c=colors.values)
+                    # print("[{}, {}]\tx: {}\ty: {}".format(index2+1, index1, label1, label2))
+                    ax.scatter(x=label1, y=label2, data=plot_df, c=colors.values)
                     ax.plot([xy_min, xy_max], [xy_min, xy_max], ls="--", c=".3")
 
-                    for i in range(int(xy_min * 100), int(xy_max * 100) + 10, 5):
-                        alpha = 0.025
-                        if i % 10 == 0:
-                            alpha = 0.15
-                        ax.axvline(i / 100, ls='-', color="#000000",
-                                   alpha=alpha, zorder=-1)
-                        ax.axhline(i / 100, ls='-', color="#000000",
-                                   alpha=alpha, zorder=-1)
+                    if index2 >= index1:
+                        for i in range(int(xy_min * 100), int(xy_max * 100) + 10, 10):
+                            alpha = 0.025
+                            if i % 20 == 0:
+                                alpha = 0.15
+                            ax.axvline(i / 100, ls='-', color="#000000", alpha=alpha, zorder=-1)
+                            ax.axhline(i / 100, ls='-', color="#000000", alpha=alpha, zorder=-1)
+                    else:
+                        for i in range(0, 65, 5):
+                            alpha = 0.025
+                            if i % 10 == 0:
+                                alpha = 0.15
+                            ax.axvline(i / 1000, ls='-', color="#000000", alpha=alpha, zorder=-1)
+                            ax.axhline(i / 1000, ls='-', color="#000000", alpha=alpha, zorder=-1)
 
-                    ax.set_ylim(xy_min, xy_max)
-                    ax.set_xlim(xy_min, xy_max)
+                    # ax.set_ylim(xy_min, xy_max)
+                    # ax.set_xlim(xy_min, xy_max)
 
-                    ax.set_xlabel(df.columns[index1], fontsize=12, fontweight='bold')
-                    ax.set_ylabel(df.columns[index2], fontsize=12, fontweight='bold')
+                    ax.set_xlabel(label1, fontsize=14, fontweight='bold')
+                    ax.set_ylabel(label2, fontsize=14, fontweight='bold')
+                    ax.tick_params(labelsize=10)
 
-                elif index2 == index1:
-                    value_bins = pd.cut(y, bins=bins).value_counts().to_frame()
+                else:
+                    # print("[{}, {}]\tdata: {}".format(index2 + 1, index1, label1))
+                    value_bins = pd.cut(plot_df[label1], bins=bins).value_counts().to_frame()
                     value_bins.columns = ["count"]
                     value_bins = value_bins.divide(value_bins.sum())
-                    value_bins["index"] = (bins[:-1] + bins[1:]) / 2
+                    value_bins["index"] = pd.IntervalIndex(value_bins.index).mid
                     value_bins = value_bins.round(2)
 
                     sns.barplot(x="index", y="count", color='#696969',
@@ -607,17 +634,15 @@ class CombineAndPlot:
                         ax.axhline(i / 100, ls='-', color="#000000",
                                    alpha=alpha, zorder=-1)
 
-
-                    ax.set_xlabel(df.columns[index1], fontsize=12, fontweight='bold')
-                    ax.set_ylabel("ratio", fontsize=12, fontweight='bold')
-                else:
-                    ax.set_axis_off()
+                    ax.set_xlabel(label1, fontsize=14, fontweight='bold')
+                    ax.set_ylabel("ratio", fontsize=14, fontweight='bold')
+                    ax.tick_params(labelsize=10)
 
         fig.align_ylabels(axes[:, 0])
         fig.align_xlabels(axes[2, :])
         fig.suptitle('Multiple Testing Comparison', fontsize=20, fontweight='bold')
         plt.tight_layout()
-        fig.savefig(os.path.join(outdir, "pvalue_vs_fdr_comparison_{}.png".format(max_val)))
+        fig.savefig(os.path.join(outdir, "pvalue_vs_fdr_comparison.png"))
         plt.close()
 
     @staticmethod

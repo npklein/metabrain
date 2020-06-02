@@ -1,7 +1,7 @@
 """
 File:         covariates_explained_by_others.py
 Created:      2020/04/15
-Last Changed: 2020/05/25
+Last Changed: 2020/06/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -23,13 +23,13 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 import os
 
 # Third party imports.
+import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 from colour import Color
 import seaborn as sns
 import matplotlib
-
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
@@ -52,6 +52,7 @@ class CovariatesExplainedByOthers:
 
         # Extract the required data.
         print("Loading data")
+        self.groups = dataset.get_groups()
         self.cov_df = dataset.get_cov_df()
         self.colormap = self.create_color_map()
         self.tech_covs = ["PCT_CODING_BASES",
@@ -61,7 +62,7 @@ class CovariatesExplainedByOthers:
                           "PCT_USABLE_BASES",
                           "PCT_INTERGENIC_BASES",
                           "PCT_UTR_BASES",
-                          "PF_HQ_ALIGNED_READS",
+                          #"PF_HQ_ALIGNED_READS",
                           "PCT_READS_ALIGNED_IN_PAIRS",
                           "PCT_CHIMERAS",
                           "PF_READS_IMPROPER_PAIRS",
@@ -79,23 +80,29 @@ class CovariatesExplainedByOthers:
                           "MDS3",
                           "MDS4",
                           "AMPAD-MSBB-V2-AFR",
+                          "CMC_HBCC_set1-AFR",
+                          "CMC_HBCC_set2-AFR",
                           "CMC-AFR",
+                          "ENA-AFR",
                           "LIBD_1M-AFR",
                           "LIBD_h650-AFR",
+                          "ENA-EAS",
                           "AMPAD-MAYO-V2-EUR",
                           "AMPAD-MSBB-V2-EUR",
-                          "AMPAD-ROSMAP-V2-EUR",
                           "BrainGVEX-V2-EUR",
+                          "CMC_HBCC_set2-EUR",
+                          "CMC_HBCC_set3-EUR",
                           "CMC-EUR",
+                          "ENA-EUR",
                           "GTEx-EUR",
-                          "GVEx",
+                          "GVEX-EUR",
                           "LIBD_1M-EUR",
                           "LIBD_h650-EUR",
                           "NABEC-H550-EUR",
                           "NABEC-H610-EUR",
                           "TargetALS-EUR",
                           "UCLA_ASD-EUR",
-                          "ENA-EU"
+#                          "OTHER"
                           ]
 
     @staticmethod
@@ -116,30 +123,43 @@ class CovariatesExplainedByOthers:
 
         null_matrix = self.cov_df.loc[self.tech_covs, :].copy()
 
-        r2_df = self.model(null_matrix.T, self.cov_df)
+        r2_df, coef_df = self.model(null_matrix.T, self.cov_df)
+        self.plot_bars(r2_df, self.groups, self.outdir, self.extension)
 
-        with pd.option_context('display.max_rows', None,
-                               'display.max_columns', None):
-            print(r2_df)
+        subset = coef_df.loc[:, r2_df.loc[r2_df["value"] == 1.0, "index"].values].copy()
+        self.plot_clustermap(subset, self.outdir, self.extension)
 
-        self.plot(r2_df, self.outdir, self.extension)
+        for index, row in subset.T.iterrows():
+            formula = ["{} = ".format(index)]
+            row.dropna(inplace=True)
+            for name, value in row.iteritems():
+                if round(value) != 0:
+                    formula.append("{} x {}".format(value, name))
+            print(''.join(formula))
 
     def model(self, null_matrix, cov_df):
-        print("Modelling each covariate with a linear model of the others.")
+        print("Modelling each covariate with a linear model of the null matrix.")
         r2_data = []
+        coef_df = None
         for index, y in cov_df.iterrows():
             X = null_matrix.copy()
             if index in X.columns:
                 X.drop([index], axis=1, inplace=True)
-            print(X)
-            print(y)
-            score = self.create_model(X, y)
+            score, coefficients = self.create_model(X, y)
             color = self.colormap[round(score, 2)]
             r2_data.append([index, score, color])
+            coefficients_df = pd.DataFrame([coefficients], index=[index], columns=X.columns).T
+            for col in null_matrix.columns:
+                if col not in coefficients_df.index:
+                    coefficients_df.loc[col, index] = np.nan
+            if coef_df is None:
+                coef_df = coefficients_df
+            else:
+                coef_df = coef_df.merge(coefficients_df, left_index=True, right_index=True)
 
         r2_df = pd.DataFrame(r2_data, columns=["index", "value", "color"])
 
-        return r2_df
+        return r2_df, coef_df
 
     @staticmethod
     def create_model(X, y):
@@ -161,39 +181,28 @@ class CovariatesExplainedByOthers:
         # Calculate the statistics of the model.
         score = r2_score(y, y_hat)
 
-        return score
+        return score, regressor.coef_
 
     @staticmethod
-    def plot(df, outdir, extension):
+    def plot_bars(df, groups, outdir, extension):
         print("Plotting")
 
-        indices = [(0, 20, "Tech. Cov.", ""),
-                   (20, 24, "MDS", "MDS"),
-                   (24, 42, "Cohorts", ""),
-                   (42, 43, "Sex", ""),
-                   (43, 93, "PCs", "Comp"),
-                   (93, 95, "PCA", ""),
-                   (95, 120, "McKenzie\nMG", "McKenzie_"),
-                   (120, 125, "CellMap\nPCA", "CellMapPCA_"),
-                   (125, 130, "CellMap\nNMF", "CellMapNMF_"),
-                   (130, 135, "CellMap\nNNLS", "CellMapNNLS_")]
-
-        gridspec_kw = {"height_ratios": [x[1] - x[0] for x in indices],
+        gridspec_kw = {"height_ratios": [x[1] - x[0] for x in groups],
                        "width_ratios": [0.3, 0.7]}
 
         sns.set(style="ticks", color_codes=True)
-        fig, axes = plt.subplots(ncols=2, nrows=len(indices),
+        fig, axes = plt.subplots(ncols=2, nrows=len(groups),
                                  figsize=(9, 28), gridspec_kw=gridspec_kw)
         plt.subplots_adjust(top=0.95, bottom=0.05, wspace=0.1, hspace=0.2)
 
-        for i in range(len(indices)):
+        for i in range(len(groups)):
             print("\tPlotting axes[{}, 1]".format(i))
             axes[i, 0].set_axis_off()
             ax = axes[i, 1]
             sns.despine(fig=fig, ax=ax)
-            (a, b, ylabel, remove) = indices[i]
+            (a, b, ylabel, remove) = groups[i]
             xlabel = ""
-            if i == (len(indices) - 1):
+            if i == (len(groups) - 1):
                 xlabel = "MLR R2"
 
             subset = df.iloc[a:b, :]
@@ -221,8 +230,40 @@ class CovariatesExplainedByOthers:
         fig.savefig(os.path.join(outdir, "covariates_explained_by_others.{}".format(extension)))
         plt.close()
 
+    @staticmethod
+    def plot_clustermap(df, outdir, extension):
+
+        for col in df.columns:
+            data = df.loc[:, col].copy()
+            data = data.to_frame()
+            data.dropna(inplace=True)
+
+            sns.set(rc={'figure.figsize': (12, 9)})
+            sns.set_style("ticks")
+            fig, ax = plt.subplots()
+            sns.despine(fig=fig, ax=ax)
+
+            g = sns.barplot(x=col, y=data.index, data=data,
+                            orient="h")
+            g.set_title(col)
+            g.set_ylabel('covariate',
+                         fontsize=18,
+                         fontweight='bold')
+            g.set_xlabel('coefficient',
+                         fontsize=18,
+                         fontweight='bold')
+            ax.tick_params(labelsize=10)
+            ax.set_yticks(range(len(data.index)))
+            ax.set_yticklabels(data.index)
+            plt.tight_layout()
+            fig.savefig(os.path.join(outdir,
+                                     "{}_coef_bars.{}".format(col,
+                                                              extension)))
+            plt.close()
+
     def print_arguments(self):
         print("Arguments:")
+        print("  > Groups: {}".format(self.groups))
         print("  > Covariate matrix shape: {}".format(self.cov_df.shape))
         print("  > Output directory: {}".format(self.outdir))
         print("")

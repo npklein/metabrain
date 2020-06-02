@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/04/23
-Last Changed: 2020/05/18
+Last Changed: 2020/06/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -79,13 +79,14 @@ class Main:
         self.geno_inpath = os.path.join(input_dir, filenames["genotype"])
         self.expr_inpath = os.path.join(input_dir, filenames["expression"])
         self.cov_inpath = os.path.join(input_dir, filenames["covariates"])
+        self.drop_covs = settings.get_setting("drop_covariates")
         self.tech_covs = settings.get_setting("technical_covariates")
         self.cov_outdir = settings.get_setting("covariates_folder")
         self.tech_cov_outdir = settings.get_setting("technical_covariates_folder")
         self.pvalues_filename = settings.get_setting("actual_pvalues_pickle_filename")
-        self.tvalues_filename = settings.get_setting("actual_tvalues_pickle_filename")
+        self.snp_tvalues_filename = settings.get_setting("snp_tvalues_pickle_filename")
+        self.inter_tvalues_filename = settings.get_setting("inter_tvalues_pickle_filename")
         self.perm_pvalues_filename = settings.get_setting("permuted_pvalues_pickle_filename")
-        self.perm_tvalues_filename = settings.get_setting("permuted_tvalues_pickle_filename")
         self.perm_orders_filename = settings.get_setting("permutations_order_pickle_filename")
         self.n_permutations = settings.get_setting("n_permutations")
         self.max_end_time = int(time.time()) + settings.get_setting("max_runtime_in_hours") * 60 * 60
@@ -150,16 +151,16 @@ class Main:
                              self.pvalues_filename,
                              filename_suffix=filename_suffix,
                              subdir=True, unique=True)
-            self.dump_pickle(container.get_tvalues(), full_outdir,
-                             self.tvalues_filename,
+            self.dump_pickle(container.get_snp_tvalues(), full_outdir,
+                             self.snp_tvalues_filename,
+                             filename_suffix=filename_suffix,
+                             subdir=True, unique=True)
+            self.dump_pickle(container.get_inter_tvalues(), full_outdir,
+                             self.inter_tvalues_filename,
                              filename_suffix=filename_suffix,
                              subdir=True, unique=True)
             self.dump_pickle(container.get_perm_pvalues(), full_outdir,
                              self.perm_pvalues_filename,
-                             filename_suffix=filename_suffix,
-                             subdir=True, unique=True)
-            self.dump_pickle(container.get_perm_tvalues(), full_outdir,
-                             self.perm_tvalues_filename,
                              filename_suffix=filename_suffix,
                              subdir=True, unique=True)
 
@@ -197,11 +198,14 @@ class Main:
                                            range(1,  self.skip_rows + 1)],
                                  nrows=self.n_eqtls)
 
+        # Drop the covariates we don't want.
+        if len(self.drop_covs) > 0:
+            cov_df.drop(self.drop_covs, axis=0, inplace=True)
+
         # Split the covariate table into covariates of interest and technical
         # covariates.
         print("Extracting technical covariates data frame")
         tech_cov_df = cov_df.loc[self.tech_covs, :].copy()
-        # cov_df.drop(self.tech_covs, axis=0, inplace=True)
         print("\tShape: {}".format(tech_cov_df.shape))
 
         # Replace -1 with NaN in the genotype dataframe. This way we can
@@ -289,6 +293,9 @@ class Main:
                 df_null, rss_null, _ = self.create_model(null_matrix,
                                                          expression)
 
+                if self.verbose:
+                    print("\t\tn_null: {}\tdf_null: {}\trss_null: {}\t".format(n_null, df_null, rss_null))
+
                 # Loop over each permutation sample order. The first order
                 # is the normal order and the remainder are random shuffles.
                 for order_id, sample_order in enumerate(permutation_orders):
@@ -334,12 +341,16 @@ class Main:
 
                     # Create the alternative model.
                     n_alt = alt_matrix.shape[0]
-                    df_alt, rss_alt, tvalue = self.create_model(alt_matrix,
-                                                                expression,
-                                                                inter_name)
+                    df_alt, rss_alt, alt_tvalues = self.create_model(alt_matrix,
+                                                                     expression,
+                                                                     tvalue_cols=[genotype.name, inter_name])
+
+                    if self.verbose:
+                        print("\t\t\tn_alt: {}\tdf_alt: {}\trss_alt: {}\talt_tvalues: {}".format(n_alt, df_alt, rss_alt, alt_tvalues))
 
                     # Safe the t-values.
-                    storage.add_value(cov_name, order_id, "tvalue", tvalue)
+                    storage.add_value(cov_name, order_id, "snp_tvalue", alt_tvalues[genotype.name])
+                    storage.add_value(cov_name, order_id, "inter_tvalue", alt_tvalues[inter_name])
 
                     # Make sure the n's are identical.
                     if n_null != n_alt:
@@ -352,6 +363,9 @@ class Main:
                     fvalue = self.calc_f_value(rss_null, rss_alt,
                                                df_null, df_alt, n_null)
                     pvalue = self.get_p_value(fvalue, df_null, df_alt, n_null)
+
+                    if self.verbose:
+                        print("\t\t\tfvalue: {}\tpvalue: {}".format(fvalue, pvalue))
 
                     # Safe the p-values.
                     storage.add_value(cov_name, order_id, "pvalue", pvalue)
@@ -466,17 +480,18 @@ class Main:
         f.close()
 
     @staticmethod
-    def create_model(X, y, name=None):
+    def create_model(X, y, tvalue_cols=None):
         """
         Method for creating a multilinear model.
 
         :param X: DataFrame, the matrix with rows as samples and columns as
                              dimensions.
         :param y: Series, the outcome values.
-        :param name: string, the name of the variable accessing for the t-value.
+        :param tvalue_cols: list, the name(s) of the variable(s) to get
+                            tvalue(s) for.
         :return df: int, the degrees of freedom of this model.
         :return ssr: float, the residual sum of squares of this fit.
-        :return tvalue: float, beta  / std error.
+        :return tvalue: dict, beta  / std error.
         """
         # # Filter on features with no standard deviation.
         # stds = X.std(axis=0) > 0
@@ -490,14 +505,20 @@ class Main:
         df = X.shape[1]
         ssr = ols_result.ssr
 
-        tvalue = 0
-        if name and name in X.columns:
-            coef = ols_result.params[name]
-            std_err = ols_result.bse[name]
-            if std_err > 0:
-                tvalue = coef / std_err
+        tvalues = {}
+        if tvalue_cols is not None:
+            for col in tvalue_cols:
+                tvalue = 0
+                if col in X.columns:
+                    coef = ols_result.params[col]
+                    std_err = ols_result.bse[col]
+                    if std_err > 0:
+                        tvalue = coef / std_err
+                else:
+                    tvalue = np.nan
+                tvalues[col] = tvalue
 
-        return df, ssr, tvalue
+        return df, ssr, tvalues
 
     @staticmethod
     def calc_f_value(rss1, rss2, df1, df2, n):
@@ -562,6 +583,7 @@ class Main:
         print("  > Expression datafile: {}".format(self.expr_inpath))
         print("  > Covariates datafile: {}".format(self.cov_inpath))
         print("  > Output directory: {}".format(self.outdir))
+        print("  > Drop covariates: {}".format(self.drop_covs))
         print("  > Technical covariates: {}".format(self.tech_covs))
         print("  > Permutations: {}".format(self.n_permutations))
         print("  > Panic datetime: {}".format(panic_time_string))

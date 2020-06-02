@@ -17,8 +17,10 @@
   "interaction_filenames": {
     "pvalues": "",
     "zscores": "",
-    "tvalues": ""
+    "snp_tvalues": "",
+    "inter_tvalues": ""
   },
+  "groups": [],
   "celltypes": ["CellTypeA"],
   "colormap": {
     "CellTypeA": "#hexcode",
