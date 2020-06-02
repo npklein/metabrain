@@ -1,7 +1,7 @@
 """
 File:         deconvolution_covariate_comparison.py
 Created:      2020/04/15
-Last Changed: 2020/05/25
+Last Changed: 2020/06/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -29,6 +29,7 @@ import pandas as pd
 import scipy.stats as stats
 import seaborn as sns
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
@@ -51,13 +52,20 @@ class DeconvolutionCovariateComparison:
 
         # Extract the required data.
         print("Loading data")
+        self.groups = dataset.get_groups()
+        self.cellmap_methods = dataset.get_cellmap_methods()
+        self.marker_genes = dataset.get_marker_genes()
         self.cov_df = dataset.get_cov_df()
 
     def start(self):
         print("Plotting deconvolution convariate comparison.")
         self.print_arguments()
         corr_df, pval_df = self.correlate(self.cov_df)
-        self.plot(corr_df, pval_df, self.outdir, self.extension)
+
+        prefixes = [x[0] for x in self.cellmap_methods]
+        prefixes.append(self.marker_genes)
+        prefixes = [x.replace("_", "") for x in prefixes]
+        self.plot(corr_df, pval_df, self.groups, prefixes, self.outdir, self.extension)
 
     @staticmethod
     def correlate(df):
@@ -66,25 +74,21 @@ class DeconvolutionCovariateComparison:
         pval_df = pd.DataFrame("", index=df.index, columns=df.index)
         for i, row1 in enumerate(df.index):
             for j, row2 in enumerate(df.index):
-                if i >= j:
-                    coef, p = stats.spearmanr(df.loc[row1, :], df.loc[row2, :])
-                    corr_df.loc[row1, row2] = coef
-                    pval_df.loc[row1, row2] = p_value_to_symbol(p)
+                coef, p = stats.spearmanr(df.loc[row1, :], df.loc[row2, :])
+                corr_df.loc[row1, row2] = coef
+                pval_df.loc[row1, row2] = p_value_to_symbol(p)
 
         return corr_df, pval_df
 
-    @staticmethod
-    def plot(corr_df, pval_df, outdir, extension):
+    def plot(self, corr_df, pval_df, groups, prefixes, outdir, extension):
         print("Plotting")
 
-        indices = [(95, 100, "McKenzie\nMG", "McKenzie_"),
-                   (100, 105, "McKenzie\nMG", "McKenzie_"),
-                   (105, 110, "McKenzie\nMG", "McKenzie_"),
-                   (110, 115, "McKenzie\nMG", "McKenzie_"),
-                   (115, 120, "McKenzie\nMG", "McKenzie_"),
-                   (120, 125, "CellMap\nPCA", "CellMapPCA_"),
-                   (125, 130, "CellMap\nNMF", "CellMapNMF_"),
-                   (130, 135, "CellMap\nNNLS", "CellMapNNLS_")]
+        decon_groups = []
+        for group in groups:
+            for prefix in prefixes:
+                if group[3] == prefix:
+                    decon_groups.append(group)
+                    break
 
         cmap = plt.cm.RdBu_r
         norm = matplotlib.colors.Normalize(vmin=-1, vmax=1)
@@ -94,43 +98,53 @@ class DeconvolutionCovariateComparison:
                           annot_kws={"size": 12, "color": "#808080"})
 
         sns.set(style="ticks", color_codes=True)
-        fig, axes = plt.subplots(ncols=len(indices), nrows=len(indices),
+        fig, axes = plt.subplots(ncols=len(decon_groups), nrows=len(decon_groups),
                                  figsize=(29, 21))
         plt.subplots_adjust(left=0.2, right=0.87, bottom=0.2, top=0.95,
                             wspace=0.1, hspace=0.1)
 
-        for i in range(len(indices)):
-            (ra, rb, ylabel, yremove) = indices[i]
-            for j in range(len(indices)):
-                (ca, cb, xlabel, xremove) = indices[j]
+        for i in range(len(decon_groups)):
+            (ra, rb, ylabel, yremove) = decon_groups[i]
+            for j in range(len(decon_groups)):
+                (ca, cb, xlabel, xremove) = decon_groups[j]
                 ax = axes[i, j]
 
                 if i >= j:
                     print("\tPlotting axes[{}, {}]".format(i, j))
                     xticklabels = False
-                    if i == len(indices) - 1:
+                    if i == len(decon_groups) - 1:
                         xticklabels = True
                     yticklabels = False
                     if j == 0:
                         yticklabels = True
 
                     data_subset = corr_df.iloc[ra:rb, ca:cb]
-                    anmnot_subset = pval_df.iloc[ra:rb, ca:cb]
+                    annot_subset = pval_df.iloc[ra:rb, ca:cb]
+
+                    if xremove == yremove:
+                        label = xremove.replace("_", "")
+                        index_index = 1
+                        if xremove.startswith("McKenzie"):
+                            label = '_'.join(data_subset.index[0].split("_")[0:2])
+                            index_index = 2
+                        self.heatmap(data_subset.copy(), annot_subset.copy(), label, index_index, outdir, extension)
 
                     sns.heatmap(data_subset,
-                                annot=anmnot_subset,
+                                annot=annot_subset,
                                 xticklabels=xticklabels,
                                 yticklabels=yticklabels,
                                 ax=ax,
                                 **heatmapkws)
 
                     if xticklabels:
-                        new_xticks = [x.replace(xremove, '').replace("_", " ") for x in data_subset.columns]
+                        new_xticks = [x.replace(xremove, '').replace("_", " ")
+                                      for x in data_subset.columns]
                         ax.set_xticklabels(new_xticks, fontsize=14, rotation=90)
                         ax.set_xlabel(xlabel, fontsize=16, fontweight='bold')
 
                     if yticklabels:
-                        new_yticks = [y.replace(yremove, '').replace("_", " ") for y in data_subset.index]
+                        new_yticks = [y.replace(yremove, '').replace("_", " ")
+                                      for y in data_subset.index]
                         ax.set_yticklabels(new_yticks, fontsize=14, rotation=0)
                         ax.set_ylabel(ylabel, fontsize=16, fontweight='bold')
                 else:
@@ -140,14 +154,92 @@ class DeconvolutionCovariateComparison:
         sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
         sm.set_array([])
         fig.align_ylabels(axes[:, 0])
-        fig.align_xlabels(axes[len(indices) - 1, :])
+        fig.align_xlabels(axes[len(decon_groups) - 1, :])
         fig.colorbar(sm, cax=cax)
-        fig.suptitle('Deconvolution Covariate Correlations', fontsize=40, fontweight='bold')
-        fig.savefig(os.path.join(outdir, "deconvolution_covariate_comparison.{}".format(extension)))
+        fig.suptitle('Deconvolution Covariate Correlations', fontsize=40,
+                     fontweight='bold')
+        fig.savefig(os.path.join(outdir,
+                                 "deconvolution_covariate_comparison.{}".format(
+                                     extension)))
+        plt.close()
+
+        mg = ["McKenzie_Astrocyte_AQP4", "McKenzie_EndothelialCell_KDR", "McKenzie_Microglia_TLR2", "McKenzie_Neuron_CCK", "McKenzie_Oligodendrocyte_CA2"]
+        data_subset = corr_df.loc[mg, mg]
+        annot_subset = pval_df.loc[mg, mg]
+        label = "McKenzie_best"
+        index_index = 1
+        self.heatmap(data_subset, annot_subset, label, index_index, outdir, extension)
+        exit()
+
+        comparisons = [["McKenzie_Neuron_CCK", "CellMapPCA_Neuron_PC1", "CellMapNMF_Neuron_C1", "CellMapNNLS_Neuron"],
+                       ["McKenzie_Oligodendrocyte_CA2", "CellMapPCA_Oligodendrocyte_PC1", "CellMapNMF_Oligodendrocyte_C1", "CellMapNNLS_Oligodendrocyte"],
+                       ["McKenzie_EndothelialCell_KDR", "CellMapPCA_EndothelialCell_PC1", "CellMapNMF_EndothelialCell_C1", "CellMapNNLS_EndothelialCell"],
+                       ["McKenzie_Microglia_TLR2", "CellMapPCA_Macrophage_PC1", "CellMapNMF_Macrophage_C1", "CellMapNNLS_Macrophage"],
+                       ["McKenzie_Astrocyte_AQP4", "CellMapPCA_Astrocyte_PC1", "CellMapNMF_Astrocyte_C1", "CellMapNNLS_Astrocyte"]]
+        for comparison, celltype in zip(comparisons, ["Neuron", "Oligodendrocyte", "EndothelialCell", "Microglia", "Astrocyte"]):
+            data_subset = corr_df.loc[comparison, comparison]
+            annot_subset = pval_df.loc[comparison, comparison]
+            data_subset.index = ["Mcke", "PCA", "NMF", "NNLS"]
+            data_subset.columns = ["Mcke", "PCA", "NMF", "NNLS"]
+            annot_subset.index = ["Mcke", "PCA", "NMF", "NNLS"]
+            annot_subset.columns = ["Mcke", "PCA", "NMF", "NNLS"]
+            index_index = 0
+            self.heatmap(data_subset, annot_subset, celltype, index_index,
+                         outdir, extension)
+
+    @staticmethod
+    def heatmap(data_subset, annot_subset, label, index_index, outdir, extension):
+        abbreviations = {"Neuron": "neuro", "Oligodendrocyte": "oligo",
+                         "EndothelialCell": "endo", "Microglia": "micro",
+                         "Macrophage": "macro", "Astrocyte": "astro",
+                         "CellMapNNLS": "NNLS", "CellMapPCA_PC1": "PCA",
+                         "CellMapNMF_C1": "NMF", "McKenzie": "McKe"}
+        new_index = []
+        for x in data_subset.index:
+            x = x.split("_")[index_index]
+            if x in abbreviations.keys():
+                x = abbreviations[x]
+            new_index.append(x)
+        new_cols = []
+        for x in data_subset.columns:
+            x = x.split("_")[index_index]
+            if x in abbreviations.keys():
+                x = abbreviations[x]
+            new_cols.append(x)
+
+        data_subset.index = new_index
+        data_subset.columns = new_cols
+
+        for i in range(len(data_subset.index)):
+            for j in range(len(data_subset.columns)):
+                if i < j:
+                    data_subset.iloc[i, j] = np.nan
+                    annot_subset.iloc[i, j] = ""
+
+        sns.set(color_codes=True)
+        g = sns.clustermap(data_subset, cmap="RdBu_r",
+                           row_cluster=False, col_cluster=False,
+                           yticklabels=True, xticklabels=True, square=True,
+                           vmin=-1, vmax=1, annot=annot_subset, fmt='',
+                           annot_kws={"size": 16, "color": "#000000"},
+                           figsize=(12, 12))
+        plt.setp(
+            g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_ymajorticklabels(),
+                                         fontsize=25, rotation=0))
+        plt.setp(
+            g.ax_heatmap.set_xticklabels(g.ax_heatmap.get_xmajorticklabels(),
+                                         fontsize=25, rotation=45))
+        #g.cax.set_visible(False)
+        plt.tight_layout()
+        g.savefig(os.path.join(outdir, "{}_clustermap.{}".format(label,
+                                                                 extension)))
         plt.close()
 
     def print_arguments(self):
         print("Arguments:")
+        print("  > Groups: {}".format(self.groups))
+        print("  > CellMap Methods: {}".format(self.cellmap_methods))
+        print("  > Marker Genes: {}".format(self.marker_genes))
         print("  > Covariate matrix shape: {}".format(self.cov_df.shape))
         print("  > Output directory: {}".format(self.outdir))
         print("")

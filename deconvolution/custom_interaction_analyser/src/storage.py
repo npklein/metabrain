@@ -1,7 +1,7 @@
 """
 File:         storage.py
 Created:      2020/05/06
-Last Changed: 2020/05/11
+Last Changed: 2020/06/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -62,8 +62,10 @@ class Storage:
             self.error = True
             return
 
-        if category == "tvalue":
-            container.add_tvalue(order_id, value)
+        if category == "snp_tvalue":
+            container.add_snp_tvalue(order_id, value)
+        elif category == "inter_tvalue":
+            container.add_inter_tvalue(order_id, value)
         elif category == "pvalue":
             container.add_pvalue(order_id, value)
         else:

@@ -1,7 +1,7 @@
 """
 File:         create_matrices.py
 Created:      2020/03/12
-Last Changed: 2020/05/13
+Last Changed: 2020/06/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -64,7 +64,7 @@ class CreateMatrices:
         self.geno_outpath = os.path.join(self.outdir, "genotype_table.txt.gz")
         self.alleles_outpath = os.path.join(self.outdir, "genotype_alleles.txt.gz")
         self.expr_outpath = os.path.join(self.outdir, "expression_table.txt.gz")
-        self.group_outpath = os.path.join(self.outdir, "groups.pkl")
+        # self.group_outpath = os.path.join(self.outdir, "groups.pkl")
 
         # Create empty variable.
         self.complete_expr_matrix = None
@@ -77,14 +77,13 @@ class CreateMatrices:
         if check_file_exists(self.geno_outpath) and \
                 check_file_exists(self.alleles_outpath) and \
                 check_file_exists(self.expr_outpath) and \
-                check_file_exists(self.group_outpath) and \
                 not self.force:
             print("Skipping step.")
             return
 
         # Remove the output files.
         for outfile in [self.geno_outpath, self.alleles_outpath,
-                        self.expr_outpath, self.group_outpath]:
+                        self.expr_outpath]:
             if os.path.isfile(outfile):
                 print("Removing file: {}.".format(outfile))
                 os.remove(outfile)
@@ -108,9 +107,9 @@ class CreateMatrices:
         expr_str_buffer = ["-" + "\t" + "\t".join(self.sample_order) + "\n"]
         allele_str_buffer = ["-" + "\t" + "\t".join(list(allele_df.columns)) + "\n"]
 
-        saved_profile_genes = []
-        groups = []
-        new_group_id = 0
+        # saved_profile_genes = []
+        # groups = []
+        # new_group_id = 0
         n_snps = self.eqtl_df.shape[0]
         for i, row in self.eqtl_df.iterrows():
             if (i % 250 == 0) or (i == (n_snps - 1)):
@@ -170,29 +169,29 @@ class CreateMatrices:
                 expression.iloc[0, :].astype(str).values) + "\n"
             expr_str_buffer.append(expr_str)
 
-            # Create an eQTL object.
-            new_eqtl = Eqtl(snp_name, i, genotype, expression)
-
-            # Get the samples indices of the eQTl.
-            samples = new_eqtl.get_samples()
-            samples_indices = new_eqtl.get_sample_indices()
-
-            # Assign the group.
-            matches = False
-            if groups:
-                # Check if there is a group with these samples.
-                for group in groups:
-                    if group.matches(samples_indices):
-                        group.add_eqtl(new_eqtl)
-                        matches = True
-                        break
-
-            # Add a new group.
-            if not matches:
-                new_group = Group(new_group_id, samples)
-                new_group.add_eqtl(new_eqtl)
-                groups.append(new_group)
-                new_group_id = new_group_id + 1
+            # # Create an eQTL object.
+            # new_eqtl = Eqtl(snp_name, i, genotype, expression)
+            #
+            # # Get the samples indices of the eQTl.
+            # samples = new_eqtl.get_samples()
+            # samples_indices = new_eqtl.get_sample_indices()
+            #
+            # # Assign the group.
+            # matches = False
+            # if groups:
+            #     # Check if there is a group with these samples.
+            #     for group in groups:
+            #         if group.matches(samples_indices):
+            #             group.add_eqtl(new_eqtl)
+            #             matches = True
+            #             break
+            #
+            # # Add a new group.
+            # if not matches:
+            #     new_group = Group(new_group_id, samples)
+            #     new_group.add_eqtl(new_eqtl)
+            #     groups.append(new_group)
+            #     new_group_id = new_group_id + 1
 
         # Write output files.
         if geno_str_buffer:
@@ -204,10 +203,10 @@ class CreateMatrices:
         if allele_str_buffer:
             self.write_buffer(self.alleles_outpath, allele_str_buffer)
 
-        # Pickle the groups.
-        print("Writing group pickle file.")
-        with open(self.group_outpath, "wb") as f:
-            pickle.dump(groups, f)
+        # # Pickle the groups.
+        # print("Writing group pickle file.")
+        # with open(self.group_outpath, "wb") as f:
+        #     pickle.dump(groups, f)
 
         # Remove old dataframes.
         del geno_df, expr_df
@@ -254,9 +253,6 @@ class CreateMatrices:
     def get_complete_expr_matrix(self):
         return self.complete_expr_matrix
 
-    def get_group_outpath(self):
-        return self.group_outpath
-
     def print_arguments(self):
         print("Arguments:")
         print("  > Genotype input file: {}".format(self.geno_file))
@@ -264,7 +260,7 @@ class CreateMatrices:
         print("  > Genotype output path: {}".format(self.geno_outpath))
         print("  > Alleles output path: {}".format(self.alleles_outpath))
         print("  > Expression output path: {}".format(self.expr_outpath))
-        print("  > Groups pickle output path: {}".format(self.group_outpath))
+        # print("  > Groups pickle output path: {}".format(self.group_outpath))
         print("  > GTE input shape: {}".format(self.gte_df.shape))
         print("  > eQTL input shape: {}".format(self.eqtl_df.shape))
         print("  > Output directory: {}".format(self.outdir))

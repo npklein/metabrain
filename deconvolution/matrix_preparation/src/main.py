@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/12
-Last Changed: 2020/04/15
+Last Changed: 2020/06/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -222,20 +222,20 @@ class Main:
         cmm.start()
         del cmm
 
-        # Step 9. Create the group matrices.
-        print("\n### STEP9 ###\n")
-        cg = CreateGroups(
-            settings=self.settings.get_setting('create_groups'),
-            eqtl_df=eqtl_df.copy(),
-            geno_df=geno_df.copy(),
-            alleles_df=alleles_df.copy(),
-            expr_df=expr_df.copy(),
-            cov_df=cov_df.copy(),
-            groups_file=cm.get_group_outpath(),
-            force=self.force_dict['create_groups'],
-            outdir=self.outdir)
-        cg.start()
-        del cg
+        # # Step 9. Create the group matrices.
+        # print("\n### STEP9 ###\n")
+        # cg = CreateGroups(
+        #     settings=self.settings.get_setting('create_groups'),
+        #     eqtl_df=eqtl_df.copy(),
+        #     geno_df=geno_df.copy(),
+        #     alleles_df=alleles_df.copy(),
+        #     expr_df=expr_df.copy(),
+        #     cov_df=cov_df.copy(),
+        #     groups_file=cm.get_group_outpath(),
+        #     force=self.force_dict['create_groups'],
+        #     outdir=self.outdir)
+        # cg.start()
+        # del cg
 
         # Step 10. Create the regression matrices.
         print("\n### STEP10 ###\n")

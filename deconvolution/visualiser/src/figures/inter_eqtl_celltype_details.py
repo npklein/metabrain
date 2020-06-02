@@ -20,15 +20,11 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Standard imports.
-import math
 import os
 
 # Third party imports.
 import seaborn as sns
-import numpy as np
-import pandas as pd
 import matplotlib
-
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
@@ -54,7 +50,7 @@ class IntereQTLCelltypeDetails:
         self.eqtl_df = dataset.get_eqtl_df()
         self.geno_df = dataset.get_geno_df()
         self.zscore_df = dataset.get_inter_cov_zscore_df()
-        self.tvalue_df = dataset.get_inter_cov_tvalue_df()
+        self.tvalue_df = dataset.get_inter_cov_inter_tvalue_df()
         self.cellmap_methods = dataset.get_cellmap_methods()
         self.marker_genes = dataset.get_marker_genes()
         self.z_score_cutoff = dataset.get_significance_cutoff()
@@ -119,12 +115,11 @@ class IntereQTLCelltypeDetails:
                 df.columns = ["tvalue", "zscore"]
                 df.index = ["{}".format(x.replace(prefix, "").replace(suffix, "")) for x in df.index]
 
-                self.plot_forest(snp_name, probe_name, hgnc_name, name, df,
-                                 self.z_score_cutoff, eqtl_outdir, self.extension)
+                self.plot_forest(hgnc_name, name, df, self.z_score_cutoff,
+                                 eqtl_outdir, self.extension)
 
     @staticmethod
-    def plot_forest(snp_name, probe_name, hgnc_name, method, data,
-                    z_score_cutoff, outdir, extension):
+    def plot_forest(hgnc_name, method, data, z_score_cutoff, outdir, extension):
         hue_list = []
         for zscore in data["zscore"]:
             add = "not signif."
@@ -179,54 +174,6 @@ class IntereQTLCelltypeDetails:
 
         plt.tight_layout()
         fig.savefig(os.path.join(outdir, method + "_stripplot.{}".format(extension)))
-        plt.close()
-
-    @staticmethod
-    def plot_radar(name, df, outdir, extension):
-        max_val = math.ceil(df.values.max())
-        steps = [round(x, 2) for x in np.linspace(0, max_val, 4)]
-
-        categories = list(df.columns)
-        N = len(categories)
-
-        angles = [n / float(N) * 2 * math.pi for n in range(N)]
-        angles += angles[:1]
-
-        ax = plt.subplot(111, polar=True)
-
-        ax.set_theta_offset(math.pi / 2)
-        ax.set_theta_direction(-1)
-
-        plt.xticks(angles[:-1], categories)
-        ax.set_rlabel_position(0)
-        plt.yticks(steps[1:], steps[1:], color="grey", size=7)
-        plt.ylim(0, max_val)
-
-        colors = ['b', 'r']
-        for i, (index, row) in enumerate(df.iterrows()):
-            values = row.values.flatten().tolist()
-            values += values[:1]
-            ax.plot(angles, values, linewidth=1, linestyle='solid', label=index)
-            ax.fill(angles, values, colors[i], alpha=0.1)
-
-        plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
-
-        plt.gcf().canvas.draw()
-        labels = []
-        half_step = 360.0 / N / 2
-        angles = [0.0, 8 * half_step, half_step, 9 * half_step, 2 * half_step]
-        print(angles)
-        for label, angle in zip(ax.get_xticklabels(), angles):
-            print(label, angle)
-            x, y = label.get_position()
-            lab = ax.text(x, y, label.get_text(),
-                          transform=label.get_transform(),
-                          ha=label.get_ha(), va=label.get_va())
-            lab.set_rotation(angle)
-            labels.append(lab)
-        ax.set_xticklabels([])
-
-        plt.savefig(os.path.join(outdir, name + "_radarplot.{}".format(extension)))
         plt.close()
 
     def print_arguments(self):

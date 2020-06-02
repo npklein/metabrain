@@ -1,7 +1,7 @@
 """
 File:         container.py
 Created:      2020/05/06
-Last Changed:
+Last Changed: 2020/06/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -32,39 +32,33 @@ class Container:
     def __init__(self, colnames):
         # Initialize the result list.
         self.pvalues_buffer = [[-1, "-"] + colnames]
-        self.tvalues_buffer = [[-1, "-"] + colnames]
+        self.snp_tvalues_buffer = [[-1, "-"] + colnames]
+        self.inter_tvalues_buffer = [[-1, "-"] + colnames]
         self.perm_pvalues_buffer = []
-        self.perm_tvalues_buffer = []
 
         # Initialize a new row.
         self.pvalues = None
-        self.tvalues = None
+        self.snp_tvalues = None
+        self.inter_tvalues = None
         self.perm_pvalues = None
-        self.perm_tvalues = None
 
     def add_row(self, eqtl_index, genotype_name):
         self.pvalues = [eqtl_index, genotype_name]
-        self.tvalues = [eqtl_index, genotype_name]
+        self.snp_tvalues = [eqtl_index, genotype_name]
+        self.inter_tvalues = [eqtl_index, genotype_name]
 
         self.perm_pvalues = []
-        self.perm_tvalues = []
 
     def store_row(self):
         self.pvalues_buffer.append(self.pvalues)
-        self.tvalues_buffer.append(self.tvalues)
+        self.snp_tvalues_buffer.append(self.snp_tvalues)
+        self.inter_tvalues_buffer.append(self.inter_tvalues)
         self.perm_pvalues_buffer.extend(self.perm_pvalues)
-        self.perm_tvalues_buffer.extend(self.perm_tvalues)
 
         self.pvalues = None
-        self.tvalues = None
+        self.snp_tvalues = None
+        self.inter_tvalues = None
         self.perm_pvalues = None
-        self.perm_tvalues = None
-
-    def add_tvalue(self, order_id, value):
-        if order_id == 0:
-            self.tvalues.append(value)
-        else:
-            self.perm_tvalues.append(value)
 
     def add_pvalue(self, order_id, value):
         if order_id == 0:
@@ -72,14 +66,26 @@ class Container:
         else:
             self.perm_pvalues.append(value)
 
+    def add_snp_tvalue(self, order_id, value):
+        if order_id == 0:
+            self.snp_tvalues.append(value)
+        else:
+            pass
+
+    def add_inter_tvalue(self, order_id, value):
+        if order_id == 0:
+            self.inter_tvalues.append(value)
+        else:
+            pass
+
     def get_pvalues(self):
         return self.pvalues_buffer
 
-    def get_tvalues(self):
-        return self.tvalues_buffer
+    def get_snp_tvalues(self):
+        return self.snp_tvalues_buffer
+
+    def get_inter_tvalues(self):
+        return self.inter_tvalues_buffer
 
     def get_perm_pvalues(self):
         return self.perm_pvalues_buffer
-
-    def get_perm_tvalues(self):
-        return self.perm_tvalues_buffer

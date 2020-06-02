@@ -1,7 +1,7 @@
 """
 File:         dataset.py
 Created:      2020/03/16
-Last Changed: 2020/05/20
+Last Changed: 2020/06/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -50,8 +50,10 @@ class Dataset:
         inter_filenames = settings.get_setting("interaction_filenames")
         self.pvalue_filename = inter_filenames["pvalues"]
         self.zscore_filename = inter_filenames["zscores"]
-        self.tvalue_filename = inter_filenames["tvalues"]
+        self.snp_tvalue_filename = inter_filenames["snp_tvalues"]
+        self.inter_tvalue_filename = inter_filenames["inter_tvalues"]
 
+        self.groups = settings.get_setting("groups")
         self.celltypes = settings.get_setting("celltypes")
         self.colormap = settings.get_setting("colormap")
         self.cellmap_methods = settings.get_setting("cellmap_method_prefix_and_suffix")
@@ -78,8 +80,10 @@ class Dataset:
         self.inter_tech_cov_pvalue_df = None
         self.inter_cov_zscore_df = None
         self.inter_tech_cov_zscore_df = None
-        self.inter_cov_tvalue_df = None
-        self.inter_tech_cov_tvalue_df = None
+        self.inter_cov_snp_tvalue_df = None
+        self.inter_tech_cov_snp_tvalue_df = None
+        self.inter_cov_inter_tvalue_df = None
+        self.inter_tech_cov_inter_tvalue_df = None
         self.eqtl_and_interactions_df = None
         self.marker_df = None
 
@@ -96,12 +100,17 @@ class Dataset:
         self.get_inter_tech_cov_pvalue_df()
         self.get_inter_cov_zscore_df()
         self.get_inter_tech_cov_zscore_df()
-        self.get_inter_cov_tvalue_df()
-        self.get_inter_tech_cov_tvalue_df()
+        self.get_inter_cov_snp_tvalue_df()
+        self.get_inter_tech_cov_snp_tvalue_df()
+        self.get_inter_cov_inter_tvalue_df()
+        self.get_inter_tech_cov_inter_tvalue_df()
         self.get_eqtl_and_interactions_df()
         self.get_marker_df()
         print("Validation finished.")
         exit()
+
+    def get_groups(self):
+        return self.groups
 
     def get_celltypes(self):
         return self.celltypes
@@ -246,37 +255,65 @@ class Dataset:
             self.validate()
         return self.inter_tech_cov_zscore_df
 
-    def get_inter_cov_tvalue_df(self):
-        if self.inter_cov_tvalue_df is None:
-            inter_cov_tvalue_df = load_dataframe(
+    def get_inter_cov_snp_tvalue_df(self):
+        if self.inter_cov_snp_tvalue_df is None:
+            inter_cov_snp_tvalue_df = load_dataframe(
                 inpath=os.path.join(self.inter_input_dir,
                                     self.inter_cov_subdir,
-                                    self.tvalue_filename),
+                                    self.snp_tvalue_filename),
                 header=0,
                 index_col=0)
             if self.interest is not None:
-                inter_cov_tvalue_df = inter_cov_tvalue_df.iloc[:,
-                                           self.interest]
-            self.inter_cov_tvalue_df = inter_cov_tvalue_df
+                inter_cov_snp_tvalue_df = inter_cov_snp_tvalue_df.iloc[:, self.interest]
+            self.inter_cov_snp_tvalue_df = inter_cov_snp_tvalue_df
 
             self.validate()
-        return self.inter_cov_tvalue_df
+        return self.inter_cov_snp_tvalue_df
 
-    def get_inter_tech_cov_tvalue_df(self):
-        if self.inter_tech_cov_tvalue_df is None:
-            inter_tech_cov_tvalue_df = load_dataframe(
+    def get_inter_tech_cov_snp_tvalue_df(self):
+        if self.inter_tech_cov_snp_tvalue_df is None:
+            inter_tech_cov_snp_tvalue_df = load_dataframe(
                 inpath=os.path.join(self.inter_input_dir,
                                     self.inter_tech_cov_subdir,
-                                    self.tvalue_filename),
+                                    self.snp_tvalue_filename),
                 header=0,
                 index_col=0)
             if self.interest is not None:
-                inter_tech_cov_tvalue_df = inter_tech_cov_tvalue_df.iloc[:,
-                                           self.interest]
-            self.inter_tech_cov_tvalue_df = inter_tech_cov_tvalue_df
+                inter_tech_cov_snp_tvalue_df = inter_tech_cov_snp_tvalue_df.iloc[:, self.interest]
+            self.inter_tech_cov_snp_tvalue_df = inter_tech_cov_snp_tvalue_df
 
             self.validate()
-        return self.inter_tech_cov_tvalue_df
+        return self.inter_tech_cov_snp_tvalue_df
+
+    def get_inter_cov_inter_tvalue_df(self):
+        if self.inter_cov_inter_tvalue_df is None:
+            inter_cov_inter_tvalue_df = load_dataframe(
+                inpath=os.path.join(self.inter_input_dir,
+                                    self.inter_cov_subdir,
+                                    self.inter_tvalue_filename),
+                header=0,
+                index_col=0)
+            if self.interest is not None:
+                inter_cov_inter_tvalue_df = inter_cov_inter_tvalue_df.iloc[:, self.interest]
+            self.inter_cov_inter_tvalue_df = inter_cov_inter_tvalue_df
+
+            self.validate()
+        return self.inter_cov_inter_tvalue_df
+
+    def get_inter_tech_cov_inter_tvalue_df(self):
+        if self.inter_tech_cov_inter_tvalue_df is None:
+            inter_tech_cov_inter_tvalue_df = load_dataframe(
+                inpath=os.path.join(self.inter_input_dir,
+                                    self.inter_tech_cov_subdir,
+                                    self.inter_tvalue_filename),
+                header=0,
+                index_col=0)
+            if self.interest is not None:
+                inter_tech_cov_inter_tvalue_df = inter_tech_cov_inter_tvalue_df.iloc[:, self.interest]
+            self.inter_tech_cov_inter_tvalue_df = inter_tech_cov_inter_tvalue_df
+
+            self.validate()
+        return self.inter_tech_cov_inter_tvalue_df
 
     def get_eqtl_and_interactions_df(self):
         # Get the complete input dataframes.
@@ -292,7 +329,7 @@ class Dataset:
         if df1.shape[0] != df2.shape[0]:
             print("Input files do not match (1).")
             exit()
-        for i in range(df1.shape[1]):
+        for i in range(df1.shape[0]):
             if not df2.index[i].startswith(df1["SNPName"][i]):
                 print("Input files do not match (2).")
                 exit()
