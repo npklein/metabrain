@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect_celltype.py
 Created:      2020/04/20
-Last Changed: 2020/06/02
+Last Changed: 2020/06/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -46,6 +46,9 @@ class IntereQTLEffectCelltype:
         self.outdir = os.path.join(outdir, 'inter_eqtl_effect_celltype')
         prepare_output_dir(self.outdir)
         self.extension = extension
+
+        # Set the right pdf font for exporting.
+        matplotlib.rcParams['pdf.fonttype'] = 42
 
         # Extract the required data.
         print("Loading data")

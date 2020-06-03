@@ -1,7 +1,7 @@
 """
-File:         cohort_clustermap.py
+File:         covariate_heatmap.py
 Created:      2020/06/02
-Last Changed:
+Last Changed: 2020/06/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -32,7 +32,7 @@ import matplotlib.pyplot as plt
 from general.utilities import prepare_output_dir
 
 
-class CohortClustermap:
+class CovariateHeatmap:
     def __init__(self, dataset, outdir, extension):
         """
         The initializer for the class.
@@ -45,59 +45,39 @@ class CohortClustermap:
         prepare_output_dir(self.outdir)
         self.extension = extension
 
+        # Set the right pdf font for exporting.
+        matplotlib.rcParams['pdf.fonttype'] = 42
+
         # Extract the required data.
         print("Loading data")
         self.cov_df = dataset.get_cov_df()
-        self.cohorts = ["AMPAD-MSBB-V2-AFR",
-                        "CMC_HBCC_set1-AFR",
-                        "CMC_HBCC_set2-AFR",
-                        "CMC-AFR",
-                        "ENA-AFR",
-                        "LIBD_1M-AFR",
-                        "LIBD_h650-AFR",
-                        "ENA-EAS",
-                        "AMPAD-MAYO-V2-EUR",
-                        "AMPAD-MSBB-V2-EUR",
-                        "BrainGVEX-V2-EUR",
-                        "CMC_HBCC_set2-EUR",
-                        "CMC_HBCC_set3-EUR",
-                        "CMC-EUR",
-                        "ENA-EUR",
-                        "GTEx-EUR",
-                        "GVEX-EUR",
-                        "LIBD_1M-EUR",
-                        "LIBD_h650-EUR",
-                        "NABEC-H550-EUR",
-                        "NABEC-H610-EUR",
-                        "TargetALS-EUR",
-                        "UCLA_ASD-EUR",
-                        "OTHER"
-                        ]
 
     def start(self):
         print("Plotting convariate comparison.")
         self.print_arguments()
-        cohorts = self.cov_df.loc[self.cohorts, :].copy()
-        self.plot(cohorts, self.outdir, self.extension)
+        norm_df = self.normalize(self.cov_df)
+        self.plot(norm_df, self.outdir, self.extension)
+
+    @staticmethod
+    def normalize(df):
+        out_df = df.copy()
+        out_df = out_df.loc[out_df.std(axis=1) > 0, :]
+        out_df = out_df.subtract(out_df.mean(axis=1), axis=0).divide(out_df.std(axis=1), axis=0)
+        return out_df
 
     @staticmethod
     def plot(df, outdir, extension):
         sns.set(color_codes=True)
-        g = sns.clustermap(df, center=0.5, cmap="RdBu_r",
-                           vmin=0, vmax=1,
+        g = sns.clustermap(df, center=0.5, cmap="RdBu_r",  cbar=False,
                            yticklabels=True, xticklabels=False,
-                           dendrogram_ratio=(.1, .1),
+                           row_cluster=False, col_cluster=False,
                            figsize=(12, (.2 * (len(df.index)))))
-        g.cax.set_visible(False)
-        plt.setp(
-            g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_ymajorticklabels(),
-                                         fontsize=10))
-        g.savefig(os.path.join(outdir, "cohorts_clustermap.{}".format(extension)))
+        plt.setp(g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_ymajorticklabels(), fontsize=10))
+        g.savefig(os.path.join(outdir, "covariate_heatmap.{}".format(extension)))
         plt.close()
 
     def print_arguments(self):
         print("Arguments:")
         print("  > Covariate matrix shape: {}".format(self.cov_df.shape))
-        print("  > Cohorts: {}".format(self.cohorts))
         print("  > Output directory: {}".format(self.outdir))
         print("")

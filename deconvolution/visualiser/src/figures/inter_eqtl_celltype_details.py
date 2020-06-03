@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_celltype_details.py
 Created:      2020/05/20
-Last Changed: 2020/05/25
+Last Changed: 2020/06/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -44,6 +44,9 @@ class IntereQTLCelltypeDetails:
         self.outdir = os.path.join(outdir, 'inter_eqtl_celltype_details')
         prepare_output_dir(self.outdir)
         self.extension = extension
+
+        # Set the right pdf font for exporting.
+        matplotlib.rcParams['pdf.fonttype'] = 42
 
         # Extract the required data.
         print("Loading data")

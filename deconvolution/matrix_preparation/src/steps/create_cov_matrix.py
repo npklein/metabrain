@@ -1,7 +1,7 @@
 """
 File:         create_cov_matrices.py
 Created:      2020/03/12
-Last Changed: 2020/06/02
+Last Changed: 2020/06/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -51,6 +51,7 @@ class CreateCovMatrix:
         :param outdir: string, the output directory.
         """
         self.cov_file = settings["covariate_datafile"]
+        self.tech_covs = settings["technical_covariates"]
         self.cohorts = settings["cohorts"]
         self.ref_cohort = settings["reference_cohort"]
         self.pheno_file = settings["phenotype_datafile"]
@@ -90,8 +91,9 @@ class CreateCovMatrix:
         # read the covariates file.
         print("Loading covariate matrix.")
         cov_df = load_dataframe(inpath=self.cov_file, header=0, index_col=0)
-        cohorts_df = cov_df[self.cohorts]
-        cov_df = cov_df.drop(self.cohorts, axis=1)
+        tech_cov_df = cov_df[self.tech_covs].copy()
+        cohorts_df = cov_df[self.cohorts].copy()
+        del cov_df
 
         # validate the cohorts.
         print("Validating cohorts.")
@@ -139,14 +141,14 @@ class CreateCovMatrix:
         # merge.
         print("Merging matrices.")
         comb_cov = reduce(lambda left, right: pd.merge(left, right, left_index=True, right_index=True),
-                          [cov_df, cohorts_df, gender_df, eigen_df, cov_cor_df, marker_df, self.celltype_pcs.T, self.celltype_cs.T, self.deconvolution])
+                          [tech_cov_df, cohorts_df, gender_df, eigen_df, cov_cor_df, marker_df, self.celltype_pcs.T, self.celltype_cs.T, self.deconvolution])
         comb_cov = comb_cov.T
         comb_cov = comb_cov[self.sample_order]
         comb_cov.index.name = "-"
         print("\tShape: {}".format(comb_cov.shape))
 
         # Remove old dataframes.
-        del cov_df, cohorts_df, gender_df, eigen_df, cov_cor_df, marker_df
+        del tech_cov_df, cohorts_df, gender_df, eigen_df, cov_cor_df, marker_df
 
         return comb_cov
 
@@ -178,6 +180,7 @@ class CreateCovMatrix:
     def print_arguments(self):
         print("Arguments:")
         print("  > Covariates input file: {}".format(self.cov_file))
+        print("  > Technical Covarates: {}".format(self.tech_covs))
         print("  > Cohorts: {}".format(self.cohorts))
         print("  > Reference cohort: {}".format(self.ref_cohort))
         print("  > Phenotype input file: {}".format(self.pheno_file))

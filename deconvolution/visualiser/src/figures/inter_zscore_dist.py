@@ -1,7 +1,7 @@
 """
 File:         inter_zscores_dist.py
 Created:      2020/03/16
-Last Changed: 2020/05/25
+Last Changed: 2020/06/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -45,6 +45,9 @@ class InterZscoreDist:
         self.outdir = os.path.join(outdir, 'inter_zscore_dist')
         prepare_output_dir(self.outdir)
         self.extension = extension
+
+        # Set the right pdf font for exporting.
+        matplotlib.rcParams['pdf.fonttype'] = 42
 
         # Extract the required data.
         print("Loading data")
