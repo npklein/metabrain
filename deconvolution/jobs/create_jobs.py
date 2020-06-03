@@ -48,17 +48,17 @@ __description__ = "{} is a program developed and maintained by {}. " \
 class main():
     def __init__(self):
         self.output_directory = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/jobs/"
-        self.name_prefix = "CIA"
+        self.name_prefix = "CIA_NEW"
         self.time = "05:59:00"
         self.exclude = None
         self.cores = 1
         self.mem = 2
         self.count = 0
         self.start_index = 0
-        self.stop_index = 10000
+        self.stop_index = 18851
         self.batch_size = 50
-        self.samples = 3703
-        self.settings_file = "cis_settings"
+        self.samples = 2970
+        self.settings_file = "cis_new_settings"
 
     def start(self):
         start_indices = [i for i in range(self.start_index, self.stop_index, self.batch_size)]

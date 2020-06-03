@@ -1,7 +1,7 @@
 """
 File:         covariates_explained_by_others.py
 Created:      2020/04/15
-Last Changed: 2020/06/02
+Last Changed: 2020/06/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -50,6 +50,9 @@ class CovariatesExplainedByOthers:
         prepare_output_dir(self.outdir)
         self.extension = extension
 
+        # Set the right pdf font for exporting.
+        matplotlib.rcParams['pdf.fonttype'] = 42
+
         # Extract the required data.
         print("Loading data")
         self.groups = dataset.get_groups()
@@ -79,14 +82,6 @@ class CovariatesExplainedByOthers:
                           "MDS2",
                           "MDS3",
                           "MDS4",
-                          "AMPAD-MSBB-V2-AFR",
-                          "CMC_HBCC_set1-AFR",
-                          "CMC_HBCC_set2-AFR",
-                          "CMC-AFR",
-                          "ENA-AFR",
-                          "LIBD_1M-AFR",
-                          "LIBD_h650-AFR",
-                          "ENA-EAS",
                           "AMPAD-MAYO-V2-EUR",
                           "AMPAD-MSBB-V2-EUR",
                           "BrainGVEX-V2-EUR",
@@ -102,7 +97,7 @@ class CovariatesExplainedByOthers:
                           "NABEC-H610-EUR",
                           "TargetALS-EUR",
                           "UCLA_ASD-EUR",
-#                          "OTHER"
+#                          "AMPAD-ROSMAP-V2-EUR"
                           ]
 
     @staticmethod

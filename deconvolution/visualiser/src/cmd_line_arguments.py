@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/13
-Last Changed: 2020/06/02
+Last Changed: 2020/06/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -78,7 +78,7 @@ class CommandLineArguments:
                             nargs="+",
                             type=str,
                             default=["all"],
-                            choices=["cohort_clustermap",
+                            choices=["covariate_heatmap",
                                      "covariate_comparison",
                                      "covariates_explained_by_others",
                                      "deconvolution_covariate_comparison",

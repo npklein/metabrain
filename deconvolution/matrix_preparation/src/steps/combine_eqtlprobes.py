@@ -1,7 +1,7 @@
 """
 File:         combine_eqtlprobes.py
 Created:      2020/03/12
-Last Changed: 2020/05/15
+Last Changed: 2020/06/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -81,6 +81,7 @@ class CombineEQTLProbes:
             infile = os.path.join(self.indir, self.iter_dirname + str(i),
                                   self.in_filename)
             df = load_dataframe(inpath=infile, header=0, index_col=False)
+            df["Iteration"] = i
             if combined is None:
                 combined = df
             else:

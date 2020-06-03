@@ -1,7 +1,7 @@
 """
 File:         covariate_comparison.py
 Created:      2020/04/15
-Last Changed: 2020/05/25
+Last Changed: 2020/06/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -48,6 +48,9 @@ class CovariateComparison:
         prepare_output_dir(self.outdir)
         self.extension = extension
 
+        # Set the right pdf font for exporting.
+        matplotlib.rcParams['pdf.fonttype'] = 42
+
         # Extract the required data.
         print("Loading data")
         self.groups = dataset.get_groups()
@@ -70,6 +73,8 @@ class CovariateComparison:
                     coef, p = stats.spearmanr(df.loc[row1, :], df.loc[row2, :])
                     corr_df.loc[row1, row2] = coef
                     pval_df.loc[row1, row2] = p_value_to_symbol(p)
+                    if (coef == 1.0) and (row1 != row2):
+                        print("{} = {}".format(row1, row2))
 
         return corr_df, pval_df
 

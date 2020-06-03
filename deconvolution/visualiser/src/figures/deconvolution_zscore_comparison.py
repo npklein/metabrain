@@ -1,7 +1,7 @@
 """
 File:         deconvolution_zscore_comparison.py
 Created:      2020/04/07
-Last Changed: 2020/06/02
+Last Changed: 2020/06/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -48,6 +48,9 @@ class DeconvolutionZscoreComparison:
                                    'deconvolution_zscore_comparison')
         prepare_output_dir(self.outdir)
         self.extension = extension
+
+        # Set the right pdf font for exporting.
+        matplotlib.rcParams['pdf.fonttype'] = 42
 
         # Extract the required data.
         print("Loading data")

@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/04/23
-Last Changed: 2020/06/02
+Last Changed: 2020/06/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -147,19 +147,23 @@ class Main:
             full_outdir = os.path.join(self.outdir, outdir)
             prepare_output_dir(full_outdir)
 
-            self.dump_pickle(container.get_pvalues(), full_outdir,
+            self.dump_pickle(container.get_pvalues(),
+                             full_outdir,
                              self.pvalues_filename,
                              filename_suffix=filename_suffix,
                              subdir=True, unique=True)
-            self.dump_pickle(container.get_snp_tvalues(), full_outdir,
+            self.dump_pickle(container.get_snp_tvalues(),
+                             full_outdir,
                              self.snp_tvalues_filename,
                              filename_suffix=filename_suffix,
                              subdir=True, unique=True)
-            self.dump_pickle(container.get_inter_tvalues(), full_outdir,
+            self.dump_pickle(container.get_inter_tvalues(),
+                             full_outdir,
                              self.inter_tvalues_filename,
                              filename_suffix=filename_suffix,
                              subdir=True, unique=True)
-            self.dump_pickle(container.get_perm_pvalues(), full_outdir,
+            self.dump_pickle(container.get_perm_pvalues(),
+                             full_outdir,
                              self.perm_pvalues_filename,
                              filename_suffix=filename_suffix,
                              subdir=True, unique=True)
@@ -293,8 +297,8 @@ class Main:
                 df_null, rss_null, _ = self.create_model(null_matrix,
                                                          expression)
 
-                if self.verbose:
-                    print("\t\tn_null: {}\tdf_null: {}\trss_null: {}\t".format(n_null, df_null, rss_null))
+                # if self.verbose:
+                #     print("\t\tn_null: {}\tdf_null: {}\trss_null: {}\t".format(n_null, df_null, rss_null))
 
                 # Loop over each permutation sample order. The first order
                 # is the normal order and the remainder are random shuffles.
@@ -345,8 +349,8 @@ class Main:
                                                                      expression,
                                                                      tvalue_cols=[genotype.name, inter_name])
 
-                    if self.verbose:
-                        print("\t\t\tn_alt: {}\tdf_alt: {}\trss_alt: {}\talt_tvalues: {}".format(n_alt, df_alt, rss_alt, alt_tvalues))
+                    # if self.verbose:
+                    #     print("\t\t\tn_alt: {}\tdf_alt: {}\trss_alt: {}\talt_tvalues: {}".format(n_alt, df_alt, rss_alt, alt_tvalues))
 
                     # Safe the t-values.
                     storage.add_value(cov_name, order_id, "snp_tvalue", alt_tvalues[genotype.name])
@@ -364,8 +368,8 @@ class Main:
                                                df_null, df_alt, n_null)
                     pvalue = self.get_p_value(fvalue, df_null, df_alt, n_null)
 
-                    if self.verbose:
-                        print("\t\t\tfvalue: {}\tpvalue: {}".format(fvalue, pvalue))
+                    # if self.verbose:
+                    #     print("\t\t\tfvalue: {}\tpvalue: {}".format(fvalue, pvalue))
 
                     # Safe the p-values.
                     storage.add_value(cov_name, order_id, "pvalue", pvalue)
@@ -415,11 +419,13 @@ class Main:
             if not os.path.exists(full_directory):
                 os.makedirs(full_directory)
 
-        full_filename = "{}_{}".format(filename, filename_suffix)
-        if unique:
-            full_filename = "{}_{}_{}".format(filename,
-                                              filename_suffix,
-                                              int(time.time()))
+        full_filename = filename
+        if filename_suffix != "":
+            full_filename = "{}_{}".format(filename, filename_suffix)
+            if unique:
+                full_filename = "{}_{}_{}".format(filename,
+                                                  filename_suffix,
+                                                  int(time.time()))
 
         fpath = os.path.join(full_directory, full_filename + ".pkl")
 

@@ -40,10 +40,8 @@
   },
   "create_cov_matrix": {
     "covariate_datafile": "",
-    "covariate_exclude": [
-    ],
-    "cohorts": [
-    ],
+    "technical_covariates": [],
+    "cohorts": [],
     "reference_cohort": "",
     "phenotype_datafile": "",
     "eigenvectors_datafile": "",
