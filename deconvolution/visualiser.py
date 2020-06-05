@@ -3,7 +3,7 @@
 """
 File:         visualiser.py
 Created:      2020/03/13
-Last Changed: 2020/05/25
+Last Changed: 2020/06/05
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -48,15 +48,22 @@ if __name__ == '__main__':
     CLA = CommandLineArguments(program=__program__,
                                version=__version__,
                                description=__description__)
+    NAME = CLA.get_argument("name")
     SETTINGS_FILE = CLA.get_argument("settings")
+    ALPHA = CLA.get_argument("alpha")
     PLOTS = CLA.get_argument("plots")
-    N_EQTLS = CLA.get_argument("n_eqtls")
+    TOP = CLA.get_argument("top")
     INTEREST = CLA.get_argument("interest")
     EXTENSION = CLA.get_argument("extension")
     VALIDATE = CLA.get_argument("validate")
 
     # Start the program.
-    PROGRAM = Main(settings_file=SETTINGS_FILE, plots=PLOTS,
-                   n_eqtls=N_EQTLS, interest=INTEREST, extension=EXTENSION,
+    PROGRAM = Main(name=NAME,
+                   settings_file=SETTINGS_FILE,
+                   alpha=ALPHA,
+                   plots=PLOTS,
+                   top=TOP,
+                   interest=INTEREST,
+                   extension=EXTENSION,
                    validate=VALIDATE)
     PROGRAM.start()

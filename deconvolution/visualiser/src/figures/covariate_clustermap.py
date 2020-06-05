@@ -1,5 +1,5 @@
 """
-File:         covariate_heatmap.py
+File:         covariate_clustermap.py
 Created:      2020/06/02
 Last Changed: 2020/06/03
 Author:       M.Vochteloo
@@ -32,7 +32,7 @@ import matplotlib.pyplot as plt
 from general.utilities import prepare_output_dir
 
 
-class CovariateHeatmap:
+class CovariateClustermap:
     def __init__(self, dataset, outdir, extension):
         """
         The initializer for the class.
@@ -41,7 +41,7 @@ class CovariateHeatmap:
         :param outdir: string, the output directory.
         :param extension: str, the output figure file type extension.
         """
-        self.outdir = os.path.join(outdir, 'cohort_clustermap')
+        self.outdir = os.path.join(outdir, 'covariate_clustermap')
         prepare_output_dir(self.outdir)
         self.extension = extension
 
@@ -68,12 +68,12 @@ class CovariateHeatmap:
     @staticmethod
     def plot(df, outdir, extension):
         sns.set(color_codes=True)
-        g = sns.clustermap(df, center=0.5, cmap="RdBu_r",  cbar=False,
+        g = sns.clustermap(df, center=0.5, cmap="RdBu_r",
                            yticklabels=True, xticklabels=False,
-                           row_cluster=False, col_cluster=False,
+                           row_cluster=False, col_cluster=True,
                            figsize=(12, (.2 * (len(df.index)))))
         plt.setp(g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_ymajorticklabels(), fontsize=10))
-        g.savefig(os.path.join(outdir, "covariate_heatmap.{}".format(extension)))
+        g.savefig(os.path.join(outdir, "covariate_clustermap.{}".format(extension)))
         plt.close()
 
     def print_arguments(self):

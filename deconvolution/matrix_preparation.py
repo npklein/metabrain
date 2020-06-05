@@ -3,7 +3,7 @@
 """
 File:         matrix_preparation.py
 Created:      2020/03/12
-Last Changed: 2020/03/19
+Last Changed: 2020/06/05
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -48,10 +48,14 @@ if __name__ == '__main__':
     CLA = CommandLineArguments(program=__program__,
                                version=__version__,
                                description=__description__)
+    NAME = CLA.get_argument("name")
     SETTINGS_FILE = CLA.get_argument("settings")
+    DISEASE = ' '.join(CLA.get_argument("disease"))
     FORCE_STEPS = CLA.get_argument("force_steps")
 
     # Start the program.
-    PROGRAM = Main(settings_file=SETTINGS_FILE,
+    PROGRAM = Main(name=NAME,
+                   settings_file=SETTINGS_FILE,
+                   disease=DISEASE,
                    force_steps=FORCE_STEPS)
     PROGRAM.start()

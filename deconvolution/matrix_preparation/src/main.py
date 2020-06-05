@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/12
-Last Changed: 2020/06/02
+Last Changed: 2020/06/05
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -48,11 +48,13 @@ class Main:
     Main: this class is the main class that calls all other functionality.
     """
 
-    def __init__(self, settings_file, force_steps):
+    def __init__(self, name, settings_file, disease, force_steps):
         """
         Initializer of the class.
 
+        :param name: string, the name of the base input/ouput directory.
         :param settings_file: string, the name of the settings file.
+        :param disease: string, the name of the disease to analyse.
         :param force_steps: list, the names of the steps to force to redo.
         """
         # Define the current directory.
@@ -62,22 +64,25 @@ class Main:
         self.settings = LocalSettings(current_dir, settings_file)
 
         # Safe arguments.
+        self.disease = disease
         self.force_dict = self.create_force_dict(force_steps)
 
         # Prepare an output directory.
-        self.outdir = os.path.join(current_dir,
-                                   self.settings.get_setting("output_dir"))
+        self.outdir = os.path.join(current_dir, name)
         prepare_output_dir(self.outdir)
 
     @staticmethod
     def create_force_dict(force_steps):
-        force_dict = {'combine_gte_files': False, 'combine_eqtlprobes': False,
+        force_dict = {'combine_gte_files': False,
+                      'combine_eqtlprobes': False,
                       'create_matrices': False,
                       'perform_celltype_factorization': False,
                       'create_deconvolution_matrices': False,
                       'perform_deconvolution': False,
-                      'create_cov_matrix': False, 'mask_matrices': False,
-                      'create_groups': False, 'create_regression_matrix': False}
+                      'create_cov_matrix': False,
+                      'mask_matrices': False,
+                      'create_groups': False,
+                      'create_regression_matrix': False}
         if force_steps is None or len(force_steps) == 0:
             return force_dict
 
@@ -109,6 +114,7 @@ class Main:
         print("\n### STEP2 ###\n")
         cepf = CombineEQTLProbes(
             settings=self.settings.get_setting('combine_eqtlprobes'),
+            disease=self.disease,
             force=self.force_dict['combine_eqtlprobes'],
             outdir=self.outdir)
         cepf.start()

@@ -3,7 +3,7 @@
 """
 File:         custom_interaction_analyser.py
 Created:      2020/03/23
-Last Changed: 2020/05/06
+Last Changed: 2020/06/05
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -51,11 +51,13 @@ if __name__ == '__main__':
     CLA = CommandLineArguments(program=__program__,
                                version=__version__,
                                description=__description__)
+    NAME = CLA.get_argument("name")
     SETTINGS_FILE = CLA.get_argument("settings")
     COMBINE = CLA.get_argument("combine")
 
     if COMBINE:
-        PROGRAM = CombineAndPlot(settings_file=SETTINGS_FILE)
+        PROGRAM = CombineAndPlot(name=NAME,
+                                 settings_file=SETTINGS_FILE)
         PROGRAM.start()
     else:
         SKIP_ROWS = CLA.get_argument("skip_rows")
@@ -64,7 +66,8 @@ if __name__ == '__main__':
         VERBOSE = CLA.get_argument("verbose")
 
         # Start the program.
-        PROGRAM = Main(settings_file=SETTINGS_FILE,
+        PROGRAM = Main(name=NAME,
+                       settings_file=SETTINGS_FILE,
                        skip_rows=SKIP_ROWS,
                        n_eqtls=N_EQTLS,
                        n_samples=N_SAMPLES,

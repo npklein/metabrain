@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/13
-Last Changed: 2020/06/03
+Last Changed: 2020/06/05
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -67,18 +67,29 @@ class CommandLineArguments:
                             version="{} {}".format(self.program,
                                                    self.version),
                             help="show program's version number and exit")
+        parser.add_argument("-n",
+                            "--name",
+                            type=str,
+                            required=True,
+                            help="The name of the input/output directory.")
         parser.add_argument("-s",
                             "--settings",
                             type=str,
                             default="default_settings",
                             help="The settings input file (without '.json'), "
                                  "default: 'default_settings'.")
+        parser.add_argument("-a",
+                            "--alpha",
+                            type=float,
+                            default=0.05,
+                            help="The significance cut-off,"
+                                 "default: 0.05.")
         parser.add_argument("-p",
                             "--plots",
                             nargs="+",
                             type=str,
                             default=["all"],
-                            choices=["covariate_heatmap",
+                            choices=["covariate_clustermap",
                                      "covariate_comparison",
                                      "covariates_explained_by_others",
                                      "deconvolution_covariate_comparison",
@@ -98,11 +109,11 @@ class CommandLineArguments:
                                      ],
                             help="The name of the figures to be created, "
                                  "default: 'all'.")
-        parser.add_argument("-n",
-                            "--n_eqtls",
+        parser.add_argument("-t",
+                            "--top",
                             type=int,
                             default=1,
-                            help="The number of eQTLs to visualise, "
+                            help="The number of top eQTLs to visualise, "
                                  "default: 1.")
         parser.add_argument("-i",
                             "--interest",

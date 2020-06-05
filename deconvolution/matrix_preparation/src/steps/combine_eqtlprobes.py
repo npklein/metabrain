@@ -31,11 +31,12 @@ from general.df_utilities import load_dataframe, save_dataframe
 
 
 class CombineEQTLProbes:
-    def __init__(self, settings, force, outdir):
+    def __init__(self, settings, disease, force, outdir):
         """
         The initializer for the class.
 
         :param settings: string, the settings.
+        :param disease: string, the name of the disease to analyse.
         :param force: boolean, whether or not to force the step to redo.
         :param outdir: string, the output directory.
         """
@@ -45,7 +46,7 @@ class CombineEQTLProbes:
         self.in_filename = settings["in_filename"]
         self.snp_to_gwasid_filename = settings["snp_to_gwasid_filename"]
         self.gwasid_to_trait_filename = settings["gwasid_to_trait_filename"]
-        self.trait = settings["trait"]
+        self.disease = disease
         self.force = force
 
         # Prepare an output directory.
@@ -69,8 +70,8 @@ class CombineEQTLProbes:
             # Load each GTE file.
             print("Loading eQTLprobes files.")
             combined_eqtl_probes = self.combine_files()
-            if self.trait != "" and self.trait is not None:
-                print("Filtering on trait: {}".format(self.trait))
+            if self.disease != "" and self.disease is not None:
+                print("Filtering on trait: {}".format(self.disease))
                 combined_eqtl_probes = self.filter_on_trait(combined_eqtl_probes)
             self.eqtl_probes = combined_eqtl_probes
             self.save()
@@ -128,7 +129,7 @@ class CombineEQTLProbes:
 
         # Subset.
         df.dropna(subset=['Trait'], inplace=True)
-        df = df[df['Trait'].str.contains(self.trait, case=False)]
+        df = df[df['Trait'].str.contains(self.disease, case=False)]
         df.reset_index(drop=True, inplace=True)
 
         return df
