@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/13
-Last Changed: 2020/06/03
+Last Changed: 2020/06/05
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -31,7 +31,7 @@ import os
 from general.utilities import prepare_output_dir
 from general.local_settings import LocalSettings
 from general.objects.dataset import Dataset
-from .figures.covariate_heatmap import CovariateHeatmap
+from .figures.covariate_clustermap import CovariateClustermap
 from .figures.covariate_comparison import CovariateComparison
 from .figures.deconvolution_covariate_comparison import DeconvolutionCovariateComparison
 from .figures.covariates_explained_by_others import CovariatesExplainedByOthers
@@ -53,14 +53,16 @@ class Main:
     Main: this class is the main class that calls all other functionality.
     """
 
-    def __init__(self, settings_file, plots, n_eqtls, interest, extension,
-                 validate):
+    def __init__(self, name, settings_file, plots, alpha, top, interest,
+                 extension, validate):
         """
         Initializer of the class.
 
+        :param name: string, the name of the base input/ouput directory.
         :param settings_file: string, the name of the settings file.
+        :param alpha: float, the significance cut-off.
         :param plots: list, the names of the plots to create.
-        :param n_eqtls: int, the number of equals to plot.
+        :param top: int, the number of top eQTLs to plot.
         :param interest: list, the indices of equals to plot.
         :param extension: str, the output figure file type extension.
         :param validate: boolean, whether or not to validate the input.
@@ -72,15 +74,16 @@ class Main:
         self.settings = LocalSettings(current_dir, settings_file)
 
         # Load the variables.
+        self.name = name
+        self.alpha = alpha
         self.plots = plots
-        self.n_eqtls = n_eqtls
+        self.top = top
         self.interest = interest
         self.extension = extension
         self.validate = validate
 
         # Prepare an output directory.
-        self.outdir = os.path.join(current_dir,
-                                   self.settings.get_setting('output_dir'))
+        self.outdir = os.path.join(current_dir, name)
         prepare_output_dir(self.outdir)
 
     def start(self):
@@ -91,26 +94,29 @@ class Main:
         self.print_arguments()
 
         # Create the dataset object.
-        ds = Dataset(settings=self.settings, nrows=self.n_eqtls,
+        ds = Dataset(name=self.name,
+                     settings=self.settings,
+                     alpha=self.alpha,
+                     nrows=self.top,
                      interest=self.interest)
         if self.validate:
             ds.load_all()
 
-        if ('covariate_heatmap' in self.plots) or \
+        if ('covariate_clustermap' in self.plots) or \
                 ('all' in self.plots):
-            print("\n### Covariate Heatmap ###\n")
-            ch = CovariateHeatmap(dataset=ds, outdir=self.outdir,
-                                  extension=self.extension)
-            ch.start()
-            del ch
+            print("\n### Covariate Clustermap ###\n")
+            cocl = CovariateClustermap(dataset=ds, outdir=self.outdir,
+                                       extension=self.extension)
+            cocl.start()
+            del cocl
 
         if ('covariate_comparison' in self.plots) or \
                 ('all' in self.plots):
             print("\n### Covariate Comparison ###\n")
-            cc = CovariateComparison(dataset=ds, outdir=self.outdir,
-                                     extension=self.extension)
-            cc.start()
-            del cc
+            coco = CovariateComparison(dataset=ds, outdir=self.outdir,
+                                       extension=self.extension)
+            coco.start()
+            del coco
 
         if ('covariates_explained_by_others' in self.plots) or \
                 ('all' in self.plots):
@@ -222,8 +228,9 @@ class Main:
     def print_arguments(self):
         print("Arguments:")
         print("  > Output directory: {}".format(self.outdir))
+        print("  > Alpha: {}".format(self.alpha))
         print("  > Plots: {}".format(self.plots))
-        print("  > N eQTLS: {}".format(self.n_eqtls))
+        print("  > Top: {}".format(self.top))
         print("  > Interest: {}".format(self.interest))
         print("  > Validate: {}".format(self.validate))
         print("")

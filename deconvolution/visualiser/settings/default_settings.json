@@ -1,5 +1,4 @@
 {
-  "output_dir": "output",
   "input_dir": "",
   "filenames": {
     "eqtl": "",
@@ -30,8 +29,5 @@
     ["Method1Prefix", "Method1Suffix"],
     ["...", "..."]
     ],
-  "marker_genes_prefix": "",
-  "significance_cutoff": 0.05,
-  "technical_covariates": [
-  ]
+  "marker_genes_prefix": ""
 }

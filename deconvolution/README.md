@@ -70,6 +70,7 @@ python3 ./matrix_preparation.py
 ```  
 Options:
 
+ * **-n** / **--name**: The name of the input/output directory.
  * **-s** / **--settings**: The settings input file (without '.json'), default: 'default_settings'.
  * **-f** / **--force_steps**: The steps to force the program to redo, default: None.
  
@@ -119,6 +120,7 @@ python3 ./custom_interaction_analyser.py
 ```  
 Options:
 
+ * **-n** / **--name**: The name of the input/output directory.
  * **-s** / **--settings**: The settings input file (without '.json'), default: 'default_settings'.
  * **-sr** / **--skip_rows**: The number of rows to skip in the input files, default: 0
  * **-ne** / **--n_eqtls**: The number of eQTLs in the input files, default: None (determine manually).
@@ -158,9 +160,11 @@ python3 ./visualiser.py
 ```  
 Options:
 
+ * **-n** / **--name**: The name of the input/output directory.
  * **-s** / **--settings**: The settings input file (without '.json'), default: 'default_settings'.
+ * **-a** / **--alpha**: The significance cut-off, default: 0.05.
  * **-p** / **--plots**: The name of the figures to be created, default: 'all'.
- * **-n** / **--n_eqtls**: The number of eQTLs to visualise, default: 1.
+ * **-t** / **--top**: The number of top eQTLs to visualise, default: 1.
  * **-validate**: Validate that the input matrices match with each other and then quit, default: 'False'.  
   
 ## Author  

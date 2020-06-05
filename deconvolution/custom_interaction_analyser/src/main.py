@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/04/23
-Last Changed: 2020/06/03
+Last Changed: 2020/06/05
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -49,10 +49,12 @@ class Main:
     Class for the manager.
     """
 
-    def __init__(self, settings_file, skip_rows, n_eqtls, n_samples, verbose):
+    def __init__(self, name, settings_file, skip_rows, n_eqtls, n_samples,
+                 verbose):
         """
         Initializer of the class.
 
+        :param name: string, the name of the base input/ouput directory.
         :param settings_file: string, the name of the settings file.
         :param skip_rows: int, the number of rows to skip.
         :param n_eqtls: int, the number of eqtls in the input files.
@@ -69,16 +71,15 @@ class Main:
         settings = LocalSettings(current_dir, settings_file)
 
         # Prepare an output directory.
-        self.outdir = os.path.join(current_dir,
-                                   settings.get_setting("output_dir"))
+        self.outdir = os.path.join(current_dir, name)
         prepare_output_dir(self.outdir)
 
         # Safe settings.
         input_dir = settings.get_setting("input_dir")
         filenames = settings.get_setting("filenames")
-        self.geno_inpath = os.path.join(input_dir, filenames["genotype"])
-        self.expr_inpath = os.path.join(input_dir, filenames["expression"])
-        self.cov_inpath = os.path.join(input_dir, filenames["covariates"])
+        self.geno_inpath = os.path.join(input_dir, name, filenames["genotype"])
+        self.expr_inpath = os.path.join(input_dir, name, filenames["expression"])
+        self.cov_inpath = os.path.join(input_dir, name, filenames["covariates"])
         self.drop_covs = settings.get_setting("drop_covariates")
         self.tech_covs = settings.get_setting("technical_covariates")
         self.cov_outdir = settings.get_setting("covariates_folder")
@@ -504,11 +505,16 @@ class Main:
         # stds['intercept'] = True
         # X = X.loc[:, stds]
 
+        df = X.shape[1]
+
         # Perform the Ordinary least squares fit.
         ols = sm.OLS(y.values, X)
-        ols_result = ols.fit()
+        try:
+            ols_result = ols.fit()
+        except np.linalg.LinAlgError as e:
+            print("\t\tError: {}".format(e))
+            return df, np.nan, {col: np.nan for col in tvalue_cols}
 
-        df = X.shape[1]
         ssr = ols_result.ssr
 
         tvalues = {}
@@ -539,6 +545,8 @@ class Main:
         :param n: int, the number of samples in the model.
         :return : float, the p-value of the comparison.
         """
+        if (rss1 == np.nan) or (rss2 == np.nan):
+            return np.nan
         if df1 >= df2:
             return np.nan
         if df2 >= n:

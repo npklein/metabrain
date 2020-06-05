@@ -1,7 +1,7 @@
 """
 File:         dataset.py
 Created:      2020/03/16
-Last Changed: 2020/06/02
+Last Changed: 2020/06/05
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -33,8 +33,8 @@ from general.df_utilities import load_dataframe
 
 
 class Dataset:
-    def __init__(self, settings, nrows, interest):
-        self.input_dir = settings.get_setting("input_dir")
+    def __init__(self, name, settings, alpha, nrows, interest):
+        self.input_dir = os.path.join(settings.get_setting("input_dir"), name)
         filenames = settings.get_setting("filenames")
         self.eqtl_filename = filenames["eqtl"]
         self.geno_filename = filenames["genotype"]
@@ -43,7 +43,7 @@ class Dataset:
         self.cov_filename = filenames["covariates"]
         self.markers_filename = filenames["markers"]
 
-        self.inter_input_dir = settings.get_setting("interaction_input_dir")
+        self.inter_input_dir = os.path.join(settings.get_setting("interaction_input_dir"), name)
         inter_subdirs = settings.get_setting("interaction_input_subfolders")
         self.inter_cov_subdir = inter_subdirs["covariates_of_interest"]
         self.inter_tech_cov_subdir = inter_subdirs["technical_covariates"]
@@ -58,7 +58,7 @@ class Dataset:
         self.colormap = settings.get_setting("colormap")
         self.cellmap_methods = settings.get_setting("cellmap_method_prefix_and_suffix")
         self.marker_genes = settings.get_setting("marker_genes_prefix")
-        self.signif_cutoff = stats.norm.isf(settings.get_setting("significance_cutoff"))
+        self.signif_cutoff = stats.norm.isf(alpha)
         self.interest = interest
         nrows = nrows
         if nrows == -1:

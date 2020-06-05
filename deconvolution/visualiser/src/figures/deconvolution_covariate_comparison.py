@@ -1,7 +1,7 @@
 """
 File:         deconvolution_covariate_comparison.py
 Created:      2020/04/15
-Last Changed: 2020/06/03
+Last Changed: 2020/06/05
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -89,7 +89,7 @@ class DeconvolutionCovariateComparison:
         decon_groups = []
         for group in groups:
             for prefix in prefixes:
-                if group[3] == prefix:
+                if prefix in group[3]:
                     decon_groups.append(group)
                     break
 

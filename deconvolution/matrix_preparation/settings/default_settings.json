@@ -1,5 +1,4 @@
 {
-  "output_dir": "output",
   "combine_gte_files": {
     "input_directory": "",
     "filename_regex": ""

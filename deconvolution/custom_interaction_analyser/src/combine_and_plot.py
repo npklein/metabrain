@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed: 2020/06/02
+Last Changed: 2020/06/05
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -51,10 +51,11 @@ class CombineAndPlot:
     Main: this class combines the output of different jobs of the manager into
         one result.
     """
-    def __init__(self, settings_file):
+    def __init__(self, name, settings_file):
         """
         Initializer of the class.
 
+        :param name: string, the name of the base input/ouput directory.
         :param settings_file: string, the name of the settings file.
         """
         # Define the current directory.
@@ -67,8 +68,7 @@ class CombineAndPlot:
         self.n_permutations = settings.get_setting("n_permutations")
 
         # Prepare an output directory.
-        self.outdir = os.path.join(current_dir,
-                                   settings.get_setting("output_dir"))
+        self.outdir = os.path.join(current_dir, name)
 
         # Get the needed settings.
         self.cov_outdir = settings.get_setting("covariates_folder")

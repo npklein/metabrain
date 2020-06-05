@@ -5,7 +5,7 @@
     "expression": "",
     "covariates": ""
   },
-  "output_dir": "output",
+  "drop_covariates": [],
   "technical_covariates": [],
   "covariates_folder": "covariates",
   "technical_covariates_folder": "technical_covariates",
