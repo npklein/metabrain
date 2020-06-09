@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/03/13
-Last Changed: 2020/06/05
+Last Changed: 2020/06/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -53,7 +53,7 @@ class Main:
     Main: this class is the main class that calls all other functionality.
     """
 
-    def __init__(self, name, settings_file, plots, alpha, top, interest,
+    def __init__(self, name, settings_file, alpha, plots, top, interest,
                  extension, validate):
         """
         Initializer of the class.

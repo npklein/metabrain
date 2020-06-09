@@ -149,9 +149,24 @@ python3 ./custom_interaction_analyser.py -combine
 Options:
  * **-combine**: Combine the created files, alternative functionality. Default: False.    
   
-### Step 3: visualiser  
+### Step 3: identify cell type mediated eQTLs  
 
-This step takes the results from the previous two steps and creates visualizations of it. Each plot can be called separately.
+This step takes the results from the previous two steps and groups eQTLs based on cell type mediated effects.
+
+Settings: [default_settings.json](identify_ct_mediated_eqtls/settings/default_settings.json)  
+Syntax:
+```console  
+python3 ./identify_ct_mediated_eqtls.py
+```  
+Options:
+
+ * **-n** / **--name**: The name of the input/output directory.
+ * **-s** / **--settings**: The settings input file (without '.json'), default: 'default_settings'.
+ * **-a** / **--alpha**: The significance cut-off, default: 0.05.
+
+### Step 4: visualiser  
+
+This step takes the results from the first two steps and creates visualizations of it. Each plot can be called separately.
 
 Settings: [default_settings.json](visualiser/settings/default_settings.json)  
 Syntax:
@@ -165,6 +180,8 @@ Options:
  * **-a** / **--alpha**: The significance cut-off, default: 0.05.
  * **-p** / **--plots**: The name of the figures to be created, default: 'all'.
  * **-t** / **--top**: The number of top eQTLs to visualise, default: 1.
+ * **-i** / **--interest**: The indices of the eQTLS to visualise, default: None. If set, -t / --top is discarded.
+ * **-e** / **--extension**: The output file format, default: 'png' 
  * **-validate**: Validate that the input matrices match with each other and then quit, default: 'False'.  
   
 ## Author  
