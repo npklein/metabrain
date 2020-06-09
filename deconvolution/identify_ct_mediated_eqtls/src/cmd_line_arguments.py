@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
-Created:      2020/03/13
-Last Changed: 2020/06/05
+Created:      2020/06/08
+Last Changed:
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -84,56 +84,6 @@ class CommandLineArguments:
                             default=0.05,
                             help="The significance cut-off,"
                                  "default: 0.05.")
-        parser.add_argument("-p",
-                            "--plots",
-                            nargs="+",
-                            type=str,
-                            default=["all"],
-                            choices=["covariate_clustermap",
-                                     "covariate_comparison",
-                                     "covariates_explained_by_others",
-                                     "deconvolution_covariate_comparison",
-                                     "deconvolution_zscore_comparison",
-                                     "simple_eqtl_effect",
-                                     "inter_clustermap",
-                                     "inter_zscore_bars",
-                                     "inter_pvalue_boxplot",
-                                     "inter_zscore_dist",
-                                     "inter_zscore_marker_genes",
-                                     "inter_eqtl_zscore_bars",
-                                     "inter_eqtl_effect",
-                                     "inter_eqtl_effect_deconvolution",
-                                     "inter_eqtl_effect_marker_vs_comp",
-                                     "inter_eqtl_effect_celltype",
-                                     "inter_eqtl_celltype_details"
-                                     ],
-                            help="The name of the figures to be created, "
-                                 "default: 'all'.")
-        parser.add_argument("-t",
-                            "--top",
-                            type=int,
-                            default=1,
-                            help="The number of top eQTLs to visualise, "
-                                 "default: 1.")
-        parser.add_argument("-i",
-                            "--interest",
-                            nargs="+",
-                            type=int,
-                            default=None,
-                            help="The indices of the eQTLS to visualise,"
-                                 "default: None. If set, -t / --top is "
-                                 "discarded.")
-        parser.add_argument("-e",
-                            "--extension",
-                            type=str,
-                            default="png",
-                            choices=["eps", "pdf", "pgf", "png", "ps", "raw", "rgba", "svg", "svgz"],
-                            help="The output file format, default: 'png'")
-        parser.add_argument("-validate",
-                            action='store_true',
-                            help="Validate that the input matrices match "
-                                 "with each other and then quit, default: "
-                                 "'False'.")
 
         return parser
 

@@ -1,7 +1,7 @@
 """
 File:         dataset.py
 Created:      2020/03/16
-Last Changed: 2020/06/05
+Last Changed: 2020/06/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -33,7 +33,7 @@ from general.df_utilities import load_dataframe
 
 
 class Dataset:
-    def __init__(self, name, settings, alpha, nrows, interest):
+    def __init__(self, name, settings, alpha=0.05, nrows=None, interest=None):
         self.input_dir = os.path.join(settings.get_setting("input_dir"), name)
         filenames = settings.get_setting("filenames")
         self.eqtl_filename = filenames["eqtl"]
@@ -60,10 +60,9 @@ class Dataset:
         self.marker_genes = settings.get_setting("marker_genes_prefix")
         self.signif_cutoff = stats.norm.isf(alpha)
         self.interest = interest
-        nrows = nrows
         if nrows == -1:
             nrows = None
-        elif nrows <= 0:
+        if nrows is not None and nrows <= 0:
             print("Unexpected argument for -n / --n_eqtls: '{}'".format(nrows))
             exit()
         if self.interest is not None:

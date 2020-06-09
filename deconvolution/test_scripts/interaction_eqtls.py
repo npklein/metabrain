@@ -50,17 +50,12 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 class main():
     def __init__(self):
-        self.input = {'cis_output': 6.31e-03,
-                      'alzheimer_output': 1.35e-03,
-                      'schizophrenia_output': 1.63e-03,
-                      'parkinson_output': 2.24e-03,
-                      'depression_output': 1.52e-03,
-                      'ms_output': 5.71e-03,
-                      'alzheimer_trans_output': 1.09e-03,
-                      'schizophrenia_trans_output': 1.24e-02,
-                      'parkinson_trans_output': 3.10e-03,
-                      'depression_trans_output': 1.86e-03,
-                      'ms_trans_output': 8.62e-04}
+        self.input = {'cis_new_output': 3.60e-04,
+                      'alzheimer_cis_new_output': 0.05,
+                      'schizophrenia_cis_new_output': 0.05,
+                      'parkinson_cis_new_output': 0.05,
+                      'depression_cis_new_output': 0.05,
+                      'ms_cis_new_output': 0.05}
         self.cols_of_interest = ["SEX", "CellMapNNLS_Astrocyte",
                                  "CellMapNNLS_EndothelialCell",
                                  "CellMapNNLS_Macrophage", "CellMapNNLS_Neuron",
@@ -75,8 +70,8 @@ class main():
 
     def start(self):
         for dir, pval_cutoff in self.input.items():
-            # if dir != "cis_output":
-            #     continue
+            if dir != "cis_new_output":
+                continue
             print("Directory: {}".format(dir))
 
             z_score_cutoff = abs(st.norm.isf(pval_cutoff))
@@ -84,7 +79,7 @@ class main():
             # Define filenames.
             inter_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/custom_interaction_analyser/{}/covariates/interaction_table.txt.gz".format(
                 dir)
-            tvalue_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/custom_interaction_analyser/{}/covariates/tvalue_table.txt.gz".format(
+            tvalue_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/custom_interaction_analyser/{}/covariates/inter_tvalue_table.txt.gz".format(
                 dir)
             eqtl_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/{}/combine_eqtlprobes/eQTLprobes_combined.txt.gz".format(
                 dir)
@@ -188,7 +183,7 @@ class main():
                                  :].index)
             print("\tMAF below cutoff:\t{}".format(n_maf_droppped))
 
-            # Combine the data and drop the results with too few samples.
+            # Combine the data.
             df = eqtl_df.merge(eqtl_geno_info_df, left_index=True,
                                right_index=True)
 

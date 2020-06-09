@@ -96,7 +96,7 @@ class main():
                             "--disease",
                             nargs="+",
                             type=str,
-                            default="",
+                            default=None,
                             help="The name of the disease to analyse,"
                                  "default: '' (i.e. SNPs).")
         parser.add_argument("-a",
@@ -136,8 +136,14 @@ class main():
     def create_prepare_job(self):
         job_name = "{}_{}".format(self.job, "prepare")
 
+        disease_str = ""
+        settings_str = self.settings
+        if self.disease is not None:
+            disease_str = " -d {} ".format(self.disease)
+            settings_str = "disease_{}".format(self.settings)
+
         header = self.create_header(job_name, cpus="2", mem="16")
-        content = ['python3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation.py -n {} -s {} -d {} \n'.format(self.name, self.settings, self.disease)]
+        content = ['python3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation.py -n {} -s {}{}\n'.format(self.name, settings_str, disease_str)]
         footer = self.create_footer()
 
         fpath = os.path.join(self.outdir, job_name + ".sh")
