@@ -35,8 +35,8 @@ from general.utilities import prepare_output_dir
 
 
 class Plotter:
-    def __init__(self, df, exclude, total, outdir, extension="png"):
-        self.df = df.loc[~df["Covariate"].isin(exclude), :]
+    def __init__(self, df, total, outdir, extension="png"):
+        self.df = df
         self.total = total
         self.outdir = os.path.join(outdir, 'plots')
         self.extension = extension
@@ -47,15 +47,20 @@ class Plotter:
         if self.extension == "pdf":
             matplotlib.rcParams['pdf.fonttype'] = 42
 
-    def plot(self):
+    def plot(self, exclude=None):
         print("Plotting interaction upsetplot.")
         data = {}
+        celltype_mediated_eqtls = set()
         for covariate in self.df["Covariate"].unique():
+            if exclude is not None and covariate in exclude:
+                continue
             subset = self.df.loc[self.df["Covariate"] == covariate, :]
-            data[covariate] = set(subset["Index"])
+            eqtls = set(subset["Index"])
+            data[covariate] = eqtls
+            celltype_mediated_eqtls.update(eqtls)
 
         self.upsetplot(data, self.outdir, self.extension)
-        self.plot_pie(self.total, self.df.shape[0], self.outdir, self.extension)
+        self.plot_pie(self.total, len(celltype_mediated_eqtls), self.outdir, self.extension)
 
     def upsetplot(self, data, outdir, extension):
         counts = self.count(data)

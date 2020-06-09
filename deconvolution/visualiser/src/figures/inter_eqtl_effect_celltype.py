@@ -20,15 +20,19 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Standard imports.
+import math
 import os
 
 # Third party imports.
+import seaborn as sns
+import numpy as np
 import pandas as pd
 import matplotlib
 import itertools
 matplotlib.use('Agg')
 import upsetplot as up
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 # Local application imports.
 from general.utilities import prepare_output_dir
@@ -64,8 +68,11 @@ class IntereQTLEffectCelltype:
         self.print_arguments()
 
         print("Plotting deconvolution methods")
+        overview_data = {}
+        overview_overlap = {}
         celltype_mediated_eqtls = set()
         for (prefix, suffix) in self.cellmap_methods:
+            name = prefix.replace("_", "") + suffix
             data = {}
 
             for celltype in self.celltypes:
@@ -80,8 +87,12 @@ class IntereQTLEffectCelltype:
                 data[method_celltype] = eqtls
 
             # Plot.
+            overlap_vals = self.get_overlap(data)
             self.upsetplot(data, prefix.replace("_", "") + suffix,
                            self.outdir, self.extension)
+
+            overview_data[name] = data
+            overview_overlap[name] = overlap_vals
 
         print("Plotting {}".format(self.marker_genes))
         name = self.marker_genes.replace("_", "")
@@ -97,7 +108,14 @@ class IntereQTLEffectCelltype:
             eqtls = set(df.loc[df.sum(axis=1) > 0].index.values)
             celltype_mediated_eqtls.update(eqtls)
 
+        overlap_vals = self.get_overlap(data)
         self.upsetplot(data, name, self.outdir, self.extension)
+        overview_data[name] = data
+        overview_overlap[name] = overlap_vals
+
+        print("Plotting overview data.")
+        self.plot_overview(overview_data, overview_overlap, self.celltypes,
+                           self.outdir, self.extension, self.colormap)
 
         print("Plotting all eQTLs.")
         total = len(set(self.eqtlinter_df.index.values))
@@ -152,8 +170,137 @@ class IntereQTLEffectCelltype:
             celltype_data[celltype] = set(all_eQTLs_of_celltype)
 
         print("Plotting all celltypes combined")
-        self.upsetplot(celltype_data, "Cell-Type_eQTLs", self.outdir,
-                       self.extension)
+        self.upsetplot(celltype_data, "Cell-Type_eQTLs", self.outdir, self.extension)
+
+    @staticmethod
+    def get_overlap(data):
+        overlap = pd.DataFrame(np.nan, index=data.keys(), columns=data.keys())
+        overlap_values = []
+        for i, key1 in enumerate(overlap.index):
+            for j, key2 in enumerate(overlap.columns):
+                value1 = data[key1]
+                value2 = data[key2]
+
+                if len(value1) == 0 or len(value2) == 0:
+                    continue
+
+                n = len(set(value1).intersection(set(value2)))
+                fraction = round(n / len(value1), 2)
+                overlap.iloc[i, j] = fraction
+
+                if i != j:
+                    overlap_values.append([key1, key2, fraction])
+        return overlap_values
+
+    @staticmethod
+    def plot_overview(data, overlap, celltypes, outdir, extension, colormap):
+        boxplot_data = []
+        for key, value in overlap.items():
+            for row in value:
+                boxplot_data.append([key] + row)
+        boxplot_df = pd.DataFrame(boxplot_data,
+                                  columns=["method", "from", "to", "overlap"])
+
+        group_df = boxplot_df.copy()
+        group_df = group_df.groupby("method").mean()
+        group_df.columns = ['mean']
+        group_df.index.name = None
+        group_df.sort_values(['mean'], inplace=True)
+
+        boxplot_df["hue"] = "other"
+        boxplot_df.loc[boxplot_df["method"] == group_df.index[0], "hue"] = "best"
+
+        barplot_data = {}
+        methods = data.keys()
+        method_sum = {method: 0 for method in methods}
+        for i, celltype in enumerate(celltypes):
+            celltype_data = []
+            for method in methods:
+                method_celltype = celltype
+                if celltype not in data[method].keys():
+                    method_celltype = "Macrophage"
+
+                old_sum = method_sum[method]
+                new_sum = old_sum + len(data[method][method_celltype])
+                method_sum[method] = new_sum
+                celltype_data.append([method,
+                                      new_sum,
+                                      colormap[method_celltype]])
+            barplot_data[i] = celltype_data
+
+        sns.set(rc={'figure.figsize': (18, 9)})
+        sns.set_style("ticks")
+        fig, (ax1, ax2) = plt.subplots(1, 2)
+        plt.subplots_adjust(top=0.9, bottom=0.1, wspace=0.01, hspace=0.01)
+        for ax in [ax1, ax2]:
+            sns.despine(fig=fig, ax=ax)
+
+        # Plot the bar graph.
+        max_val = max(method_sum.values())
+        major_ticks = 10 ** (math.floor(math.log10(max(max_val, 100))))
+        minor_ticks = int(major_ticks / 2)
+        for i in range(0, int(max_val) + (1 * major_ticks), minor_ticks):
+            alpha = 0.025
+            if i % major_ticks == 0:
+                alpha = 0.15
+            ax1.axhline(i, ls='-', color="#000000", alpha=alpha, zorder=-1)
+
+        for i in range(len(celltypes) - 1, -1, -1):
+            barplot_df = pd.DataFrame(barplot_data[i], columns=["method", "len", "color"])
+            sns.barplot(x="method", y="len", palette=barplot_df["color"],
+                        data=barplot_df, order=group_df.index, ax=ax1)
+
+        ax1.text(0.5, 1.02,
+                    'Total Interactions per Celltype',
+                    fontsize=20, weight='bold', ha='center', va='bottom',
+                    transform=ax1.transAxes)
+        ax1.set_xlabel('',
+                       fontsize=14,
+                       fontweight='bold')
+        ax1.set_ylabel('N cis-eQTL interactions',
+                        fontsize=14,
+                        fontweight='bold')
+
+        handles = []
+        for celltype in celltypes[::-1]:
+            label = celltype
+            if celltype == "Microglia":
+                label = "Microglia/Macrophage"
+            handles.append(mpatches.Patch(color=colormap[celltype], label=label))
+        ax1.legend(handles=handles, loc="upper left")
+        ax1.tick_params(labelsize=14)
+
+        # Plot boxplot.
+        for i in range(0, 100, 5):
+            alpha = 0.025
+            if i % 10 == 0:
+                alpha = 0.15
+            ax2.axhline(i / 100, ls='-', color="#000000", alpha=alpha,
+                        zorder=-1)
+
+        sns.boxplot(x="method", y="overlap", hue="hue", data=boxplot_df,
+                    palette={"best": "#6495ED", "other": "#808080"},
+                    order=group_df.index, showfliers=False, dodge=False,
+                    ax=ax2)
+        sns.swarmplot(x="method", y="overlap", data=boxplot_df, color=".25",
+                      order=group_df.index, ax=ax2)
+        ax2.get_legend().set_visible(False)
+
+        ax2.text(0.5, 1.02,
+                 'Average Overlap in Interactions\nBetween Cell Types',
+                 fontsize=20, weight='bold', ha='center', va='bottom',
+                 transform=ax2.transAxes)
+        ax2.set_ylabel('overlap',
+                       fontsize=14,
+                       fontweight='bold')
+        ax2.set_xlabel('',
+                       fontsize=14,
+                       fontweight='bold')
+        ax2.tick_params(labelsize=14)
+        ax2.set_ylim(0, 1)
+        plt.tight_layout()
+        fig.savefig(os.path.join(outdir, "overview.{}".format(extension)))
+        plt.close()
 
     def upsetplot(self, data, title, outdir, extension):
         counts = self.count(data)

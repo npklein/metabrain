@@ -3,7 +3,7 @@
 """
 File:         create_jobs.py
 Created:      2020/06/05
-Last Changed:
+Last Changed: 2020/06/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -96,7 +96,7 @@ class main():
                             "--disease",
                             nargs="+",
                             type=str,
-                            default=None,
+                            default="",
                             help="The name of the disease to analyse,"
                                  "default: '' (i.e. SNPs).")
         parser.add_argument("-a",
@@ -118,6 +118,7 @@ class main():
                             default=["all"],
                             choices=["prepare",
                                      "combine",
+                                     "identify",
                                      "visualise"],
                             help="The job files to create.")
 
@@ -130,6 +131,9 @@ class main():
         if 'combine' in self.types or 'all' in self.types:
             self.create_combine_job()
 
+        if 'identify' in self.types or 'all' in self.types:
+            self.create_identify_job()
+
         if 'visualise' in self.types or 'all' in self.types:
             self.create_visualise_job()
 
@@ -138,7 +142,7 @@ class main():
 
         disease_str = ""
         settings_str = self.settings
-        if self.disease is not None:
+        if self.disease != "":
             disease_str = " -d {} ".format(self.disease)
             settings_str = "disease_{}".format(self.settings)
 
@@ -155,6 +159,17 @@ class main():
 
         header = self.create_header(job_name, cpus="4", mem="16")
         content = ['python3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/custom_interaction_analyser.py -n {} -s {} -combine \n'.format(self.name, self.settings)]
+        footer = self.create_footer()
+
+        fpath = os.path.join(self.outdir, job_name + ".sh")
+        lines = header + content + footer
+        self.create_file(fpath, lines)
+
+    def create_identify_job(self):
+        job_name = "{}_{}".format(self.job, "identify")
+
+        header = self.create_header(job_name, cpus="4", mem="16")
+        content = ['python3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/identify_ct_mediated_eqtls.py.py -n {} -s {} -a {} \n'.format(self.name, self.settings, self.alpha)]
         footer = self.create_footer()
 
         fpath = os.path.join(self.outdir, job_name + ".sh")

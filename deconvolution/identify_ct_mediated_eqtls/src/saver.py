@@ -50,7 +50,8 @@ class Saver:
         if exclude is not None:
             df = df.loc[~df["Covariate"].isin(exclude), :]
         fpath = os.path.join(self.outdir, "all.txt")
-        self.save(df, fpath, self.max_url_len, self.signif_cutoff)
+        self.save(df, fpath, self.max_url_len, self.signif_cutoff,
+                  include_cov=True)
 
     def save_per_group(self):
         print("Saving results per group.")
@@ -83,19 +84,19 @@ class Saver:
                                                                         direction))
                     self.save(dir_df, fpath, self.max_url_len, self.signif_cutoff)
 
-                    indices_of_interest.extend(cov_df["Index"][:self.top])
+                    indices_of_interest.extend(dir_df["Index"][:self.top])
 
         indices_of_interest = list(set(indices_of_interest))
         indices_of_interest.sort()
         return indices_of_interest
 
     @staticmethod
-    def save(df, outfile, max_url_len, z_score_cutoff, include_cell=False):
+    def save(df, outfile, max_url_len, z_score_cutoff, include_cov=False):
         print("\tWriting output file: {}\tlen: {}".format(os.path.basename(outfile), len(df.index)))
         with open(outfile, 'w') as f:
             f.write("Index\tSNPName\tProbeName\tHGNCName\tN\tMAF\teQTL\tInter")
-            if include_cell:
-                f.write("\tCell")
+            if include_cov:
+                f.write("\tCovariate")
             f.write("\n")
 
             url_string = ""
@@ -111,8 +112,8 @@ class Saver:
                                                 row["eQTL"],
                                                 row["Inter"]
                                                 ))
-                if include_cell:
-                    f.write("\t{}".format(row["cell"]))
+                if include_cov:
+                    f.write("\t{}".format(row["Covariate"]))
                 f.write("\n")
                 if (len(url_string) + len(row["ProbeName"])) < max_url_len:
                     if row["HGNCName"] not in url_genes:
