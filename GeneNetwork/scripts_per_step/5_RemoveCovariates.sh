@@ -11,6 +11,7 @@ expression_file=
 covar_matrix=
 threads=
 github_dir=
+mem=
 main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
@@ -23,7 +24,7 @@ main(){
 
     mkdir -p $(dirname $outdir)
 
-    java -jar $github_dir//RunV13.jar $project_dir/configs/5_RemoveCovariates.json
+    java -Xmx$mem -Xms$mem -jar $github_dir//RunV13.jar $project_dir/configs/5_RemoveCovariates.json
 
 
 }
@@ -31,13 +32,14 @@ main(){
 usage(){
     # print the usage of the programme
     programname=$0
-    echo "usage: $programname -e expression_file -p project_directory -o output_dir -c config_dir -g github_dir -z covariance matrix"
+    echo "usage: $programname -e expression_file -p project_directory -o output_dir -c config_dir -g github_dir -z covariance matrix -m memory"
     echo "  -e      Expression file to remove duplciates from"
     echo "  -p      Base of the project_dir where config files will be written"
     echo "  -o      Output directory that will be written"
     echo "  -c      Dir with configuration template files"
     echo "  -g      Github dir where RunV13.jar is located"
     echo "  -z      Covariance matrix to regress out"
+    echo "  -m      Memory to reserve"
     echo "  -h      display help"
     exit 1
 }
@@ -70,6 +72,9 @@ parse_commandline(){
                                         ;;
             -z | --covar_matrix )       shift
                                         covar_matrix=$1
+                                        ;;
+            -m | --mem )                shift
+                                        mem=$1
                                         ;;
             -h | --help )               usage
                                         exit
@@ -115,6 +120,12 @@ parse_commandline(){
     if [ -z "$covar_matrix" ];
     then
         echo "ERROR: -z/--covar_matrix not set!"
+        usage
+        exit 1;
+    fi
+    if [ -z "$mem" ];
+    then
+        echo "ERROR: -m/--mem not set!"
         usage
         exit 1;
     fi

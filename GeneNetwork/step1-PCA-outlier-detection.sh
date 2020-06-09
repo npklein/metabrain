@@ -130,12 +130,12 @@ print_command_arguments(){
     # Step 3. calculate PCs of quantile normalized data. Do visual inspection, if samples need to be removed, rerun with different sample file as input
     # and remake the PC plot. Repeat until no outliers are left over. Then go to next step of GeneNetwork
     output_file_step3=$output_dir/3_quantileNormalized_$step/$(basename ${output_file_step2%.txt.gz}.QuantileNormalized.txt.gz)
-    if [ ! -f $output_dir/pca.png ];
+    if [ ! -f $output_dir/3_quantileNormalized_$step/pca.png ];
     then
        bash $github_dir/GeneNetwork/scripts_per_step/3_PCA_on_quantNormalizedData.sh \
            -p $project_dir \
            -e $output_file_step2 \
-           -o $TMPDIR/3_quantileNormalized/ \
+           -o $TMPDIR/3_quantileNormalized_$step/ \
            -c $github_dir/GeneNetwork/config_file_templates/ \
            -j $jar_dir \
            -m $mem

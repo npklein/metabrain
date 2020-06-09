@@ -58,10 +58,10 @@ main(){
     8_center_scale
     echo "9_correlate_eigenvectors"
     9_correlate_eigenvectors
-    echo "10_GeneNetwork_predictions"
-    10_GeneNetwork_predictions
-    echo "11_WebsiteMatrixCreator"
-    11_WebsiteMatrixCreator
+#    echo "10_GeneNetwork_predictions"
+#    10_GeneNetwork_predictions
+#    echo "11_WebsiteMatrixCreator"
+#    11_WebsiteMatrixCreator
 }
 
 
@@ -206,16 +206,32 @@ print_command_arguments(){
         matrix_name=$(basename ${f%_terms.txt})
         matrix_name=${matrix_name%.terms.txt}
         auc="${output_dir}/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.txt"
-        if [ ! -f $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt ];
+        if [ ! -f $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt ] && [ ! -f $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt.gz ];
         then
+            if [ -f ${auc}.gz ] && [ ! -f ${auc} ];
+            then
+                echo "zcat ${auc}.gz to ${auc}"
+                zcat ${auc}.gz > ${auc}
+            fi
             Rscript ${github_dir}/GeneNetwork/table_scripts/calculate_bonferonni.R \
                                           -i $auc \
                                           -o $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt \
                                           -t $f
         fi
         outfile=$output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.bonSigOnly.txt
-        if [ ! -f $outfile ];
+        if [ ! -f $outfile ] && [ ! -f ${outfile}.gz ];
         then
+            if [ -f $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt.gz ] && [ ! -f $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt ];
+            then
+                echo "zcat $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt.gz > zcat $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt"
+                zcat $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt.gz > $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt
+            fi
+
+            if [ -f $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.txt.gz ] && [ ! -f $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.txt ];
+            then
+                echo "zcat $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.txt.gz > $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.txt"
+                zcat $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.txt.gz > $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.txt
+            fi
             bash ${github_dir}/GeneNetwork/scripts_per_step/11_select_columns.sh -g ${github_dir}/GeneNetwork/ \
                                                                              -a $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt \
                                                                              -c $github_dir/GeneNetwork/config_file_templates/ \
@@ -235,22 +251,40 @@ print_command_arguments(){
         matrix_name=$(basename ${f%.matrix.txt})
         matrix_name=${matrix_name%_matrix.txt}
         echo $output_dir/11_ImportToWebsite/${matrix_name}.${n_eigenvectors}_eigenvectors_gnInputFormat.txt
-        if [ ! -f $output_dir/11_ImportToWebsite/${matrix_name}.${n_eigenvectors}_eigenvectors.matrix_gnInputFormat.txt ];
+        if [ ! -f $output_dir/11_ImportToWebsite/${n_eigenvectors}/${matrix_name}.${n_eigenvectors}_eigenvectors.matrix_gnInputFormat.txt ];
         then
+            if [ ! -f $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonSigTerms.txt ] && [ -f $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonSigTerms.txt.gz ];
+            then
+                echo "zcat $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonSigTerms.txt.gz > output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonSigTerms.txt"
+                zcat $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonSigTerms.txt.gz > $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonSigTerms.txt
+            fi
+
+            if [ ! -f $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt ] && [ -f $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt.gz ];
+            then
+                echo "zcat $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt.gz > $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt"
+                zcat $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt.gz > $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt
+            fi
+
+            if [ ! -f $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.bonSigOnly.txt ] && [ -f $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.bonSigOnly.txt.gz ];
+            then
+                echo "zcat $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.bonSigOnly.txt.gz > $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.bonSigOnly.txt"
+                zcat $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.bonSigOnly.txt.gz > $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.bonSigOnly.txt
+            fi
+
             bash ${github_dir}/GeneNetwork/scripts_per_step/12_GeneNetwork_WebsiteMatrixCreator.sh  -i $f \
                                                                                                     -t $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonSigTerms.txt \
                                                                                                     -a $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt \
                                                                                                     -z $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.bonSigOnly.txt \
-                                                                                                    -o $output_dir/11_ImportToWebsite/ \
+                                                                                                    -o $output_dir/11_ImportToWebsite/${n_eigenvectors}/ \
                                                                                                     -g $github_dir/GeneNetwork/ \
                                                                                                     -c $github_dir/GeneNetwork/config_file_templates/ \
                                                                                                     -p $project_dir
         fi
-        echo "# $github_dir/GeneNetwork/GeneNetworkBackend/PathwayMatrix/${matrix_name}.${n_eigenvectors}_eigenvectors.matrix.txt" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
+
+        echo "# $github_dir/GeneNetwork/GeneNetworkBackend/PathwayMatrix/${matrix_name}.matrix.txt" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
         echo "# $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonSigTerms.txt" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
         echo "# $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.AUC.bonferonni.txt" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
         echo "# $output_dir/10_GeneNetwork_predictions/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.bonSigOnly.txt" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
-        echo "# $github_dir/GeneNetwork/GeneNetworkBackend/PathwayMatrix/${matrix_name}.${n_eigenvectors}_eigenvectors.matrix.txt" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
         echo "# $output_dir/11_ImportToWebsite/*" >> $output_dir/11_ImportToWebsite/populate_database.${n_eigenvectors}_eigenvectors.sh
     done
     today=$(date +"%Y-%m-%d")
