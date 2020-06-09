@@ -3,7 +3,7 @@
 """
 File:         create_CIA_jobs.py
 Created:      2020/04/22
-Last Changed: 2020/06/05
+Last Changed: 2020/06/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -51,13 +51,14 @@ class main():
     def __init__(self):
         # Get the command line arguments.
         arguments = self.create_argument_parser()
+        self.job = getattr(arguments, 'job').upper()
         self.name = getattr(arguments, 'name').lower()
         self.settings = getattr(arguments, 'settings').lower()
         self.exclude = getattr(arguments, 'exclude')
         self.start_index = getattr(arguments, 'first')
         self.stop_index = getattr(arguments, 'last')
         self.batch_size = getattr(arguments, 'batch')
-        self.samples = getattr(arguments, 'samples')
+        self.n_samples = getattr(arguments, 'n_samples')
 
         # Set the variables.
         self.outdir = Path(__file__).parent.absolute()
@@ -80,6 +81,11 @@ class main():
                             version="{} {}".format(__program__,
                                                    __version__),
                             help="show program's version number and exit")
+        parser.add_argument("-j",
+                            "--job",
+                            type=str,
+                            required=True,
+                            help="The name of the job")
         parser.add_argument("-n",
                             "--name",
                             type=str,
@@ -93,12 +99,12 @@ class main():
                             help="The settings input file")
         parser.add_argument("-f",
                             "--first",
-                            type=str,
+                            type=int,
                             default=0,
                             help="The start index, default: 0.")
         parser.add_argument("-l",
                             "--last",
-                            type=str,
+                            type=int,
                             required=True,
                             help="The stop index.")
         parser.add_argument("-b",
@@ -106,16 +112,16 @@ class main():
                             type=str,
                             default=50,
                             help="The number of eQTLs per job.")
-        parser.add_argument("-s",
-                            "--sample",
-                            type=str,
+        parser.add_argument("-ns",
+                            "--n_samples",
+                            type=int,
                             required=True,
                             help="The number of samples.")
         parser.add_argument("-e",
                             "--exclude",
                             type=str,
                             default=None,
-                            help="The name of name to exclude,"
+                            help="The name of node to exclude,"
                                  "default: None.")
 
         return parser.parse_args()
@@ -133,7 +139,7 @@ class main():
         if start_index > 0:
             skip_rows = " -sr {}".format(start_index)
 
-        job_name = "{}{}".format(self.name.upper(), job_id)
+        job_name = "{}{}".format(self.job.upper(), job_id)
         out_filepath = os.path.join(self.log_file_outdir, job_name + ".out")
         bash_filepath = os.path.join(self.outdir, job_name + ".sh")
 
@@ -157,7 +163,7 @@ class main():
                  "module load Python/3.6.3-foss-2015b\n",
                  "source $HOME/venv/bin/activate\n",
                  "\n",
-                 "python3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/custom_interaction_analyser.py -n {} -s {}{} -ne {} -ns {}\n".format(self.name, self.settings, skip_rows, batch_size, self.samples),
+                 "python3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/custom_interaction_analyser.py -n {} -s {}{} -ne {} -ns {}\n".format(self.name, self.settings, skip_rows, batch_size, self.n_samples),
                  "\n",
                  "deactivate\n"]
 

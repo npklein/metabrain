@@ -56,7 +56,7 @@ class Main:
         # Load the LocalSettings singelton class.
         self.settings = LocalSettings(current_dir, settings_file)
         self.covs = self.settings.get_setting("covariates_to_include")
-        self.covs_excl_from_overview = self.settings.get_setting("covariates_excl_from_overview")
+        self.covs_excl_from_overview = [x.lower() for x in self.settings.get_setting("covariates_excl_from_overview")]
         self.max_url_len = self.settings.get_setting("max_url_length")
         self.maf_cutoff = self.settings.get_setting("maf_cutoff")
         self.include_top_n = self.settings.get_setting("include_top_n")
@@ -144,6 +144,7 @@ class Main:
                             inter_tvalues=tvalues)
                 #eqtl.print_info()
                 data.extend(eqtl.get_data())
+                del eqtl
 
         # Create the complete dataframe.
         data_df = pd.DataFrame(data, columns=["Index", "SNPName", "ProbeName",
@@ -152,8 +153,8 @@ class Main:
                                               "Interaction", "Direction"])
 
         # Plot the data.
-        plotter = Plotter(data_df, self.covs_excl_from_overview, eqtl_df.shape[0], self.outdir)
-        plotter.plot()
+        plotter = Plotter(data_df, eqtl_df.shape[0], self.outdir)
+        plotter.plot(exclude=self.covs_excl_from_overview)
 
         # Save data files.
         saver = Saver(data_df, self.outdir, signif_cutoff, self.max_url_len, self.include_top_n)
