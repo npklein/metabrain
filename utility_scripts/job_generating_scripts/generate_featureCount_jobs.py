@@ -8,7 +8,7 @@ parser.add_argument('jobs_directory', help='Directory to write jobs to')
 parser.add_argument('output_directory', help='Outputdir to write results to')
 parser.add_argument('ref_gtf', help='Reference gtf file location')
 parser.add_argument('ref_meta_gtf', help='Reference gtf file location')
-parser.add_argument('-r','--ref_fasta', help='Reference fasta')
+parser.add_argument('ref_fasta', help='Reference fasta')
 parser.add_argument('-q','--qos', help='QOS to use', default='regular')
 parser.add_argument('-s','--subreadVersion', help='subread version', default='1.6.4-foss-2018b')
 #parser.add_argument('--extra_options', help='Extra options to give to featurecounts (e.g. -O --fraction',
@@ -138,7 +138,7 @@ set -u
 module load Subread/REPLACESUBREADVERSION
 module load SAMtools
 
-if [[ "$REPLACECRAM" == *cram ]];
+if [[ "REPLACECRAM" == *cram ]];
 then
     echo "converting cram to bam"
     samtools view -T REPLACEREFFASTA -hb REPLACECRAM > $TMPDIR/$(basename REPLACEBAM)
