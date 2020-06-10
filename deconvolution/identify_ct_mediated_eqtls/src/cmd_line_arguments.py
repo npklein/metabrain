@@ -90,7 +90,7 @@ class CommandLineArguments:
                             nargs="+",
                             default=["png"],
                             choices=["eps", "pdf", "pgf", "png", "ps", "raw", "rgba", "svg", "svgz"],
-                            help="The output file format, default: 'png'")
+                            help="The output file format(s), default: ['png']")
         parser.add_argument("-i",
                             "--interest",
                             nargs="+",
