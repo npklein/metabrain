@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/23
-Last Changed: 2020/06/05
+Last Changed: 2020/06/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -89,13 +89,13 @@ class CommandLineArguments:
                             type=int,
                             default=None,
                             help="The number of eQTLs in the input files, "
-                                 "default: None (determine manually).")
+                                 "default: None (determine automatically).")
         parser.add_argument("-ns",
                             "--n_samples",
                             type=int,
                             default=None,
                             help="The number of samples in the input files, "
-                                 "default: None (determine manually).")
+                                 "default: None (determine automatically).")
         parser.add_argument("-verbose",
                             action='store_true',
                             help="Include steps and command prints, "

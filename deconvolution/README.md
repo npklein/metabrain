@@ -33,7 +33,7 @@ See 'Installing' on how to install these packages.
 Installing and running the program can be done by executing the following steps:
 
 **Step 1: acquire the source files**      
-Either [clone](https://bitbucket.org/martijnvochteloo/programming1/commits/all) or [download](https://bitbucket.org/martijnvochteloo/programming1/downloads/) the source files.
+Either [clone](https://github.com/mvochteloo/brain_eQTL.git) or [download](https://github.com/mvochteloo/brain_eQTL/archive/master.zip) the source files.
 
 **Step 2: creating the virtual environment [OPTIONAL]**    
 1) Open JetBrains PyCharm  
@@ -79,7 +79,7 @@ Options:
   
 ### Step 2: Analyse Interactions 
 
-This step performs multiple regression (MLR) analysis on the ordered expression/genotype matrix for each covariate in the covariate matrix (data from step 1). Each covariate is tested for having an interaction effect with the eQTL. Two distinct methods are implemented: (1) a wrapper around the java bases [eQTLInteractionAnalyser](https://github.com/molgenis/systemsgenetics/wiki/Discovery-of-hidden-confounders-of-QTLs) implementation developed by Patrick Deelen, and (2) my own custom implementation.  
+This step performs multiple regression (MLR) analysis on the ordered expression/genotype matrix for each covariate in the covariate matrix (data from step 1). Each covariate is tested for having an interaction effect with the eQTL. Two distinct methods are implemented: **(1)** a wrapper around the java bases [eQTLInteractionAnalyser](https://github.com/molgenis/systemsgenetics/wiki/Discovery-of-hidden-confounders-of-QTLs) implementation developed by Patrick Deelen, and **(2)** my own custom implementation.  
 
 My own implementation also performs permutation based FDR in the MLR analysis. Results are separated on technical covariates and covariates of interest. The former of which is used to validate the model.
 
@@ -125,24 +125,24 @@ Options:
  * **-n** / **--name**: The name of the input/output directory.
  * **-s** / **--settings**: The settings input file (without '.json'), default: 'default_settings'.
  * **-sr** / **--skip_rows**: The number of rows to skip in the input files, default: 0
- * **-ne** / **--n_eqtls**: The number of eQTLs in the input files, default: None (determine manually).
- * **-ns** / **--n_samples**: The number of samples in the input files, default: None (determine manually).
+ * **-ne** / **--n_eqtls**: The number of eQTLs in the input files, default: None (determine automatically).
+ * **-ns** / **--n_samples**: The number of samples in the input files, default: None (determine automatically).
  * **-verbose**: Include steps and command prints, default: False.  
 
 Example:
  * Job1, analyzes eQTLs 0-50: 
  ```console  
-python3 ./custom_interaction_analyser.py -n example_output -ne 50 -ns 1000 
+python3 ./custom_interaction_analyser.py -n example_output -ne 50 
 ```  
  * Job2, analyzed eQTLs 50-100: 
  ```console  
-python3 ./custom_interaction_analyser.py -n example_output -sr 50 -ne 100 -ns 1000  
+python3 ./custom_interaction_analyser.py -n example_output -sr 50 -ne 100 
 ``` 
  * Job3:   
    ...  
    
 ##### Step B2: Combine the Resuts
-This step loads the pickled data and combines them into a complete interaction matrix. Also multiple-testing corrections are performed and the resulting FDR are compared to the original p-values. This code also creates a few visualizations of the interaction data.
+This step loads the pickled data and combines them into a complete interaction matrix. Also multiple-testing corrections are performed and the resulting FDR values are compared to the original p-values. This code also creates a few visualizations of the p-value distributions and fdr - pvalue comparisons.
   
 Syntax:
 ```console  
@@ -153,12 +153,12 @@ Options:
   
 ### Step 3: identify cell type mediated eQTLs  
 
-This step takes the results from the previous two steps and groups eQTLs based on cell type mediated effects.
+This step takes the results from the previous two steps and groups eQTLs based on cell type mediated effects. Furthermore, upsetplot(s) is/are created for overlapping interaction effects.
 
 Settings: [default_settings.json](identify_ct_mediated_eqtls/settings/default_settings.json)  
 Syntax:
 ```console  
-python3 ./identify_ct_mediated_eqtls.py
+python3 ./identify_ct_mediated_eqtls.py -n example_output
 ```  
 Options:
 
@@ -185,7 +185,7 @@ Options:
  * **-p** / **--plots**: The name of the figures to be created, default: 'all'.
  * **-t** / **--top**: The number of top eQTLs to visualise, default: 1.
  * **-i** / **--interest**: The indices of the eQTLS to visualise, default: None. If set, -t / --top is discarded.
- * **-e** / **--extension**: The output file format, default: 'png' 
+ * **-e** / **--extension**: The output file format, default: 'png'.
  * **-validate**: Validate that the input matrices match with each other and then quit, default: 'False'.  
   
 ## Author  
