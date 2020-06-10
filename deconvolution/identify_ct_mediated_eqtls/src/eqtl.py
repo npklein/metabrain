@@ -1,7 +1,7 @@
 """
 File:         eqtl.py
 Created:      2020/06/09
-Last Changed:
+Last Changed: 2020/06/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -30,16 +30,17 @@ import numpy as np
 
 
 class Eqtl:
-    def __init__(self, index, snp_name, probe_name, hgnc_name, eqtl_zscore,
-                 alleles, gwas_ids, traits, signif_cutoff, maf_cutoff,
-                 selections, genotype, expression, covariates, inter_zscores,
-                 inter_tvalues):
+    def __init__(self, index, snp_name, probe_name, hgnc_name, iteration,
+                 eqtl_zscore, alleles, gwas_ids, traits, signif_cutoff,
+                 maf_cutoff, selections, genotype, expression, covariates,
+                 inter_zscores, inter_tvalues):
         # General information.
         self.index = index
         self.snp_name = snp_name
         self.probe_name = probe_name
         self.hgnc_name = hgnc_name
-        self.eqtl_zscore = eqtl_zscore
+        self.iteration = iteration
+        self.eqtl_zscore = round(eqtl_zscore, 2)
         self.alleles = alleles
         self.gwas_ids = gwas_ids
         self.traits = traits
@@ -52,8 +53,8 @@ class Eqtl:
         self.covariates = covariates
 
         # Significance of the interaction.
-        inter_zscores = {index.split("_")[-1].lower(): value for index, value in inter_zscores.iteritems()}
-        inter_tvalues = {index.split("_")[-1].lower(): value for index, value in inter_tvalues.iteritems()}
+        inter_zscores = {index.split("_")[-1].lower(): round(value, 2) for index, value in inter_zscores.iteritems()}
+        inter_tvalues = {index.split("_")[-1].lower(): round(value, 2) for index, value in inter_tvalues.iteritems()}
 
         # Variables.
         self.minor_allele = self.alleles[-1]
@@ -170,7 +171,7 @@ class Eqtl:
         for key, value in self.cov_info.items():
             selection = self.selections[key]
             if self.maf > self.maf_cutoff and value["interaction"] in selection and value["direction"] is not None:
-                data.append([self.index, self.snp_name, self.probe_name, self.hgnc_name, self.df.shape[0], self.maf, self.eqtl_zscore, value["tvalue"], key, value["interaction"], value["direction"]])
+                data.append([self.index, self.snp_name, self.probe_name, self.hgnc_name, self.iteration, self.df.shape[0], self.maf, self.eqtl_zscore, value["tvalue"], key, value["interaction"], value["direction"], self.gwas_ids, self.traits])
         return data
 
     def print_info(self):
@@ -179,6 +180,7 @@ class Eqtl:
         print("  > SNP name: {}".format(self.snp_name))
         print("  > Probe name: {}".format(self.probe_name))
         print("  > HGNC name: {}".format(self.hgnc_name))
+        print("  > Iteration: {}".format(self.iteration))
         print("  > eQTL z-score: {}".format(self.eqtl_zscore))
         print("  > Alleles: {}".format(self.alleles))
         print("  > GWAS IDs: {}".format(self.gwas_ids))

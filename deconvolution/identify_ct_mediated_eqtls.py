@@ -3,7 +3,7 @@
 """
 File:         identify_ct_mediated_eqtls.py
 Created:      2020/06/08
-Last Changed:
+Last Changed: 2020/06/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -51,9 +51,13 @@ if __name__ == '__main__':
     NAME = CLA.get_argument("name")
     SETTINGS_FILE = CLA.get_argument("settings")
     ALPHA = CLA.get_argument("alpha")
+    EXTENSIONS = CLA.get_argument("extensions")
+    INTEREST = CLA.get_argument("interest")
 
     # Start the program.
     PROGRAM = Main(name=NAME,
                    settings_file=SETTINGS_FILE,
-                   alpha=ALPHA)
+                   alpha=ALPHA,
+                   extensions=EXTENSIONS,
+                   interest=INTEREST)
     PROGRAM.start()

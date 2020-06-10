@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/04/23
-Last Changed: 2020/06/05
+Last Changed: 2020/06/09
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -84,11 +84,11 @@ class Main:
         self.tech_covs = settings.get_setting("technical_covariates")
         self.cov_outdir = settings.get_setting("covariates_folder")
         self.tech_cov_outdir = settings.get_setting("technical_covariates_folder")
+        self.perm_orders_filename = settings.get_setting("permutations_order_pickle_filename")
         self.pvalues_filename = settings.get_setting("actual_pvalues_pickle_filename")
         self.snp_tvalues_filename = settings.get_setting("snp_tvalues_pickle_filename")
         self.inter_tvalues_filename = settings.get_setting("inter_tvalues_pickle_filename")
         self.perm_pvalues_filename = settings.get_setting("permuted_pvalues_pickle_filename")
-        self.perm_orders_filename = settings.get_setting("permutations_order_pickle_filename")
         self.n_permutations = settings.get_setting("n_permutations")
         self.max_end_time = int(time.time()) + settings.get_setting("max_runtime_in_hours") * 60 * 60
         self.panic_time = self.max_end_time - (settings.get_setting("panic_time_in_min") * 60)
@@ -596,9 +596,9 @@ class Main:
         print("  > Genotype datafile: {}".format(self.geno_inpath))
         print("  > Expression datafile: {}".format(self.expr_inpath))
         print("  > Covariates datafile: {}".format(self.cov_inpath))
-        print("  > Output directory: {}".format(self.outdir))
         print("  > Drop covariates: {}".format(self.drop_covs))
         print("  > Technical covariates: {}".format(self.tech_covs))
+        print("  > Output directory: {}".format(self.outdir))
         print("  > Permutations: {}".format(self.n_permutations))
         print("  > Panic datetime: {}".format(panic_time_string))
         print("  > Max end datetime: {}".format(end_time_string))

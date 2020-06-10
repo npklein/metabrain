@@ -1,7 +1,7 @@
 """
 File:         plotter.py
 Created:      2020/06/09
-Last Changed:
+Last Changed: 2020/06/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -35,9 +35,8 @@ from general.utilities import prepare_output_dir
 
 
 class Plotter:
-    def __init__(self, df, total, outdir, extension="png"):
-        self.df = df
-        self.total = total
+    def __init__(self, df, outdir, extension="png"):
+        self.df = self.set_df(df)
         self.outdir = os.path.join(outdir, 'plots')
         self.extension = extension
 
@@ -47,25 +46,34 @@ class Plotter:
         if self.extension == "pdf":
             matplotlib.rcParams['pdf.fonttype'] = 42
 
-    def plot(self, exclude=None):
-        print("Plotting interaction upsetplot.")
+    @staticmethod
+    def set_df(df):
+        work_df = df.copy()
+        work_df["ID"] = work_df["SNPName"] + work_df["HGNCName"] + work_df["Covariate"]
+        return work_df
+
+    def plot_upsetplot(self, column, id_col, exclude=None):
         data = {}
-        celltype_mediated_eqtls = set()
-        for covariate in self.df["Covariate"].unique():
+        for covariate in self.df[column].unique():
             if exclude is not None and covariate in exclude:
                 continue
-            subset = self.df.loc[self.df["Covariate"] == covariate, :]
-            eqtls = set(subset["Index"])
-            data[covariate] = eqtls
-            celltype_mediated_eqtls.update(eqtls)
+            subset = self.df.loc[self.df[column] == covariate, :]
+            data[covariate] = set(subset[id_col])
 
-        self.upsetplot(data, self.outdir, self.extension)
-        self.plot_pie(self.total, len(celltype_mediated_eqtls), self.outdir, self.extension)
+        if len(data.keys()) <= 1:
+            return
 
-    def upsetplot(self, data, outdir, extension):
         counts = self.count(data)
+
+        self.upsetplot(counts, column, "", self.outdir, self.extension)
+        self.upsetplot(counts[:len(data.keys())], column, "_unique", self.outdir, self.extension)
+
+    def plot_pie(self, total, part):
+        self.pie(total, part, self.outdir, self.extension)
+
+    def upsetplot(self, counts, title, suffix, outdir, extension):
         up.plot(counts, sort_by='cardinality', show_counts=True)
-        plt.savefig(os.path.join(outdir, "upsetplot.{}".format(extension)))
+        plt.savefig(os.path.join(outdir, "{}_upsetplot{}.{}".format(title, suffix, extension)))
         plt.close()
 
     @staticmethod
@@ -75,19 +83,13 @@ class Plotter:
         for i in range(1, len(cols) + 1):
             combinations.extend(list(itertools.combinations(cols, i)))
 
-        abbreviations = {"neuron": "neuro",
-                         "oligodendrocyte": "oligo",
-                         "endothelialcell": "endo",
-                         "microglia": "micro",
-                         "macrophage": "macro",
-                         "astrocyte": "astro"}
-
         abbr_cols = []
         for col in cols:
-            if col in abbreviations.keys():
-                abbr_cols.append(abbreviations[col])
+            col_str = str(col)
+            if len(col_str) > 5:
+                abbr_cols.append(col_str[:5])
             else:
-                abbr_cols.append(col)
+                abbr_cols.append(col_str)
 
         indices = []
         data = []
@@ -125,7 +127,7 @@ class Plotter:
         return s
 
     @staticmethod
-    def plot_pie(total, part, outdir, extension):
+    def pie(total, part, outdir, extension):
         labels = ['YES', 'NO']
         sizes = [part, total - part]
         explode = (0.1, 0)

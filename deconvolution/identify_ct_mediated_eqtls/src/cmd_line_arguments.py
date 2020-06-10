@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/06/08
-Last Changed:
+Last Changed: 2020/06/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -84,6 +84,20 @@ class CommandLineArguments:
                             default=0.05,
                             help="The significance cut-off,"
                                  "default: 0.05.")
+        parser.add_argument("-e",
+                            "--extensions",
+                            type=str,
+                            nargs="+",
+                            default=["png"],
+                            choices=["eps", "pdf", "pgf", "png", "ps", "raw", "rgba", "svg", "svgz"],
+                            help="The output file format, default: 'png'")
+        parser.add_argument("-i",
+                            "--interest",
+                            nargs="+",
+                            type=int,
+                            default=None,
+                            help="The HGNC names to print the info of, "
+                                 "default: None.")
 
         return parser
 
