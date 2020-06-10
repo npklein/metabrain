@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/03/12
-Last Changed: 2020/06/05
+Last Changed: 2020/06/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -83,8 +83,8 @@ class CommandLineArguments:
                             nargs="+",
                             type=str,
                             default="",
-                            help="The name of the disease to analyse,"
-                                 "default: '' (i.e. SNPs).")
+                            help="The name of the disease to filter on,"
+                                 "default: '' (i.e. no filter).")
         parser.add_argument("-f",
                             "--force_steps",
                             nargs="+",

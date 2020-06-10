@@ -3,9 +3,9 @@ This directory contains code written for the cell type deconvolution of bulk RNA
 
 
 ## Introduction
-The goal of this project is to find interaction effects between eQTLS and covariates. Each step of the pipeline is called from the base directory. Each step also contains a command line argument to adjust to settings file. With this option, any setting can be altered by simply copying the default settings and replacing the variables as you please. Make sure to call the program with the right settings using the **-s** / **--settings** command line option.
+The goal of this project is to find interaction effects between eQTLS and covariates. Each step of the pipeline is called from the base directory. Each step also contains a command line argument to adjust the input / output directory name and the settings file. The **-n** / **--name** command line option defines the name of the input, as well as the output, directory. This name will be appended on the settings ***input_dir** variable(s). With the settings option, any global variable can be altered by simply copying the default settings and replacing the variables as you please. Make sure to call the program with the right settings using the **-s** / **--settings** command line option.
 
-Some test scripts and job files are also part of this repository. These files consist code not worthy of a complete step in the pipeline but are still relevant to the project.
+Some scripts saved in the [test_scripts](test_scripts) and [jobs](jobs) folders are also used for the project and are thus included in this repository. These files consist code not worthy of a complete step in the pipeline but are still relevant to the project. An example of which is the [create_jobs](jobs/create_jobs.py) and [create_CIA_jobs](jobs/create_CIA_jobs.py) scripts. These allow for quick and easy SLURM job generation but are not strictly required for the project.
 
 ## Prerequisites  
 
@@ -14,15 +14,16 @@ This program is developed in Pycharm 2019.3 (Professional Edition), performance 
 The program requires the following packages to be installed:  
 
  * pandas ([v1.0.1](https://github.com/pandas-dev/pandas); [BSD 3-Clause License](https://github.com/pandas-dev/pandas/blob/master/LICENSE))  
- * numpy ([v1.13.3](https://pypi.org/project/numpy/#history); [BSD License](https://www.numpy.org/license.html))  
- * scipy ([v1.4.1](https://docs.scipy.org/doc/scipy/reference/release.html); [BSD License](https://www.scipy.org/scipylib/license.html))  
- * matplotlib ([v3.1.3](https://github.com/matplotlib/matplotlib/releases); [BSD License](https://matplotlib.org/3.1.3/users/license.html))  
+ * numpy ([v1.18.3](https://pypi.org/project/numpy/#history); [BSD License](https://www.numpy.org/license.html))  
+ * scipy ([v1.4.1](https://docs.scipy.org/doc/scipy/reference/release.html); [BSD License](https://www.scipy.org/scipylib/license.html))
+ * statsmodels ([v0.11.1](https://www.statsmodels.org/stable/index.html); [Modified BSD (3-clause) license](https://www.statsmodels.org/stable/index.html))    
+ * matplotlib ([v3.2.1](https://github.com/matplotlib/matplotlib/releases); [BSD License](https://matplotlib.org/3.1.3/users/license.html))  
  * seaborn ([v0.10.0](https://github.com/mwaskom/seaborn); [BSD 3-Clause License](https://github.com/mwaskom/seaborn/blob/master/LICENSE))  
  * scikit-learn ([v0.22.2.post1](https://scikit-learn.org/stable/whats_new.html); [BSD 3-Clause License](https://github.com/scikit-learn/scikit-learn/blob/master/COPYING))
- * colour ([v0.1.5](https://pypi.org/project/colour/#history); [BSD 3-Clause License](https://pypi.org/project/colour/))  
+ * colour ([v0.1.5](https://pypi.org/project/colour/#history); [BSD 3-Clause License](https://pypi.org/project/colour/))
+ * upsetplot [v0.4.0](https://pypi.org/project/UpSetPlot/#history); [BSD 3-Clause License](https://pypi.org/project/UpSetPlot//))   
  * xlrd* ([v1.2.0](https://pypi.org/project/xlrd/#history); [BSD License](https://pypi.org/project/xlrd/)) 
- * venn [v0.1.3](https://pypi.org/project/venn/#history); [GPLv3](https://pypi.org/project/venn/))
-  
+
 See 'Installing' on how to install these packages.
 
 \* xlrd is only used on one of the test-scripts and is not required for the main program. 
@@ -66,12 +67,13 @@ This step also performs marker gene extractions, marker gene factorization, and 
 Settings: [default_settings.json](matrix_preparation/settings/default_settings.json)  
 Syntax:
 ```console  
-python3 ./matrix_preparation.py
+python3 ./matrix_preparation.py -n example_output
 ```  
 Options:
 
  * **-n** / **--name**: The name of the input/output directory.
  * **-s** / **--settings**: The settings input file (without '.json'), default: 'default_settings'.
+ * **-d** / **--disease**: The name of the disease to filter on, default: '' (i.e. no filter).
  * **-f** / **--force_steps**: The steps to force the program to redo, default: None.
  
   
@@ -116,7 +118,7 @@ This step performs the interaction analyses on a partition of the complete data 
   
 Syntax:
 ```console  
-python3 ./custom_interaction_analyser.py
+python3 ./custom_interaction_analyser.py -n example_output
 ```  
 Options:
 
@@ -130,11 +132,11 @@ Options:
 Example:
  * Job1, analyzes eQTLs 0-50: 
  ```console  
-python3 ./custom_interaction_analyser.py -ne 50 
+python3 ./custom_interaction_analyser.py -n example_output -ne 50 -ns 1000 
 ```  
  * Job2, analyzed eQTLs 50-100: 
  ```console  
-python3 ./custom_interaction_analyser.py -sr 50 -ne 100 
+python3 ./custom_interaction_analyser.py -n example_output -sr 50 -ne 100 -ns 1000  
 ``` 
  * Job3:   
    ...  
@@ -144,7 +146,7 @@ This step loads the pickled data and combines them into a complete interaction m
   
 Syntax:
 ```console  
-python3 ./custom_interaction_analyser.py -combine
+python3 ./custom_interaction_analyser.py -n example_output -combine
 ```  
 Options:
  * **-combine**: Combine the created files, alternative functionality. Default: False.    
@@ -163,7 +165,7 @@ Options:
  * **-n** / **--name**: The name of the input/output directory.
  * **-s** / **--settings**: The settings input file (without '.json'), default: 'default_settings'.
  * **-a** / **--alpha**: The significance cut-off, default: 0.05.
- * **-e** / **--extension**: The output file format, default: 'png'.
+ * **-e** / **--extensions**: The output file formats, default: ['png'].
  * **-i** / **--interest**: The HGNC names to print the info of, default: None.  
 
 ### Step 4: visualiser  
@@ -173,7 +175,7 @@ This step takes the results from the first two steps and creates visualizations 
 Settings: [default_settings.json](visualiser/settings/default_settings.json)  
 Syntax:
 ```console  
-python3 ./visualiser.py
+python3 ./visualiser.py -n example_output
 ```  
 Options:
 
