@@ -1,7 +1,7 @@
 """
 File:         saver.py
 Created:      2020/06/09
-Last Changed:
+Last Changed: 2020/06/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -45,20 +45,18 @@ class Saver:
         return df
 
     def save_all(self, exclude=None):
-        print("Saving all results.")
         df = self.df.copy()
         if exclude is not None:
             df = df.loc[~df["Covariate"].isin(exclude), :]
         fpath = os.path.join(self.outdir, "all.txt")
-        self.save(df, fpath, self.max_url_len, self.signif_cutoff,
-                  include_cov=True)
+        self.save(df, fpath, self.max_url_len, self.signif_cutoff)
 
     def save_per_group(self):
-        print("Saving results per group.")
         indices_of_interest = []
 
         for interaction in self.df["Interaction"].unique():
-            inter_df = self.df.loc[self.df["Interaction"] == interaction, :]
+            inter_df = self.df.loc[self.df["Interaction"] == interaction, :].copy()
+            inter_df.drop(["Interaction"], axis=1, inplace=True)
             if len(inter_df.index) <= 0:
                 return indices_of_interest
 
@@ -66,7 +64,8 @@ class Saver:
             prepare_output_dir(out_dir)
 
             for covariate in inter_df["Covariate"].unique():
-                cov_df = inter_df.loc[inter_df["Covariate"] == covariate, :]
+                cov_df = inter_df.loc[inter_df["Covariate"] == covariate, :].copy()
+                cov_df.drop(["Covariate"], axis=1, inplace=True)
                 if len(cov_df.index) <= 0:
                     continue
 
@@ -75,7 +74,8 @@ class Saver:
                 self.save(cov_df, fpath, self.max_url_len, self.signif_cutoff)
 
                 for direction in ["up", "down"]:
-                    dir_df = cov_df.loc[cov_df["Direction"] == direction, :]
+                    dir_df = cov_df.loc[cov_df["Direction"] == direction, :].copy()
+                    dir_df.drop(["Direction"], axis=1, inplace=True)
                     if len(dir_df.index) <= 0:
                         continue
 
@@ -91,30 +91,18 @@ class Saver:
         return indices_of_interest
 
     @staticmethod
-    def save(df, outfile, max_url_len, z_score_cutoff, include_cov=False):
+    def save(df, outfile, max_url_len, z_score_cutoff):
         print("\tWriting output file: {}\tlen: {}".format(os.path.basename(outfile), len(df.index)))
         with open(outfile, 'w') as f:
-            f.write("Index\tSNPName\tProbeName\tHGNCName\tN\tMAF\teQTL\tInter")
-            if include_cov:
-                f.write("\tCovariate")
+            f.write('\t'.join([str(x) for x in df.columns]))
             f.write("\n")
 
             url_string = ""
             url_genes = []
             for i, row in df.iterrows():
-                f.write("{}\t{}\t{}\t{}\t{}\t{:.2f}\t"
-                        "{:.2f}\t{:.2f}".format(row["Index"],
-                                                row["SNPName"],
-                                                row["ProbeName"],
-                                                row["HGNCName"],
-                                                row["N"],
-                                                row["MAF"],
-                                                row["eQTL"],
-                                                row["Inter"]
-                                                ))
-                if include_cov:
-                    f.write("\t{}".format(row["Covariate"]))
+                f.write('\t'.join([str(x) for x in row]))
                 f.write("\n")
+
                 if (len(url_string) + len(row["ProbeName"])) < max_url_len:
                     if row["HGNCName"] not in url_genes:
                         url_string += row["ProbeName"]

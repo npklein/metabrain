@@ -1,7 +1,7 @@
 """
 File:         combine_and_plot.py
 Created:      2020/03/30
-Last Changed: 2020/06/05
+Last Changed: 2020/06/09
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -240,8 +240,8 @@ class CombineAndPlot:
                     if columns and i == 0:
                         col_list = content[0]
                     data.extend(content[1:])
-                    print("\tLoaded list: {} with length: {}".format(
-                        get_basename(fpath), len(content)))
+                    # print("\tLoaded list: {} with length: {}".format(
+                    #     get_basename(fpath), len(content)))
                 except EOFError:
                     print("\tEOFError in: {} ".format(get_basename(fpath)))
             f.close()

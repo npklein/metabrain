@@ -169,7 +169,7 @@ class main():
         job_name = "{}_{}".format(self.job, "identify")
 
         header = self.create_header(job_name, cpus="4", mem="16")
-        content = ['python3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/identify_ct_mediated_eqtls.py.py -n {} -s {} -a {} \n'.format(self.name, self.settings, self.alpha)]
+        content = ['python3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/identify_ct_mediated_eqtls.py -n {} -s {} -a {} -e png pdf\n'.format(self.name, self.settings, self.alpha)]
         footer = self.create_footer()
 
         fpath = os.path.join(self.outdir, job_name + ".sh")
@@ -184,6 +184,7 @@ class main():
                    '\n',
                    'for EXT in ${EXTENSIONS[@]}; do\n',
                    '\tpython3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/visualiser.py -n {} -s {} -a {} -p covariate_clustermap covariate_comparison covariates_explained_by_others deconvolution_covariate_comparison deconvolution_zscore_comparison inter_clustermap inter_eqtl_effect_celltype inter_pvalue_boxplot inter_zscore_bars -e $EXT\n'.format(self.name, self.settings, self.alpha),
+                   '\tpython3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/visualiser.py -n {} -s {} -a {} -p simple_eqtl_effect inter_eqtl_zscore_bars inter_eqtl_effect inter_eqtl_celltype_details -i -e $EXT\n'.format(self.name, self.settings, self.alpha),
                    'done\n']
         footer = self.create_footer()
 

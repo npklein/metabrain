@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/06/08
-Last Changed:
+Last Changed: 2020/06/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -42,13 +42,15 @@ class Main:
     Main: this class is the main class that calls all other functionality.
     """
 
-    def __init__(self, name, settings_file, alpha):
+    def __init__(self, name, settings_file, alpha, extensions, interest):
         """
         Initializer of the class.
 
         :param name: string, the name of the base input/ouput directory.
         :param settings_file: string, the name of the settings file.
         :param alpha: float, the significance cut-off.
+        :param extensions: str, the output figure file type extension.
+        :param interest: list, the HGNC names to print.
         """
         # Define the current directory.
         current_dir = str(Path(__file__).parent.parent)
@@ -64,6 +66,8 @@ class Main:
         # Load the variables.
         self.name = name
         self.alpha = alpha
+        self.extensions = extensions
+        self.interest = interest
 
         # Prepare an output directory.
         self.outdir = os.path.join(current_dir, name)
@@ -118,6 +122,9 @@ class Main:
             zscores = select_zscore_df.iloc[i, :].copy()
             tvalues = select_tvalue_df.iloc[i, :].copy()
 
+            iteration = None
+            if "Iteration" in row.index:
+                iteration = row["Iteration"]
             gwas_ids = None
             if "GWASIDS" in row.index:
                 gwas_ids = row["GWASIDS"]
@@ -130,6 +137,7 @@ class Main:
                             snp_name=row["SNPName"],
                             probe_name=row["ProbeName"],
                             hgnc_name=row["HGNCName"],
+                            iteration=iteration,
                             eqtl_zscore=row["OverallZScore"],
                             gwas_ids=gwas_ids,
                             traits=traits,
@@ -142,30 +150,39 @@ class Main:
                             covariates=select_cov_df.copy(),
                             inter_zscores=zscores,
                             inter_tvalues=tvalues)
-                #eqtl.print_info()
+                if self.interest is not None and row["HGNCName"] in self.interest:
+                    eqtl.print_info()
                 data.extend(eqtl.get_data())
                 del eqtl
 
         # Create the complete dataframe.
         data_df = pd.DataFrame(data, columns=["Index", "SNPName", "ProbeName",
-                                              "HGNCName", "N", "MAF", "eQTL",
-                                              "Inter", "Covariate",
-                                              "Interaction", "Direction"])
+                                              "HGNCName", "Iteration", "N",
+                                              "MAF", "eQTL", "Inter",
+                                              "Covariate", "Interaction",
+                                              "Direction", "GWASIDs", "Traits"])
 
         # Plot the data.
-        plotter = Plotter(data_df, eqtl_df.shape[0], self.outdir)
-        plotter.plot(exclude=self.covs_excl_from_overview)
+        print("Creating plots")
+        for extension in self.extensions:
+            plotter = Plotter(data_df, self.outdir, extension=extension)
+            plotter.plot_upsetplot(column="Covariate", id_col="Index", exclude=self.covs_excl_from_overview)
+            plotter.plot_upsetplot(column="Iteration", id_col="ID")
+            plotter.plot_pie(total=eqtl_df.shape[0], part=len(data_df["Index"].unique()))
 
         # Save data files.
+        print("Saving results")
         saver = Saver(data_df, self.outdir, signif_cutoff, self.max_url_len, self.include_top_n)
         saver.save_all(exclude=self.covs_excl_from_overview)
         indices_of_interest = saver.save_per_group()
-        print("Indices of interest: {}".format(' '.join([str(x) for x in indices_of_interest])))
+        print("eQTL indices of interest: {}".format(' '.join([str(x) for x in indices_of_interest])))
 
     def print_arguments(self):
         print("Arguments:")
         print("  > Output directory: {}".format(self.outdir))
         print("  > Alpha: {}".format(self.alpha))
+        print("  > Extensions: {}".format(self.extensions))
+        print("  > Interest: {}".format(self.interest))
         print("  > Covariates to include: {}".format(self.covs))
         print("  > Covariates to exclude from overview: {}".format(self.covs_excl_from_overview))
         print("  > Max URL length: {}".format(self.max_url_len))

@@ -3,7 +3,7 @@
 """
 File:         custom_interaction_analyser.py
 Created:      2020/03/23
-Last Changed: 2020/06/05
+Last Changed: 2020/06/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -27,7 +27,6 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 # Third party imports.
 
 # Local application imports.
-from custom_interaction_analyser.src.manager import Manager
 from custom_interaction_analyser.src.main import Main
 from custom_interaction_analyser.src.combine_and_plot import CombineAndPlot
 from custom_interaction_analyser.src.cmd_line_arguments import \

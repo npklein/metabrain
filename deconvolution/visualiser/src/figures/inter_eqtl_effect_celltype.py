@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect_celltype.py
 Created:      2020/04/20
-Last Changed: 2020/06/03
+Last Changed: 2020/06/09
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -202,10 +202,10 @@ class IntereQTLEffectCelltype:
                                   columns=["method", "from", "to", "overlap"])
 
         group_df = boxplot_df.copy()
-        group_df = group_df.groupby("method").mean()
-        group_df.columns = ['mean']
+        group_df = group_df.groupby("method").median()
+        group_df.columns = ['median']
         group_df.index.name = None
-        group_df.sort_values(['mean'], inplace=True)
+        group_df.sort_values(['median'], inplace=True)
 
         boxplot_df["hue"] = "other"
         boxplot_df.loc[boxplot_df["method"] == group_df.index[0], "hue"] = "best"
