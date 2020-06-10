@@ -1,11 +1,9 @@
-# Deconvolution  
+# Brain eQTL Deconvolution  
 This directory contains code written for the cell type deconvolution of bulk RNA-seq data. This project is part of my graduation internship for the master Data Science for Life Sciences at the Hanze University of Applied Sciences. For more information, please see my thesis.
 
 
 ## Introduction
-The goal of this project is to find interaction effects between eQTLS and covariates. Each step of the pipeline is called from the base directory. Each step also contains a command line argument to adjust the input / output directory name and the settings file. The **-n** / **--name** command line option defines the name of the input, as well as the output, directory. This name will be appended on the settings ***input_dir** variable(s). With the settings option, any global variable can be altered by simply copying the default settings and replacing the variables as you please. Make sure to call the program with the right settings using the **-s** / **--settings** command line option.
-
-Some scripts saved in the [test_scripts](test_scripts) and [jobs](jobs) folders are also used for the project and are thus included in this repository. These files consist code not worthy of a complete step in the pipeline but are still relevant to the project. An example of which is the [create_jobs](jobs/create_jobs.py) and [create_CIA_jobs](jobs/create_CIA_jobs.py) scripts. These allow for quick and easy SLURM job generation but are not strictly required for the project.
+The goal of this project is to find interaction effects between eQTLS and covariates. Each step of the pipeline is called from the base directory. Each step also contains a command line argument to adjust the input / output directory name and the settings file. The **-n** / **--name** command line option defines the name of the input, as well as the output, directory. This name will be appended on the settings ***input_dir** variable(s). The reason for defining this setting as a command line argument is so subsets of data can be analyzed using the same settings file. With the settings file, any global variable can be altered in the program. Simply copy the default settings and replacing the variables as you please. Make sure to call the program with the right settings using the **-s** / **--settings** command line option.
 
 ## Prerequisites  
 
@@ -62,7 +60,7 @@ This step creates ordered matrices based on an eQTL file. For each eQTL, the cor
   
 This step also performs marker gene extractions, marker gene factorization, and partial deconvolution; all being part of the covariate matrix creation. 
    
- Other decommissioned steps involve masking the sample identifiers of the matrices, as well as creating groupings of non-NA containing eQTLs, and a correlation matrix for z-score comparison. 
+ Other decommissioned steps involve masking the sample identifiers of the matrices, as well as creating groupings of non-NA containing eQTLs, and a correlation matrix for z-score comparison. This is no longer used.
 
 Settings: [default_settings.json](matrix_preparation/settings/default_settings.json)  
 Syntax:
@@ -79,41 +77,13 @@ Options:
   
 ### Step 2: Analyse Interactions 
 
-This step performs multiple regression (MLR) analysis on the ordered expression/genotype matrix for each covariate in the covariate matrix (data from step 1). Each covariate is tested for having an interaction effect with the eQTL. Two distinct methods are implemented: **(1)** a wrapper around the java bases [eQTLInteractionAnalyser](https://github.com/molgenis/systemsgenetics/wiki/Discovery-of-hidden-confounders-of-QTLs) implementation developed by Patrick Deelen, and **(2)** my own custom implementation.  
+This step performs multiple regression (MLR) analysis on the ordered expression/genotype matrix for each covariate in the covariate matrix (data from step 1). Each covariate is tested for having an interaction effect with the eQTL. Two distinct methods are implemented: **(1)** a wrapper around the java based [eQTLInteractionAnalyser](https://github.com/molgenis/systemsgenetics/wiki/Discovery-of-hidden-confounders-of-QTLs) implementation developed by Patrick Deelen, and **(2)** my own custom implementation. The first of which is decommissioned but is still included in the repository as it is part of process and therefore relevant for grading. 
+  
+My own implementation is what is actually used. This implementation of MLR also performs permutation based FDR in the MLR analysis. Results are separated on technical covariates and covariates of interest. The former of which are used to validate that the model works as intended.
 
-My own implementation also performs permutation based FDR in the MLR analysis. Results are separated on technical covariates and covariates of interest. The former of which is used to validate the model.
-
-#### Method A: [eQTLInteractionAnalyser](https://github.com/molgenis/systemsgenetics/wiki/Discovery-of-hidden-confounders-of-QTLs)
-##### Step A1: Analyse Interaction per Group
-Settings: [default_settings.json](analyse_interactions/settings/default_settings.json)  
-Syntax:
-```console  
-python3 ./analyse_interactions.py
-```  
-Options:
-
- * **-s** / **--settings**: The settings input file (without '.json'), default: 'default_settings'.
- * **-g** / **--groups**: The name of the group to analyse, default: 'all'.
- * **-force**: Force the program to redo all steps, default: False.
- * **-verbose**: Include steps and command prints, default: False. 
- 
-#### Step A2: Merge Groups  
-Settings: [default_settings.json](merge_groups/settings/default_settings.json)  
-Syntax:
-```console  
-python3 ./merge_groups.py
-```  
-Options:
-
- * **-s** / **--settings**: The settings input file (without '.json'), default: 'default_settings'.
- * **-g** / **--groups**: The name of the group to analyse, default: 'all'.
- * **-force**: Force the program to redo all steps, default: False.
-    
-
-### Method B: Custom Interaction Analyser
 Settings: [default_settings.json](custom_interaction_analyser/settings/default_settings.json)  
 
-##### Step B1: Analyse All Interaction 
+##### Step 2A: Multiple Linear Regression Analysis 
 This step performs the interaction analyses on a partition of the complete data frame and saves the result as pickled files.
   
 Syntax:
@@ -141,7 +111,7 @@ python3 ./custom_interaction_analyser.py -n example_output -sr 50 -ne 100
  * Job3:   
    ...  
    
-##### Step B2: Combine the Resuts
+##### Step 2B: Combine the Resuts
 This step loads the pickled data and combines them into a complete interaction matrix. Also multiple-testing corrections are performed and the resulting FDR values are compared to the original p-values. This code also creates a few visualizations of the p-value distributions and fdr - pvalue comparisons.
   
 Syntax:
@@ -151,7 +121,7 @@ python3 ./custom_interaction_analyser.py -n example_output -combine
 Options:
  * **-combine**: Combine the created files, alternative functionality. Default: False.    
   
-### Step 3: identify cell type mediated eQTLs  
+### Step 3: Identify Cell Type Mediated eQTLs  
 
 This step takes the results from the previous two steps and groups eQTLs based on cell type mediated effects. Furthermore, upsetplot(s) is/are created for overlapping interaction effects.
 
@@ -168,7 +138,7 @@ Options:
  * **-e** / **--extensions**: The output file formats, default: ['png'].
  * **-i** / **--interest**: The HGNC names to print the info of, default: None.  
 
-### Step 4: visualiser  
+### Step 4: Visualiser  
 
 This step takes the results from the first two steps and creates visualizations of it. Each plot can be called separately.
 
@@ -188,6 +158,16 @@ Options:
  * **-e** / **--extension**: The output file format, default: 'png'.
  * **-validate**: Validate that the input matrices match with each other and then quit, default: 'False'.  
   
+## Questions and Answers
+**Q**: You are refering to your thesis; can I view it?  
+**A**: The thesis for this project is under embargo until the 1st of July 2021.  
+  
+**Q**: Why are there more files in the repository than described in this README?  
+**A**: This README only describes the steps for performing cell type deconvolution. However, some code contributes to the project but not directly to the cell type deconvolution pipeline. Some scripts are written to test a certain aspect of the results [test_scripts](test_scripts), others are made to create and manage slurm jobs [jobs](jobs), and other code such as [analyse_interactions](analyse_interactions) en [merge_groups](merge_groups) is no longer part of the pipeline. All this code is not strictly required for the project, but is included for the grading of the repository. One exception is the [general](general) folder. This code contains classes that are used for more than one step is  part of the pipeline although not explicitly mentioned in the steps.
+
+**Q**: How to cite? (NOTE: only for citing the code in this repository; cite the results of the project as it is published)  
+**A**: *'Vochteloo, M. (2020). Brain eQTL Deconvolution. Hanze University of Applied Sciences, Groningen, The Netherlands.'*  
+
 ## Author  
 
 Martijn Vochteloo *(1)*
