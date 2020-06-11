@@ -1,7 +1,7 @@
 """
 File:         plotter.py
 Created:      2020/06/09
-Last Changed: 2020/06/10
+Last Changed: 2020/06/11
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -63,10 +63,13 @@ class Plotter:
         if len(data.keys()) <= 1:
             return
 
+        # Get the counts.
         counts = self.count(data)
+        counts = counts[counts > 0]
 
         self.upsetplot(counts, column, "", self.outdir, self.extension)
-        self.upsetplot(counts[:len(data.keys())], column, "_unique", self.outdir, self.extension)
+        if len(counts.index) > len(data.keys()):
+            self.upsetplot(counts[:len(data.keys())], column, "_unique", self.outdir, self.extension)
 
     def plot_pie(self, total, part):
         self.pie(total, part, self.outdir, self.extension)

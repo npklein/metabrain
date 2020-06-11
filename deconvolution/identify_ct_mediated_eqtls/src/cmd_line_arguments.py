@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/06/08
-Last Changed: 2020/06/10
+Last Changed: 2020/06/11
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -94,7 +94,7 @@ class CommandLineArguments:
         parser.add_argument("-i",
                             "--interest",
                             nargs="+",
-                            type=int,
+                            type=str,
                             default=None,
                             help="The HGNC names to print the info of, "
                                  "default: None.")

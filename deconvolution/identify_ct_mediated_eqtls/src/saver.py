@@ -1,7 +1,7 @@
 """
 File:         saver.py
 Created:      2020/06/09
-Last Changed: 2020/06/10
+Last Changed: 2020/06/11
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -50,6 +50,19 @@ class Saver:
             df = df.loc[~df["Covariate"].isin(exclude), :]
         fpath = os.path.join(self.outdir, "all.txt")
         self.save(df, fpath, self.max_url_len, self.signif_cutoff)
+
+    def save_per_iter(self, exclude=None):
+        df = self.df.copy()
+        if exclude is not None:
+            df = df.loc[~df["Covariate"].isin(exclude), :]
+
+        for iter in df["Iteration"].unique():
+            iter_df = self.df.loc[self.df["Iteration"] == iter, :].copy()
+            iter_df.drop(["Iteration"], axis=1, inplace=True)
+
+            fpath = os.path.join(self.outdir,
+                                 "all_iteration{}.txt".format(iter))
+            self.save(iter_df, fpath, self.max_url_len, self.signif_cutoff)
 
     def save_per_group(self):
         indices_of_interest = []
