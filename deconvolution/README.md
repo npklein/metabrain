@@ -160,7 +160,7 @@ Options:
   
 ## Questions and Answers
 **Q**: You are refering to your thesis; can I view it?  
-**A**: The thesis for this project is under embargo until the 1st of July 2021.  
+**A**: The thesis of this project is under embargo until the 1st of July 2021.  
   
 **Q**: Why are there more files in the repository than described in this README?  
 **A**: This README only describes the steps for performing cell type deconvolution. However, some code contributes to the project but not directly to the cell type deconvolution pipeline. Some scripts are written to test a certain aspect of the results [test_scripts](test_scripts), others are made to create and manage slurm jobs [jobs](jobs), and other code such as [analyse_interactions](analyse_interactions) en [merge_groups](merge_groups) is no longer part of the pipeline. All this code is not strictly required for the project, but is included for the grading of the repository. One exception is the [general](general) folder. This code contains classes that are used for more than one step is  part of the pipeline although not explicitly mentioned in the steps.
