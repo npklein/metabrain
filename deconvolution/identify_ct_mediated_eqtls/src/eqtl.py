@@ -1,7 +1,7 @@
 """
 File:         eqtl.py
 Created:      2020/06/09
-Last Changed: 2020/06/10
+Last Changed: 2020/06/11
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -26,6 +26,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 import scipy.stats as st
 import numpy as np
 
+
 # Local application imports.
 
 
@@ -46,15 +47,18 @@ class Eqtl:
         self.traits = traits
         self.signif_cutoff = signif_cutoff
         self.maf_cutoff = maf_cutoff
-        self.selections = {key.split("_")[-1].lower(): value for key, value in selections.items()}
+        self.selections = {key.split("_")[-1].lower(): value for key, value in
+                           selections.items()}
 
         # The interaction data.
         df = self.combine_data(genotype, expression)
         self.covariates = covariates
 
         # Significance of the interaction.
-        inter_zscores = {index.split("_")[-1].lower(): round(value, 2) for index, value in inter_zscores.iteritems()}
-        inter_tvalues = {index.split("_")[-1].lower(): round(value, 2) for index, value in inter_tvalues.iteritems()}
+        inter_zscores = {index.split("_")[-1].lower(): round(value, 2) for
+                         index, value in inter_zscores.iteritems()}
+        inter_tvalues = {index.split("_")[-1].lower(): round(value, 2) for
+                         index, value in inter_tvalues.iteritems()}
 
         # Variables.
         self.minor_allele = self.alleles[-1]
@@ -63,7 +67,8 @@ class Eqtl:
 
         # Calculations.
         zero_geno_count, two_geno_count, self.maf = self.calculate_maf(genotype)
-        self.genotype_flip, self.allele_info = self.set_allele_info(zero_geno_count, two_geno_count, alleles)
+        self.genotype_flip, self.allele_info = self.set_allele_info(
+            zero_geno_count, two_geno_count, alleles)
         if self.genotype_flip:
             df = self.flip_genotype(df)
         self.df = df
@@ -85,7 +90,8 @@ class Eqtl:
 
         zero_geno_count = (counts[0.0] * 2) + counts[1.0]
         two_geno_count = (counts[2.0] * 2) + counts[1.0]
-        maf = min(zero_geno_count, two_geno_count) / (zero_geno_count + two_geno_count)
+        maf = min(zero_geno_count, two_geno_count) / (
+                    zero_geno_count + two_geno_count)
         return zero_geno_count, two_geno_count, maf
 
     @staticmethod
@@ -125,17 +131,30 @@ class Eqtl:
         return df
 
     def assess_interactions(self, inter_zscores):
-        celltype_info = {}
+        interaction_info = {}
 
         cov_df = self.covariates.copy()
         for index, row in cov_df.iterrows():
             celltype = index.split("_")[-1].lower()
 
-            info = {"interaction": None, "direction": None}
+            info = {"include": False,
+                    "spread": None,
+                    "low_end_std": None,
+                    "high_end_std": None,
+                    "interaction": None,
+                    "major_yhat": None,
+                    "minor_yhat": None,
+                    "direction": None}
 
             if inter_zscores[celltype] > self.signif_cutoff:
+                info["include"] = True
+
                 work_df = self.df.copy()
                 work_df[celltype] = row.copy()
+                min_fraction = work_df[celltype].min()
+                max_fraction = work_df[celltype].max()
+
+                info["spread"] = abs(max_fraction - min_fraction)
 
                 low_end = {}
                 high_end = {}
@@ -144,34 +163,48 @@ class Eqtl:
                     subset = work_df.loc[work_df["geno_group"] == group, :].copy()
 
                     if len(subset.index) > 0:
-                        slope, intercept, _, _, _ = st.linregress(subset[celltype], subset["expression"])
-                        low_end[group] = intercept + 0.1 * slope
-                        high_end[group] = intercept + 0.9 * slope
+                        slope, intercept, _, _, _ = st.linregress(
+                            subset[celltype], subset["expression"])
+                        low_end[group] = intercept + subset[celltype].min() * slope
+                        high_end[group] = intercept + subset[celltype].max() * slope
                         groups_present.append(group)
+                low_end_std = np.std(list(low_end.values()))
+                high_end_std = np.std(list(high_end.values()))
 
-                if np.std(list(low_end.values())) < np.std(list(high_end.values())):
+                info["low_end_std"] = low_end_std
+                info["high_end_std"] = high_end_std
+
+                if low_end_std < high_end_std:
                     info["interaction"] = "positive"
-                if np.std(list(low_end.values())) > np.std(list(high_end.values())):
+                if low_end_std > high_end_std:
                     info["interaction"] = "negative"
 
                 max_geno = max(groups_present)
                 min_geno = min(groups_present)
+                info["major_yhat"] = high_end[min_geno]
+                info["minor_yhat"] = high_end[max_geno]
 
                 if high_end[max_geno] > high_end[min_geno]:
                     info["direction"] = "up"
                 elif high_end[max_geno] < high_end[min_geno]:
                     info["direction"] = "down"
 
-            celltype_info[celltype] = info
+            interaction_info[celltype] = info
 
-        return celltype_info
+        return interaction_info
 
     def get_data(self):
         data = []
         for key, value in self.cov_info.items():
             selection = self.selections[key]
-            if self.maf > self.maf_cutoff and value["interaction"] in selection and value["direction"] is not None:
-                data.append([self.index, self.snp_name, self.probe_name, self.hgnc_name, self.iteration, self.df.shape[0], self.maf, self.eqtl_zscore, value["tvalue"], key, value["interaction"], value["direction"], self.gwas_ids, self.traits])
+            if self.maf > self.maf_cutoff and value[
+                "interaction"] in selection and value["direction"] is not None:
+                data.append(
+                    [self.index, self.snp_name, self.probe_name, self.hgnc_name,
+                     self.iteration, self.df.shape[0], self.maf,
+                     self.eqtl_zscore, value["tvalue"], key,
+                     value["interaction"], value["direction"], self.gwas_ids,
+                     self.traits])
         return data
 
     def print_info(self):
@@ -191,11 +224,19 @@ class Eqtl:
         print("  > Significance cut-off: {}".format(self.signif_cutoff))
         print("  > Cell type info:")
         for key, value in self.cov_info.items():
-            print("\t{:15s} = include: {}\tdirection: {}\tz-score: {:.2f}\t"
-                  "t-value: {:.2f}".format(key,
-                                           value["interaction"],
-                                           value["direction"],
-                                           value["zscore"],
-                                           value["tvalue"]))
+            if value["include"]:
+                print("\t{:15s} = spread: {:.2f}\tlow-end STD: {:.2f}\t"
+                      "high-end STD: {:.2f}\tinteraction: {}\t"
+                      "major yhat: {:.2f}\tminor yhat: {:.2f}\t"
+                      "direction: {}\tz-score: {:.2f}\t"
+                      "t-value: {:.2f}\t".format(key,
+                                                 value["spread"],
+                                                 value["low_end_std"],
+                                                 value["high_end_std"],
+                                                 value["interaction"],
+                                                 value["major_yhat"],
+                                                 value["minor_yhat"],
+                                                 value["direction"],
+                                                 value["zscore"],
+                                                 value["tvalue"]))
         print("")
-

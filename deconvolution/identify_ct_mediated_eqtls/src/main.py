@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/06/08
-Last Changed: 2020/06/10
+Last Changed: 2020/06/11
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -174,6 +174,7 @@ class Main:
         print("Saving results")
         saver = Saver(data_df, self.outdir, signif_cutoff, self.max_url_len, self.include_top_n)
         saver.save_all(exclude=self.covs_excl_from_overview)
+        saver.save_per_iter(exclude=self.covs_excl_from_overview)
         indices_of_interest = saver.save_per_group()
         print("eQTL indices of interest: {}".format(' '.join([str(x) for x in indices_of_interest])))
 
