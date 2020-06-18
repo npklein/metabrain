@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect_celltype.py
 Created:      2020/04/20
-Last Changed: 2020/06/09
+Last Changed: 2020/06/11
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -67,12 +67,15 @@ class IntereQTLEffectCelltype:
         print("Plotting cell type mediated interaction eQTLs")
         self.print_arguments()
 
+        total = len(set(self.eqtlinter_df.index.values))
+
         print("Plotting deconvolution methods")
         overview_data = {}
         overview_overlap = {}
         celltype_mediated_eqtls = set()
         for (prefix, suffix) in self.cellmap_methods:
             name = prefix.replace("_", "") + suffix
+            method_eqtls = set()
             data = {}
 
             for celltype in self.celltypes:
@@ -83,13 +86,16 @@ class IntereQTLEffectCelltype:
                 df = self.eqtlinter_df.loc[:,
                      prefix + method_celltype + suffix].copy()
                 eqtls = set(df.loc[df == 1].index.values)
-                celltype_mediated_eqtls.update(eqtls)
+                method_eqtls.update(eqtls)
                 data[method_celltype] = eqtls
+            celltype_mediated_eqtls.update(method_eqtls)
 
             # Plot.
             overlap_vals = self.get_overlap(data)
             self.upsetplot(data, prefix.replace("_", "") + suffix,
                            self.outdir, self.extension)
+            self.plot_pie(total, len(method_eqtls), name, self.outdir,
+                          self.extension)
 
             overview_data[name] = data
             overview_overlap[name] = overlap_vals
@@ -118,9 +124,8 @@ class IntereQTLEffectCelltype:
                            self.outdir, self.extension, self.colormap)
 
         print("Plotting all eQTLs.")
-        total = len(set(self.eqtlinter_df.index.values))
         part = len(celltype_mediated_eqtls)
-        self.plot_pie(total, part, self.outdir, self.extension)
+        self.plot_pie(total, part, "all_cis-eQTLs", self.outdir, self.extension)
 
         print("Plotting {} marker genes separately".format(self.marker_genes))
         for celltype in self.celltypes:
@@ -304,6 +309,7 @@ class IntereQTLEffectCelltype:
 
     def upsetplot(self, data, title, outdir, extension):
         counts = self.count(data)
+        counts = counts[counts > 0]
         up.plot(counts, sort_by='cardinality', show_counts=True)
         plt.suptitle('{}'.format(title.replace("_", " ")), fontsize=18, fontweight='bold')
         plt.savefig(os.path.join(outdir, "{}_upsetplot.{}".format(title, extension)))
@@ -364,7 +370,7 @@ class IntereQTLEffectCelltype:
         return s
 
     @staticmethod
-    def plot_pie(total, part, outdir, extension):
+    def plot_pie(total, part, title, outdir, extension):
         labels = ['YES', 'NO']
         sizes = [part, total - part]
         explode = (0.1, 0)
@@ -384,7 +390,7 @@ class IntereQTLEffectCelltype:
         ax.axis('equal')
 
         fig.suptitle("Cell-Type Mediated eQTLs", fontsize=20, fontweight='bold')
-        fig.savefig(os.path.join(outdir, "all_cis-eQTLs.{}".format(extension)))
+        fig.savefig(os.path.join(outdir, "{}_pie.{}".format(title, extension)))
         plt.show()
 
     def print_arguments(self):
