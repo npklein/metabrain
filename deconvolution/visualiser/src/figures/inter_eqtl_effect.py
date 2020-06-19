@@ -63,6 +63,7 @@ class IntereQTLEffect:
 
         # Create color map.
         self.group_color_map, self.value_color_map = self.create_color_map(colormap)
+        self.sex_color_map = {0.0: colormap["male"], 1.0: colormap["female"]}
 
     def start(self):
         print("Plotting interaction eQTL plots.")
@@ -162,7 +163,7 @@ class IntereQTLEffect:
                         self.plot_box(snp_name, probe_name, hgnc_name,
                                       eqtl_type, eqtl_data, index2, row, count,
                                       allele_map, eqtl_interaction_outdir,
-                                      self.extension)
+                                      self.sex_color_map, self.extension)
                     else:
                         self.plot_inter(snp_name, probe_name, hgnc_name,
                                         eqtl_type, eqtl_data, index2, row,
@@ -276,10 +277,10 @@ class IntereQTLEffect:
 
     @staticmethod
     def plot_box(snp_name, probe_name, hgnc_name, eqtl_type, df, cov_name,
-                 zscore, count, allele_map, outdir, extension):
+                 zscore, count, allele_map, outdir, sex_colormap, extension):
         palette = None
         if cov_name == "SEX":
-            palette = {0.0: "#ADD8E6", 1.0: "#FFC0CB"}
+            palette = sex_colormap
 
         # Prepare the figure.
         sns.set(rc={'figure.figsize': (12, 9)})
