@@ -1,7 +1,7 @@
 """
 File:         covariate_clustermap.py
 Created:      2020/06/02
-Last Changed: 2020/06/03
+Last Changed: 2020/06/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -51,12 +51,13 @@ class CovariateClustermap:
         # Extract the required data.
         print("Loading data")
         self.cov_df = dataset.get_cov_df()
+        self.cmap = dataset.get_diverging_cmap()
 
     def start(self):
         print("Plotting convariate comparison.")
         self.print_arguments()
         norm_df = self.normalize(self.cov_df)
-        self.plot(norm_df, self.outdir, self.extension)
+        self.plot(norm_df, self.cmap, self.outdir, self.extension)
 
     @staticmethod
     def normalize(df):
@@ -66,9 +67,9 @@ class CovariateClustermap:
         return out_df
 
     @staticmethod
-    def plot(df, outdir, extension):
+    def plot(df, cmap, outdir, extension):
         sns.set(color_codes=True)
-        g = sns.clustermap(df, center=0.5, cmap="RdBu_r",
+        g = sns.clustermap(df, center=0.5, cmap=cmap,
                            yticklabels=True, xticklabels=False,
                            row_cluster=False, col_cluster=True,
                            figsize=(12, (.2 * (len(df.index)))))

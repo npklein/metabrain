@@ -1,7 +1,7 @@
 """
 File:         inter_clustermap.py
 Created:      2020/03/16
-Last Changed: 2020/06/03
+Last Changed: 2020/06/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -53,9 +53,10 @@ class InterClusterMap:
         # Extract the required data.
         print("Loading data")
         self.inter_cov_zscore_df = dataset.get_inter_cov_zscore_df()
-        self.inter_tech_cov_zscore_df = dataset.get_inter_tech_cov_zscore_df()
+        #self.inter_tech_cov_zscore_df = dataset.get_inter_tech_cov_zscore_df()
         self.inter_cov_inter_tvalue_df = dataset.get_inter_cov_inter_tvalue_df()
-        self.inter_tech_cov_inter_tvalue_df = dataset.get_inter_tech_cov_inter_tvalue_df()
+        #self.inter_tech_cov_inter_tvalue_df = dataset.get_inter_tech_cov_inter_tvalue_df()
+        self.cmap = dataset.get_diverging_cmap()
 
     def start(self):
         sys.setrecursionlimit(10000)
@@ -64,14 +65,15 @@ class InterClusterMap:
         self.print_arguments()
 
         self.visualize_matrix(self.inter_cov_zscore_df, self.outdir, outfile_prefix="cov_zscore")
-        self.visualize_matrix(self.inter_tech_cov_zscore_df, self.outdir, outfile_prefix="tech_cov_zscore")
+        #self.visualize_matrix(self.inter_tech_cov_zscore_df, self.outdir, outfile_prefix="tech_cov_zscore")
         self.visualize_matrix(self.inter_cov_inter_tvalue_df, self.outdir, outfile_prefix="cov_tvalue")
-        self.visualize_matrix(self.inter_tech_cov_inter_tvalue_df, self.outdir, outfile_prefix="tech_cov_tvalue")
+        #self.visualize_matrix(self.inter_tech_cov_inter_tvalue_df, self.outdir, outfile_prefix="tech_cov_tvalue")
 
     def visualize_matrix(self, df, outdir, outfile_prefix="", vmin=None, vmax=None):
         clean_df = df.dropna(axis=1)
 
-        self.plot(df=clean_df, outdir=outdir, extension=self.extension,
+        self.plot(df=clean_df, cmap=self.cmap, outdir=outdir,
+                  extension=self.extension,
                   outfile_prefix=outfile_prefix, vmin=vmin, vmax=vmax)
 
         if vmin is None:
@@ -79,13 +81,13 @@ class InterClusterMap:
         if vmax is None:
             vmax = clean_df.values.max()
 
-        self.plot_colorbar(vmin=vmin, vmax=vmax, outdir=outdir,
+        self.plot_colorbar(vmin=vmin, vmax=vmax, cmap=self.cmap, outdir=outdir,
                            name_prefix=outfile_prefix, extension=self.extension)
 
     @staticmethod
-    def plot(df, outdir, extension, outfile_prefix="", vmin=None, vmax=None):
+    def plot(df, cmap, outdir, extension, outfile_prefix="", vmin=None, vmax=None):
         sns.set(color_codes=True)
-        g = sns.clustermap(df, center=0, cmap="RdBu_r",
+        g = sns.clustermap(df, center=0, cmap=cmap,
                            vmin=vmin, vmax=vmax,
                            yticklabels=True, xticklabels=False,
                            dendrogram_ratio=(.1, .1),
@@ -98,10 +100,10 @@ class InterClusterMap:
         plt.close()
 
     @staticmethod
-    def plot_colorbar(vmin, vmax, outdir, name_prefix, extension):
+    def plot_colorbar(vmin, vmax, cmap, outdir, name_prefix, extension):
         a = np.array([[vmin, 0, vmax]])
         fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(3, 9))
-        img = sns.heatmap(a, center=0, vmin=vmin, vmax=vmax, cmap="RdBu_r",
+        img = sns.heatmap(a, center=0, vmin=vmin, vmax=vmax, cmap=cmap,
                           ax=ax1, cbar_ax=ax2)
         ax1.remove()
         plt.savefig(os.path.join(outdir, "{}_colorbar.{}".format(name_prefix, extension)), bbox_inches='tight')
@@ -109,8 +111,8 @@ class InterClusterMap:
     def print_arguments(self):
         print("Arguments:")
         print("  > Cov interaction z-score matrix shape: {}".format(self.inter_cov_zscore_df.shape))
-        print("  > Tech.cov interaction z-score matrix shape: {}".format(self.inter_tech_cov_zscore_df.shape))
+        #print("  > Tech.cov interaction z-score matrix shape: {}".format(self.inter_tech_cov_zscore_df.shape))
         print("  > Cov interaction t-value matrix shape: {}".format(self.inter_cov_inter_tvalue_df.shape))
-        print("  > Tech.cov interaction t-value matrix shape: {}".format(self.inter_tech_cov_inter_tvalue_df.shape))
+        #print("  > Tech.cov interaction t-value matrix shape: {}".format(self.inter_tech_cov_inter_tvalue_df.shape))
         print("  > Output directory: {}".format(self.outdir))
         print("")

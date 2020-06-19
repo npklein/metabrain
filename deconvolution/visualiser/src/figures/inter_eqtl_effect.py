@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect.py
 Created:      2020/03/16
-Last Changed: 2020/06/03
+Last Changed: 2020/06/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -26,7 +26,6 @@ import os
 # Third party imports.
 import seaborn as sns
 import matplotlib
-
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -60,9 +59,10 @@ class IntereQTLEffect:
         self.cov_df = dataset.get_cov_df()
         self.inter_df = dataset.get_inter_cov_zscore_df()
         self.z_score_cutoff = dataset.get_significance_cutoff()
+        colormap = dataset.get_colormap()
 
         # Create color map.
-        self.group_color_map, self.value_color_map = self.create_color_map()
+        self.group_color_map, self.value_color_map = self.create_color_map(colormap)
 
     def start(self):
         print("Plotting interaction eQTL plots.")
@@ -171,16 +171,17 @@ class IntereQTLEffect:
                     count += 1
 
     @staticmethod
-    def create_color_map():
-        """
-        """
-        palette = list(Color("#ABDCA2").range_to(Color("#CBE9C5"), 50)) + \
-                  list(Color("#B1C2E1").range_to(Color("#89A3D1"), 50)) + \
-                  list(Color("#89A3D1").range_to(Color("#B1C2E1"), 50)) + \
-                  list(Color("#F6BCAD").range_to(Color("#F08C72"), 51))
+    def create_color_map(colormap):
+        major_small = list(Color(colormap["major"]).range_to(Color("#FFFFFF"), 12))[2]
+        center_small = list(Color(colormap["center"]).range_to(Color("#FFFFFF"), 12))[2]
+
+        palette = list(Color(colormap["major"]).range_to(Color(major_small), 50)) + \
+                  list(Color(major_small).range_to(Color(colormap["center"]), 50)) + \
+                  list(Color(colormap["center"]).range_to(Color(center_small), 50)) + \
+                  list(Color(center_small).range_to(Color(colormap["minor"]), 51))
         colors = [str(x).upper() for x in palette]
         values = [x / 100 for x in list(range(201))]
-        group_color_map = {0.0: "#ABDCA2", 1.0: "#89A3D1", 2.0: "#F08C72"}
+        group_color_map = {0.0: colormap["major"], 1.0: colormap["center"], 2.0: colormap["minor"]}
         value_color_map = {}
         for val, col in zip(values, colors):
             value_color_map[val] = col

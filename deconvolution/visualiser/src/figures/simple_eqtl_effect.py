@@ -1,7 +1,7 @@
 """
 File:         simple_eqtl_effect.py
 Created:      2020/03/16
-Last Changed: 2020/06/03
+Last Changed: 2020/06/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -57,9 +57,10 @@ class SimpleeQTLEffect:
         self.geno_df = dataset.get_geno_df()
         self.expr_df = dataset.get_expr_df()
         self.alleles_df = dataset.get_alleles_df()
+        colormap = dataset.get_colormap()
 
         # Create color map.
-        self.group_color_map, self.value_color_map = self.create_color_map()
+        self.group_color_map, self.value_color_map = self.create_color_map(colormap)
 
     def start(self):
         print("Plotting simple eQTL plots.")
@@ -134,16 +135,17 @@ class SimpleeQTLEffect:
                       self.group_color_map, self.outdir, self.extension)
 
     @staticmethod
-    def create_color_map():
-        """
-        """
-        palette = list(Color("#ABDCA2").range_to(Color("#CBE9C5"), 50)) + \
-                  list(Color("#B1C2E1").range_to(Color("#89A3D1"), 50)) + \
-                  list(Color("#89A3D1").range_to(Color("#B1C2E1"), 50)) + \
-                  list(Color("#F6BCAD").range_to(Color("#F08C72"), 51))
+    def create_color_map(colormap):
+        major_small = list(Color(colormap["major"]).range_to(Color("#FFFFFF"), 12))[2]
+        center_small = list(Color(colormap["center"]).range_to(Color("#FFFFFF"), 12))[2]
+
+        palette = list(Color(colormap["major"]).range_to(Color(major_small), 50)) + \
+                  list(Color(major_small).range_to(Color(colormap["center"]), 50)) + \
+                  list(Color(colormap["center"]).range_to(Color(center_small), 50)) + \
+                  list(Color(center_small).range_to(Color(colormap["minor"]), 51))
         colors = [str(x).upper() for x in palette]
         values = [x / 100 for x in list(range(201))]
-        group_color_map = {0.0: "#ABDCA2", 1.0: "#89A3D1", 2.0: "#F08C72"}
+        group_color_map = {0.0: colormap["major"], 1.0: colormap["center"], 2.0: colormap["minor"]}
         value_color_map = {}
         for val, col in zip(values, colors):
             value_color_map[val] = col
@@ -167,15 +169,16 @@ class SimpleeQTLEffect:
 
         # Plot the scatter / box plot.
         sns.regplot(x="genotype", y="expression", data=df,
-                    scatter_kws={'facecolors': df['value_hue'],
-                                 'edgecolors': "#808080"},
+                    scatter=False,
+                    # scatter_kws={'facecolors': df['value_hue'],
+                    #              'edgecolors': "#808080"},
                     line_kws={"color": "#000000"},
                     ax=ax
                     )
         sns.boxplot(x="group", y="expression", data=df,
                     palette=group_color_map,
                     showfliers=False,
-                    zorder=-1,
+                    zorder=1,
                     boxprops=dict(alpha=.3),
                     ax=ax)
         # plt.setp(ax.artists, edgecolor='k', facecolor='w')

@@ -1,7 +1,7 @@
 """
 File:         inter_pvalue_boxplot.py
 Created:      2020/05/12
-Last Changed: 2020/06/03
+Last Changed: 2020/06/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -109,8 +109,8 @@ class InterPvalueBoxplot:
             ax.axvline(i / 100, ls='-', color="#000000", alpha=alpha, zorder=-1)
 
         sns.boxplot(x="value", y="variable", hue="type", data=data,
-                    palette={"Covariate": "cornflowerblue",
-                             "Technical Covariate": "firebrick"},
+                    palette={"Covariate": "#0072B2",
+                             "Technical Covariate": "#D55E00"},
                     order=order, showfliers=False)
 
         ax.text(0.5, 1.02,

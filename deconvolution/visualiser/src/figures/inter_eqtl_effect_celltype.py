@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_effect_celltype.py
 Created:      2020/04/20
-Last Changed: 2020/06/11
+Last Changed: 2020/06/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -284,7 +284,7 @@ class IntereQTLEffectCelltype:
                         zorder=-1)
 
         sns.boxplot(x="method", y="overlap", hue="hue", data=boxplot_df,
-                    palette={"best": "#6495ED", "other": "#808080"},
+                    palette={"best": "#0072B2", "other": "#808080"},
                     order=group_df.index, showfliers=False, dodge=False,
                     ax=ax2)
         sns.swarmplot(x="method", y="overlap", data=boxplot_df, color=".25",
@@ -379,7 +379,7 @@ class IntereQTLEffectCelltype:
         _, _, autotexts = ax.pie(sizes,
                                  explode=explode,
                                  labels=labels,
-                                 colors=["#6495ED", "#808080"],
+                                 colors=["#0072B2", "#808080"],
                                  startangle=90,
                                  autopct=lambda pct: "{:.1f}%\n(n={:d})".format(
                                      pct, int(pct / 100. * sum(sizes))),

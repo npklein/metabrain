@@ -1,7 +1,7 @@
 """
 File:         inter_eqtl_celltype_details.py
 Created:      2020/05/20
-Last Changed: 2020/06/03
+Last Changed: 2020/06/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -130,7 +130,7 @@ class IntereQTLCelltypeDetails:
                 add = "signif."
             hue_list.append(add)
         data["significant"] = hue_list
-        colormap = {'signif.': '#6495ED', 'not signif.': '#808080'}
+        colormap = {'signif.': '#0072B2', 'not signif.': '#808080'}
 
         abs_max = data["tvalue"].abs().max() * 1.1
 
