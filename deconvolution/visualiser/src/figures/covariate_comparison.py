@@ -1,7 +1,7 @@
 """
 File:         covariate_comparison.py
 Created:      2020/04/15
-Last Changed: 2020/06/03
+Last Changed: 2020/06/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -55,12 +55,13 @@ class CovariateComparison:
         print("Loading data")
         self.groups = dataset.get_groups()
         self.cov_df = dataset.get_cov_df()
+        self.cmap = dataset.get_diverging_cmap()
 
     def start(self):
         print("Plotting convariate comparison.")
         self.print_arguments()
         corr_df, pval_df = self.correlate(self.cov_df)
-        self.plot(corr_df, pval_df, self.groups, self.outdir, self.extension)
+        self.plot(corr_df, pval_df, self.groups, self.cmap, self.outdir, self.extension)
 
     @staticmethod
     def correlate(df):
@@ -79,13 +80,12 @@ class CovariateComparison:
         return corr_df, pval_df
 
     @staticmethod
-    def plot(corr_df, pval_df, groups, outdir, extension):
+    def plot(corr_df, pval_df, groups, cmap, outdir, extension):
         print("Plotting")
 
         gridspec_kw = {"height_ratios": [x[1] - x[0] for x in groups],
                        "width_ratios": [x[1] - x[0] for x in groups]}
 
-        cmap = plt.cm.RdBu_r
         norm = matplotlib.colors.Normalize(vmin=-1, vmax=1)
 
         heatmapkws = dict(square=False, cbar=False, cmap=cmap, fmt='',

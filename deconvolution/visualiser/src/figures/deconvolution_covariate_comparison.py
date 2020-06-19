@@ -1,7 +1,7 @@
 """
 File:         deconvolution_covariate_comparison.py
 Created:      2020/04/15
-Last Changed: 2020/06/05
+Last Changed: 2020/06/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -59,6 +59,7 @@ class DeconvolutionCovariateComparison:
         self.cellmap_methods = dataset.get_cellmap_methods()
         self.marker_genes = dataset.get_marker_genes()
         self.cov_df = dataset.get_cov_df()
+        self.cmap = dataset.get_diverging_cmap()
 
     def start(self):
         print("Plotting deconvolution convariate comparison.")
@@ -68,7 +69,8 @@ class DeconvolutionCovariateComparison:
         prefixes = [x[0] for x in self.cellmap_methods]
         prefixes.append(self.marker_genes)
         prefixes = [x.replace("_", "") for x in prefixes]
-        self.plot(corr_df, pval_df, self.groups, prefixes, self.outdir, self.extension)
+        self.plot(corr_df, pval_df, self.groups, prefixes, self.cmap,
+                  self.outdir, self.extension)
 
     @staticmethod
     def correlate(df):
@@ -83,7 +85,7 @@ class DeconvolutionCovariateComparison:
 
         return corr_df, pval_df
 
-    def plot(self, corr_df, pval_df, groups, prefixes, outdir, extension):
+    def plot(self, corr_df, pval_df, groups, prefixes, cmap, outdir, extension):
         print("Plotting")
 
         decon_groups = []
@@ -93,7 +95,6 @@ class DeconvolutionCovariateComparison:
                     decon_groups.append(group)
                     break
 
-        cmap = plt.cm.RdBu_r
         norm = matplotlib.colors.Normalize(vmin=-1, vmax=1)
 
         heatmapkws = dict(square=False, cbar=False, cmap=cmap, fmt='',
@@ -130,7 +131,7 @@ class DeconvolutionCovariateComparison:
                         if xremove.startswith("McKenzie"):
                             label = '_'.join(data_subset.index[0].split("_")[0:2])
                             index_index = 2
-                        self.heatmap(data_subset.copy(), annot_subset.copy(), label, index_index, outdir, extension)
+                        self.heatmap(data_subset.copy(), annot_subset.copy(), label, index_index, self.cmap, outdir, extension)
 
                     sns.heatmap(data_subset,
                                 annot=annot_subset,
@@ -171,7 +172,7 @@ class DeconvolutionCovariateComparison:
         annot_subset = pval_df.loc[mg, mg]
         label = "McKenzie_best"
         index_index = 1
-        self.heatmap(data_subset, annot_subset, label, index_index, outdir, extension)
+        self.heatmap(data_subset, annot_subset, label, index_index, self.cmap, outdir, extension)
         exit()
 
         comparisons = [["McKenzie_Neuron_CCK", "CellMapPCA_Neuron_PC1", "CellMapNMF_Neuron_C1", "CellMapNNLS_Neuron"],
@@ -188,10 +189,11 @@ class DeconvolutionCovariateComparison:
             annot_subset.columns = ["Mcke", "PCA", "NMF", "NNLS"]
             index_index = 0
             self.heatmap(data_subset, annot_subset, celltype, index_index,
-                         outdir, extension)
+                         self.cmap, outdir, extension)
 
     @staticmethod
-    def heatmap(data_subset, annot_subset, label, index_index, outdir, extension):
+    def heatmap(data_subset, annot_subset, label, index_index, cmap, outdir,
+                extension):
         abbreviations = {"Neuron": "neuro", "Oligodendrocyte": "oligo",
                          "EndothelialCell": "endo", "Microglia": "micro",
                          "Macrophage": "macro", "Astrocyte": "astro",
@@ -220,7 +222,7 @@ class DeconvolutionCovariateComparison:
                     annot_subset.iloc[i, j] = ""
 
         sns.set(color_codes=True)
-        g = sns.clustermap(data_subset, cmap="RdBu_r",
+        g = sns.clustermap(data_subset, cmap=cmap,
                            row_cluster=False, col_cluster=False,
                            yticklabels=True, xticklabels=True, square=True,
                            vmin=-1, vmax=1, annot=annot_subset, fmt='',

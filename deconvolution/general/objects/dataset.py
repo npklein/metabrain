@@ -1,7 +1,7 @@
 """
 File:         dataset.py
 Created:      2020/03/16
-Last Changed: 2020/06/08
+Last Changed: 2020/06/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -26,6 +26,7 @@ import os
 
 # Third party imports.
 import pandas as pd
+import seaborn as sns
 import scipy.stats as stats
 
 # Local application imports.
@@ -116,6 +117,9 @@ class Dataset:
 
     def get_colormap(self):
         return self.colormap
+
+    def get_diverging_cmap(self):
+        return sns.diverging_palette(self.colormap["low"], self.colormap["high"], as_cmap=True)
 
     def get_cellmap_methods(self):
         return self.cellmap_methods

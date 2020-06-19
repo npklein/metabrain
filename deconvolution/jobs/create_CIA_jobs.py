@@ -109,7 +109,7 @@ class main():
                             help="The stop index.")
         parser.add_argument("-b",
                             "--batch",
-                            type=str,
+                            type=int,
                             default=50,
                             help="The number of eQTLs per job.")
         parser.add_argument("-ns",
