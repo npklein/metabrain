@@ -1,7 +1,7 @@
 """
 File:         perform_deconvolution.py
 Created:      2020/06/29
-Last Changed:
+Last Changed: 2020/06/30
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -90,7 +90,7 @@ class PerformDeconvolution:
     def get_avg_residuals(self):
         return self.residuals.mean()
 
-    def get_avg_info_per_celltype(self):
+    def get_info_per_celltype(self):
         means = self.deconvolution.mean(axis=0).to_dict()
         stds = self.deconvolution.std(axis=0).to_dict()
 
@@ -111,6 +111,6 @@ class PerformDeconvolution:
     def print_info(self):
         print("Average residuals: {:.2f}".format(self.get_avg_residuals()))
         print("Average weights per celltype:")
-        for celltype, (mean, std) in self.get_avg_info_per_celltype().items():
+        for celltype, (mean, std) in self.get_info_per_celltype().items():
             print("\t{:20s}: mean = {:.2f} std = {:.2f}".format(celltype, mean, std))
         print("")

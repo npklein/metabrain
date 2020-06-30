@@ -1,7 +1,7 @@
 """
 File:         visualiser.py
 Created:      2020/06/29
-Last Changed:
+Last Changed: 2020/06/30
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -26,22 +26,30 @@ import os
 
 # Third party imports.
 import scipy.cluster.hierarchy as sch
+from scipy import stats
 import pandas as pd
 import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 # Local application imports.
 
 
 class Visualiser:
-    def __init__(self, settings, signature, expression, deconvolution):
+    def __init__(self, settings, signature, expression, deconvolution,
+                 ground_truth, comparison):
         self.outdir = settings.get_output_path()
         self.extension = settings.get_extension()
+        self.title = settings.get_title()
+        self.subtitle = settings.get_subtitle()
+        self.ground_truth_type = settings.get_ground_truth_type()
         self.signature = signature
         self.expression = expression
         self.deconvolution = deconvolution
+        self.ground_truth = ground_truth
+        self.comparison = comparison
         self.order = self.set_order()
         self.palette = {
             "Neuron": "#0072B2",
@@ -50,7 +58,7 @@ class Visualiser:
             "Microglia": "#E69F00",
             "Macrophage": "#E69F00",
             "Astrocyte": "#D55E00",
-            "Average": "#E8E8E8"
+            "Pericytes": "#808080"
         }
 
     def set_order(self):
@@ -60,7 +68,7 @@ class Visualiser:
 
     def plot_profile_clustermap(self):
         df = self.signature.copy()
-        self.create_clustermap(df.T, 'signature')
+        self.create_clustermap(df.T, name='signature')
 
     def plot_profile_stripplot(self, n=25):
         df = self.signature.copy()
@@ -110,26 +118,21 @@ class Visualiser:
     def plot_profile_boxplot(self):
         df = self.signature.copy()
         dfm = df.melt()
-        self.create_boxplot(dfm, 'signature')
+        self.create_boxplot(dfm, name='signature')
 
     def plot_deconvolution_clustermap(self):
         df = self.deconvolution.copy()
-        self.create_clustermap(df.T, 'deconvolution')
+        self.create_clustermap(df.T, name='deconvolution')
 
     def plot_deconvolution_per_sample(self, n=1):
         sign_df = self.signature.copy()
         expr_df = self.expression.copy()
         decon_df = self.deconvolution.copy()
 
-        print(sign_df)
-        print(expr_df)
-        print(decon_df)
-        exit()
-
         for i in range(n):
             self.visualise_sample_deconvolution(X=sign_df,
                                                 y=expr_df.iloc[:, i],
-                                                coefficients=decon_df.iloc[:, i],
+                                                coefficients=decon_df.iloc[i, :],
                                                 name=expr_df.columns[i])
 
     def visualise_sample_deconvolution(self, X, y, coefficients, name):
@@ -241,12 +244,35 @@ class Visualiser:
     def plot_deconvolution_distribution(self):
         df = self.deconvolution.copy()
         dfm = df.melt()
-        self.create_distribution(dfm, 'deconvolution')
+        self.create_distribution(dfm, name='deconvolution')
 
     def plot_deconvolution_boxplot(self):
         df = self.deconvolution.copy()
         dfm = df.melt()
-        self.create_boxplot(dfm, 'weight')
+        self.create_boxplot(dfm, name='deconvolution')
+
+    def plot_ground_truth_distribution(self):
+        if self.ground_truth is None:
+            return
+
+        df = self.ground_truth.copy()
+        dfm = df.melt()
+        self.create_distribution(dfm, name='ground_truth')
+
+    def plot_ground_truth_boxplot(self):
+        if self.ground_truth is None:
+            return
+
+        df = self.ground_truth.copy()
+        dfm = df.melt()
+        self.create_boxplot(dfm, name='ground_truth')
+
+    def plot_prediction_comparison(self):
+        if self.comparison is None:
+            return
+
+        df = self.comparison.copy()
+        self.create_regression(df, "NNLS predictions", "{} counts".format(self.ground_truth_type), 'comparison')
 
     def create_clustermap(self, df, name):
         sns.set(color_codes=True)
@@ -262,17 +288,23 @@ class Visualiser:
         g.savefig(os.path.join(self.outdir, "{}_clustermap.{}".format(name, self.extension)))
         plt.close()
 
-    def create_boxplot(self, df, name):
+    def create_boxplot(self, df, xlabel="", ylabel="", name=""):
         sns.set(rc={'figure.figsize': (12, 9)})
         sns.set_style("ticks")
         fig, ax = plt.subplots()
         sns.despine(fig=fig, ax=ax)
-        sns.boxplot(x="variable", y="value", data=df, palette=self.palette)
+        sns.boxplot(x="variable", y="value", data=df, palette=self.palette, ax=ax)
+        ax.set_xlabel(xlabel,
+                      fontsize=14,
+                      fontweight='bold')
+        ax.set_ylabel(ylabel,
+                      fontsize=14,
+                      fontweight='bold')
         plt.tight_layout()
         fig.savefig(os.path.join(self.outdir, "{}_boxplot.{}".format(name, self.extension)))
         plt.close()
 
-    def create_distribution(self, df, name):
+    def create_distribution(self, df, name=""):
         sns.set(style="ticks", color_codes=True)
         g = sns.FacetGrid(df, col='variable', sharex=True, sharey=True)
         g.map(sns.distplot, 'value')
@@ -285,3 +317,55 @@ class Visualiser:
     @staticmethod
     def vertical_mean_line(x, **kwargs):
         plt.axvline(x.mean(), ls="--", c="black")
+
+    def create_regression(self, df, xlabel="", ylabel="", name=""):
+        df['color'] = df['hue'].map(self.palette)
+
+        sns.set(rc={'figure.figsize': (12, 9)})
+        sns.set_style("ticks")
+        fig, ax = plt.subplots()
+        sns.despine(fig=fig, ax=ax)
+
+        groups = df['hue'].unique()
+
+        coefs = {}
+        for group in groups:
+            subset = df.loc[df['hue'] == group, :].copy()
+            color = self.palette[group]
+
+            coef, p = stats.spearmanr(subset["x"], subset["y"])
+            coefs[group] = "r = {:.2f}".format(coef)
+
+            sns.regplot(x="x", y="y", data=subset,
+                        scatter_kws={'facecolors': subset['color'],
+                                     'edgecolors': "#808080"},
+                        line_kws={"color": color},
+                        ax=ax
+                        )
+
+        ax.set_xlim(-0.1, 1.1)
+        ax.set_ylim(-0.1, 1.1)
+        ax.plot([-0.1, 1.1], [-0.1, 1.1], ls="--", c=".3")
+
+        ax.text(0.5, 1.1, self.title,
+                fontsize=18, weight='bold', ha='center', va='bottom',
+                transform=ax.transAxes)
+        ax.text(0.5, 1.02, self.subtitle,
+                fontsize=14, alpha=0.75, ha='center', va='bottom',
+                transform=ax.transAxes)
+
+        ax.set_ylabel(ylabel,
+                      fontsize=14,
+                      fontweight='bold')
+        ax.set_xlabel(xlabel,
+                      fontsize=14,
+                      fontweight='bold')
+
+        handles = []
+        for key, color in self.palette.items():
+            if key in groups and key in coefs.keys():
+                handles.append(mpatches.Patch(color=color, label="{} [{}]".format(key, coefs[key])))
+        ax.legend(handles=handles)
+
+        fig.savefig(os.path.join(self.outdir, "{}_regression.{}".format(name, self.extension)))
+        plt.close()

@@ -1,7 +1,7 @@
 """
 File:         data_loader.py
 Created:      2020/06/29
-Last Changed:
+Last Changed: 2020/06/30
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -35,19 +35,21 @@ import pandas as pd
 
 class DataLoader:
     def __init__(self, settings):
+        self.data_path = settings.get_data_path()
         self.signature_path = settings.get_signature_path()
         self.translate_path = settings.get_translate_path()
         self.sample_path = settings.get_sample_path()
         self.cohort = settings.get_cohort()
-        self.data_path = settings.get_data_path()
+        self.ground_truth_path = settings.get_ground_truth_path()
 
         outdir = settings.get_output_path()
-        self.signature_file = os.path.join(outdir, 'signature.txt.gz')
         self.expression_file = os.path.join(outdir, 'expression_{}.txt.gz'.format(self.cohort))
+        self.signature_file = os.path.join(outdir, 'signature.txt.gz')
         self.settings_file = os.path.join(outdir, 'settings.json')
 
-        self.signature = None
         self.expression = None
+        self.signature = None
+        self.ground_truth = None
 
     def work(self):
         # Check if the filtered data files exist.
@@ -59,6 +61,10 @@ class DataLoader:
         else:
             print("Loading saved files")
             self.load_saved_files()
+
+        # Check if ground truth file exists and if so, load it.
+        if self.ground_truth_path is not None and os.path.exists(self.ground_truth_path):
+            self.load_ground_truth()
 
     def load(self):
         # Load the signature matrix.
@@ -114,6 +120,8 @@ class DataLoader:
                         if col in sample_dict.keys():
                             selection.append(j)
                             columns.append(col)
+                    if len(selection) <= 0:
+                        break
 
                 gene = splitted_line[0]
                 if gene in trans_dict.keys() and trans_dict[gene] in profile_genes and trans_dict[gene] not in indices:
@@ -172,13 +180,43 @@ class DataLoader:
               "with shape: {}".format(os.path.basename(self.expression_file),
                                       self.expression.shape))
 
+    def load_ground_truth(self):
+        print("\tLoading ground truth matrix")
+        self.ground_truth = pd.read_csv(self.ground_truth_path,
+                                        sep="\t",
+                                        header=0,
+                                        index_col=0)
+        print("\tloaded dataframe: {} "
+              "with shape: {}".format(os.path.basename(self.ground_truth_path),
+                                      self.ground_truth.shape))
+
     def get_signature(self):
         return self.signature
 
     def get_expression(self):
         return self.expression
 
+    def get_ground_truth(self):
+        return self.ground_truth
+
+    def get_info_per_celltype(self):
+        if self.ground_truth is None:
+            return {}
+        means = self.ground_truth.mean(axis=0).to_dict()
+        stds = self.ground_truth.std(axis=0).to_dict()
+
+        info = {}
+        for key in means.keys():
+            info[key] = (means[key], stds[key])
+        return info
+
     def print_info(self):
         print("Signature matrix:\t{} rows and {} columns".format(self.signature.shape[0], self.signature.shape[1]))
         print("Expression matrix:\t{} rows and {} columns".format(self.expression.shape[0], self.expression.shape[1]))
+        if self.ground_truth is not None:
+            print("Ground truth matrix:\t{} rows and {} columns".format(self.ground_truth.shape[0], self.ground_truth.shape[1]))
+            print("Average fraction per celltype:")
+            for celltype, (mean, std) in self.get_info_per_celltype().items():
+                print("\t{:20s}: mean = {:.2f} std = {:.2f}".format(celltype,
+                                                                    mean, std))
         print("")
