@@ -1,7 +1,7 @@
 """
 File:         settings.py
 Created:      2020/06/29
-Last Changed:
+Last Changed: 2020/06/30
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -33,13 +33,14 @@ import os
 
 class Settings:
     def __init__(self, data_path, signature_path, translate_path, sample_path,
-                 cohort, min_expr, normalize, zscore, log2, decon_method,
-                 sum_to_one, extension):
+                 cohort, ground_truth_path, min_expr, normalize, zscore, log2,
+                 decon_method, sum_to_one, extension):
         self.data_path = data_path
         self.signature_path = signature_path
         self.translate_path = translate_path
         self.sample_path = sample_path
         self.cohort = cohort
+        self.ground_truth_path = ground_truth_path
         self.min_expr = min_expr
         self.normalize = normalize
         self.zscore = zscore
@@ -49,11 +50,14 @@ class Settings:
         self.extension = extension
 
         self.outpath = None
+        self.real_info_per_celltype = None
         self.filter_shape_diff = None
         self.sign_shift = None
         self.expr_shift = None
         self.avg_residuals = None
-        self.avg_info_per_celltype = None
+        self.pred_info_per_celltype = None
+        self.comparison_n_samples = None
+        self.comparison_rss = None
 
     def get_data_path(self):
         return self.data_path
@@ -69,6 +73,12 @@ class Settings:
 
     def get_cohort(self):
         return self.cohort
+
+    def get_ground_truth_path(self):
+        return self.ground_truth_path
+
+    def get_ground_truth_type(self):
+        return os.path.basename(self.ground_truth_path).split(".")[0].replace("_counts", "").replace("_", " ")
 
     def get_min_expr(self):
         return self.min_expr
@@ -97,6 +107,9 @@ class Settings:
     def get_output_path(self):
         return self.outpath
 
+    def set_real_info_per_celltype(self, real_info_per_celltype):
+        self.real_info_per_celltype = real_info_per_celltype
+
     def set_filter_shape_diff(self, filter_shape_diff):
         self.filter_shape_diff = filter_shape_diff
 
@@ -109,8 +122,31 @@ class Settings:
     def set_avg_residuals(self, avg_residuals):
         self.avg_residuals = avg_residuals
 
-    def set_avg_info_per_celltype(self, avg_info_per_celltype):
-        self.avg_info_per_celltype = avg_info_per_celltype
+    def set_pred_info_per_celltype(self, pred_info_per_celltype):
+        self.pred_info_per_celltype = pred_info_per_celltype
+
+    def set_comparison_n_samples(self, comparison_n_samples):
+        self.comparison_n_samples = comparison_n_samples
+
+    def set_comparison_rss(self, comparison_rss):
+        self.comparison_rss = comparison_rss
+
+    def get_title(self):
+        return "{} partial deconvolution using {}".format(self.cohort, self.decon_method)
+
+    def get_subtitle(self):
+        avg_resid_str = ""
+        if self.avg_residuals is not None:
+            avg_resid_str = "{:.2f}".format(self.avg_residuals)
+
+        rss_str = ""
+        if self.comparison_rss is not None:
+            rss_str = "{:.2f}".format(self.comparison_rss)
+
+        return "min.expr.: {}, norm.: {}, z-score: {}, log2: {}, " \
+               "sum-to-one: {}\n avg.residuals: {}, N: {}, RSS: {}".format(
+            self.min_expr, self.normalize, self.zscore, self.log2,
+            self.sum_to_one, avg_resid_str, self.comparison_n_samples, rss_str)
 
     def save_settings(self):
         if self.outpath is None:
@@ -123,6 +159,7 @@ class Settings:
                 "translate_path": self.translate_path,
                 "sample_path": self.sample_path,
                 "cohort": self.cohort,
+                "ground_truth_path": self.ground_truth_path,
                 "min_expr": self.min_expr,
                 "normalize": self.normalize,
                 "zscore": self.zscore,
@@ -130,11 +167,14 @@ class Settings:
                 "decon_method": self.decon_method,
                 "sum_to_one": self.sum_to_one,
                 "extension": self.extension,
+                "real_info_per_celltype": self.real_info_per_celltype,
                 "filter_shape_diff": self.filter_shape_diff,
                 "sign_shift": self.sign_shift,
                 "expr_shift": self.expr_shift,
                 "avg_residuals": self.avg_residuals,
-                "avg_info_per_celltype": self.avg_info_per_celltype}
+                "pred_info_per_celltype": self.pred_info_per_celltype,
+                "comparison_n_samples": self.comparison_n_samples,
+                "comparison_rss": self.comparison_rss}
 
         outpath = os.path.join(self.outpath, 'settings.json')
         with open(outpath, 'w') as f:
