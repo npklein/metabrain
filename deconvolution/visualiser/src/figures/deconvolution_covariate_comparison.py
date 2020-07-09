@@ -81,7 +81,8 @@ class DeconvolutionCovariateComparison:
             for j, row2 in enumerate(df.index):
                 coef, p = stats.spearmanr(df.loc[row1, :], df.loc[row2, :])
                 corr_df.loc[row1, row2] = coef
-                pval_df.loc[row1, row2] = p_value_to_symbol(p)
+                # pval_df.loc[row1, row2] = p_value_to_symbol(p)
+                pval_df.loc[row1, row2] = "{:.2e}".format(p)
 
         return corr_df, pval_df
 

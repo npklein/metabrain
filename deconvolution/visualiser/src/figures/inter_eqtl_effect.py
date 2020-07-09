@@ -24,6 +24,7 @@ from colour import Color
 import os
 
 # Third party imports.
+import numpy as np
 import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
@@ -63,7 +64,7 @@ class IntereQTLEffect:
 
         # Create color map.
         self.group_color_map, self.value_color_map = self.create_color_map(colormap)
-        self.sex_color_map = {0.0: colormap["male"], 1.0: colormap["female"]}
+        self.sex_color_map = {"Male": colormap["male"], "Female": colormap["female"]}
 
     def start(self):
         print("Plotting interaction eQTL plots.")
@@ -207,7 +208,8 @@ class IntereQTLEffect:
         fig, ax = plt.subplots()
         sns.despine(fig=fig, ax=ax)
 
-        for i, genotype in enumerate([0.0, 1.0, 2.0]):
+        label_pos = {0.0: 0.94, 1.0: 0.90, 2.0: 0.86}
+        for i, genotype in enumerate([1.0, 0.0, 2.0]):
             subset = df.loc[df["round_geno"] == genotype, :].copy()
             color = group_color_map[genotype]
             allele = allele_map[genotype]
@@ -219,7 +221,8 @@ class IntereQTLEffect:
                 coef, p = stats.spearmanr(subset["expression"],
                                           subset[cov_name])
                 coef_str = "{:.2f}".format(coef)
-                p_str = p_value_to_symbol(p)
+                # p_str = p_value_to_symbol(p)
+                p_str = "p = {:.2e}".format(p)
 
                 # Plot.
                 sns.regplot(x=cov_name, y="expression", data=subset,
@@ -234,7 +237,8 @@ class IntereQTLEffect:
             ax.set(xlim=(xmin, xmax), ylim=(ymin, ymax))
             ax.annotate(
                 '{}: r = {} [{}]'.format(allele, coef_str, p_str),
-                xy=(0.03, 0.94 - ((i / 100) * 4)),
+                #xy=(0.03, 0.94 - ((i / 100) * 4)),
+                xy=(0.03, label_pos[genotype]),
                 xycoords=ax.transAxes,
                 color=color,
                 alpha=0.75,
@@ -280,6 +284,8 @@ class IntereQTLEffect:
                  zscore, count, allele_map, outdir, sex_colormap, extension):
         palette = None
         if cov_name == "SEX":
+            df[cov_name] = df[cov_name].map({0: "Male", 1: "Female", -1: np.nan})
+            df.dropna(inplace=True)
             palette = sex_colormap
 
         # Prepare the figure.

@@ -179,7 +179,7 @@ class SimpleeQTLEffect:
                     palette=group_color_map,
                     showfliers=False,
                     zorder=1,
-                    boxprops=dict(alpha=.3),
+                    #boxprops=dict(alpha=.3),
                     ax=ax)
         # plt.setp(ax.artists, edgecolor='k', facecolor='w')
         # plt.setp(ax.lines, color='k')
@@ -188,14 +188,20 @@ class SimpleeQTLEffect:
         ax.set_xticks(range(3))
         ax.set_xticklabels([allele_map[0.0], allele_map[1.0], allele_map[2.0]])
         ax.text(0.5, 1.06,
-                '{} {}-eQTL [{}]'.format(hgnc_name, eqtl_type,
-                                         p_value_to_symbol(p_value)),
+                # '{} {}-eQTL [{}]'.format(hgnc_name, eqtl_type,
+                #                          p_value_to_symbol(p_value)),
+                '{} {}-eQTL [p = {:.2e}]'.format(hgnc_name, eqtl_type, p_value),
                 fontsize=22, weight='bold', ha='center', va='bottom',
                 transform=ax.transAxes)
         ax.text(0.5, 1.02,
-                'r = {:.2f} [{}]    minor allele frequency '
+                # 'r = {:.2f} [{}]    minor allele frequency '
+                # '{} = {:.2f}'.format(coef,
+                #                      p_value_to_symbol(p),
+                #                      minor_allele,
+                #                      minor_allele_frequency),
+                'r = {:.2f} [p = {:.2e}]    minor allele frequency '
                 '{} = {:.2f}'.format(coef,
-                                     p_value_to_symbol(p),
+                                     p,
                                      minor_allele,
                                      minor_allele_frequency),
                 fontsize=14, alpha=0.75, ha='center', va='bottom',

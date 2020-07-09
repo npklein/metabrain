@@ -129,7 +129,8 @@ class DeconvolutionZscoreComparison:
                 # Calculate the correlation.
                 coef, p = stats.spearmanr(df[method1_name], df[method2_name])
                 coef_str = "{:.2f}".format(coef)
-                p_str = p_value_to_symbol(p)
+                # p_str = p_value_to_symbol(p)
+                p_str = "p = {:.2e}".format(p)
 
                 # Plot.
                 g = sns.regplot(x=method1_name,
@@ -226,7 +227,8 @@ class DeconvolutionZscoreComparison:
                     # Calculate the correlation.
                     coef, p = stats.spearmanr(df[method_name], df[marker_gene])
                     coef_str = "{:.2f}".format(coef)
-                    p_str = p_value_to_symbol(p)
+                    # p_str = p_value_to_symbol(p)
+                    p_str = "p = {:.2e}".format(p)
 
                     # Plot.
                     g = sns.regplot(x=method_name,

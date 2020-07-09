@@ -73,7 +73,8 @@ class CovariateComparison:
                 if i >= j:
                     coef, p = stats.spearmanr(df.loc[row1, :], df.loc[row2, :])
                     corr_df.loc[row1, row2] = coef
-                    pval_df.loc[row1, row2] = p_value_to_symbol(p)
+                    #pval_df.loc[row1, row2] = p_value_to_symbol(p)
+                    pval_df.loc[row1, row2] = "{:.2e}".format(p)
                     if (coef == 1.0) and (row1 != row2):
                         print("{} = {}".format(row1, row2))
 
