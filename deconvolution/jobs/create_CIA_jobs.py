@@ -85,33 +85,35 @@ class main():
                             "--job",
                             type=str,
                             required=True,
-                            help="The name of the job")
+                            help="The name of the job.")
         parser.add_argument("-n",
                             "--name",
                             type=str,
                             required=True,
                             help="The name of the job (must have settings "
-                                 "<name>_settings.json)")
+                                 "<name>_settings.json).")
         parser.add_argument("-s",
                             "--settings",
                             type=str,
                             required=True,
-                            help="The settings input file")
+                            help="The settings input file (without '.json'), "
+                                 "default: 'default_settings'.")
         parser.add_argument("-f",
                             "--first",
                             type=int,
                             default=0,
-                            help="The start index, default: 0.")
+                            help="The eQTL index of the first one to analyse, "
+                                 "default: 0.")
         parser.add_argument("-l",
                             "--last",
                             type=int,
                             required=True,
-                            help="The stop index.")
+                            help="The eQTL index of the last one to analyse")
         parser.add_argument("-b",
                             "--batch",
                             type=int,
                             default=50,
-                            help="The number of eQTLs per job.")
+                            help="The number of eQTLs per job. Default: 50.")
         parser.add_argument("-ns",
                             "--n_samples",
                             type=int,

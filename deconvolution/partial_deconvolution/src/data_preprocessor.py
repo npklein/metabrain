@@ -25,7 +25,6 @@ from __future__ import print_function
 
 # Third party imports.
 import numpy as np
-import pandas as pd
 
 # Local application imports.
 

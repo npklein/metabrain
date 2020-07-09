@@ -20,12 +20,12 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Standard imports.
+import itertools
 import os
 
 # Third party imports.
 import pandas as pd
 import matplotlib
-import itertools
 matplotlib.use('Agg')
 import upsetplot as up
 import matplotlib.pyplot as plt

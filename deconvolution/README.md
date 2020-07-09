@@ -111,6 +111,39 @@ python3 ./custom_interaction_analyser.py -n example_output -sr 50 -ne 100
  * Job3:   
    ...  
    
+**TIP**: to automate this process I developed three bash scripts that can help with this step. First, using the [create_CIA_jobs](jobs/create_CIA_jobs.py) script you can create Custom Interaction Analyser job files to submit to the cluster. 
+
+Options:
+
+ * **-j** / **--job**: The name of the job.
+ * **-n** / **--name**: The name of the job (must have settings <name>_settings.json).
+ * **-s** / **--settings**: The settings input file (without '.json'), default: 'default_settings'.
+ * **-f** / **--first**: The eQTL index of the first one to analyse, default: 0.
+ * **-l** / **--last**: The eQTL index of the last one to analyse.
+ * **-b** / **--batch**: The number of eQTLs per job. Default: 50.
+ * **-ns** / **--n_samples**: The number of samples in the expression file.
+ * **-e** / **--exclude**: The name of node to exclude, default: None.  
+ 
+**Important note**: the maximum runtime of these job files is '05:59:00'. If the number of permutations in performed or the **-b** / **--batch** gets too big, the process won't be finished in time. I recommend using <75 for 10 permutations.
+
+This program then creates N files named <job>_<n>.sh. After creating the files, you can start submitting them. IMPORTANT that you first submit <job>_0.sh and wait for it to start. You know it has started with 'custom_interaction_analyser/<output_directory>/permutation_order.pkl' exists. This file has to exist before continuing! 
+You can then submit the rest of the job files using [start](jobs/start.sh):
+ ```console  
+./start.sh <job_prefix> <start_index> <stop_index>  
+```  
+Where job_prefix = **-j** / **--job**, start_index = 1, and stop_index = the highest job file number.
+  
+During the analysis you can check on the progress by using [status](jobs/status.sh):
+ ```console  
+./status.sh <job_prefix> <start_index> <stop_index>  
+```  
+
+If something went wrong, you can stop jobs easily using [stop](jobs/stop.sh):
+ ```console  
+./stop.sh
+```  
+This program stops all jobs that are written to the start.txt file.
+      
 ##### Step 2B: Combine the Resuts
 This step loads the pickled data and combines them into a complete interaction matrix. Also multiple-testing corrections are performed and the resulting FDR values are compared to the original p-values. This code also creates a few visualizations of the p-value distributions and fdr - pvalue comparisons.
   

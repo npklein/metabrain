@@ -94,7 +94,7 @@ class CommandLineArguments:
                             type=int,
                             default=0,
                             help="The minimal expression value per gene."
-                                 " Default: 0")
+                                 " Default: 0.")
         parser.add_argument("-n",
                             "--normalize",
                             type=str,
@@ -110,6 +110,10 @@ class CommandLineArguments:
                             action='store_true',
                             help="Log2 transform the profile values."
                                  " Default: False.")
+        parser.add_argument("-sum_to_one",
+                            action='store_true',
+                            help="Sum-to-one the deconvolution weights."
+                                 " Default: False.")
         parser.add_argument("-dm",
                             "--decon_method",
                             type=str,
@@ -117,10 +121,6 @@ class CommandLineArguments:
                             default="NNLS",
                             help="The deconvolution method to use. "
                                  "Default: 'NNLS'.")
-        parser.add_argument("-sum_to_one",
-                            action='store_true',
-                            help="Sum-to-one the deconvolution weights."
-                                 " Default: False.")
         parser.add_argument("-visualise",
                             action='store_true',
                             help="Whether or not to visualise the data."
