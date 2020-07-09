@@ -57,14 +57,11 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 class main():
     def __init__(self):
-        dir = "cis_output"
-        self.geno_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/{}/create_matrices/genotype_table.txt.gz".format(
-            dir)
-        self.expr_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/{}/create_matrices/expression_table.txt.gz".format(
-            dir)
-        self.cov_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/{}/create_cov_matrix/covariates_table.txt.gz".format(
-            dir)
-        self.index = 13
+        self.geno_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/cis_new_output/create_matrices/genotype_table.txt.gz"
+        self.expr_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/cis_new_nocovcorr/create_matrices/expression_table.txt.gz"
+        self.cov_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/cis_new_output/create_cov_matrix/covariates_table.txt.gz"
+        self.index = 0
+        self.drop_covs = ["AMPAD-ROSMAP-V2-EUR"]
         self.tech_covs = [
             "PCT_CODING_BASES",
             "PCT_MRNA_BASES",
@@ -73,7 +70,6 @@ class main():
             "PCT_USABLE_BASES",
             "PCT_INTERGENIC_BASES",
             "PCT_UTR_BASES",
-            "PF_HQ_ALIGNED_READS",
             "PCT_READS_ALIGNED_IN_PAIRS",
             "PCT_CHIMERAS",
             "PF_READS_IMPROPER_PAIRS",
@@ -90,24 +86,21 @@ class main():
             "MDS2",
             "MDS3",
             "MDS4",
-            "AMPAD-MSBB-V2-AFR",
-            "CMC-AFR",
-            "LIBD_1M-AFR",
-            "LIBD_h650-AFR",
             "AMPAD-MAYO-V2-EUR",
             "AMPAD-MSBB-V2-EUR",
-            "AMPAD-ROSMAP-V2-EUR",
             "BrainGVEX-V2-EUR",
+            "CMC_HBCC_set2-EUR",
+            "CMC_HBCC_set3-EUR",
             "CMC-EUR",
+            "ENA-EUR",
             "GTEx-EUR",
-            "GVEx",
+            "GVEX-EUR",
             "LIBD_1M-EUR",
             "LIBD_h650-EUR",
             "NABEC-H550-EUR",
             "NABEC-H610-EUR",
             "TargetALS-EUR",
-            "UCLA_ASD-EUR",
-            "ENA-EU"
+            "UCLA_ASD-EUR"
         ]
         self.covs = ["SEX", "CellMapNNLS_Astrocyte",
                      "CellMapNNLS_EndothelialCell",
@@ -126,6 +119,10 @@ class main():
         print("\tExpression matrix: {}".format(expr_df.shape))
         cov_df = pd.read_csv(self.cov_path, sep="\t", header=0, index_col=0)
         print("\tCovariate matrix: {}".format(cov_df.shape))
+
+        # Drop the covariates we don't want.
+        if len(self.drop_covs) > 0:
+            cov_df.drop(self.drop_covs, axis=0, inplace=True)
 
         tech_cov_df = cov_df.loc[self.tech_covs, :].copy()
         cov_df = cov_df.loc[self.covs, :]
@@ -162,7 +159,16 @@ class main():
                               technical_covs.T,
                               tech_inter_matrix.T])
 
-
+        # Check the eQTL effect.
+        print(base_matrix)
+        print(genotype.name)
+        print(base_matrix[["intercept", genotype.name]])
+        df_eqtl, rss_eqtl, info = self.create_model(base_matrix[["intercept", genotype.name]],
+                                                    expression)
+        print("\ttdf_eqtl: {}\trss_eqtl: {}".format(df_eqtl, rss_eqtl))
+        with pd.option_context('display.max_rows', None,
+                               'display.max_columns', None):
+            print(info)
 
         # Loop over the covariates.
         for cov_index in range(len(cov_df.index)):
@@ -182,13 +188,18 @@ class main():
                                                 left_index=True,
                                                 right_index=True)
 
+            print(null_matrix)
+
             # Create the null model.
             n_null = null_matrix.shape[0]
-            df_null, rss_null, _ = self.create_model(null_matrix,
-                                                     expression)
+            df_null, rss_null, info = self.create_model(null_matrix,
+                                                        expression)
             print("\tn_null: {}\tdf_null: {}\trss_null: {}".format(n_null,
                                                                    df_null,
                                                                    rss_null))
+            with pd.option_context('display.max_rows', None,
+                                   'display.max_columns', None):
+                print(info)
 
             # Calculate the interaction effect of the covariate of
             # interest. Then drop the NA's from the interaction
@@ -208,14 +219,14 @@ class main():
 
             # Create the alternative model.
             n_alt = alt_matrix.shape[0]
-            df_alt, rss_alt, tvalue = self.create_model(alt_matrix,
-                                                        expression,
-                                                        inter_name)
-            print(
-                "\tn_alt: {}\tdf_alt: {}\trss_alt: {}\ttvalue: {}".format(n_alt,
-                                                                          df_alt,
-                                                                          rss_alt,
-                                                                          tvalue))
+            df_alt, rss_alt, info = self.create_model(alt_matrix,
+                                                      expression)
+            print("\tn_alt: {}\tdf_alt: {}\trss_alt: {}".format(n_alt,
+                                                                df_alt,
+                                                                rss_alt))
+            with pd.option_context('display.max_rows', None,
+                                   'display.max_columns', None):
+                print(info)
 
             # Make sure the n's are identical.
             if n_null != n_alt:
@@ -260,21 +271,32 @@ class main():
         plt.close()
 
     @staticmethod
-    def create_model(X, y, name=None):
-        ols = sm.OLS(y.values, X)
-        ols_result = ols.fit()
-
+    def create_model(X, y):
         df = X.shape[1]
+
+        # Perform the Ordinary least squares fit.
+        ols = sm.OLS(y.values, X)
+        try:
+            ols_result = ols.fit()
+        except np.linalg.LinAlgError as e:
+            print("\t\tError: {}".format(e))
+            return df, np.nan, None
+
         ssr = ols_result.ssr
 
-        tvalue = 0
-        if name and name in X.columns:
-            coef = ols_result.params[name]
-            std_err = ols_result.bse[name]
+        info = []
+        for col in X.columns:
+            coef = ols_result.params[col]
+            std_err = ols_result.bse[col]
             if std_err > 0:
                 tvalue = coef / std_err
+            else:
+                tvalue = np.nan
+            info.append([col, coef, std_err, tvalue])
+        info_df = pd.DataFrame(info)
+        info_df.columns = ["term", "b", "se", "t-value"]
 
-        return df, ssr, tvalue
+        return df, ssr, info_df
 
     @staticmethod
     def calc_f_value(rss1, rss2, df1, df2, n):
