@@ -90,8 +90,7 @@ class main():
                             "--name",
                             type=str,
                             required=True,
-                            help="The name of the job (must have settings "
-                                 "<name>_settings.json).")
+                            help="The name of the input/output directory.")
         parser.add_argument("-s",
                             "--settings",
                             type=str,
