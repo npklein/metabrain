@@ -1,7 +1,7 @@
 """
 File:         perform_deconvolution.py
 Created:      2020/04/08
-Last Changed: 2020/04/28
+Last Changed: 2020/06/18
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -91,41 +91,53 @@ class PerformDeconvolution:
             self.ct_expr_df = load_dataframe(self.ct_expr_file,
                                              header=0, index_col=0)
 
-        # Shift the matrices to be all positive.
-        shifted_ct_expr = self.ct_expr_df.copy()
-        shifted_ct_expr = shifted_ct_expr + abs(shifted_ct_expr.values.min())
-        shifted_profile_df = self.normalize(self.profile_df)
-        shifted_profile_df = shifted_profile_df + abs(shifted_profile_df.values.min())
+        # Z-score transform the signature profile.
+        profile_df = self.normalize(self.profile_df)
+
+        print("Shifting data to be positive.")
+        # Shift the data to be positive.
+        if profile_df.values.min() < 0:
+            print("\tshifting profile")
+            profile_df = profile_df + abs(profile_df.values.min())
+
+        expr_df = self.ct_expr_df.copy()
+        if expr_df.values.min() < 0:
+            print("\tshifting expression")
+            expr_df = expr_df + abs(expr_df.values.min())
 
         # Filter on overlap.
-        overlap = np.intersect1d(shifted_profile_df.index, shifted_ct_expr.index)
-        shifted_profile_df = shifted_profile_df.loc[overlap, :]
-        shifted_ct_expr = shifted_ct_expr.loc[overlap, :]
+        overlap = np.intersect1d(profile_df.index, expr_df.index)
+        profile_df = profile_df.loc[overlap, :]
+        expr_df = expr_df.loc[overlap, :]
 
         # Set index name identical.
-        shifted_profile_df.index.name = "-"
-        shifted_ct_expr.index.name = "-"
+        profile_df.index.name = "-"
+        expr_df.index.name = "-"
 
         # Check if identical.
-        if not shifted_profile_df.index.equals(shifted_ct_expr.index):
+        if not profile_df.index.equals(expr_df.index):
             print("Invalid order.")
             exit()
 
+        print("Profile shape: {}".format(profile_df.shape))
+        print("Expression shape: {}".format(expr_df.shape))
+
         # Perform deconvolution per sample.
+        print("Performing partial deconvolution.")
         decon_data = []
         residuals_data = []
-        for col_id in range(len(shifted_ct_expr.columns)):
-            sample = shifted_ct_expr.iloc[:, col_id]
-            proportions, rnorm = self.nnls(shifted_profile_df, sample)
+        for _, sample in expr_df.T.iterrows():
+            proportions, rnorm = self.nnls(profile_df, sample)
             decon_data.append(proportions)
             residuals_data.append(rnorm)
 
         decon_df = pd.DataFrame(decon_data,
-                                index=shifted_ct_expr.columns,
-                                columns=["{}NNLS_{}".format(*x.split("_")) for x in shifted_profile_df.columns])
+                                index=expr_df.columns,
+                                columns=["{}NNLS_{}".format(*x.split("_")) for x in profile_df.columns])
 
         print("Estimated weights:")
         print(decon_df)
+        print(decon_df.mean(axis=0))
 
         # Make the weights sum up to 1.
         decon_df = self.sum_to_one(decon_df)
@@ -133,7 +145,7 @@ class PerformDeconvolution:
         print(decon_df)
 
         # Construct a Series for the residuals.
-        residuals_df = pd.Series(residuals_data, index=shifted_ct_expr.columns)
+        residuals_df = pd.Series(residuals_data, index=expr_df.columns)
         print(residuals_df)
         print("Average residual: {:.2f}".format(residuals_df.mean()))
 

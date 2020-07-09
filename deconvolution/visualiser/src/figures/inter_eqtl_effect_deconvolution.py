@@ -219,7 +219,8 @@ class IntereQTLEffectDeconvolution:
                         coef, p = stats.spearmanr(subset["expression"],
                                                   subset[cov_name])
                         coef_str = "{:.2f}".format(coef)
-                        p_str = p_value_to_symbol(p)
+                        #p_str = p_value_to_symbol(p)
+                        p_str = "p = {:.2e}".format(p)
 
                         # Plot.
                         sns.regplot(x=cov_name, y="expression", data=subset,
