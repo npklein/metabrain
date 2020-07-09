@@ -135,7 +135,7 @@ Options:
  * **-n** / **--name**: The name of the input/output directory.
  * **-s** / **--settings**: The settings input file (without '.json'), default: 'default_settings'.
  * **-a** / **--alpha**: The significance cut-off, default: 0.05.
- * **-e** / **--extensions**: The output file formats, default: ['png'].
+ * **-e** / **--extension**: The output file formats, default: 'png'.
  * **-i** / **--interest**: The HGNC names to print the info of, default: None.  
 
 ### Step 4: Visualiser  
