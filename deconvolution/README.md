@@ -116,7 +116,7 @@ python3 ./custom_interaction_analyser.py -n example_output -sr 50 -ne 100
 Options:
 
  * **-j** / **--job**: The name of the job.
- * **-n** / **--name**: The name of the job (must have settings <name>_settings.json).
+ * **-n** / **--name**: The name of the input/output directory.
  * **-s** / **--settings**: The settings input file (without '.json'), default: 'default_settings'.
  * **-f** / **--first**: The eQTL index of the first one to analyse, default: 0.
  * **-l** / **--last**: The eQTL index of the last one to analyse.
@@ -126,7 +126,7 @@ Options:
  
 **Important note**: the maximum runtime of these job files is '05:59:00'. If the number of permutations in performed or the **-b** / **--batch** gets too big, the process won't be finished in time. I recommend using <75 for 10 permutations.
 
-This program then creates N files named <job>_<n>.sh. After creating the files, you can start submitting them. IMPORTANT that you first submit <job>_0.sh and wait for it to start. You know it has started with 'custom_interaction_analyser/<output_directory>/permutation_order.pkl' exists. This file has to exist before continuing! 
+This program then creates N files named <job><n>.sh. After creating the files, you can start submitting them. IMPORTANT that you first submit <job>_0.sh and wait for it to start. You know it has started with 'custom_interaction_analyser/<output_directory>/permutation_order.pkl' exists. This file has to exist before continuing! 
 You can then submit the rest of the job files using [start](jobs/start.sh):
  ```console  
 ./start.sh <job_prefix> <start_index> <stop_index>  
@@ -168,7 +168,7 @@ Options:
  * **-n** / **--name**: The name of the input/output directory.
  * **-s** / **--settings**: The settings input file (without '.json'), default: 'default_settings'.
  * **-a** / **--alpha**: The significance cut-off, default: 0.05.
- * **-e** / **--extension**: The output file formats, default: 'png'.
+ * **-e** / **--extensions**: The output file formats, default: ['png'].
  * **-i** / **--interest**: The HGNC names to print the info of, default: None.  
 
 ### Step 4: Visualiser  
