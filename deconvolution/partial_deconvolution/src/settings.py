@@ -78,7 +78,7 @@ class Settings:
         return self.ground_truth_path
 
     def get_ground_truth_type(self):
-        return os.path.basename(self.ground_truth_path).split(".")[0].replace("_counts", "").replace("_", " ")
+        return os.path.basename(self.ground_truth_path).split(".")[0].replace("_counts", "")
 
     def get_min_expr(self):
         return self.min_expr

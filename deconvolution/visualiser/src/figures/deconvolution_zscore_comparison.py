@@ -137,7 +137,8 @@ class DeconvolutionZscoreComparison:
                                 y=method2_name,
                                 data=df,
                                 scatter_kws={'facecolors': '#000000',
-                                             'edgecolor': '#000000',
+#                                             'edgecolor': '#000000',
+                                             'linewidth': 0,
                                              'alpha': 0.5},
                                 line_kws={"color": color},
                                 ax=ax
@@ -235,7 +236,8 @@ class DeconvolutionZscoreComparison:
                                     y=marker_gene,
                                     data=df,
                                     scatter_kws={'facecolors': '#000000',
-                                                 'edgecolor': '#000000',
+#                                                 'edgecolor': '#000000',
+                                                 'linewidth': 0,
                                                  'alpha': 0.5},
                                     line_kws={"color": color},
                                     ax=ax

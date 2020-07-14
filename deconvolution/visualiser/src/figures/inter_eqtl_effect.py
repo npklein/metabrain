@@ -227,7 +227,8 @@ class IntereQTLEffect:
                 # Plot.
                 sns.regplot(x=cov_name, y="expression", data=subset,
                             scatter_kws={'facecolors': subset['value_hue'],
-                                         'edgecolors': subset['group_hue'],
+#                                         'edgecolors': subset['group_hue'],
+                                         'linewidth': 0,
                                          'alpha': 0.75},
                             line_kws={"color": color, "alpha": 0.75},
                             ax=ax

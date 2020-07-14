@@ -1,7 +1,7 @@
 """
 File:         visualiser.py
 Created:      2020/06/29
-Last Changed: 2020/06/30
+Last Changed: 2020/07/09
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -272,7 +272,10 @@ class Visualiser:
             return
 
         df = self.comparison.copy()
-        self.create_regression(df, "NNLS predictions", "{} counts".format(self.ground_truth_type), 'comparison')
+        self.create_regression(df,
+                               "NNLS predictions",
+                               "{} counts".format(self.ground_truth_type),
+                               '{}_comparison'.format(self.ground_truth_type))
 
     def create_clustermap(self, df, name):
         sns.set(color_codes=True)
@@ -333,7 +336,8 @@ class Visualiser:
             subset = df.loc[df['hue'] == group, :].copy()
             color = self.palette[group]
 
-            coef, p = stats.spearmanr(subset["x"], subset["y"])
+            #coef, p = stats.spearmanr(subset["x"], subset["y"])
+            coef, p = stats.pearsonr(subset["x"], subset["y"])
             coefs[group] = "r = {:.2f}".format(coef)
 
             sns.regplot(x="x", y="y", data=subset,

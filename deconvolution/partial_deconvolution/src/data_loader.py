@@ -96,7 +96,7 @@ class DataLoader:
     def load_samples(filepath, cohort, key="RnaID", value="GenotypeID"):
         print("\tLoading samples dict")
         df = pd.read_csv(filepath, sep="\t")
-        if cohort.lower() != 'All':
+        if cohort.lower() != 'all':
             df = df.loc[df["MetaCohort"] == cohort, :]
         return dict(zip(df.loc[:, key], df.loc[:, value]))
 
