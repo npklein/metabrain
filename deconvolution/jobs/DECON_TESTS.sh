@@ -23,7 +23,7 @@ SINGLE_CELL="SINGLE_CELL:/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDo
 IHC="IHC:/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/test_scripts/AMP-AD/IHC_counts.txt.gz"
 CELLMAP_NOLOG2="CELLMAP_NOLOG2:/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/2020-07-14-CellMapPredictions/nolog2/CellMap_noLog2_counts.txt.gz"
 CELLMAP_LOG2="CELLMAP_LOG2:/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/2020-07-14-CellMapPredictions/log2/CellMap_log2_counts.txt.gz"
-GT_FILES=($CELLMAP_LOG2 $CELLMAP_NOLOG2)
+GT_FILES=($SINGLE_CELL $IHC $CELLMAP_LOG2 $CELLMAP_NOLOG2)
 
 for DATA_FILE in ${DATA_FILES[@]}; do
     DATA_TYPE="${DATA_FILE%%:*}"
@@ -40,6 +40,10 @@ for DATA_FILE in ${DATA_FILES[@]}; do
 
       echo /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/partial_deconvolution.py -d $DATA_FP -si /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/CellMap_brain_celltype_avgCPM.txt -t /groups/umcg-biogen/tmp03/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz -sa /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-05-25-samplelinks/all/links2-ExpressionSamplesLinked.txt -c AMP-AD -g $GT_FP -log2 -m 5 -sum_to_one -o AMPAD_${DATA_TYPE}_${GT_TYPE}_log2 -visualise -e pdf
       python3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/partial_deconvolution.py -d $DATA_FP -si /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/CellMap_brain_celltype_avgCPM.txt -t /groups/umcg-biogen/tmp03/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz -sa /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-05-25-samplelinks/all/links2-ExpressionSamplesLinked.txt -c AMP-AD -g $GT_FP -log2 -m 5 -sum_to_one -o AMPAD_${DATA_TYPE}_${GT_TYPE}_log2 -visualise -e pdf
+      echo ""
+
+      echo /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/partial_deconvolution.py -d $DATA_FP -si /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/CellMap_brain_celltype_avgCPM.txt -t /groups/umcg-biogen/tmp03/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz -sa /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-05-25-samplelinks/all/links2-ExpressionSamplesLinked.txt -c AMP-AD -g $GT_FP -log2 -m 5 -zscore -sum_to_one -o AMPAD_${DATA_TYPE}_${GT_TYPE}_zscoreAndLog2 -visualise -e pdf
+      python3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/partial_deconvolution.py -d $DATA_FP -si /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/CellMap_brain_celltype_avgCPM.txt -t /groups/umcg-biogen/tmp03/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz -sa /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-05-25-samplelinks/all/links2-ExpressionSamplesLinked.txt -c AMP-AD -g $GT_FP -log2 -m 5 -zscore -sum_to_one -o AMPAD_${DATA_TYPE}_${GT_TYPE}_zscoreAndLog2 -visualise -e pdf
       echo ""
     done
 done

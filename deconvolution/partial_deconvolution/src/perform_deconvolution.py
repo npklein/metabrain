@@ -71,6 +71,7 @@ class PerformDeconvolution:
         # Save.
         self.deconvolution = deconvolution
         self.residuals = residuals
+        self.save()
 
     @staticmethod
     def nnls(A, b):

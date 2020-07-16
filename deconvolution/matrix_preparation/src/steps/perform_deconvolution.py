@@ -1,7 +1,7 @@
 """
 File:         perform_deconvolution.py
 Created:      2020/04/08
-Last Changed: 2020/06/18
+Last Changed: 2020/07/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -91,35 +91,26 @@ class PerformDeconvolution:
             self.ct_expr_df = load_dataframe(self.ct_expr_file,
                                              header=0, index_col=0)
 
-        # Z-score transform the signature profile.
-        profile_df = self.normalize(self.profile_df)
+        # Filter uninformative genes from the signature matrix.
+        prof_df = self.filter(self.profile_df)
 
-        print("Shifting data to be positive.")
+        # Subset and reorder.
+        prof_df, expr_df = self.subset(prof_df, self.ct_expr_df)
+
+        # Transform.
+        prof_df = self.perform_log2_transform(prof_df)
+
         # Shift the data to be positive.
-        if profile_df.values.min() < 0:
-            print("\tshifting profile")
-            profile_df = profile_df + abs(profile_df.values.min())
+        print("Shifting data to be positive")
+        if prof_df.values.min() < 0:
+            prof_df = self.perform_shift(prof_df)
+            self.sign_shift = True
 
-        expr_df = self.ct_expr_df.copy()
         if expr_df.values.min() < 0:
-            print("\tshifting expression")
-            expr_df = expr_df + abs(expr_df.values.min())
+            expr_df = self.perform_shift(expr_df)
+            self.expr_shift = True
 
-        # Filter on overlap.
-        overlap = np.intersect1d(profile_df.index, expr_df.index)
-        profile_df = profile_df.loc[overlap, :]
-        expr_df = expr_df.loc[overlap, :]
-
-        # Set index name identical.
-        profile_df.index.name = "-"
-        expr_df.index.name = "-"
-
-        # Check if identical.
-        if not profile_df.index.equals(expr_df.index):
-            print("Invalid order.")
-            exit()
-
-        print("Profile shape: {}".format(profile_df.shape))
+        print("Profile shape: {}".format(prof_df.shape))
         print("Expression shape: {}".format(expr_df.shape))
 
         # Perform deconvolution per sample.
@@ -127,13 +118,14 @@ class PerformDeconvolution:
         decon_data = []
         residuals_data = []
         for _, sample in expr_df.T.iterrows():
-            proportions, rnorm = self.nnls(profile_df, sample)
+            proportions, rnorm = self.nnls(prof_df, sample)
             decon_data.append(proportions)
             residuals_data.append(rnorm)
 
         decon_df = pd.DataFrame(decon_data,
                                 index=expr_df.columns,
-                                columns=["{}NNLS_{}".format(*x.split("_")) for x in profile_df.columns])
+                                columns=["{}NNLS_{}".format(*x.split("_")) for x in prof_df.columns])
+        residuals_df = pd.Series(residuals_data, index=expr_df.columns)
 
         print("Estimated weights:")
         print(decon_df)
@@ -144,19 +136,41 @@ class PerformDeconvolution:
         print("Estimated proportions:")
         print(decon_df)
 
-        # Construct a Series for the residuals.
-        residuals_df = pd.Series(residuals_data, index=expr_df.columns)
+        # Calculate the average residuals.
         print(residuals_df)
         print("Average residual: {:.2f}".format(residuals_df.mean()))
 
         return decon_df
 
     @staticmethod
-    def normalize(df):
-        out_df = df.copy()
-        out_df = out_df.loc[out_df.std(axis=1) > 0, :]
-        out_df = out_df.subtract(out_df.mean(axis=1), axis=0).divide(out_df.std(axis=1), axis=0)
-        return out_df
+    def filter(df, cutoff=0):
+        tmp = df.copy()
+        return tmp.loc[(tmp.std(axis=1) != 0) & (tmp.max(axis=1) > cutoff), :]
+
+    @staticmethod
+    def subset(raw_signature, raw_expression):
+        overlap = np.intersect1d(raw_signature.index, raw_expression.index)
+        sign_df = raw_signature.loc[overlap, :]
+        expr_df = raw_expression.loc[overlap, :]
+
+        sign_df.index.name = "-"
+        expr_df.index.name = "-"
+
+        if not sign_df.index.equals(expr_df.index):
+            print("Invalid order")
+            exit()
+
+        return sign_df, expr_df
+
+    @staticmethod
+    def perform_log2_transform(df):
+        tmp = df.copy()
+        tmp = tmp + abs(tmp.values.min()) + 1
+        return np.log2(tmp)
+
+    @staticmethod
+    def perform_shift(df):
+        return df + abs(df.values.min())
 
     @staticmethod
     def nnls(A, b):

@@ -55,10 +55,10 @@ class DataPreprocessor:
         # Transform.
         if self.normalize:
             sign_df = self.perform_normalize(sign_df, self.normalize)
-        if self.zscore:
-            sign_df = self.perform_zscore_transform(sign_df)
         if self.log2:
             sign_df = self.perform_log2_transform(sign_df)
+        if self.zscore:
+            sign_df = self.perform_zscore_transform(sign_df)
 
         # Shift the data to be positive.
         print("Shifting data to be positive")
