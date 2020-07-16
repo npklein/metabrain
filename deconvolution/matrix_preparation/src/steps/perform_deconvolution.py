@@ -104,11 +104,9 @@ class PerformDeconvolution:
         print("Shifting data to be positive")
         if prof_df.values.min() < 0:
             prof_df = self.perform_shift(prof_df)
-            self.sign_shift = True
 
         if expr_df.values.min() < 0:
             expr_df = self.perform_shift(expr_df)
-            self.expr_shift = True
 
         print("Profile shape: {}".format(prof_df.shape))
         print("Expression shape: {}".format(expr_df.shape))
