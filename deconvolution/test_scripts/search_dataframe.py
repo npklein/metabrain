@@ -3,7 +3,7 @@
 """
 File:         search_dataframe.py
 Created:      2020/07/16
-Last Changed:
+Last Changed: 2020/07/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -52,6 +52,7 @@ class main():
         self.snps = getattr(arguments, 'snps')
         self.genes = getattr(arguments, 'genes')
         self.data_path = getattr(arguments, 'data')
+        self.eqtl_path = getattr(arguments, 'eqtls')
         self.filter = getattr(arguments, 'filter')
         self.header = getattr(arguments, 'header')
         self.index_col = getattr(arguments, 'index_col')
@@ -91,6 +92,10 @@ class main():
                             "--data",
                             type=str,
                             help="The data to look in.")
+        parser.add_argument("-e",
+                            "--eqtls",
+                            type=str,
+                            help="The eqtls corresponding to the data.")
         parser.add_argument("--header",
                             type=int,
                             default=0,
@@ -113,20 +118,25 @@ class main():
 
     def start(self):
         print("Load the data.")
-        df = pd.read_csv(self.data_path,
-                         header=self.header,
-                         index_col=self.index_col,
-                         sep=self.sep)
+        data_df = pd.read_csv(self.data_path,
+                              header=self.header,
+                              index_col=self.index_col,
+                              sep=self.sep)
+
+        eqtl_df = pd.read_csv(self.eqtl_path,
+                              header=self.header,
+                              index_col=self.index_col,
+                              sep=self.sep)
 
         print("Searching rows.")
-        for i, (index, row) in enumerate(df.iterrows()):
+        for i, (index, row) in enumerate(data_df.iterrows()):
             if self.is_hit(index):
-                self.print_info(i, index, row)
+                self.print_info(i, index, row, eqtl_df.iloc[i, :])
 
         print("Searching columns.")
-        for i, (index, row) in enumerate(df.T.iterrows()):
+        for i, (index, row) in enumerate(data_df.T.iterrows()):
             if self.is_hit(index):
-                self.print_info(i, index, row)
+                self.print_info(i, index, row, eqtl_df.iloc[i, :])
 
     def is_hit(self, index):
         for snp in self.snps:
@@ -137,8 +147,13 @@ class main():
                 return True
         return False
 
-    def print_info(self, i, name, row):
-        buffer = ["Index:\t{}".format(name)]
+    def print_info(self, i, name, row, eqtl):
+        probe_name = ""
+        hgnc_name = ""
+        if name.startswith(eqtl["SNPName"]):
+            probe_name = eqtl["ProbeName"]
+            hgnc_name = eqtl["HGNCName"]
+        buffer = ["Index:\t{} - {} [{}]".format(name, probe_name, hgnc_name)]
         for index, item in row.iteritems():
             if self.filter is None:
                 if item < self.alpha:
