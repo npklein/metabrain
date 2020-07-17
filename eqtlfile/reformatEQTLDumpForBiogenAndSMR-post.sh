@@ -8,25 +8,24 @@ ml Java
 ml Python
 
 
-if [ "$#" -ne 4 ]; then
-    echo "Usage: dumpdir outprefix fdrreference-FDR0.05.txt.gz chr"
+if [ "$#" -ne 3 ]; then
+    echo "Usage: dumpdir outprefix chr"
     exit
 fi
 
 dumpdir=$1
 outprefix=$2
-fdrref=$3
-chr=$4
+chr=$3
 
 	# reformat to biogen preferred format
-#	python /groups/umcg-biogen/tmp03/tools/biogen/reformatQTLfile.py \
-#		$dumpdir/splitByChr/$outprefix\-$chr.txt.gz \
-#		$dumpdir/biogenformat/$outprefix\-$chr\-biogenformat.txt.gz
+	python /groups/umcg-biogen/tmp03/tools/biogen/reformatQTLfile.py \
+		$dumpdir/splitByChr/$outprefix\-$chr.txt.gz \
+		$dumpdir/biogenformat/$outprefix\-$chr\-biogenformat.txt.gz
 
 	# grep significant hits
-	# python /groups/umcg-biogen/tmp03/tools/brain_eQTL/eqtlfile/select_fdr_significant.py \
-	#	$dumpdir/biogenformat/ \
-	#	$dumpdir/biogenformat/fdr005/
+	 python /groups/umcg-biogen/tmp03/tools/brain_eQTL/eqtlfile/select_fdr_significant.py \
+		$dumpdir/biogenformat/$outprefix\-$chr\-biogenformat.txt.gz \
+		$dumpdir/biogenformat/fdr005/$outprefix\-$chr\-biogenformat-FDR0.05.txt.gz
 	
 	# convert to SMR file
 	java -Xmx10g -jar /groups/umcg-biogen/tmp03/tools/eqtl-mapping-pipeline-1.4.8-SNAPSHOT/eqtl-mapping-pipeline.jar --mode util --converteqtlfiletosmr \

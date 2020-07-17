@@ -11,7 +11,7 @@ dumpdir=$1
 outprefix=$2
 fdrref=$3
 
-if [ 1 -eq 2 ]; then
+#if [ 1 -eq 2 ]; then
 # calculate MAF
 java -Xmx10g -jar /groups/umcg-biogen/tmp03/tools/eqtl-mapping-pipeline-1.4.8-SNAPSHOT/eqtl-mapping-pipeline.jar --mode util --getmaffromqclog \
         --in $dumpdir/SNPQCLog.txt.gz \
@@ -42,7 +42,7 @@ java -Xmx10g -jar /groups/umcg-biogen/tmp03/tools/eqtl-mapping-pipeline-1.4.8-SN
         --in $dumpdir/eQTLDump-sortPos-FDR.txt.gz \
         --out $dumpdir/splitByChr/$outprefix
 
-fi
+#fi
 
 
 # reformat biogen
