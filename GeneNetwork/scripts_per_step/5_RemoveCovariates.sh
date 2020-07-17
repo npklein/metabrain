@@ -14,13 +14,16 @@ github_dir=
 mem=
 main(){
     module load Java/1.8.0_144-unlimited_JCE
+    module load Python
     parse_commandline "$@"
 
     rsync -vP $config_templates/5_RemoveCovariates.json $project_dir/configs/
-
+    head -n1 $expression_file | sed -e 's;\t;\n;g' > $outdir/samples.txt
+    subset_covar="$outdir/$(basename ${covar_matrix%.*}).subset.txt"
+    python $github_dir/table_scripts/subset_covar_matrix_remove_noVariance_rows.py $covar_matrix $outdir/samples.txt $subset_covar
     sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/5_RemoveCovariates.json
     sed -i "s;REPLACEOUTDIR;$outdir/;" $project_dir/configs/5_RemoveCovariates.json
-    sed -i "s;REPLCACECOVARMATRIX;$covar_matrix;" $project_dir/configs/5_RemoveCovariates.json
+    sed -i "s;REPLCACECOVARMATRIX;$subset_covar;" $project_dir/configs/5_RemoveCovariates.json
 
     mkdir -p $(dirname $outdir)
 
