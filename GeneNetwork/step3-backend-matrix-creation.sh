@@ -58,10 +58,10 @@ main(){
     8_center_scale
     echo "9_correlate_eigenvectors"
     9_correlate_eigenvectors
-#    echo "10_GeneNetwork_predictions"
-#    10_GeneNetwork_predictions
-#    echo "11_WebsiteMatrixCreator"
-#    11_WebsiteMatrixCreator
+    echo "10_GeneNetwork_predictions"
+    10_GeneNetwork_predictions
+    echo "11_WebsiteMatrixCreator"
+    11_WebsiteMatrixCreator
 }
 
 
