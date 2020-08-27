@@ -100,7 +100,13 @@ print_command_arguments(){
             -i $output_dir/7_evd_on_correlation_matrix/$name.eigenvectors.${n_eigenvectors}_eigenvectors.txt \
             -o ${output_file_step8}
     else
-        echo "${output_file_step8}.gz exists, go to step 9"
+        if [ ! -f ${output_dir}/7_evd_on_correlation_matrix/$name.eigenvectors.${n_eigenvectors}_eigenvectors.txt.gz ];
+        then
+            nforcut=$(expr $n_eigenvectors + 1)
+            zcat < $output_dir/7_evd_on_correlation_matrix/$name.eigenvectors.txt.gz | cut -f1-$nforcut > $output_dir/7_evd_on_correlation_matrix/$name.eigenvectors.${n_eigenvectors}_eigenvectors.txt
+            gzip $output_dir/7_evd_on_correlation_matrix/$name.eigenvectors.${n_eigenvectors}_eigenvectors.txt
+        fi
+        echo "${output_file_step8} exists, go to step 9"
     fi
 }
 
@@ -157,12 +163,13 @@ print_command_arguments(){
             rsync -vP $github_dir/GeneNetwork/scripts_per_step/10_GeneNetwork_predictions.sh $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
             sed -i "s;REPLACENAME;${matrix_name}.${n_eigenvectors}_eigenvectors.predictions;g" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
             sed -i "s;REPLACEGENENETWORKDIR;${gene_network_dir};" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
-            sed -i "s;REPLACEIDENTITYMATRIX;$f;" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
+            sed -i "s;REPLACEIDENTITYMATRIX;$f;g" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
             sed -i "s;REPLACEEIGENVECTORS;$output_dir/7_evd_on_correlation_matrix/${name}.eigenvectors.${n_eigenvectors}_eigenvectors.txt;g" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
             sed -i "s;REPLACEOUT;$outfile;" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
             sed -i "s;REPLACEBACKGROUND;${f%matrix.txt}genesInPathways.txt;g" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
             sed -i "s;REPLACEMEM;${mem};g" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
             sed -i "s;REPLACEQOS;${qos};" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
+            sed -i "s;REPLACENEIG;${n_eigenvectors};" $output_dir/10_GeneNetwork_predictions/scripts/${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh
             job_ids+=("$(sbatch --parsable ${matrix_name}.${n_eigenvectors}_eigenvectors.predictions.sh)")
             outfiles+=("$outfile")
         else
