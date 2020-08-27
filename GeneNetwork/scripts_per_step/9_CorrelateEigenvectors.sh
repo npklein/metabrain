@@ -10,78 +10,91 @@ config_templates=
 jardir=
 eigenvector_file=
 threads=
+mem=
+qos=
+github_dir=
 main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
 
-    rsync -vP $config_templates/6_CorrelationMatrix.json $project_dir/configs/9_CorrelateEigenvectors.json
-
-    sed -i "s;REPLACEEXPRFILE;$eigenvector_file;" $project_dir/configs/9_CorrelateEigenvectors.json
-    sed -i "s;REPLACEOUTFILE;$outfile;" $project_dir/configs/9_CorrelateEigenvectors.json
-    sed -i "s;REPLACETHREADS;$threads;" $project_dir/configs/9_CorrelateEigenvectors.json
+    eigname=$(basename $eigenvector_file)
+    eigname=${eigname%.gz}
+    eigname=${eigname%.txt}
+    rsync -vP $config_templates/6_CorrelationMatrix.json $project_dir/configs/9_CorrelateEigenvectors.$eigname.json
+    sed -i "s;REPLACEEXPRFILE;$eigenvector_file;" $project_dir/configs/9_CorrelateEigenvectors.$eigname.json
+    sed -i "s;REPLACEOUTFILE;$outfile;" $project_dir/configs/9_CorrelateEigenvectors.$eigname.json
+    sed -i "s;REPLACETHREADS;$threads;" $project_dir/configs/9_CorrelateEigenvectors.$eigname.json
     mkdir -p $(dirname $outfile)
 
     echo "Starting sbatch with:"
     echo "#!/bin/bash
-#SBATCH --job-name=correlation
-#SBATCH --output=$(dirname $outfile)/correlation.out
-#SBATCH --error=$(dirname $outfile)/correlation.err
+#SBATCH --job-name=correlation_$eigname
+#SBATCH --output=$(dirname $outfile)/correlation_$eigname.out
+#SBATCH --error=$(dirname $outfile)/correlation_$eigname.err
 #SBATCH --time=05:59:59
 #SBATCH --cpus-per-task $threads
-#SBATCH --mem 100gb
+#SBATCH --mem ${mem}b
 #SBATCH --nodes 1
+#SBATCH --qos $qos
 
 ml Java;
-java -Xmx90g -Xms90g -jar $jardir/RunV13.jar $project_dir/configs/9_CorrelateEigenvectors.json
+java -Xmx$mem -Xms$mem -jar $github_dir/RunV13.jar $project_dir/configs/9_CorrelateEigenvectors.$eigname.json
 
 if [ $? -eq 0 ];
 then
     echo "success!"
-    touch $(dirname $outfile)/correlation.finished
+    touch $(dirname $outfile)/correlation_$eigname.finished
 else
     echo "error!"
     exit 1;
 fi
 
-" > $(dirname $outfile)/correlation.sh
+" > $(dirname $outfile)/correlation_$eigname.sh
 
     echo "start sbatch with:"
-    echo "sbatch $(dirname $outfile)/correlation.sh"
-    sbatch $(dirname $outfile)/correlation.sh
+    echo "sbatch $(dirname $outfile)/correlation_$eigname.sh"
+    sbatch $(dirname $outfile)/correlation_$eigname.sh
 
-    echo "sleep 10 minutes before checking if correlation is done"
+    echo "sleep 2 minutes before checking if correlation is done"
     dt=$(date '+%d/%m/%Y %H:%M:%S');
     echo "$dt"
-    sleep 600
+    sleep 120
     echo "done sleeping, check again"
-    while [ ! -f $(dirname $outfile)/correlation.finished ]
+    while [ ! -f $(dirname $outfile)/correlation_$eigname.finished ]
     do
-      echo "$(dirname $outfile)/correlation.finished does not exist yet"
+      echo "$(dirname $outfile)/correlation_$eigname.finished does not exist yet"
       echo "sleep 2 minutes before checking again"
       dt=$(date '+%d/%m/%Y %H:%M:%S');
       echo "$dt"
       sleep 120
+      echo "----------------------------------"
       echo "done sleeping, check again"
     done
 
     if [ ! -f $outfile ];
     then
-        echo "$outfile not made!"
+        echo "ERROR: $outfile not made!"
         exit 1;
     fi
+    echo "finished, gzip the output file (can take some time)"
     gzip $outfile
+    echo "done gzipping"
+
 }
 
 usage(){
     # print the usage of the programme
     programname=$0
-    echo "usage: $programname -e eigenvector_file -p project_directory -o output_dir"
+    echo "usage: $programname -e eigenvector_file -p project_directory -o output_dir -m mem -q qos"
     echo "  -e      Expression file to remove duplciates from"
     echo "  -p      Base of the project_dir where config files will be written"
     echo "  -o      Output file that will be written"
     echo "  -c      Dir with configuration template files"
     echo "  -j      Location of V13 jar file"
     echo "  -t      Number of threads"
+    echo "  -m      mem to use"
+    echo "  -q      qos to use"
+    echo "  -g      github_dir"
     echo "  -h      display help"
     exit 1
 }
@@ -114,6 +127,15 @@ parse_commandline(){
                                         ;;
             -j | --jardir )             shift
                                         jardir=$1
+                                        ;;
+            -q | --qos )                shift
+                                        qos=$1
+                                        ;;
+            -m | --mem )                shift
+                                        mem=$1
+                                        ;;
+            -g | --github_dir )         shift
+                                        github_dir=$1
                                         ;;
             -h | --help )               usage
                                         exit
@@ -159,6 +181,24 @@ parse_commandline(){
     if [ -z "$config_templates" ];
     then
         echo "ERROR: -c/--config_templates not set!"
+        usage
+        exit 1;
+    fi
+    if [ -z "$mem" ];
+    then
+        echo "ERROR: -m/--mem not set!"
+        usage
+        exit 1;
+    fi
+    if [ -z "$qos" ];
+    then
+        echo "ERROR: -q/--qos not set!"
+        usage
+        exit 1;
+    fi
+    if [ -z "$github_dir" ];
+    then
+        echo "ERROR: -g/--github_dir not set!"
         usage
         exit 1;
     fi
