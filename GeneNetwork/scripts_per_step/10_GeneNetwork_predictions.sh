@@ -23,12 +23,16 @@ then
 fi
 
 # have to make sure that the input background genes are only genes that are also in eigenvectors
-comm -1 -2 <(awk '{print $1}' REPLACEEIGENVECTORS | sort) <(sort REPLACEBACKGROUND) > $(basename REPLACEBACKGROUND.onlyInEigenvector.txt)
+comm -1 -2 <(awk '{print $1}' REPLACEEIGENVECTORS | sort) <(sort REPLACEBACKGROUND) > $(basename REPLACEBACKGROUND.onlyInEigenvector.neig_REPLACENEIG.txt)
+
+echo "Subsetting REPLACEIDENTITYMATRIX by genes in REPLACEEIGENVECTORS"
+head -n1 REPLACEIDENTITYMATRIX > $TMPDIR/$(basename REPLACEIDENTITYMATRIX.subsetted.txt)
+awk -F"\t" 'FNR==NR {a[$1]=$0; next}; $1 in a {print a[$1]}' REPLACEIDENTITYMATRIX REPLACEEIGENVECTORS >> $TMPDIR/$(basename REPLACEIDENTITYMATRIX.subsetted.txt)
 
 java -jar -XmsREPLACEMEM -XmxREPLACEMEM REPLACEGENENETWORKDIR/GeneNetworkBackend-1.0.7-SNAPSHOT-jar-with-dependencies.jar \
   -e REPLACEEIGENVECTORS \
-  -p REPLACEIDENTITYMATRIX \
-  -b $(basename REPLACEBACKGROUND.onlyInEigenvector.txt) \
+  -p $TMPDIR/$(basename REPLACEIDENTITYMATRIX.subsetted.txt) \
+  -b  $(basename REPLACEBACKGROUND.onlyInEigenvector.neig_REPLACENEIG.txt) \
   -o REPLACEOUT
 
 touch REPLACENAME.finished
