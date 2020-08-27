@@ -103,7 +103,7 @@ parse_Mayo <- function(opt){
 parse_MSBB <- function(opt){
   MSBB_genotype_id_map <- fread(paste0(opt$metadataDir,'/AMP_AD/MSBB_final.txt'),header=F)
   colnames(MSBB_genotype_id_map) <- c('rnaseq_id','genotype_id')
-
+  msbb_individuals <- read.csv(paste0(opt$metadataDir,'/AMP_AD/msbb_individual_metadata.csv'), header=T)
   # WES data not necesarry
   #MSBB_covariates <- fread(paste0(opt$metadataDir,'/AMP_AD/MSBB_WES_covariatestsv'))
   #colnames(MSBB_covariates)[colnames(MSBB_covariates)=='Region'] <- 'BrodmannArea'
@@ -123,9 +123,28 @@ parse_MSBB <- function(opt){
   MSBB_covariates[MSBB_covariates$genotype_id=='.',]$genotype_id <- MSBB_covariates[MSBB_covariates$genotype_id=='.',]$individualIdentifier
   
   MSBB_clinical <- fread(paste0(opt$metadataDir,'/AMP_AD/MSBB_clinical.csv'))
+  MSBB_clinical_w_individual <- merge(MSBB_clinical, msbb_individuals, by.x='individualIdentifier',by.y='individualID')
+  MSBB_clinical_w_individual <- MSBB_clinical_w_individual[!is.na(MSBB_clinical_w_individual$bbscor),]
+  v <- MSBB_clinical_w_individual$bbscore==MSBB_clinical_w_individual$Braak
+  n <- sum(v)
+  if(n != nrow(MSBB_clinical_w_individual)){
+    print(head(MSBB_clinical_w_individual))
+    print(paste(sum(MSBB_clinical_w_individual$bbscore==MSBB_clinical_w_individual$Braak), nrow(MSBB_clinical_w_individual)))
+    stop("MSBB_clinical_w_individual bbscore and braak not the samefor all rows")
+  }
+  MSBB_clinical_w_individual <- MSBB_clinical_w_individual[!is.na(MSBB_clinical_w_individual$CDR.x),]
+  v <- MSBB_clinical_w_individual$CDR.x==MSBB_clinical_w_individual$CDR.y
+  n <- sum(v)
+  if(n != nrow(MSBB_clinical_w_individual)){
+    print(head(MSBB_clinical_w_individual))
+    print(paste(sum(MSBB_clinical_w_individual$CDR.x==MSBB_clinical_w_individual$CDR.y), nrow(MSBB_clinical_w_individual)))
+    stop("MSBB_clinical_w_individual CDR.x and CDR.y not the samefor all rows")
+  }
     
   MSBB <- merge(MSBB_covariates, MSBB_clinical, by.x='genotype_id', by.y='individualIdentifier',all.x=T)
-  
+  # there is some double data in msbb_indivudas and msb_clnical, so select only some of the columns
+  msbb_individuals <- msbb_individuals[c("individualID","yearsEducation","ageDeath","causeDeath","mannerDeath","apoeGenotype","pH","diagnosis","diagnosisCriteria","CERAD")]
+  MSBB <- merge(MSBB_covariates, msbb_individuals, by.x='genotype_id', by.y='individualID', all.x=T)
   
   same_rows(MSBB, list(MSBB_covariates))
   colnames(MSBB)[colnames(MSBB)=='sampleIdentifier'] <- 'rnaseq_id'
