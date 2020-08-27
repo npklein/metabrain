@@ -21,22 +21,20 @@ jar_dir=
 sample_file=
 # github dir
 github_dir=
-# quant normalize only necesarry to select samples. we already know which are the good ones, so skip
-quant_norm=false
 # covariate table
 covar_table=
 # GTF file
 gtf=
 # number of threads to use for correlation and PCA step
 threads=
-# gene_network_dir that contains GeneNetworkBackend-1.0.7-SNAPSHOT-jar-with-dependencies.jar and PathwayMatrix/
-gene_network_dir=
 # memory to use when doing normalization, PCA etc
 mem=
 # qos to run sbatch jobs in (default = regular)
 qos=
 # Name of the project (e.g. GeneNetwork, MetaBrain, KidneyNetwork, etc)
 name=
+# the previous step which has the correctly selected samples. e.g. step1b, will use this to find right input directory
+prev_step=
 ####
 
 main(){
@@ -70,6 +68,8 @@ main(){
     6_CorrelationMatrix
     echo "7_evd_on_correlation"
     7_evd_on_correlation
+    echo "Finished correlation and eigenvalue decomposition, check output/7_evd_on_correlation_matrix/eigenvalues.png how many eigenvalues to use."
+    echo "Then run the next step."
 }
 
 
@@ -86,7 +86,6 @@ print_command_arguments(){
     echo "github_dir=$github_dir"
     echo "covar_table=$covar_table"
     echo "gtf=$gtf"
-    echo "gene_network_dir=$gene_network_dir"
     echo "mem=$mem"
     echo "qos=$qos"
     echo "name=$name"
@@ -116,7 +115,7 @@ print_command_arguments(){
 
 1_select_samples(){
     # Step 1. Select samples from expression file
-    new_output_file_step1=$output_dir/1_selectSamples/$(basename ${outfile_step0%.txt.gz})_extractedColumnsnoVarianceRowsRemoved.txt.gz
+    new_output_file_step1=$output_dir/1_selectSamples_$prev_step/$(basename ${outfile_step0%.txt.gz})_extractedColumnsnoVarianceRowsRemoved.txt.gz
     echo $new_output_file_step1
     if [ ! -f ${new_output_file_step1} ]
     then
@@ -124,17 +123,17 @@ print_command_arguments(){
         bash $github_dir/GeneNetwork/scripts_per_step/1_select_samples.sh \
             -e $outfile_step0 \
             -p $project_dir \
-            -o $TMPDIR/1_selectSamples/ \
+            -o $TMPDIR/1_selectSamples_$prev_step/ \
             -c $github_dir/GeneNetwork/config_file_templates/ \
             -g $github_dir/GeneNetwork/ \
             -s $sample_file
         # input of next file expect postfix of extractedColumnsnoVarianceRowsRemoved.txt.gz but is extractedColumns_noVarRemoved.txt.gz
         # change this
-        f1=$output_dir/1_selectSamples/$(basename ${outfile_step0%.txt.gz})_extractedColumns_noVarRemoved.txt.gz
-        mkdir -p $output_dir/1_selectSamples
+        f1=$output_dir/1_selectSamples_$prev_step/$(basename ${outfile_step0%.txt.gz})_extractedColumns_noVarRemoved.txt.gz
+        mkdir -p $output_dir/1_selectSamples_$prev_step
         echo "mv $TMPDIR/1_selectSamples/* $output_dir/"
-        mv $TMPDIR/1_selectSamples/* $output_dir/1_selectSamples/
-        rmdir $TMPDIR/1_selectSamples/
+        mv $TMPDIR/1_selectSamples_$prev_step/* $output_dir/1_selectSamples_$prev_step/
+        rmdir $TMPDIR/1_selectSamples_$prev_step/
         mv $f1 $new_output_file_step1
         if [ ! -f ${new_output_file_step1} ];
         then
@@ -147,7 +146,7 @@ print_command_arguments(){
 2_remove_duplicate_samples(){
     # We have some ENA samples in our data, so run for duplicates. Add the relevant input files to the config file
     # Step 2. remove duplicates
-    output_file_step2="${output_dir}/2_removeDuplicates/$(basename ${expression_file%.txt.gz}).duplicateSamplesRemoved_extractedColumns.txt.gz"
+    output_file_step2="${output_dir}/2_removeDuplicates_$prev_step/$(basename ${expression_file%.txt.gz}).duplicateSamplesRemoved_extractedColumns.txt.gz"
     if [ ! -f ${output_file_step2} ];
     then
         echo "start step 2"
@@ -194,7 +193,8 @@ print_command_arguments(){
             -o $TMPDIR/5_covariatesRemoved \
             -c $github_dir/GeneNetwork/config_file_templates/ \
             -g $github_dir/GeneNetwork/ \
-            -z $covar_table
+            -z $covar_table \
+            -m $mem
         mkdir -p $output_dir/5_covariatesRemoved/
         echo "Removing rows with NaN values"
         zcat $TMPDIR/5_covariatesRemoved/$(basename $output_file_step5) | grep -v 'NaN' > $TMPDIR/5_covariatesRemoved/$(basename ${output_file_step5}).tmp
@@ -259,8 +259,9 @@ print_command_arguments(){
         echo "job submitted (jobid=$jobid), check if job is running, if so sleep for 10 minutes"
         startDate=`date`
 
-        while [ ! $(squeue -j $jobid | wc -l) -eq 0 ];
+        while [ ! $(squeue -j $jobid 2> /dev/null | wc -l) -le 1 ];
         do
+            echo "--------------------------------"
             echo "sbatch starting time: $startDate"
             echo "current time: `date`"
             echo "Job still running. Sleep 10 minutes"
@@ -281,7 +282,7 @@ usage(){
     programname=$0
     echo "usage: $programname -t TMPDIR -e expression_file -o output_dir -p project_dir"
     echo "                    -j jar_dir -s sample_file -g github_dir -z covar_table -v threads"
-    echo "                    -d GeneNetworkDir -r conbach_alpha -n name -m mem [-q qos]"
+    echo "                    -r conbach_alpha -n name -m mem -y prev_step [-q qos]"
     echo "  -t      TMPDIR where files will be written during runtime"
     echo "  -e      Expression file"
     echo "  -p      Base of the project_dir where config files will be written"
@@ -292,10 +293,10 @@ usage(){
     echo "  -z      Covariate table"
     echo "  -a      GTF file"
     echo "  -v      Number of threads to use for correlation step and PCA step"
-    echo "  -d      GeneNetwork directory (with backend data for predictions"
     echo "  -m      Memory to use for some steps"
     echo "  -q      qos to run sbatch jobs in"
     echo "  -n      Name that will be used in output file"
+    echo "  -y      the previous step which has the correctly selected samples. e.g. step1b, will use this to find right input directory"
     echo "  -h      display help"
     exit 1
 }
@@ -341,9 +342,6 @@ parse_commandline(){
             -z | --covar_table )            shift
                                             covar_table=$1
                                             ;;
-            -d | --gene_network_dir )       shift
-                                            gene_network_dir=$1
-                                            ;;
             -m | --mem )                    shift
                                             mem=$1
                                             ;;
@@ -352,6 +350,9 @@ parse_commandline(){
                                             ;;
             -n | --name )                   shift
                                             name=$1
+                                            ;;
+            -y | --prev_step )              shift
+                                            prev_step=$1
                                             ;;
             -h | --help )                   usage
                                             exit
@@ -412,12 +413,6 @@ parse_commandline(){
         usage
         exit 1;
     fi
-    if [ -z "$gene_network_dir" ];
-    then
-        echo "ERROR: -d/--gene_network_dir not set!"
-        usage
-        exit 1;
-    fi
     if [ -z "$threads" ];
     then
         echo "ERROR: -v/--threads not set!"
@@ -439,6 +434,12 @@ parse_commandline(){
     if [ -z "$name" ];
     then
         echo "ERROR: -n/--name not set!"
+        usage
+        exit 1;
+    fi
+    if [ -z "$prev_step" ];
+    then
+        echo "ERROR: -y/--prev_step not set!"
         usage
         exit 1;
     fi

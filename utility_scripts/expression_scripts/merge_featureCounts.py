@@ -53,7 +53,9 @@ number_of_transcript = 0
 with gzip.open(args.out_prefix+feature_type+'.txt.gz','wt') as out:
     x = 0
     out.write('-')
-    for f in glob.iglob(featureCount_directory+'/**/*txt.gz', recursive=True):
+    files = [x for x in glob.iglob(featureCount_directory+'/**/*txt.gz', recursive=True)]
+    print(len(files), 'files found. start processing')
+    for f in files:
         number_of_transcript_written = 0
         # open the first file to get a list of features
 
@@ -76,8 +78,6 @@ with gzip.open(args.out_prefix+feature_type+'.txt.gz','wt') as out:
                         continue
                     list_of_features.append(line[0])
                     if 'metaExon' not in feature_type:
-                        print(feature_info[line[1]+'_'+line[2]+'_'+line[3]])
-                        exit()
                         out.write('\t'+feature_info[line[1]+'_'+line[2]+'_'+line[3]]+'_'+line[1]+'_'+line[2]+'_'+line[3])
                     else:
                         out.write('\t'+line[0]+line[1]+'_'+line[2]+'_'+line[3]+'_'+line[4])
