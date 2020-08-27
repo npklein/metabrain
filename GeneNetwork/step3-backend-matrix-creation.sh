@@ -23,40 +23,37 @@ sample_file=
 github_dir=
 # quant normalize only necesarry to select samples. we already know which are the good ones, so skip
 quant_norm=false
-# covariate table
-covar_table=
 # GTF file
 gtf=
 # number of threads to use for correlation and PCA step
 threads=
-# Cut-off value for cronbach alphas of PCA
-cronbach_cutoff=
 # gene_network_dir that contains GeneNetworkBackend-1.0.7-SNAPSHOT-jar-with-dependencies.jar and PathwayMatrix/
 gene_network_dir=
 # memory to use when doing normalization, PCA etc
 mem=
 # qos to run sbatch jobs in (default = regular)
 qos=
+# Name of the project (e.g. GeneNetwork, MetaBrain, KidneyNetwork, etc)
+name=
 ####
 
 main(){
     parse_commandline "$@"
     print_command_arguments
+    cd $github_dir/GeneNetwork
+    if [ ! -f RunV13.jar ];
+    then
+        echo "RunV13.jar does not exist, download now"
+        wget https://github.com/npklein/brain_eQTL/releases/download/2020-03-02/RunV13.jar
+    fi
+    md5=$(md5sum RunV13.jar | awk '{print $1}')
+    if [ $md5 != "9b292956792206b7cdb8a4e7fee5a06b" ];
+    then
+        echo "ERROR: md5sum of RunV13.jar not correct"
+        exit 1;
+    fi
+    cd -
     mkdir -p $output_dir
-    echo "0_remove_genes"
-    0_remove_genes
-    echo "1_select_samples"
-    1_select_samples
-    echo "2_remove_duplicate_samples"
-    2_remove_duplicate_samples
-    echo "4_DeseqNormalizedData"
-    4_DeseqNormalizedData
-    echo "5_RemoveCovariates"
-    5_RemoveCovariates
-    echo "6_CorrelationMatrix"
-    6_CorrelationMatrix
-    echo "7_evd_on_correlation"
-    7_evd_on_correlation
     echo "8_center_scale"
     8_center_scale
     echo "9_correlate_eigenvectors"
@@ -81,188 +78,23 @@ print_command_arguments(){
     echo "jar_dir=$jar_dir"
     echo "sample_file=$sample_file"
     echo "github_dir=$github_dir"
-    echo "covar_table=$covar_table"
     echo "gtf=$gtf"
-    echo "cronbach_cutoff=$cronbach_cutoff"
     echo "gene_network_dir=$gene_network_dir"
     echo "mem=$mem"
     echo "qos=$qos"
+    echo "name=$name"
     echo "-------------------------------------------"
     echo ""
     echo ""
 }
 
-
-0_remove_genes(){
-    # Step 1. Select samples from expression file
-    outfile_step0="${output_dir}/0_remove_genes/$(basename ${expression_file%.txt.gz}).genesRemoved.txt.gz"
-    if [ ! -f ${outfile_step0} ]
-    then
-        echo "${outfile_step0} does not exist, start step 0"
-        python $github_dir/GeneNetwork/scripts_per_step/0_remove_duplicate_sameCounts_scaffolded_genes.py \
-            -e $expression_file \
-            -o $TMPDIR/0_remove_genes/$(basename $outfile_step0) \
-            -g $gtf
-        mkdir -p ${output_dir}/0_remove_genes/
-        mv $TMPDIR/0_remove_genes/* ${output_dir}/0_remove_genes/
-        rmdir $TMPDIR/0_remove_genes/
-    else
-        echo "{$outfile_step0} exists, go to step 1"
-    fi
-}
-
-1_select_samples(){
-    # Step 1. Select samples from expression file
-    new_output_file_step1=$output_dir/1_selectSamples/$(basename ${outfile_step0%.txt.gz})_extractedColumnsnoVarianceRowsRemoved.txt.gz
-    echo $new_output_file_step1
-    if [ ! -f ${new_output_file_step1} ]
-    then
-        echo "start step 1"
-        bash $github_dir/GeneNetwork/scripts_per_step/1_select_samples.sh \
-            -e $outfile_step0 \
-            -p $project_dir \
-            -o $TMPDIR/1_selectSamples/ \
-            -c $github_dir/GeneNetwork/config_file_templates/ \
-            -g $github_dir/GeneNetwork/ \
-            -s $sample_file
-        # input of next file expect postfix of extractedColumnsnoVarianceRowsRemoved.txt.gz but is extractedColumns_noVarRemoved.txt.gz
-        # change this
-        f1=$output_dir/1_selectSamples/$(basename ${outfile_step0%.txt.gz})_extractedColumns_noVarRemoved.txt.gz
-        mkdir -p $output_dir/1_selectSamples
-        echo "mv $TMPDIR/1_selectSamples/* $output_dir/"
-        mv $TMPDIR/1_selectSamples/* $output_dir/1_selectSamples/
-        rmdir $TMPDIR/1_selectSamples/
-        mv $f1 $new_output_file_step1
-        if [ ! -f ${new_output_file_step1} ];
-        then
-            echo "${new_output_file_step1} does not exist"
-            exit 1;
-        fi
-    fi
-}
-
-2_remove_duplicate_samples(){
-    # We have some ENA samples in our data, so run for duplicates. Add the relevant input files to the config file
-    # Step 2. remove duplicates
-    output_file_step2="${output_dir}/2_removeDuplicates/$(basename ${expression_file%.txt.gz}).duplicateSamplesRemoved_extractedColumns.txt.gz"
-    if [ ! -f ${output_file_step2} ];
-    then
-        echo "start step 2"
-        bash $github_dir/GeneNetwork/scripts_per_step/2_remove_duplicate_samples.sh \
-            -p $project_dir \
-            -e $new_output_file_step1 \
-            -o $TMPDIR/$(basename $output_file_step2) \
-            -c $github_dir/GeneNetwork/config_file_templates/ \
-            -g $github_dir/GeneNetwork/
-        echo "done"
-        mkdir -p $(dirname $output_file_step2)
-        mv $TMPDIR/$(basename $output_file_step2) $output_file_step2
-    fi
-}
-
-4_DeseqNormalizedData(){
-    output_file_step4="$output_dir/4_deseqNormalized/$(basename ${output_file_step2%.txt.gz}noVarianceRowsRemoved.DESeqNorm.log2.txt)"
-    if [ ! -f $output_file_step4 ];
-    then
-        # Step 4. Do deseq normalisation on the original counts
-        bash $github_dir/GeneNetwork/scripts_per_step/4_DeseqNormalizedData.sh \
-            -p $project_dir \
-            -e $output_file_step2 \
-            -f $TMPDIR/4_deseqNormalized/$(basename ${output_file_step2%.txt.gz}noVarianceRowsRemoved.DESeqNorm.txt.gz) \
-            -o $TMPDIR/4_deseqNormalized/ \
-            -g $github_dir/GeneNetwork/ \
-            -z $TMPDIR/4_deseqNormalized/PCA_corrected_expression/ \
-            -m $mem
-        mkdir -p $output_dir/4_deseqNormalized/
-        mv $TMPDIR/4_deseqNormalized/* $output_dir/4_deseqNormalized/
-        rmdir $TMPDIR/4_deseqNormalized/
-    fi
-}
-
-5_RemoveCovariates(){
-    output_file_step5=$output_dir/5_covariatesRemoved/$(basename ${output_file_step4%.txt}.CovariatesRemoved.txt.gz)
-    echo "$output_file_step5"
-    if [ ! -f $output_file_step5 ];
-    then
-        # Step 5. Remove covariates from deseq normalized data
-        bash $github_dir/GeneNetwork/scripts_per_step/5_RemoveCovariates.sh \
-            -p $project_dir \
-            -e $output_file_step4 \
-            -o $TMPDIR/5_covariatesRemoved \
-            -c $github_dir/GeneNetwork/config_file_templates/ \
-            -g $github_dir/GeneNetwork/ \
-            -z $covar_table
-        mkdir -p $output_dir/5_covariatesRemoved/
-        echo "Removing rows with NaN values"
-        zcat $TMPDIR/5_covariatesRemoved/$(basename $output_file_step5) | grep -v 'NaN' > $TMPDIR/5_covariatesRemoved/$(basename ${output_file_step5}).tmp
-        mv $TMPDIR/5_covariatesRemoved/$(basename ${output_file_step5}).tmp $TMPDIR/5_covariatesRemoved/$(basename ${output_file_step5%.gz})
-        rm $TMPDIR/5_covariatesRemoved/$(basename $output_file_step5)
-        gzip $TMPDIR/5_covariatesRemoved/$(basename ${output_file_step5%.gz})
-        mv $TMPDIR/5_covariatesRemoved/* $output_dir/5_covariatesRemoved/
-        rmdir $TMPDIR/5_covariatesRemoved
-    else
-        echo "$output_file_step5 exists, skip step"
-    fi
-}
-
-6_CorrelationMatrix(){
-    output_file_step6="$output_dir/6_correlation_matrix/MetaBrain.deseqNorm.covarCorrected.correlation.txt"
-    if [ ! -f $output_file_step6 ]  && [ ! -f ${output_file_step6}.gz ];
-    then
-        # Step 6. Make correlation matrix
-        bash $github_dir/GeneNetwork/scripts_per_step/6_CorrelationMatrix.sh \
-            -p $project_dir \
-            -e $output_file_step5 \
-            -o ${output_file_step6} \
-            -c $github_dir/GeneNetwork/config_file_templates/ \
-            -g $github_dir/GeneNetwork/ \
-            -t $threads \
-            -m $mem \
-            -q $qos
-    fi
-}
-
-7_evd_on_correlation(){
-    if [ ! -f $output_file_step6 ] && [ -f ${output_file_step6}.gz ];
-    then
-        echo "zcat ${output_file_step6}.gz > ${output_file_step6}"
-        zcat ${output_file_step6}.gz > ${output_file_step6}
-    fi
-
-    if [ ! -f ${output_file_step5%.gz} ] && [ -f ${output_file_step5} ];
-    then
-        echo "zcat ${output_file_step5} > ${output_file_step5%.gz}"
-         zcat ${output_file_step5} > ${output_file_step5%.gz}
-    fi
-
-
-    if [ ! -f $output_dir/7_evd_on_correlation_matrix/MetaBrain.eigenvectors.cronbach_$cronbach_cutoff.txt.gz ];
-    then
-        # step 7. Run evd on correlation matrix
-        mkdir -p  $output_dir/7_Pevd_on_correlation_matrix/
-        rsync -vP $github_dir/GeneNetwork/scripts_per_step/7_evd_on_correlation.sh $output_dir/7_evd_on_correlation_matrix/7_evd_on_correlation.sh
-        echo "replace"
-        sed -i "s;REPLACECORMATRIX;$output_file_step6;" $output_dir/7_evd_on_correlation_matrix/7_evd_on_correlation.sh
-        sed -i "s;REPLACECOVCORRECTEDEXPRESSION;${output_file_step5%.gz};" $output_dir/7_evd_on_correlation_matrix/7_evd_on_correlation.sh
-        sed -i "s;REPLACEOUTDIR;$output_dir/;" $output_dir/7_evd_on_correlation_matrix/7_evd_on_correlation.sh
-        sed -i "s;REPLACETHREADS;$threads;" $output_dir/7_evd_on_correlation_matrix/7_evd_on_correlation.sh
-        sed -i "s;REPLACECRONBACHCUTOFF;${cronbach_cutoff};" $output_dir/7_evd_on_correlation_matrix/7_evd_on_correlation.sh
-        cd $output_dir/7_evd_on_correlation_matrix
-        echo "submit eigenvector decomposition to cluster. Can take a while. Will wait untill finished"
-        sbatch --wait 7_PCA_on_correlation.sh
-        wait
-        echo "done"
-        cd -
-    fi
-}
-
 8_center_scale(){
-    output_file_step8="$output_dir/8_CenterScaledColumnsRows/MetaBrain.eigenvectors.cronbach_${cronbach_cutoff}.columnsRowsCenterScaled.txt.gz"
+    output_file_step8="$output_dir/8_CenterScaledColumnsRows/$name.eigenvectors.columnsRowsCenterScaled.txt.gz"
     if [ ! -f ${output_file_step8} ];
     then
         echo "${output_file_step8}.gz does not exist yet, start step 8"
         bash $github_dir/GeneNetwork/scripts_per_step/8_CenterScaleColumnsRows.sh \
-            -i $output_dir/7_PCA_on_correlation_matrix/MetaBrain.eigenvectors.cronbach_${cronbach_cutoff}.txt.gz \
+            -i $output_dir/7_PCA_on_correlation_matrix/$name.eigenvectors.txt.gz \
             -o ${output_file_step8}
     else
         echo "${output_file_step8}.gz exists, go to step 9"
@@ -270,7 +102,7 @@ print_command_arguments(){
 }
 
 9_correlate_eigenvectors(){
-    output_file_step9="$output_dir/9_eigenvector_correlation_matrix/MetaBrain.eigenvectors.cronbach_${cronbach_cutoff}.columnsRowsCenterScaled.correlation.txt"
+    output_file_step9="$output_dir/9_eigenvector_correlation_matrix/$name.eigenvectors.columnsRowsCenterScaled.correlation.txt"
     if [ ! -f ${output_file_step9}.gz ];
     then
         echo "${output_file_step9}.gz does not exist yet, start step 9"
@@ -293,7 +125,7 @@ print_command_arguments(){
     for type in "go_F" "go_P" "kegg" "hpo" "reactome" "go_C";
     do
         mkdir -p $output_dir/10_GeneNetwork_predictions/scripts/$type/
-        outfile="$output_dir/10_GeneNetwork_predictions/MetaBrain.${type}_predictions.txt"
+        outfile="$output_dir/10_GeneNetwork_predictions/$name.${type}_predictions.txt"
         if [ ! -f $outfile ];
         then
             for f in ${gene_network_dir}/PathwayMatrix/split_matrices/$type/*txt;
@@ -303,7 +135,7 @@ print_command_arguments(){
                 sed -i "s;REPLACENAME;${type}_$(basename ${f%.txt});" $output_dir/10_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
                 sed -i "s;REPLACEGENENETWORKDIR;${gene_network_dir};" $output_dir/10_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
                 sed -i "s;REPLACEIDENTITYMATRIX;$f;" $output_dir/10_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
-                sed -i "s;REPLACEEIGENVECTORS;${output_dir}/7_PCA_on_correlation_matrix/MetaBrain.eigenvectors.cronbach_${cronbach_cutoff}.filteredOnPathwayGenes.txt;" $output_dir/10_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
+                sed -i "s;REPLACEEIGENVECTORS;${output_dir}/7_PCA_on_correlation_matrix/$name.eigenvectors.filteredOnPathwayGenes.txt;" $output_dir/10_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
                 sed -i "s;REPLACEOUT;$outfile;" $output_dir/10_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
                 sed -i "s;REPLACETYPE;${fullname[$type]};" $output_dir/10_GeneNetwork_predictions/scripts/$type/${type}_$(basename ${f%.txt}).predictions.sh
                 cd $output_dir/10_GeneNetwork_predictions/scripts/$type/
@@ -341,8 +173,8 @@ usage(){
     # print the usage of the programme
     programname=$0
     echo "usage: $programname -t TMPDIR -e expression_file -o output_dir -p project_dir"
-    echo "                    -j jar_dir -s sample_file -g github_dir -z covar_table -v threads -a cronbach_cutoff"
-    echo "                    -d GeneNetworkDir -r conbach_alpha -m mem [-q qos]"
+    echo "                    -j jar_dir -s sample_file -g github_dir -v threads"
+    echo "                    -d GeneNetworkDir -r conbach_alpha -n name -m mem [-q qos]"
     echo "  -t      TMPDIR where files will be written during runtime"
     echo "  -e      Expression file"
     echo "  -p      Base of the project_dir where config files will be written"
@@ -350,13 +182,12 @@ usage(){
     echo "  -j      Location of eqtl-mapping-pipeline.jar"
     echo "  -s      File with samples to include"
     echo "  -g      Location of git cloned https://github.com/npklein/brain_eQTL/ directory"
-    echo "  -z      Covariate table"
     echo "  -a      GTF file"
     echo "  -v      Number of threads to use for correlation step and PCA step"
     echo "  -d      GeneNetwork directory (with backend data for predictions"
-    echo "  -r      Cronbach alpha cut-off"
     echo "  -m      Memory to use for some steps"
     echo "  -q      qos to run sbatch jobs in"
+    echo "  -n      Name that will be used in output file"
     echo "  -h      display help"
     exit 1
 }
@@ -399,20 +230,17 @@ parse_commandline(){
             -v | --threads )                shift
                                             threads=$1
                                             ;;
-            -z | --covar_table )            shift
-                                            covar_table=$1
-                                            ;;
             -d | --gene_network_dir )       shift
                                             gene_network_dir=$1
-                                            ;;
-            -r | --cronbach_cutoff )        shift
-                                            cronbach_cutoff=$1
                                             ;;
             -m | --mem )                    shift
                                             mem=$1
                                             ;;
             -q | --qos )                    shift
                                             qos=$1
+                                            ;;
+            -n | --name )                   shift
+                                            name=$1
                                             ;;
             -h | --help )                   usage
                                             exit
@@ -467,21 +295,9 @@ parse_commandline(){
         usage
         exit 1;
     fi
-    if [ -z "$covar_table" ];
-    then
-        echo "ERROR: -z/--covar_table not set!"
-        usage
-        exit 1;
-    fi
     if [ -z "$gene_network_dir" ];
     then
         echo "ERROR: -d/--gene_network_dir not set!"
-        usage
-        exit 1;
-    fi
-    if [ -z "$cronbach_cutoff" ];
-    then
-        echo "ERROR: -r/--cronbach_cutoff not set!"
         usage
         exit 1;
     fi
@@ -500,6 +316,12 @@ parse_commandline(){
     if [ -z "$qos" ];
     then
         echo "ERROR: -q/--qos not set!"
+        usage
+        exit 1;
+    fi
+    if [ -z "$name" ];
+    then
+        echo "ERROR: -n/--name not set!"
         usage
         exit 1;
     fi
