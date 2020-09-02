@@ -3,7 +3,7 @@
 """
 File:         partial_deconvolution.py
 Created:      2020/06/29
-Last Changed: 2020/06/30
+Last Changed: 2020/09/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -53,9 +53,11 @@ if __name__ == '__main__':
                         signature_path=CLA.get_argument("signature"),
                         translate_path=CLA.get_argument("translate"),
                         sample_path=CLA.get_argument("sample"),
-                        cohort=CLA.get_argument("cohort"),
+                        sample_id=CLA.get_argument("sample_id"),
+                        cohort_id=CLA.get_argument("cohort_id"),
                         ground_truth_path=CLA.get_argument("ground_truth"),
                         min_expr=CLA.get_argument("min_expr"),
+                        cohort_corr=CLA.get_argument("cohort_corr"),
                         normalize=CLA.get_argument("normalize"),
                         zscore=CLA.get_argument("zscore"),
                         log2=CLA.get_argument("log2"),

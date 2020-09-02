@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/06/29
-Last Changed:
+Last Changed: 2020/09/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -71,11 +71,18 @@ class CommandLineArguments:
                             type=str,
                             required=True,
                             help="The sample to cohort translate matrix.")
-        parser.add_argument("-c",
-                            "--cohort",
+        parser.add_argument("-sid",
+                            "--sample_id",
                             type=str,
-                            default='All',
-                            help="The cohort. Default: 'All'.")
+                            required=True,
+                            help="The sample column name in the -sa / --sample "
+                                 "file.")
+        parser.add_argument("-cid",
+                            "--cohort_id",
+                            type=str,
+                            required=True,
+                            help="The cohort column name in the -sa / --sample "
+                                 "file.")
         parser.add_argument("-g",
                             "--ground_truth",
                             type=str,
@@ -95,6 +102,10 @@ class CommandLineArguments:
                             default=0,
                             help="The minimal expression value per gene."
                                  " Default: 0.")
+        parser.add_argument("-cohort_corr",
+                            action='store_true',
+                            help="Correct for cohort biases in the expression."
+                                 " Default: False.")
         parser.add_argument("-n",
                             "--normalize",
                             type=str,

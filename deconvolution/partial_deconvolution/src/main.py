@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/06/29
-Last Changed: 2020/06/30
+Last Changed: 2020/09/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -63,7 +63,8 @@ class Main:
         print("### Preprocessing")
         dp = DataPreprocessor(settings=self.settings,
                               raw_signature=dl.get_signature(),
-                              raw_expression=dl.get_expression())
+                              raw_expression=dl.get_expression(),
+                              cohorts=dl.get_cohorts())
         dp.work()
         dp.print_info()
         self.settings.set_filter_shape_diff(dp.get_shape_diff())
