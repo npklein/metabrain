@@ -1,7 +1,7 @@
 """
 File:         settings.py
 Created:      2020/06/29
-Last Changed: 2020/06/30
+Last Changed: 2020/09/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -33,15 +33,17 @@ import os
 
 class Settings:
     def __init__(self, data_path, signature_path, translate_path, sample_path,
-                 cohort, ground_truth_path, min_expr, normalize, zscore, log2,
-                 decon_method, sum_to_one, extension):
+                 sample_id, cohort_id, ground_truth_path, min_expr, cohort_corr,
+                 normalize, zscore, log2, decon_method, sum_to_one, extension):
         self.data_path = data_path
         self.signature_path = signature_path
         self.translate_path = translate_path
         self.sample_path = sample_path
-        self.cohort = cohort
+        self.sample_id = sample_id
+        self.cohort_id = cohort_id
         self.ground_truth_path = ground_truth_path
         self.min_expr = min_expr
+        self.cohort_corr = cohort_corr
         self.normalize = normalize
         self.zscore = zscore
         self.log2 = log2
@@ -71,8 +73,11 @@ class Settings:
     def get_sample_path(self):
         return self.sample_path
 
-    def get_cohort(self):
-        return self.cohort
+    def get_sample_id(self):
+        return self.sample_id
+
+    def get_cohort_id(self):
+        return self.cohort_id
 
     def get_ground_truth_path(self):
         return self.ground_truth_path
@@ -82,6 +87,9 @@ class Settings:
 
     def get_min_expr(self):
         return self.min_expr
+
+    def get_cohort_corr(self):
+        return self.cohort_corr
 
     def get_normalize(self):
         return self.normalize
@@ -132,7 +140,7 @@ class Settings:
         self.comparison_rss = comparison_rss
 
     def get_title(self):
-        return "{} partial deconvolution using {}".format(self.cohort, self.decon_method)
+        return "partial deconvolution using {}".format(self.decon_method)
 
     def get_subtitle(self):
         avg_resid_str = ""
@@ -143,9 +151,9 @@ class Settings:
         if self.comparison_rss is not None:
             rss_str = "{:.2f}".format(self.comparison_rss)
 
-        return "min.expr.: {}, norm.: {}, z-score: {}, log2: {}, " \
-               "sum-to-one: {}\n avg.residuals: {}, N: {}, RSS: {}".format(
-            self.min_expr, self.normalize, self.zscore, self.log2,
+        return "min.expr.: {}, coh.corr: {}, norm.: {}, z-score: {}, " \
+               "log2: {}, sum-to-one: {}\n avg.residuals: {}, N: {}, RSS: {}".format(
+            self.min_expr, self.cohort_corr, self.normalize, self.zscore, self.log2,
             self.sum_to_one, avg_resid_str, self.comparison_n_samples, rss_str)
 
     def save_settings(self):
@@ -158,8 +166,10 @@ class Settings:
                 "signature_path": self.signature_path,
                 "translate_path": self.translate_path,
                 "sample_path": self.sample_path,
-                "cohort": self.cohort,
+                "sample_id": self.sample_id,
+                "cohort_id": self.cohort_id,
                 "ground_truth_path": self.ground_truth_path,
+                "cohort_corr": self.cohort_corr,
                 "min_expr": self.min_expr,
                 "normalize": self.normalize,
                 "zscore": self.zscore,
