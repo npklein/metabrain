@@ -1,7 +1,7 @@
 """
 File:         data_loader.py
 Created:      2020/06/29
-Last Changed: 2020/09/02
+Last Changed: 2020/09/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -42,6 +42,7 @@ class DataLoader:
         self.sample_id = settings.get_sample_id()
         self.cohort_id = settings.get_cohort_id()
         self.ground_truth_path = settings.get_ground_truth_path()
+        self.filter_path = settings.get_filter_path()
         self.cohort_corr = settings.get_cohort_corr()
 
         outdir = settings.get_output_path()
@@ -80,13 +81,15 @@ class DataLoader:
 
         # Load the expression of the signature genes.
         translate_dict = self.load_translate(self.translate_path)
-        self.sample_dict = self.load_samples(self.sample_path,
-                                             self.sample_id,
-                                             self.cohort_id)
+        self.sample_dict = self.load_sample_to_info_dict(self.sample_path,
+                                                         self.sample_id,
+                                                         self.cohort_id)
+        sample_filter = self.load_filter(self.filter_path)
         self.expression = self.load_data(self.data_path,
                                          self.signature.index,
                                          translate_dict,
-                                         self.sample_dict)
+                                         self.sample_dict,
+                                         sample_filter)
 
     @staticmethod
     def load_signature(filepath):
@@ -102,13 +105,24 @@ class DataLoader:
         return dict(zip(df.loc[:, key], df.loc[:, value]))
 
     @staticmethod
-    def load_samples(filepath, sample_id, cohort_id):
+    def load_sample_to_info_dict(filepath, key_id, value_id):
         print("\tLoading samples dict")
         df = pd.read_csv(filepath, sep="\t", low_memory=False)
-        return dict(zip(df.loc[:, sample_id], df.loc[:, cohort_id]))
+        return dict(zip(df.loc[:, key_id], df.loc[:, value_id]))
 
     @staticmethod
-    def load_data(filepath, profile_genes, trans_dict, sample_dict):
+    def load_filter(filepath):
+        print("\tLoading sample filter")
+        if filepath is None:
+            return None
+        else:
+            df = pd.read_csv(filepath, sep="\t", header=0, index_col=0,
+                             nrows=1)
+            return list(df.columns)
+
+    @staticmethod
+    def load_data(filepath, profile_genes, trans_dict, sample_dict,
+                  sample_filter):
         selection = []
         data = []
         columns = []
@@ -124,7 +138,7 @@ class DataLoader:
                 splitted_line = np.array(line.decode().split('\t'))
                 if i == 0:
                     for j, col in enumerate(splitted_line):
-                        if col in sample_dict.keys():
+                        if col in sample_dict.keys() and (sample_filter is None or col in sample_filter):
                             selection.append(j)
                             columns.append(col)
                     if len(selection) <= 0:
@@ -150,7 +164,7 @@ class DataLoader:
             self.expression.to_csv(self.expression_file, compression="gzip", sep="\t", header=True, index=True)
             print("\tsaved dataframe: {} "
                   "with shape: {}".format(os.path.basename(self.expression_file),
-                                          self.signature.shape))
+                                          self.expression.shape))
 
     def settings_match(self):
         with open(self.settings_file) as f:
@@ -163,7 +177,8 @@ class DataLoader:
             (prev_settings["signature_path"] == self.signature_path) and \
             (prev_settings["translate_path"] == self.translate_path) and \
             (prev_settings["sample_path"] == self.sample_path) and \
-            (prev_settings["sample_id"] == self.sample_id):
+            (prev_settings["sample_id"] == self.sample_id) and \
+            (prev_settings["filter_path"] == self.filter_path):
             return True
 
         return False
@@ -199,9 +214,9 @@ class DataLoader:
 
     def create_cohorts_matrix(self):
         if self.sample_dict is None:
-            self.sample_dict = self.load_samples(self.sample_path,
-                                                 self.sample_id,
-                                                 self.cohort_id)
+            self.sample_dict = self.load_sample_to_info_dict(self.sample_path,
+                                                             self.sample_id,
+                                                             self.cohort_id)
 
         cohort_dict = self.flip_dict(self.sample_dict)
 
@@ -246,6 +261,11 @@ class DataLoader:
         for key in means.keys():
             info[key] = (means[key], stds[key])
         return info
+
+    def get_sample_to_info_dict(self, col_id):
+        return self.load_sample_to_info_dict(self.sample_path,
+                                             self.sample_id,
+                                             col_id)
 
     def print_info(self):
         print("Signature matrix:\t{} rows and {} columns".format(self.signature.shape[0], self.signature.shape[1]))

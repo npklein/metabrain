@@ -3,7 +3,7 @@
 """
 File:         partial_deconvolution.py
 Created:      2020/06/29
-Last Changed: 2020/09/02
+Last Changed: 2020/09/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -56,6 +56,7 @@ if __name__ == '__main__':
                         sample_id=CLA.get_argument("sample_id"),
                         cohort_id=CLA.get_argument("cohort_id"),
                         ground_truth_path=CLA.get_argument("ground_truth"),
+                        filter_path=CLA.get_argument("filter"),
                         min_expr=CLA.get_argument("min_expr"),
                         cohort_corr=CLA.get_argument("cohort_corr"),
                         normalize=CLA.get_argument("normalize"),
@@ -69,5 +70,6 @@ if __name__ == '__main__':
     # Start the program.
     PROGRAM = Main(settings=SETTINGS,
                    outdir=CLA.get_argument("outdir"),
-                   visualise=CLA.get_argument("visualise"))
+                   visualise=CLA.get_argument("visualise"),
+                   plot_ids=CLA.get_argument("plot_id"),)
     PROGRAM.start()

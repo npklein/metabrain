@@ -1,7 +1,7 @@
 """
 File:         visualiser.py
 Created:      2020/06/29
-Last Changed: 2020/07/09
+Last Changed: 2020/09/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -277,6 +277,12 @@ class Visualiser:
                                "{} counts".format(self.ground_truth_type),
                                '{}_comparison'.format(self.ground_truth_type))
 
+    def plot_violin_comparison(self, label, trans_dict):
+        df = self.deconvolution.copy()
+        df = df.reset_index().melt(id_vars=["index"])
+        df[label] = df["index"].map(trans_dict).astype(str)
+        self.create_catplot(df, label)
+
     def create_clustermap(self, df, name):
         sns.set(color_codes=True)
         g = sns.clustermap(df, center=0, cmap="RdBu_r",
@@ -289,6 +295,19 @@ class Visualiser:
         g.fig.subplots_adjust(bottom=0.05, top=0.7)
         plt.tight_layout()
         g.savefig(os.path.join(self.outdir, "{}_clustermap.{}".format(name, self.extension)))
+        plt.close()
+
+    def create_catplot(self, df, name):
+        sns.set(style="ticks")
+        order = list(df[name].unique())
+        order.sort()
+        g = sns.catplot(x=name, y="value", col="variable", col_wrap=3,
+                        data=df, kind="violin", order=order)
+        for axes in g.axes.flat:
+            axes.set_xticklabels(axes.get_xticklabels(),
+                                 rotation=65,
+                                 horizontalalignment='right')
+        g.savefig(os.path.join(self.outdir, "{}_catplot.{}".format(name, self.extension)))
         plt.close()
 
     def create_boxplot(self, df, xlabel="", ylabel="", name=""):
