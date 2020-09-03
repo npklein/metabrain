@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/06/29
-Last Changed: 2020/09/02
+Last Changed: 2020/09/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -90,6 +90,11 @@ class CommandLineArguments:
                             help="A matrix with the ground truth values. Must "
                                  "be in <type>_counts.<extension> format."
                                  "Default: None'.")
+        parser.add_argument("-f",
+                            "--filter",
+                            type=str,
+                            default=None,
+                            help="A list of sample identifiers to include.")
         parser.add_argument("-o",
                             "--outdir",
                             type=str,
@@ -136,6 +141,13 @@ class CommandLineArguments:
                             action='store_true',
                             help="Whether or not to visualise the data."
                                  " Default: False.")
+        parser.add_argument("-pid",
+                            "--plot_id",
+                            type=str,
+                            nargs="+",
+                            required=False,
+                            help="The column names to plot in the -sa / "
+                                 "--sample file.")
         parser.add_argument("-e",
                             "--extension",
                             type=str,

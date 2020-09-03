@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/06/29
-Last Changed: 2020/09/02
+Last Changed: 2020/09/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -36,9 +36,10 @@ from .visualiser import Visualiser
 
 
 class Main:
-    def __init__(self, settings, outdir, visualise):
+    def __init__(self, settings, outdir, visualise, plot_ids):
         self.settings = settings
         self.visualise = visualise
+        self.plot_ids = plot_ids
 
         # Prepare output directory.
         current_dir = str(Path(__file__).parent.parent)
@@ -103,13 +104,17 @@ class Main:
                            deconvolution=pf.get_deconvolution(),
                            ground_truth=dl.get_ground_truth(),
                            comparison=dc.get_comparison())
-            v.plot_profile_clustermap()
-            v.plot_profile_stripplot()
-            v.plot_profile_boxplot()
-            v.plot_deconvolution_clustermap()
-            v.plot_deconvolution_per_sample()
-            #v.plot_deconvolution_distribution()
-            v.plot_deconvolution_boxplot()
-            #v.plot_ground_truth_distribution()
-            v.plot_ground_truth_boxplot()
-            v.plot_prediction_comparison()
+            # v.plot_profile_clustermap()
+            # v.plot_profile_stripplot()
+            # v.plot_profile_boxplot()
+            # v.plot_deconvolution_clustermap()
+            # v.plot_deconvolution_per_sample()
+            # #v.plot_deconvolution_distribution()
+            # v.plot_deconvolution_boxplot()
+            # #v.plot_ground_truth_distribution()
+            # v.plot_ground_truth_boxplot()
+            # v.plot_prediction_comparison()
+
+            for plot_id in self.plot_ids:
+                print("Plotting {}".format(plot_id))
+                v.plot_violin_comparison(plot_id, dl.get_sample_to_info_dict(plot_id))

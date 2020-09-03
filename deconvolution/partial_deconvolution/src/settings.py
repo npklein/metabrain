@@ -1,7 +1,7 @@
 """
 File:         settings.py
 Created:      2020/06/29
-Last Changed: 2020/09/02
+Last Changed: 2020/09/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -33,8 +33,9 @@ import os
 
 class Settings:
     def __init__(self, data_path, signature_path, translate_path, sample_path,
-                 sample_id, cohort_id, ground_truth_path, min_expr, cohort_corr,
-                 normalize, zscore, log2, decon_method, sum_to_one, extension):
+                 sample_id, cohort_id, ground_truth_path, filter_path, min_expr,
+                 cohort_corr, normalize, zscore, log2, decon_method, sum_to_one,
+                 extension):
         self.data_path = data_path
         self.signature_path = signature_path
         self.translate_path = translate_path
@@ -42,6 +43,7 @@ class Settings:
         self.sample_id = sample_id
         self.cohort_id = cohort_id
         self.ground_truth_path = ground_truth_path
+        self.filter_path = filter_path
         self.min_expr = min_expr
         self.cohort_corr = cohort_corr
         self.normalize = normalize
@@ -81,6 +83,9 @@ class Settings:
 
     def get_ground_truth_path(self):
         return self.ground_truth_path
+
+    def get_filter_path(self):
+        return self.filter_path
 
     def get_ground_truth_type(self):
         return os.path.basename(self.ground_truth_path).split(".")[0].replace("_counts", "")
@@ -152,7 +157,7 @@ class Settings:
             rss_str = "{:.2f}".format(self.comparison_rss)
 
         return "min.expr.: {}, coh.corr: {}, norm.: {}, z-score: {}, " \
-               "log2: {}, sum-to-one: {}\n avg.residuals: {}, N: {}, RSS: {}".format(
+               "log2: {},\nsum-to-one: {}, avg.residuals: {}, N: {}, RSS: {}".format(
             self.min_expr, self.cohort_corr, self.normalize, self.zscore, self.log2,
             self.sum_to_one, avg_resid_str, self.comparison_n_samples, rss_str)
 
@@ -169,6 +174,7 @@ class Settings:
                 "sample_id": self.sample_id,
                 "cohort_id": self.cohort_id,
                 "ground_truth_path": self.ground_truth_path,
+                "filter_path": self.filter_path,
                 "cohort_corr": self.cohort_corr,
                 "min_expr": self.min_expr,
                 "normalize": self.normalize,

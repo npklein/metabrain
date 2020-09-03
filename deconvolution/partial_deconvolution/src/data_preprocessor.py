@@ -1,7 +1,7 @@
 """
 File:         data_preprocessor.py
 Created:      2020/06/29
-Last Changed: 2020/09/02
+Last Changed: 2020/09/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -108,9 +108,8 @@ class DataPreprocessor:
 
         cohorts_df = None
         if raw_cohorts is not None:
-            sample_overlap = np.intersect1d(raw_expression.columns,
-                                            raw_cohorts.index)
-            expr_df = raw_expression.loc[:, sample_overlap]
+            sample_overlap = np.intersect1d(expr_df.columns, raw_cohorts.index)
+            expr_df = expr_df.loc[:, sample_overlap]
             cohorts_df = raw_cohorts.loc[sample_overlap, :]
 
             if not expr_df.columns.equals(cohorts_df.index):
