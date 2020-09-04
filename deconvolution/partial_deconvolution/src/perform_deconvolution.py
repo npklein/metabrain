@@ -1,7 +1,7 @@
 """
 File:         perform_deconvolution.py
 Created:      2020/06/29
-Last Changed: 2020/06/30
+Last Changed: 2020/09/04
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -35,7 +35,7 @@ class PerformDeconvolution:
     def __init__(self, settings, signature, expression):
         self.decon_method = settings.get_decon_method()
         self.sum_to_one = settings.get_sum_to_one()
-        self.outdir = settings.get_output_path()
+        self.outdir = settings.get_outsubdir_path()
         self.signature = signature
         self.expression = expression
 

@@ -1,7 +1,7 @@
 """
 File:         data_loader.py
 Created:      2020/06/29
-Last Changed: 2020/09/03
+Last Changed: 2020/09/04
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -38,42 +38,34 @@ class DataLoader:
         self.data_path = settings.get_data_path()
         self.signature_path = settings.get_signature_path()
         self.translate_path = settings.get_translate_path()
-        self.sample_path = settings.get_sample_path()
-        self.sample_id = settings.get_sample_id()
-        self.cohort_id = settings.get_cohort_id()
         self.ground_truth_path = settings.get_ground_truth_path()
-        self.filter_path = settings.get_filter_path()
-        self.cohort_corr = settings.get_cohort_corr()
 
-        outdir = settings.get_output_path()
+        outdir = settings.get_outdir_path()
+
         self.expression_file = os.path.join(outdir, 'expression.txt.gz')
         self.signature_file = os.path.join(outdir, 'signature.txt.gz')
-        self.settings_file = os.path.join(outdir, 'settings.json')
+        self.settings_file = os.path.join(outdir, 'data_settings.json')
 
-        self.sample_dict = None
         self.expression = None
         self.signature = None
         self.ground_truth = None
-        self.cohorts = None
 
     def work(self):
         # Check if the filtered data files exist.
-        if (not os.path.exists(self.signature_file) and not os.path.exists(self.expression_file))\
-                or not os.path.exists(self.settings_file) or not self.settings_match():
+        if os.path.exists(self.signature_file) and \
+            os.path.exists(self.expression_file) and \
+            os.path.exists(self.settings_file) and \
+                self.settings_match():
+            print("Loading saved files")
+            self.load_saved_files()
+        else:
             print("Loading files")
             self.load()
             self.save()
-        else:
-            print("Loading saved files")
-            self.load_saved_files()
 
         # Check if ground truth file exists and if so, load it.
         if self.ground_truth_path is not None and os.path.exists(self.ground_truth_path):
             self.load_ground_truth()
-
-        # Check if we need to create a cohort dataframe.
-        if self.cohort_corr:
-            self.create_cohorts_matrix()
 
     def load(self):
         # Load the signature matrix.
@@ -81,15 +73,9 @@ class DataLoader:
 
         # Load the expression of the signature genes.
         translate_dict = self.load_translate(self.translate_path)
-        self.sample_dict = self.load_sample_to_info_dict(self.sample_path,
-                                                         self.sample_id,
-                                                         self.cohort_id)
-        sample_filter = self.load_filter(self.filter_path)
-        self.expression = self.load_data(self.data_path,
-                                         self.signature.index,
-                                         translate_dict,
-                                         self.sample_dict,
-                                         sample_filter)
+        self.expression = self.load_expression(self.data_path,
+                                               self.signature.index,
+                                               translate_dict)
 
     @staticmethod
     def load_signature(filepath):
@@ -105,52 +91,30 @@ class DataLoader:
         return dict(zip(df.loc[:, key], df.loc[:, value]))
 
     @staticmethod
-    def load_sample_to_info_dict(filepath, key_id, value_id):
-        print("\tLoading samples dict")
-        df = pd.read_csv(filepath, sep="\t", low_memory=False)
-        return dict(zip(df.loc[:, key_id], df.loc[:, value_id]))
-
-    @staticmethod
-    def load_filter(filepath):
-        print("\tLoading sample filter")
-        if filepath is None:
-            return None
-        else:
-            df = pd.read_csv(filepath, sep="\t", header=0, index_col=0,
-                             nrows=1)
-            return list(df.columns)
-
-    @staticmethod
-    def load_data(filepath, profile_genes, trans_dict, sample_dict,
-                  sample_filter):
-        selection = []
-        data = []
+    def load_expression(filepath, profile_genes, trans_dict):
         columns = []
         indices = []
+        data_collection = []
 
         print("\tLoading expression matrix")
         with gzip.open(filepath, 'rb') as f:
             for i, line in enumerate(f):
                 if (i == 0) or (i % 1000 == 0):
-                    print("\t\tfound {}/{} genes".format(len(data),
+                    print("\t\tfound {}/{} genes".format(len(data_collection),
                                                          len(profile_genes)))
 
-                splitted_line = np.array(line.decode().split('\t'))
+                splitted_line = np.array(line.decode().strip('\n').split('\t'))
+                index = splitted_line[0]
+                data = splitted_line[1:]
                 if i == 0:
-                    for j, col in enumerate(splitted_line):
-                        if col in sample_dict.keys() and (sample_filter is None or col in sample_filter):
-                            selection.append(j)
-                            columns.append(col)
-                    if len(selection) <= 0:
-                        break
+                    columns = data
 
-                gene = splitted_line[0]
-                if gene in trans_dict.keys() and trans_dict[gene] in profile_genes and trans_dict[gene] not in indices:
-                    indices.append(trans_dict[gene])
-                    data.append([float(x) for x in splitted_line[selection]])
+                if index in trans_dict.keys() and trans_dict[index] in profile_genes and trans_dict[index] not in indices:
+                    indices.append(trans_dict[index])
+                    data_collection.append([float(x) for x in data])
         f.close()
 
-        return pd.DataFrame(data, index=indices, columns=columns)
+        return pd.DataFrame(data_collection, index=indices, columns=columns)
 
     def save(self):
         print("Saving files")
@@ -175,10 +139,7 @@ class DataLoader:
         f.close()
         if (prev_settings["data_path"] == self.data_path) and \
             (prev_settings["signature_path"] == self.signature_path) and \
-            (prev_settings["translate_path"] == self.translate_path) and \
-            (prev_settings["sample_path"] == self.sample_path) and \
-            (prev_settings["sample_id"] == self.sample_id) and \
-            (prev_settings["filter_path"] == self.filter_path):
+            (prev_settings["translate_path"] == self.translate_path):
             return True
 
         return False
@@ -208,45 +169,15 @@ class DataLoader:
                                         sep="\t",
                                         header=0,
                                         index_col=0)
-        print("\tloaded dataframe: {} "
+        print("\t\tloaded dataframe: {} "
               "with shape: {}".format(os.path.basename(self.ground_truth_path),
                                       self.ground_truth.shape))
-
-    def create_cohorts_matrix(self):
-        if self.sample_dict is None:
-            self.sample_dict = self.load_sample_to_info_dict(self.sample_path,
-                                                             self.sample_id,
-                                                             self.cohort_id)
-
-        cohort_dict = self.flip_dict(self.sample_dict)
-
-        cohort_df = pd.DataFrame(0,
-                                 index=self.sample_dict.keys(),
-                                 columns=cohort_dict.keys())
-        for cohort in cohort_df.columns:
-            cohort_df.loc[cohort_df.index.isin(cohort_dict[cohort]), cohort] = 1
-        self.cohorts = cohort_df
-
-    @staticmethod
-    def flip_dict(dict1):
-        dict2 = {}
-        for key, value in dict1.items():
-            if value in dict2.keys():
-                adj_key = dict2[value]
-                adj_key.append(key)
-                dict2[value] = adj_key
-            else:
-                dict2[value] = [key]
-        return dict2
 
     def get_signature(self):
         return self.signature
 
     def get_expression(self):
         return self.expression
-
-    def get_cohorts(self):
-        return self.cohorts
 
     def get_ground_truth(self):
         return self.ground_truth
@@ -261,11 +192,6 @@ class DataLoader:
         for key in means.keys():
             info[key] = (means[key], stds[key])
         return info
-
-    def get_sample_to_info_dict(self, col_id):
-        return self.load_sample_to_info_dict(self.sample_path,
-                                             self.sample_id,
-                                             col_id)
 
     def print_info(self):
         print("Signature matrix:\t{} rows and {} columns".format(self.signature.shape[0], self.signature.shape[1]))

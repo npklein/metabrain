@@ -47,6 +47,8 @@ class DataPreprocessor:
         self.sign_shift = False
         self.expression = None
         self.expr_shift = False
+        self.n_samples = None
+        self.n_genes = None
 
     def work(self):
         # Filter uninformative genes from the signature matrix.
@@ -83,6 +85,8 @@ class DataPreprocessor:
         # Save.
         self.signature = sign_df
         self.expression = expr_df
+        self.n_samples = expr_df.shape[1]
+        self.n_genes = expr_df.shape[0]
 
     @staticmethod
     def filter(df, cutoff):
@@ -189,9 +193,17 @@ class DataPreprocessor:
     def get_expr_shift(self):
         return self.expr_shift
 
+    def get_n_samples(self):
+        return self.n_samples
+
+    def get_n_genes(self):
+        return self.n_genes
+
     def print_info(self):
         print("Signature matrix:\t{} rows and {} columns".format(self.signature.shape[0], self.signature.shape[1]))
         print("Expression matrix:\t{} rows and {} columns".format(self.expression.shape[0], self.expression.shape[1]))
         print("Dropped:\t{} rows and {} columns".format(self.shape_diff[0], self.shape_diff[1]))
         print("Shifted:\tsignature = {}\texpression = {}".format(self.sign_shift, self.expr_shift))
+        print("N samples:\t{}".format(self.n_samples))
+        print("N genes:\t{}".format(self.n_genes))
         print("")

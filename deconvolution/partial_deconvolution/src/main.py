@@ -29,6 +29,7 @@ import os
 
 # Local application imports.
 from .data_loader import DataLoader
+from .data_filter import DataFilter
 from .data_preprocessor import DataPreprocessor
 from .perform_deconvolution import PerformDeconvolution
 from .data_comparitor import DataComparitor
@@ -36,41 +37,57 @@ from .visualiser import Visualiser
 
 
 class Main:
-    def __init__(self, settings, outdir, visualise, plot_ids):
+    def __init__(self, settings, outdir, outsubdir, visualise, plot_ids):
         self.settings = settings
         self.visualise = visualise
         self.plot_ids = plot_ids
 
-        # Prepare output directory.
+        # Prepare output directories.
         current_dir = str(Path(__file__).parent.parent)
-        outpath = os.path.join(current_dir, outdir)
-        if not os.path.exists(outpath):
-            os.makedirs(outpath)
+        outdir_path = os.path.join(current_dir, outdir)
+        outsubdir_path = outdir_path
+        if outsubdir is not None:
+            outsubdir_path = os.path.join(outdir_path, outsubdir)
+        for path in [outdir_path, outsubdir_path]:
+            if not os.path.exists(path):
+                os.makedirs(path)
 
-        self.settings.set_output_path(outpath)
+        self.settings.set_outdir_path(outdir_path)
+        self.settings.set_outsubdir_path(outsubdir_path)
 
     def start(self):
         # Load the data.
         print("### Loading")
-        dl = DataLoader(self.settings)
+        dl = DataLoader(settings=self.settings)
         dl.work()
         dl.print_info()
         self.settings.set_real_info_per_celltype(dl.get_info_per_celltype())
 
         # Save.
-        self.settings.save_settings()
+        self.settings.save_data_settings()
+
+        # Filter the samples.
+        print("### Filtering")
+        df = DataFilter(settings=self.settings,
+                        raw_expression=dl.get_expression())
+        df.work()
+        df.print_info()
+        self.settings.set_filter1_shape_diff(df.get_shape_diff())
 
         # Preprocessing.
         print("### Preprocessing")
         dp = DataPreprocessor(settings=self.settings,
                               raw_signature=dl.get_signature(),
-                              raw_expression=dl.get_expression(),
-                              cohorts=dl.get_cohorts())
+                              raw_expression=df.get_expression(),
+                              cohorts=df.get_cohorts())
         dp.work()
         dp.print_info()
-        self.settings.set_filter_shape_diff(dp.get_shape_diff())
+
+        self.settings.set_filter2_shape_diff(dp.get_shape_diff())
         self.settings.set_sign_shift(dp.get_sign_shift())
         self.settings.set_expr_shift(dp.get_expr_shift())
+        self.settings.set_n_samples(dp.get_n_samples())
+        self.settings.set_n_genes(dp.get_n_genes())
 
         # Partial deconvolution.
         print("### Deconvoluting")
@@ -93,7 +110,7 @@ class Main:
         self.settings.set_comparison_rss(dc.get_rss())
 
         # Save.
-        self.settings.save_settings()
+        self.settings.save_all_settings()
 
         # Visualising profile.
         if self.visualise:
@@ -104,17 +121,17 @@ class Main:
                            deconvolution=pf.get_deconvolution(),
                            ground_truth=dl.get_ground_truth(),
                            comparison=dc.get_comparison())
-            # v.plot_profile_clustermap()
-            # v.plot_profile_stripplot()
-            # v.plot_profile_boxplot()
-            # v.plot_deconvolution_clustermap()
-            # v.plot_deconvolution_per_sample()
-            # #v.plot_deconvolution_distribution()
-            # v.plot_deconvolution_boxplot()
-            # #v.plot_ground_truth_distribution()
-            # v.plot_ground_truth_boxplot()
-            # v.plot_prediction_comparison()
+            v.plot_profile_clustermap()
+            v.plot_profile_stripplot()
+            v.plot_profile_boxplot()
+            v.plot_deconvolution_clustermap()
+            v.plot_deconvolution_per_sample()
+            #v.plot_deconvolution_distribution()
+            v.plot_deconvolution_boxplot()
+            #v.plot_ground_truth_distribution()
+            v.plot_ground_truth_boxplot()
+            v.plot_prediction_comparison()
 
             for plot_id in self.plot_ids:
                 print("Plotting {}".format(plot_id))
-                v.plot_violin_comparison(plot_id, dl.get_sample_to_info_dict(plot_id))
+                v.plot_violin_comparison(plot_id, df.get_translate_dict(value=plot_id))
