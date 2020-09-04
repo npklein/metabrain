@@ -3,7 +3,7 @@
 """
 File:         partial_deconvolution.py
 Created:      2020/06/29
-Last Changed: 2020/09/03
+Last Changed: 2020/09/04
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -52,11 +52,14 @@ if __name__ == '__main__':
     SETTINGS = Settings(data_path=CLA.get_argument("data"),
                         signature_path=CLA.get_argument("signature"),
                         translate_path=CLA.get_argument("translate"),
-                        sample_path=CLA.get_argument("sample"),
-                        sample_id=CLA.get_argument("sample_id"),
-                        cohort_id=CLA.get_argument("cohort_id"),
                         ground_truth_path=CLA.get_argument("ground_truth"),
-                        filter_path=CLA.get_argument("filter"),
+                        sample_annotation_path=CLA.get_argument("sample_annotation"),
+                        sample_id=CLA.get_argument("sample_id"),
+                        sample_filter_path=CLA.get_argument("sample_filter"),
+                        cohort_id=CLA.get_argument("cohort_id"),
+                        cohort_filter=CLA.get_argument("cohort_filter"),
+                        annotation_id=CLA.get_argument("annotation_id"),
+                        annotation_filter=CLA.get_argument("annotation_filter"),
                         min_expr=CLA.get_argument("min_expr"),
                         cohort_corr=CLA.get_argument("cohort_corr"),
                         normalize=CLA.get_argument("normalize"),
@@ -70,6 +73,7 @@ if __name__ == '__main__':
     # Start the program.
     PROGRAM = Main(settings=SETTINGS,
                    outdir=CLA.get_argument("outdir"),
+                   outsubdir=CLA.get_argument("outsubdir"),
                    visualise=CLA.get_argument("visualise"),
                    plot_ids=CLA.get_argument("plot_id"),)
     PROGRAM.start()
