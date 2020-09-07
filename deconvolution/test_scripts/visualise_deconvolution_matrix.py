@@ -25,6 +25,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 # Standard imports.
 from __future__ import print_function
 from pathlib import Path
+import itertools
 import argparse
 import os
 
@@ -34,6 +35,7 @@ import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from statannot import add_stat_annotation
 
 # Local application imports.
 
@@ -61,10 +63,12 @@ class main():
         self.sample_id = getattr(arguments, 'sample')
         self.x_id = getattr(arguments, 'x')
         self.row_id = getattr(arguments, 'row')
+        self.extension = getattr(arguments, 'extension')
 
         # Set variables.
         self.outdir = str(Path(__file__).parent.parent)
         self.colormap = {
+            "": "#FFFFFF",
             "Neuron": "#b38d84",
             "Oligodendrocyte": "#5d9166",
             "EndothelialCell": "#f2a7a7",
@@ -107,6 +111,13 @@ class main():
                             type=str,
                             required=True,
                             help="The information column for the rows.")
+        parser.add_argument("-e",
+                            "--extension",
+                            type=str,
+                            choices=["png", "pdf"],
+                            default="png",
+                            help="The figure file extension. "
+                                 "Default: 'png'.")
 
         return parser.parse_args()
 
@@ -133,39 +144,84 @@ class main():
         df[self.row_id] = df["index"].map(row_dict).astype(str)
 
         print("Visualizing.")
-        sns.set(style="ticks")
+
         order = list(df[self.x_id].unique())
         order.sort()
-        g = sns.catplot(x=self.x_id, y="value", col="variable",
-                        row=self.row_id, data=df, kind="box",
-                        order=order)
-        [plt.setp(ax.texts, text="") for ax in g.axes.flat]
-        #g.set_titles(row_template='{row_name}', col_template='{col_name}')
 
-        for axes in g.axes.flat:
-            axes.set_xticklabels(axes.get_xticklabels(),
-                                 rotation=65,
-                                 horizontalalignment='right')
-            old_title = axes.get_title().replace(" ", "")
+        rows = list(df[self.row_id].unique())
+        rows.sort()
 
-            row_column, row_variable = old_title.split("|")[0].split("=")
-            col_column, col_variable = old_title.split("|")[1].split("=")
+        cols = list(df["variable"].unique())
+        cols.sort()
 
-            subset = df[(df[row_column] == row_variable) & (df[col_column] == col_variable)]
-            counts = subset[self.x_id].value_counts()
+        sns.set(style="ticks")
+        fig, axes = plt.subplots(ncols=len(cols),
+                                 nrows=len(rows),
+                                 figsize=(4*len(cols), 4*len(rows)))
 
-            counts_string = []
-            total = 0
-            for key in order:
-                value = 0
-                if key in counts:
-                    value = counts[key]
-                counts_string.append(str(value))
-                total += int(value)
+        for i, row_variable in enumerate(rows):
+            for j, col_variable in enumerate(cols):
+                subset = df[(df[self.row_id] == row_variable) & (df["variable"] == col_variable)].copy()
+                counts = subset[self.x_id].value_counts()
+                print(subset[self.x_id].unique())
+                print(order)
 
-            axes.set_title("{} | {} | N = {}\n[{}]".format(row_variable, col_variable, str(total), ", ".join(counts_string)))
+                ax = axes[i, j]
+                print(i, j, row_variable, col_variable)
+                sns.despine(fig=fig, ax=ax)
+                sns.boxplot(x=self.x_id, y="value", data=subset, order=order,
+                            ax=ax)
 
-        g.savefig(os.path.join(self.outdir, "x{}_row{}_catplot.png".format(self.x_id.replace(" ", "_"), self.row_id.replace(" ", "_"))))
+                full_labels = []
+                group_size_labels = []
+                for label in order:
+                    value = "0"
+                    if label in counts:
+                        value = str(counts[label])
+                    group_size_labels.append("n={}".format(value))
+                    full_labels.append("{}\nn={}".format(label, value))
+
+                ylabel = ""
+                if j == 0:
+                    ylabel = row_variable
+
+                title = ""
+                if i == 0:
+                    title = col_variable
+                if i == (len(rows) - 1):
+                    ax.set_xticks(range(len(order)))
+                    ax.set_xticklabels(full_labels,
+                                       rotation=45,
+                                       ha='right',
+                                       fontsize=10,
+                                       fontweight='bold')
+                else:
+                    ax.set_xticks(range(len(order)))
+                    ax.set_xticklabels(group_size_labels,
+                                       fontsize=10,
+                                       fontweight='bold')
+
+                ax.set_title(title,
+                             fontsize=11,
+                             fontweight='bold',
+                             color=self.colormap[title])
+                ax.set_xlabel("",
+                              fontsize=10,
+                              fontweight='bold')
+                ax.set_ylabel(ylabel,
+                              fontsize=10,
+                              fontweight='bold')
+
+                box_pairs = itertools.combinations(counts.index, 2)
+                if len(counts.index) >= 2:
+                    add_stat_annotation(ax, data=subset, x=self.x_id, y="value",
+                                        order=order, box_pairs=box_pairs,
+                                        test='Mann-Whitney', text_format='star',
+                                        loc='inside', fontsize='small',
+                                        line_height=0.01, text_offset=0.1)
+
+        plt.tight_layout()
+        fig.savefig(os.path.join(self.outdir, "x{}_row{}_catplot.{}".format(self.x_id.replace(" ", "_"), self.row_id.replace(" ", "_"), self.extension)))
         plt.close()
 
 
