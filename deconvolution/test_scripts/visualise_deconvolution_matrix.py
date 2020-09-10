@@ -157,29 +157,30 @@ class main():
         sns.set(style="ticks")
         fig, axes = plt.subplots(ncols=len(cols),
                                  nrows=len(rows),
-                                 figsize=(4*len(cols), 4*len(rows)))
+                                 figsize=(4*len(cols), 4*len(rows)),
+                                 sharex="all")
 
         for i, row_variable in enumerate(rows):
             for j, col_variable in enumerate(cols):
                 subset = df[(df[self.row_id] == row_variable) & (df["variable"] == col_variable)].copy()
                 counts = subset[self.x_id].value_counts()
-                print(subset[self.x_id].unique())
-                print(order)
 
                 ax = axes[i, j]
                 print(i, j, row_variable, col_variable)
                 sns.despine(fig=fig, ax=ax)
-                sns.boxplot(x=self.x_id, y="value", data=subset, order=order,
-                            ax=ax)
+                g = sns.boxplot(x=self.x_id, y="value", data=subset,
+                                order=order, ax=ax)
 
-                full_labels = []
-                group_size_labels = []
-                for label in order:
-                    value = "0"
-                    if label in counts:
-                        value = str(counts[label])
-                    group_size_labels.append("n={}".format(value))
-                    full_labels.append("{}\nn={}".format(label, value))
+                medians = subset.groupby([self.x_id])['value'].median()
+                sizes = subset.groupby([self.x_id])['value'].count()
+                vertical_offset = subset['value'].median() * 0.01
+
+                for xtick, label in enumerate(order):
+                    if label in medians and label in sizes:
+                        g.text(xtick, medians[label] + vertical_offset,
+                               sizes[label],
+                               horizontalalignment='center', size='xx-small',
+                               color='lightgrey', weight='semibold')
 
                 ylabel = ""
                 if j == 0:
@@ -190,14 +191,9 @@ class main():
                     title = col_variable
                 if i == (len(rows) - 1):
                     ax.set_xticks(range(len(order)))
-                    ax.set_xticklabels(full_labels,
+                    ax.set_xticklabels(order,
                                        rotation=45,
                                        ha='right',
-                                       fontsize=10,
-                                       fontweight='bold')
-                else:
-                    ax.set_xticks(range(len(order)))
-                    ax.set_xticklabels(group_size_labels,
                                        fontsize=10,
                                        fontweight='bold')
 
