@@ -1,7 +1,7 @@
 """
 File:         perform_deconvolution.py
 Created:      2020/04/08
-Last Changed: 2020/07/15
+Last Changed: 2020/09/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -26,6 +26,7 @@ import os
 import numpy as np
 import pandas as pd
 from scipy.optimize import nnls
+import statsmodels.api as sm
 
 # Local application imports.
 from general.utilities import prepare_output_dir, check_file_exists
@@ -49,6 +50,9 @@ class PerformDeconvolution:
         :param force: boolean, whether or not to force the step to redo.
         :param outdir: string, the output directory.
         """
+        self.sample_cohort_file = settings["sample_cohort_datafile"]
+        self.sample_id = settings["sample_cohort_identifiers"]["sample"]
+        self.cohort_id = settings["sample_cohort_identifiers"]["cohort"]
         self.profile_file = profile_file
         self.profile_df = profile_df
         self.ct_expr_file = ct_expr_file
@@ -91,11 +95,27 @@ class PerformDeconvolution:
             self.ct_expr_df = load_dataframe(self.ct_expr_file,
                                              header=0, index_col=0)
 
+        print("Loading sample cohort matrix.")
+        sample_cohort_df = load_dataframe(self.sample_cohort_file,
+                                          header=0,
+                                          index_col=None)
+
+        # Correct for cohort effects.
+        cohort_df = self.create_cohort_df(list(self.ct_expr_df.columns),
+                                          sample_cohort_df,
+                                          self.sample_id,
+                                          self.cohort_id)
+
         # Filter uninformative genes from the signature matrix.
         prof_df = self.filter(self.profile_df)
 
         # Subset and reorder.
-        prof_df, expr_df = self.subset(prof_df, self.ct_expr_df)
+        prof_df, expr_df, cohort_df = self.subset(prof_df,
+                                                  self.ct_expr_df,
+                                                  cohort_df)
+
+        # Correct for cohorts.
+        expr_df = self.cohort_correction(expr_df, cohort_df)
 
         # Transform.
         prof_df = self.perform_log2_transform(prof_df)
@@ -133,6 +153,7 @@ class PerformDeconvolution:
         decon_df = self.sum_to_one(decon_df)
         print("Estimated proportions:")
         print(decon_df)
+        print(decon_df.mean(axis=0))
 
         # Calculate the average residuals.
         print(residuals_df)
@@ -146,19 +167,78 @@ class PerformDeconvolution:
         return tmp.loc[(tmp.std(axis=1) != 0) & (tmp.max(axis=1) > cutoff), :]
 
     @staticmethod
-    def subset(raw_signature, raw_expression):
-        overlap = np.intersect1d(raw_signature.index, raw_expression.index)
-        sign_df = raw_signature.loc[overlap, :]
-        expr_df = raw_expression.loc[overlap, :]
+    def subset(raw_signature, raw_expression, raw_cohorts):
+        gene_overlap = np.intersect1d(raw_signature.index, raw_expression.index)
+        sign_df = raw_signature.loc[gene_overlap, :]
+        expr_df = raw_expression.loc[gene_overlap, :]
 
         sign_df.index.name = "-"
         expr_df.index.name = "-"
 
         if not sign_df.index.equals(expr_df.index):
-            print("Invalid order")
+            print("Invalid gene order")
             exit()
 
-        return sign_df, expr_df
+        cohorts_df = None
+        if raw_cohorts is not None:
+            sample_overlap = np.intersect1d(expr_df.columns, raw_cohorts.index)
+            expr_df = expr_df.loc[:, sample_overlap]
+            cohorts_df = raw_cohorts.loc[sample_overlap, :]
+
+            if not expr_df.columns.equals(cohorts_df.index):
+                print("Invalid sample order")
+                exit()
+
+        return sign_df, expr_df, cohorts_df
+
+    @staticmethod
+    def create_cohort_df(samples, sample_cohort_df, sample_id, cohort_id):
+        sample_to_cohort_dict = dict(zip(sample_cohort_df.loc[:, sample_id], sample_cohort_df.loc[:, cohort_id]))
+
+        cohort_to_sample_dict = {}
+        for sample in samples:
+            cohort = sample_to_cohort_dict[sample]
+            if cohort in cohort_to_sample_dict.keys():
+                value = cohort_to_sample_dict[cohort]
+                value.append(sample)
+                cohort_to_sample_dict[cohort] = value
+            else:
+                cohort_to_sample_dict[cohort] = [sample]
+
+        cohort_df = pd.DataFrame(0,
+                                 index=sample_to_cohort_dict.keys(),
+                                 columns=cohort_to_sample_dict.keys())
+        for cohort in cohort_df.columns:
+            cohort_df.loc[cohort_df.index.isin(cohort_to_sample_dict[cohort]), cohort] = 1
+
+        return cohort_df
+
+    @staticmethod
+    def cohort_correction(raw_expression, cohorts):
+        new_expression_data = []
+        for i, (index, expression) in enumerate(raw_expression.iterrows()):
+            if (i % 100 == 0) or (i == (raw_expression.shape[0] - 1)):
+                print("\tProcessing {}/{} "
+                      "[{:.2f}%]".format(i,
+                                         (raw_expression.shape[0] - 1),
+                                         (100 / (raw_expression.shape[0] - 1)) * i))
+
+            if expression.index.equals(cohorts.index):
+                ols = sm.OLS(expression, cohorts)
+                try:
+                    ols_result = ols.fit()
+                    residuals = ols_result.resid.values
+                    corrected_expression = expression.mean() + residuals
+                    new_expression_data.append(corrected_expression.tolist())
+
+                except np.linalg.LinAlgError as e:
+                    print("\t\tError: {}".format(e))
+
+        new_expression_df = pd.DataFrame(new_expression_data,
+                                         index=raw_expression.index,
+                                         columns=raw_expression.columns)
+
+        return new_expression_df
 
     @staticmethod
     def perform_log2_transform(df):

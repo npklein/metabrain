@@ -64,6 +64,8 @@ class main():
         self.ge_path = getattr(arguments, 'gene_expression')
         self.nrows = getattr(arguments, 'nrows')
         self.gene_info_path = getattr(arguments, 'gene_info')
+        self.gene_filter_path = getattr(arguments, 'gene_filter')
+        self.gf_id = getattr(arguments, 'gene_filter_id')
         self.min_corr = getattr(arguments, 'min_corr')
         self.compare_path = getattr(arguments, 'compare')
         self.extension = getattr(arguments, 'extension')
@@ -120,6 +122,19 @@ class main():
                             type=str,
                             required=True,
                             help="The path to the gene annotation matrix.")
+        parser.add_argument("-f",
+                            "--gene_filter",
+                            type=str,
+                            required=False,
+                            default=None,
+                            help="The path to the gene filter matrix. "
+                                 "Default: None")
+        parser.add_argument("-gf_id",
+                            "--gene_filter_id",
+                            type=str,
+                            required=False,
+                            default=None,
+                            help="The column on which to filter.")
         parser.add_argument("-min",
                             "--min_corr",
                             type=float,
@@ -262,13 +277,28 @@ class main():
               "with shape: {}".format(os.path.basename(self.gene_info_path),
                                       gene_df.shape))
 
-        return gene_df
-
         df = pd.merge(corr_df, gene_df, left_on="gene", right_on="ArrayAddress")
 
         print("Saving complete data frame.")
         df.to_csv(os.path.join(self.outdir, '{}_AllCT_correlations.txt.gz'.format(self.infile_basename)),
                   sep="\t", index=True, header=True, compression="gzip")
+
+        if self.gene_filter_path is not None and self.gf_id is not None:
+            print("\tLoading gene filter matrix.")
+            filter_df = pd.read_csv(self.gene_filter_path, sep="\t", header=0)
+            print("\tLoaded dataframe: {} "
+                  "with shape: {}".format(os.path.basename(self.gene_filter_path),
+                                          filter_df.shape))
+
+            print("Pre-filter shape: {}".format(df.shape))
+            df = df.loc[df["gene"].isin(filter_df[self.gf_id]), :]
+            print("Post-filter shape: {}".format(df.shape))
+
+            print("Saving filtered data frame.")
+            df.to_csv(os.path.join(self.outdir,
+                                   '{}_FilteredCT_correlations.txt.gz'.format(
+                                       self.infile_basename)),
+                      sep="\t", index=True, header=True, compression="gzip")
 
         filtered_df = df.loc[df["abs_coefficient"] >= self.min_corr, :].copy()
 
@@ -286,6 +316,7 @@ class main():
         return gene_df
 
     def chr_pos_barplot(self, df):
+        print(df)
         order = [str(x) for x in range(22)] + ["x", "y"]
 
         sns.set_style("ticks")
@@ -338,6 +369,7 @@ class main():
             else:
                 overlap_dict[celltype] = ([index], set(index))
 
+        print("CellType\tAll\tUnique\t>{}coeff".format(self.min_corr))
         for key, (genes, overlap) in overlap_dict.items():
             print(key, len(genes), len(set(genes)), len(overlap))
 

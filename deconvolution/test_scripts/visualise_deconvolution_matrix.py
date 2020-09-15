@@ -30,11 +30,14 @@ import argparse
 import os
 
 # Third party imports.
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import scipy.stats as stats
 from statannot import add_stat_annotation
 
 # Local application imports.
@@ -63,6 +66,7 @@ class main():
         self.sample_id = getattr(arguments, 'sample')
         self.x_id = getattr(arguments, 'x')
         self.row_id = getattr(arguments, 'row')
+        self.gtex_path = getattr(arguments, 'gtex_file')
         self.extension = getattr(arguments, 'extension')
 
         # Set variables.
@@ -111,6 +115,13 @@ class main():
                             type=str,
                             required=True,
                             help="The information column for the rows.")
+        parser.add_argument("-gtex",
+                            "--gtex_file",
+                            type=str,
+                            required=False,
+                            default=None,
+                            help="The path to the GTEx file for sample "
+                                 "filtering.")
         parser.add_argument("-e",
                             "--extension",
                             type=str,
@@ -128,6 +139,25 @@ class main():
               "with shape: {}".format(os.path.basename(self.decon_path),
                                       decon_df.shape))
 
+        if self.gtex_path is not None:
+            print("\tLoading gene filter matrix.")
+            gtex_df = pd.read_csv(self.gtex_path, sep="\t", header=None)
+            print("\tLoaded dataframe: {} "
+                  "with shape: {}".format(os.path.basename(self.gtex_path),
+                                          gtex_df.shape))
+            gtex_dict = dict(zip(gtex_df.iloc[:, 0], gtex_df.iloc[:, 1]))
+
+            print("Pre-filter shape: {}".format(decon_df.shape))
+            new_sample_names = []
+            for name in decon_df.index:
+                new_name = name
+                if name in gtex_dict:
+                    new_name = gtex_dict[name]
+                new_sample_names.append(new_name)
+            decon_df.index = new_sample_names
+            decon_df = decon_df.loc[decon_df.index.isin(gtex_dict.values()), :]
+            print("Post-filter shape: {}".format(decon_df.shape))
+
         print("Loading information matrix.")
         info_df = pd.read_csv(self.info_path, sep="\t", header=0,
                               low_memory=False)
@@ -136,14 +166,76 @@ class main():
                                       info_df.shape))
 
         print("Preprocessing.")
-        x_dict = dict(zip(info_df.loc[:, self.sample_id], info_df.loc[:, self.x_id]))
-        row_dict = dict(zip(info_df.loc[:, self.sample_id], info_df.loc[:, self.row_id]))
+        x_dict = dict(
+            zip(info_df.loc[:, self.sample_id], info_df.loc[:, self.x_id]))
+        row_dict = dict(
+            zip(info_df.loc[:, self.sample_id], info_df.loc[:, self.row_id]))
 
         df = decon_df.reset_index().melt(id_vars=["index"])
         df[self.x_id] = df["index"].map(x_dict).astype(str)
         df[self.row_id] = df["index"].map(row_dict).astype(str)
 
+        print("Correlating.")
+        corr_df, pval_df = self.correlate(decon_df)
+
         print("Visualizing.")
+        self.covariate_correlation(corr_df, pval_df)
+        exit()
+        self.fraction_boxplot(df)
+
+    @staticmethod
+    def correlate(df):
+        corr_df = pd.DataFrame(np.nan, index=df.columns, columns=df.columns)
+        pval_df = pd.DataFrame("", index=df.columns, columns=df.columns)
+        for i, col1 in enumerate(df.columns):
+            for j, col2 in enumerate(df.columns):
+                coef, p = stats.spearmanr(df.loc[:, col1], df.loc[:, col2])
+                corr_df.loc[col1, col2] = coef
+                pval_df.loc[col1, col2] = "{:.2e}".format(p)
+
+        return corr_df, pval_df
+
+    def covariate_correlation(self, data_df, annot_df):
+        print(data_df)
+        print(annot_df)
+
+        abbreviations = {"Neuron": "neuro", "Oligodendrocyte": "oligo",
+                         "EndothelialCell": "endo", "Microglia": "micro",
+                         "Macrophage": "macro", "Astrocyte": "astro"}
+
+        data_df.index = data_df.index.map(abbreviations)
+        data_df.columns = data_df.columns.map(abbreviations)
+
+        for i in range(len(data_df.index)):
+            for j in range(len(data_df.columns)):
+                if i < j:
+                    data_df.iloc[i, j] = np.nan
+                    annot_df.iloc[i, j] = ""
+
+        cmap = sns.diverging_palette(246, 24, as_cmap=True)
+
+        sns.set(color_codes=True)
+        g = sns.clustermap(data_df, cmap=cmap,
+                           row_cluster=False, col_cluster=False,
+                           yticklabels=True, xticklabels=True, square=True,
+                           vmin=-1, vmax=1, annot=data_df.round(2),
+                           fmt='',
+                           annot_kws={"size": 16, "color": "#000000"},
+                           figsize=(12, 12))
+        plt.setp(
+            g.ax_heatmap.set_yticklabels(
+                g.ax_heatmap.get_ymajorticklabels(),
+                fontsize=25, rotation=0))
+        plt.setp(
+            g.ax_heatmap.set_xticklabels(
+                g.ax_heatmap.get_xmajorticklabels(),
+                fontsize=25, rotation=45))
+        # g.cax.set_visible(False)
+        plt.tight_layout()
+        g.savefig(os.path.join(self.outdir, "covariate_clustermap.{}".format(self.extension)))
+        plt.close()
+
+    def fraction_boxplot(self, df):
 
         order = list(df[self.x_id].unique())
         order.sort()
@@ -157,12 +249,13 @@ class main():
         sns.set(style="ticks")
         fig, axes = plt.subplots(ncols=len(cols),
                                  nrows=len(rows),
-                                 figsize=(4*len(cols), 4*len(rows)),
+                                 figsize=(4 * len(cols), 4 * len(rows)),
                                  sharex="all")
 
         for i, row_variable in enumerate(rows):
             for j, col_variable in enumerate(cols):
-                subset = df[(df[self.row_id] == row_variable) & (df["variable"] == col_variable)].copy()
+                subset = df[(df[self.row_id] == row_variable) & (
+                            df["variable"] == col_variable)].copy()
                 counts = subset[self.x_id].value_counts()
 
                 ax = axes[i, j]
@@ -217,7 +310,9 @@ class main():
                                         line_height=0.01, text_offset=0.1)
 
         plt.tight_layout()
-        fig.savefig(os.path.join(self.outdir, "x{}_row{}_catplot.{}".format(self.x_id.replace(" ", "_"), self.row_id.replace(" ", "_"), self.extension)))
+        fig.savefig(os.path.join(self.outdir, "x{}_row{}_catplot.{}".format(
+            self.x_id.replace(" ", "_"), self.row_id.replace(" ", "_"),
+            self.extension)))
         plt.close()
 
 
