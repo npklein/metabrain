@@ -52,7 +52,7 @@ __description__ = "{} is a program developed and maintained by {}. " \
 class main():
     def __init__(self):
         self.mathys_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/41586_2019_1195_MOESM8_ESM.csv"
-        self.decon_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/2020-07-16-decon-eQTL/cis/decon_out/deconvolutionResults.csv"
+        self.decon_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/2020-07-16-decon-eQTL/cis/cortex/decon_out/deconvolutionResults.csv"
         self.gene_info_path = "/groups/umcg-biogen/tmp03/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz"
         self.outdir = str(Path(__file__).parent.parent)
 

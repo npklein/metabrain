@@ -1,7 +1,7 @@
 """
 File:         data_preprocessor.py
 Created:      2020/06/29
-Last Changed: 2020/09/03
+Last Changed: 2020/09/07
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -49,6 +49,7 @@ class DataPreprocessor:
         self.expr_shift = False
         self.n_samples = None
         self.n_genes = None
+        self.sizes = None
 
     def work(self):
         # Filter uninformative genes from the signature matrix.
@@ -178,6 +179,11 @@ class DataPreprocessor:
     def perform_shift(df):
         return df + abs(df.values.min())
 
+    def get_n_mg_per_ct(self):
+        tmp = self.signature.copy()
+        n_mg_per_ct = self.perform_zscore_transform(tmp).idxmax(axis=1).value_counts().to_dict()
+        return n_mg_per_ct
+
     def get_shape_diff(self):
         return self.shape_diff
 
@@ -206,4 +212,6 @@ class DataPreprocessor:
         print("Shifted:\tsignature = {}\texpression = {}".format(self.sign_shift, self.expr_shift))
         print("N samples:\t{}".format(self.n_samples))
         print("N genes:\t{}".format(self.n_genes))
+        for celltype, n in self.get_n_mg_per_ct().items():
+            print("\t{:20s}: N = {}".format(celltype, n))
         print("")

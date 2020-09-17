@@ -1,7 +1,7 @@
 """
 File:         settings.py
 Created:      2020/06/29
-Last Changed: 2020/09/04
+Last Changed: 2020/09/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -70,6 +70,7 @@ class Settings:
         self.expr_shift = None
         self.n_samples = None
         self.n_genes = None
+        self.n_ng_per_ct = None
         self.avg_residuals = None
         self.pred_info_per_celltype = None
         self.comparison_n_samples = None
@@ -168,6 +169,9 @@ class Settings:
     def set_n_genes(self, n_genes):
         self.n_genes = n_genes
 
+    def set_n_ng_per_ct(self, n_ng_per_ct):
+        self.n_ng_per_ct = n_ng_per_ct
+
     def set_avg_residuals(self, avg_residuals):
         self.avg_residuals = avg_residuals
 
@@ -238,6 +242,7 @@ class Settings:
                 "expr_shift": self.expr_shift,
                 "n_samples": self.n_samples,
                 "n_genes": self.n_genes,
+                "n_ng_per_ct": self.n_ng_per_ct,
                 "avg_residuals": self.avg_residuals,
                 "pred_info_per_celltype": self.pred_info_per_celltype,
                 "comparison_n_samples": self.comparison_n_samples,

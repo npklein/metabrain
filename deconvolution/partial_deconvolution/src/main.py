@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/06/29
-Last Changed: 2020/09/03
+Last Changed: 2020/09/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -88,6 +88,7 @@ class Main:
         self.settings.set_expr_shift(dp.get_expr_shift())
         self.settings.set_n_samples(dp.get_n_samples())
         self.settings.set_n_genes(dp.get_n_genes())
+        self.settings.set_n_ng_per_ct(dp.get_n_mg_per_ct())
 
         # Partial deconvolution.
         print("### Deconvoluting")

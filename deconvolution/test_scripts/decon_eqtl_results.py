@@ -51,7 +51,7 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 class main():
     def __init__(self):
-        self.decon_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/2020-07-16-decon-eQTL/cis/decon_out/deconvolutionResults.csv"
+        self.decon_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/2020-07-16-decon-eQTL/cis/cortex/decon_out/deconvolutionResults.csv"
         self.gene_info_path = "/groups/umcg-biogen/tmp03/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz"
         self.suppl_table_x = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/Supplementary_Table_X_-_LD_overlap.xlsx"
         self.outdir = str(Path(__file__).parent.parent)
@@ -95,10 +95,11 @@ class main():
         print(df)
 
         cell_types = list(df["variable"].unique())
+        interest = ["ieu-a-1239", "2019-MSGWAS", "ebi-a-GCST006572", "ebi-a-GCST006250", "ieu-a-22", "ebi-a-GCST006940"]
         data = []
         indices = []
-        for trait in list(df["Trait"].unique()):
-            counts = df.loc[df["Trait"].str.lower() == trait.lower(), "variable"].value_counts()
+        for gwas_id in list(df["GWASID"].unique()):
+            counts = df.loc[df["GWASID"].str.lower() == gwas_id.lower(), "variable"].value_counts()
 
             values = []
             for ct in cell_types:
@@ -106,9 +107,9 @@ class main():
                     values.append(counts[ct])
                 else:
                     values.append(0)
-            if len(counts.index) > 0:
+            if len(counts.index) > 0 and gwas_id in interest:
                 data.append(values)
-                indices.append(trait)
+                indices.append(gwas_id)
         output = pd.DataFrame(data, index=indices, columns=[x.split("_")[0] for x in cell_types])
         print(output)
 
