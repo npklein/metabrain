@@ -61,6 +61,7 @@ __description__ = "{} is a program developed and maintained by {}. " \
 class main():
     def __init__(self):
         self.expression_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/test_scripts/gtex_tissue/SamplesZTransformed.txt.gz"
+        # self.expression_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/cis_new_output/create_deconvolution_matrices/ct_profile_expr_table.txt.gz"
         self.profile_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/CellMap_brain_celltype_avgCPM.txt"
         self.palette = {
             "Neuron": "#0072B2",
@@ -131,7 +132,15 @@ class main():
             if x in overlap:
                 new_profile_index.append(x)
 
-        # Normalize per cell type.
+        # Heatmap of the profile.
+        # self.plot_profile(profile_df, "default", self.outdir)
+        # self.plot_profile(self.normalize(profile_df), "normalized", self.outdir)
+        # self.plot_profile(self.zscore_transform(profile_df), "zscore_transformed", self.outdir)
+        # self.plot_profile(self.log2_transform(profile_df), "log2_transformed", self.outdir)
+        # self.plot_profile(self.normalize(self.log2_transform(profile_df)), "log2_transformed_and_normalized", self.outdir)
+        #exit()
+
+        # # Normalize per cell type.
         # profile_df = self.normalize(profile_df)
 
         # # Normalize the cellmap profile.
@@ -166,6 +175,9 @@ class main():
         # self.plot_profile_stripplot(profile_df, self.palette, self.outdir, order=new_profile_index)
         # self.plot_profile_boxplot(profile_df, self.palette, self.outdir)
 
+        # Plot the profile.
+        self.plot_profile(profile_df, "decon", self.outdir)
+
         # Perform deconvolution per sample.
         print("Performing deconvolution.")
         decon_data = []
@@ -186,6 +198,7 @@ class main():
                                 index=pd.MultiIndex.from_tuples(expr_df.columns, names=['sample', 'broad_region', 'specific_region']),
                                 columns=profile_df.columns)
         print(decon_df)
+        print(decon_df.mean(axis=0))
 
         # # Make the weights sum up to 1.
         # decon_df = self.sum_to_one(decon_df)
@@ -200,11 +213,24 @@ class main():
                 self.plot_sample_stripplot(df, self.palette, self.outdir, sample)
                 count += 1
 
-        print("Plotting distributions.")
+        # Melt the data.
         decon_df.reset_index(drop=False, inplace=True)
         decon_melt = decon_df.melt(id_vars=["broad_region"], value_vars=["Astrocyte", "EndothelialCell", "Macrophage", "Neuron", "Oligodendrocyte"])
+
+        # Create boxplot per broad region.
+        for broad_region in decon_melt["broad_region"].unique():
+            df = decon_melt.loc[decon_melt["broad_region"] == broad_region, :].copy()
+            print(broad_region)
+            print(df.groupby(by="variable").mean())
+            print("")
+            if len(df.index) > 10:
+                self.plot_boxplot(df,
+                                  "{}_celltype_fraction".format(broad_region),
+                                  self.palette,
+                                  self.outdir)
+
+        print("Plotting distributions.")
         self.plot_distributions(decon_melt, "celltype_fraction", self.outdir)
-        exit()
         self.plot_boxplot(decon_melt, "celltype_fraction", self.palette, self.outdir)
 
         # Construct a Series for the residuals.
@@ -262,6 +288,19 @@ class main():
     def sum_to_one(X):
         print("Sum-to-one weights.")
         return X.divide(X.sum(axis=1), axis=0)
+
+    @staticmethod
+    def plot_profile(df, title, outdir):
+        sns.set(color_codes=True)
+        g = sns.clustermap(df.T, center=0, cmap="RdBu_r",
+                           yticklabels=True, xticklabels=False,
+                           dendrogram_ratio=(.1, .1),
+                           figsize=(12, 9))
+        plt.setp(g.ax_heatmap.set_yticklabels(g.ax_heatmap.get_ymajorticklabels(), fontsize=10))
+        g.fig.subplots_adjust(bottom=0.05, top=0.7)
+        plt.tight_layout()
+        g.savefig(os.path.join(outdir, "{}_profile.png".format(title)))
+        plt.close()
 
     @staticmethod
     def plot_profile_stripplot(data, palette, outdir, order=None):
