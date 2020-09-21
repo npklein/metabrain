@@ -3,7 +3,7 @@
 """
 File:         gradient_plot.py
 Created:      2020/04/15
-Last Changed: 2020/04/16
+Last Changed: 2020/06/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -33,6 +33,7 @@ import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from colour import Color
 from scipy import stats
 
 # Local application imports.
@@ -54,7 +55,7 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 class main():
     def __init__(self):
-       self.cov_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/output/create_cov_matrix/covariates_table.txt.gz"
+       self.cov_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/cis_output/create_cov_matrix/covariates_table.txt.gz"
        self.outdir = str(Path(__file__).parent.parent)
 
     def start(self):
@@ -65,26 +66,30 @@ class main():
                                       cov_df.shape))
 
         # # Define the axis.
-        # xaxis = "CellMapNMF_Astrocyte_C1"
-        # yaxis = "CellMapNNLS_Astrocyte"
-        # zaxis = ""
+        xaxis = "CellMapNNLS_Neuron"
+        yaxis = "Comp1"
+        zaxis = ""
 
         # Define the axis.
-        xaxis = "Comp6"
-        yaxis = "Comp5"
-        zaxis = "SEX"
+        # xaxis = "Comp6"
+        # yaxis = "Comp5"
+        # zaxis = "SEX"
 
         # Get the data.
         xdata = cov_df.loc[xaxis, :]
         ydata = cov_df.loc[yaxis, :]
-        zdata = cov_df.loc[zaxis, :]
-        zdata = zdata.map({0: "Male", 1: "Female"})
+        # zdata = cov_df.loc[zaxis, :]
 
         # Define colors.
-        colormap = {"Male": "#03165E", "Female": "#DC106C"}
+        # colormap = {"Male": "#03165E", "Female": "#DC106C"}
+        # colormap = self.create_color_map(0, 1, 2)
+
+        # Map the colors.
+        # zdata = zdata.map({0: "Male", 1: "Female"})
+        # zdata = zdata.round(2)
 
         # De-mean.
-        xdata = xdata - xdata.mean()
+        # xdata = xdata - xdata.mean()
         ydata = ydata - ydata.mean()
 
         # Plot.
@@ -98,15 +103,16 @@ class main():
 
         g = sns.scatterplot(x=xdata,
                             y=ydata,
-                            hue=zdata,
-                            palette=colormap,
+                            # hue=zdata,
+                            # palette=colormap,
+                            legend=False,
                             alpha=0.5)
 
         g.set_title("")
-        g.set_ylabel("{} [1.65%]".format(yaxis),
+        g.set_ylabel("{} [6.4%]".format(yaxis),
                      fontsize=10,
                      fontweight='bold')
-        g.set_xlabel("{} [1.55%]".format(xaxis),
+        g.set_xlabel("{}".format(xaxis),
                      fontsize=10,
                      fontweight='bold')
         plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
@@ -117,6 +123,19 @@ class main():
                                                                     yaxis,
                                                                     zaxis)))
         plt.close()
+
+    @staticmethod
+    def create_color_map(min, max, precision):
+        print(min, max, precision)
+        val_range = abs(max - min)
+        print(val_range)
+        length = val_range * (10 ** precision)
+        print(length)
+        palette = list(Color("#DAE8F5").range_to(Color("#0B559F"), length + 1))
+        colors = [x.rgb for x in palette]
+        values = [x / (10 ** precision) for x in list(range(min * (10 ** precision), length + 1))]
+        value_color_map = {x: y for x, y in zip(values, colors)}
+        return value_color_map
 
 
 if __name__ == '__main__':
