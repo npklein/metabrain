@@ -75,6 +75,9 @@ class SimpleeQTLEffect:
             hgnc_name = row["HGNCName"]
             eqtl_type = row["CisTrans"]
 
+            # if hgnc_name != "CLECL1":
+            #     continue
+
             print("\tWorking on: {}\t{}\t{} [{}/{} "
                   "{:.2f}%]".format(snp_name, probe_name, hgnc_name,
                                     i + 1,
