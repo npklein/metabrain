@@ -25,6 +25,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 from __future__ import print_function
 from pathlib import Path
 from colour import Color
+import itertools
 import argparse
 import os
 
@@ -33,8 +34,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib
 from statsmodels.stats import multitest
-
 matplotlib.use('Agg')
+import upsetplot as up
 import matplotlib.pyplot as plt
 from scipy import stats
 
@@ -153,7 +154,7 @@ class main():
                             "--extension",
                             nargs="+",
                             type=str,
-                            choices=["png", "pdf"],
+                            choices=["png", "pdf", "eps"],
                             default="png",
                             help="The figure file extension. "
                                  "Default: 'png'.")
@@ -181,7 +182,8 @@ class main():
         self.print_arguments()
         eqtl_df, geno_df, alleles_df, expr_df, cc_df, decon_df = self.load()
         decon_fdr_df = self.bh_correct(decon_df)
-        self.plot(eqtl_df, geno_df, alleles_df, expr_df, cc_df, decon_fdr_df)
+        self.plot_upsetplot(decon_fdr_df)
+        self.plot_eqtls(eqtl_df, geno_df, alleles_df, expr_df, cc_df, decon_fdr_df)
 
     def load(self):
         print("Loading input files.")
@@ -211,7 +213,7 @@ class main():
         return fdr_df
 
     @staticmethod
-    def load_file(path, sep="\t", header=0, index_col=0, nrows=None):
+    def load_file(path, sep="\t", header=0, index_col=0, nrows=100):
         df = pd.read_csv(path, sep=sep, header=header, index_col=index_col,
                          nrows=nrows)
         print("\tLoaded dataframe: {} "
@@ -219,7 +221,83 @@ class main():
                                       df.shape))
         return df
 
-    def plot(self, eqtl_df, geno_df, alleles_df, expr_df, cc_df, decon_df):
+    def plot_upsetplot(self, decon_df):
+        data = self.parse_df(decon_df, self.alpha)
+        counts = self.count(data)
+        counts = counts[counts > 0]
+        up.plot(counts, sort_by='cardinality', show_counts=True)
+        for extension in self.extensions:
+            plt.savefig(os.path.join(self.outdir, "eQTL_upsetplot.{}".format(extension)))
+        plt.close()
+
+    @staticmethod
+    def parse_df(df, alpha):
+        tmp_df = df.copy()
+        tmp_df.reset_index(drop=False, inplace=True)
+        tmp_df = tmp_df.melt(id_vars="index", var_name="CellType", value_name="FDR")
+        tmp_df = tmp_df.loc[tmp_df["FDR"] < alpha, :]
+
+        data = {}
+        for ct in list(tmp_df["CellType"].unique()):
+            data[ct] = set(tmp_df.loc[tmp_df["CellType"] == ct, "index"])
+        return data
+
+    @staticmethod
+    def count(input_data):
+        combinations = []
+        cols = list(input_data.keys())
+        for i in range(1, len(cols) + 1):
+            combinations.extend(list(itertools.combinations(cols, i)))
+
+        abbreviations = {"Neuron": "neuro", "Oligodendrocyte": "oligo",
+                         "EndothelialCell": "endo", "Microglia": "micro",
+                         "Macrophage": "macro", "Astrocyte": "astro",
+                         "CellMapNNLS": "NNLS", "CellMapPCA_PC1": "PCA",
+                         "CellMapNMF_C1": "NMF", "McKenzie": "McKe"}
+        abbr_cols = []
+        for col in cols:
+            if col in abbreviations.keys():
+                abbr_cols.append(abbreviations[col])
+            else:
+                abbr_cols.append(col)
+
+        indices = []
+        data = []
+        for combination in combinations:
+            index = []
+            for col in cols:
+                if col in combination:
+                    index.append(True)
+                else:
+                    index.append(False)
+
+            background = set()
+            for key in cols:
+                if key not in combination:
+                    work_set = input_data[key].copy()
+                    background.update(work_set)
+
+            overlap = None
+            for key in combination:
+                work_set = input_data[key].copy()
+                if overlap is None:
+                    overlap = work_set
+                else:
+                    overlap = overlap.intersection(work_set)
+
+            duplicate_set = overlap.intersection(background)
+            length = len(overlap) - len(duplicate_set)
+
+            indices.append(index)
+            data.append(length)
+
+        s = pd.Series(data,
+                      index=pd.MultiIndex.from_tuples(indices, names=abbr_cols))
+        s.name = "value"
+        return s
+
+
+    def plot_eqtls(self, eqtl_df, geno_df, alleles_df, expr_df, cc_df, decon_df):
         print("Plotting interaction eQTL plots.")
 
         print("Iterating over eQTLs.")
@@ -336,6 +414,8 @@ class main():
                                          allele_map, self.group_color_map,
                                          eqtl_interaction_outdir,
                                          self.extensions)
+            else:
+                print("\t\tNo significant interactions.")
 
     @staticmethod
     def plot_simple_eqtl(count, p_value, snp_name, probe_name, hgnc_name,
@@ -405,7 +485,7 @@ class main():
                                                            hgnc_name,
                                                            extension)
             print("\t\tSaving plot: {}".format(filename))
-            fig.savefig(os.path.join(outdir, filename))
+            fig.savefig(os.path.join(outdir, filename), dpi=300)
         plt.close()
 
     @staticmethod
@@ -499,7 +579,7 @@ class main():
                 cov_name,
                 extension)
             print("\t\tSaving plot: {}".format(filename))
-            fig.savefig(os.path.join(outdir, filename))
+            fig.savefig(os.path.join(outdir, filename), dpi=300)
         plt.close()
 
     def print_arguments(self):
@@ -510,7 +590,7 @@ class main():
         print("  > Expression path: {}".format(self.expr_path))
         print("  > Cell count % path: {}".format(self.cc_path))
         print("  > Deconvolution path: {}".format(self.decon_path))
-        print("  > Alphah: {}".format(self.alpha))
+        print("  > Alpha: {}".format(self.alpha))
         print("  > Extension: {}".format(self.extensions))
         print("  > Output directory: {}".format(self.outdir))
         print("")
