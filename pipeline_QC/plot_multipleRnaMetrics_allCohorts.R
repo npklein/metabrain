@@ -263,11 +263,6 @@ CombinedMetrics$library.y <- NULL
 
 CombinedMetrics <- merge(CombinedMetrics, STAR_qc_all, by=c('Sample','cohort'), all = TRUE)
 
-
-STAR_qc_all[STAR_qc_all$cohort=="MayoCBE",][grepl('1105_CER',  STAR_qc_all[STAR_qc_all$cohort=="MayoCBE",]$Sample),]
-
-
-
 if('Braineac' %in% CombinedMetrics$cohort){
     CombinedMetrics[CombinedMetrics$cohort=="Braineac",]$Sample <- str_match(CombinedMetrics[CombinedMetrics$cohort=="Braineac",]$Sample, ".*(A653.*)")[, 2]
 }
@@ -369,20 +364,20 @@ CombinedMetricsWithFastQC <- CombinedMetricsWithFastQC[!duplicated(CombinedMetri
 
 filtered_samples_file <- paste0(opt$output,"/",Sys.Date(),"-samplesToFilter-",opt$freeze,".txt")
 write.table(CombinedMetricsWithFastQC[CombinedMetricsWithFastQC$FILTER=='YES',]$Sample, filtered_samples_file, quote=F, sep="\t", row.names=F)
-print(paste0("Written samples to filer to ",filtered_samples_file))
+print(paste0("Written samples to filter to ",filtered_samples_file))
 
 
 nSamples <- CombinedMetricsWithFastQC %>% group_by(cohort) %>% dplyr::summarize(no = sum(FILTER=="NO"),yes = sum(FILTER=="YES"))
 nSamples$total <- nSamples$no + nSamples$yes
 
-CombinedMetricsWithFastQC$SampleFull <- gsub('individualID.','', CombinedMetricsWithFastQC$SampleFull)
-CombinedMetricsWithFastQC$SampleFull <- gsub('specimenID.','', CombinedMetricsWithFastQC$SampleFull)
+#CombinedMetricsWithFastQC$SampleFull <- gsub('individualID.','', CombinedMetricsWithFastQC$SampleFull)
+#CombinedMetricsWithFastQC$SampleFull <- gsub('specimenID.','', CombinedMetricsWithFastQC$SampleFull)
 
 CombinedMetricsWithFastQC$pcaFiltered <- 'NO'
 
 if(!is.null(opt$pcaOutliers)){
     # Add a separate column for those that got filtered with PCA
-    CombinedMetricsWithFastQC[CombinedMetricsWithFastQC$SampleFull %in% pca_filtered_samples$V1,]$pcaFiltered <- 'YES'
+    CombinedMetricsWithFastQC[CombinedMetricsWithFastQC$Sample %in% pca_filtered_samples$V1,]$pcaFiltered <- 'YES'
 }
 #####
 
@@ -434,7 +429,8 @@ QC_plotter <- function(CombinedMetricsWithFastQC, column, plot_pca_outliers = F,
   }
   p <- p + theme_bw(base_size=30)+
     theme(axis.text.x = element_blank(),
-          axis.ticks = element_blank())+  
+          axis.ticks = element_blank(),
+          legend.title = element_blank())+  
     xlab('Samples')+ 
     guides(colour = guide_legend(override.aes = list(size=10)),
            shape = guide_legend(override.aes = list(size=10)))
@@ -458,6 +454,9 @@ QC_plotter <- function(CombinedMetricsWithFastQC, column, plot_pca_outliers = F,
   if(column == "PCT_PF_READS_ALIGNED"){
     p <- p + geom_hline(yintercept=60, colour="red",  linetype="dashed", size=2)
   }
+  if(column == "uniquely_mapped_percent"){
+    p <- p + geom_hline(yintercept=60, colour="red",  linetype="dashed", size=2)
+  }
   return(p)
 }
 #####
@@ -472,7 +471,7 @@ columns_to_plot <- colnames(select_if(CombinedMetricsWithFastQC, is.numeric))
 filter_columns <-  c("PCT_CODING_BASES","PCT_PF_READS_ALIGNED")
 columns_to_plot <- columns_to_plot[!columns_to_plot %in% filter_columns]
 columns_to_plot <- c(filter_columns, columns_to_plot)
-
+CombinedMetricsWithFastQC <- CombinedMetricsWithFastQC[!is.na(CombinedMetricsWithFastQC$Sample),]
 if(opt$plot_all == "TRUE"){
     print('start plotting')
  
@@ -483,7 +482,7 @@ if(opt$plot_all == "TRUE"){
       }
       print(column)
       p <- QC_plotter(CombinedMetricsWithFastQC, column, FALSE)
-      ggsave(paste0(opt$output,'/figures/QC_figures_separate/',column,'.png'), width=12, height = 8, plot=p)
+      ggsave(paste0(opt$output,'/figures/QC_figures_separate/',column,'.pdf'), width=12, height = 9, plot=p)
       print(p)
     }
     dev.off()
@@ -492,6 +491,7 @@ if(opt$plot_all == "TRUE"){
 colourCount = length(unique(CombinedMetricsWithFastQC$cohort))
 getPalette = colorRampPalette(brewer.pal(8, "Dark2"))
 dark2ExtendedPallete <- getPalette(colourCount)
+
 ggplot(CombinedMetricsWithFastQC[CombinedMetricsWithFastQC$FILTER=="NO",], aes(cohort,fill=cohort,colour='yes'))+
   geom_bar()+ 
   theme_bw(base_size=30)+
@@ -502,7 +502,7 @@ ggplot(CombinedMetricsWithFastQC[CombinedMetricsWithFastQC$FILTER=="NO",], aes(c
   guides(colour=F)+ 
   coord_flip()+
   guides(fill=guide_legend(ncol=2)) + theme(legend.position = "none")
-ggsave(paste0(opt$output,'/figures/n_RNAseq_samples.png'),width=8, height=12)
+ggsave(paste0(opt$output,'/figures/n_RNAseq_samples.pdf'),width=8, height=12)
 #####
 
 ##### plot lib select #####
@@ -534,7 +534,7 @@ plot_with_pca_outliers <- function(){
         }
         print(column)
         p <- QC_plotter(CombinedMetricsWithFastQC, column, TRUE)
-        ggsave(paste0(opt$output,'/figures/QC_figures_separate/',column,'.highlightPcaFilteredSamples.png'), width=12, height = 8, plot=p)
+        ggsave(paste0(opt$output,'/figures/QC_figures_separate/',column,'.highlightPcaFilteredSamples.pdf'), width=12, height = 8, plot=p)
         print(p)
       }
       dev.off()

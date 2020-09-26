@@ -65,8 +65,7 @@ pc_scores.to_csv(os.path.join(args.outdir, "pc-scores.txt"),sep='\t')
 #    alphas = (n_samples / (n_samples - 1.0)) * (1.0 - eigenvector_sums.values / pc_var.values)
 #    return(alphas)
 
-eigenvalues = pd.DataFrame(eigenvalues, columns=['eigenvalues']).to_csv('eigenvalues.txt', index=False)
-
+pd.DataFrame(eigenvalues, columns=['eigenvalues']).to_csv('eigenvalues.txt', index=False)
 #cronbach = CronbachAlpha(pc_scores, eigenvectors)
 #cronbach = pd.DataFrame(cronbach, columns=['cronbach']).to_csv('cronbach.txt', index=False)
 
