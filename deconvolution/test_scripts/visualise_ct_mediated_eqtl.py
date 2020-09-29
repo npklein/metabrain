@@ -3,7 +3,7 @@
 """
 File:         visualise_ct_mediated_eqtl.py
 Created:      2020/09/23
-Last Changed:
+Last Changed: 2020/09/29
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -91,6 +91,10 @@ class main():
 
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
+
+        # Set the right pdf font for exporting.
+        matplotlib.rcParams['pdf.fonttype'] = 42
+        matplotlib.rcParams['ps.fonttype'] = 42
 
         # Create color map.
         self.group_color_map, self.value_color_map = self.create_color_map(self.colormap)
@@ -199,21 +203,18 @@ class main():
     @staticmethod
     def bh_correct(pvalue_df):
         df = pvalue_df.copy()
-        df.index = ["{}_{}".format(i, x) for i, x in enumerate(df.index)]
-        order = list(df.index)
-        df.reset_index(drop=False, inplace=True)
-        df = df.melt(id_vars="index", value_vars=[x for x in df.columns if x.endswith("pvalue")])
-        df["FDR"] = multitest.multipletests(df['value'], method='fdr_bh')[1]
-        fdr_df = (df.pivot_table(index=['index'], columns='variable', values='FDR')).reset_index()
-        fdr_df.columns = [x.replace("_pvalue", "") for x in fdr_df.columns]
-        fdr_df.set_index("index", inplace=True)
-        fdr_df = fdr_df.loc[order, :]
-        fdr_df.index = ["_".join(x.split("_")[1:]) for x in fdr_df.index]
+        data = []
+        indices = []
+        for col in df.columns:
+            if col.endswith("_pvalue"):
+                data.append(multitest.multipletests(df.loc[:, col], method='fdr_bh')[1])
+                indices.append(col.replace("_pvalue", ""))
+        fdr_df = pd.DataFrame(data, index=indices, columns=df.index)
 
-        return fdr_df
+        return fdr_df.T
 
     @staticmethod
-    def load_file(path, sep="\t", header=0, index_col=0, nrows=100):
+    def load_file(path, sep="\t", header=0, index_col=0, nrows=None):
         df = pd.read_csv(path, sep=sep, header=header, index_col=index_col,
                          nrows=nrows)
         print("\tLoaded dataframe: {} "
