@@ -3,7 +3,7 @@
 """
 File:         filter_interaction_eqtls.py
 Created:      2020/09/25
-Last Changed:
+Last Changed: 2020/09/29
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -117,7 +117,8 @@ class main():
             gene_dict = dict(
                 zip(gene_info_df["ArrayAddress"], gene_info_df["Symbol"]))
 
-        filtered_decon_df, pre_shape, post_shape = self.filter(decon_df,
+        decon_fdr_df = self.bh_correct(decon_df)
+        filtered_decon_df, pre_shape, post_shape = self.filter(decon_fdr_df,
                                                                gene_dict,
                                                                self.alpha)
 
@@ -131,20 +132,31 @@ class main():
                        self.outfile)
 
     @staticmethod
+    def bh_correct(pvalue_df):
+        df = pvalue_df.copy()
+        data = []
+        indices = []
+        for col in df.columns:
+            if col.endswith("_pvalue"):
+                data.append(multitest.multipletests(df.loc[:, col], method='fdr_bh')[1])
+                indices.append(col.replace("_pvalue", ""))
+        fdr_df = pd.DataFrame(data, index=indices, columns=df.index)
+
+        return fdr_df.T
+
+
+    @staticmethod
     def filter(df, trans_dict, alpha):
-        df = df.loc[:, [x for x in df.columns if x.endswith("_pvalue")]]
-        df.columns = [x.replace("_pvalue", "") for x in df.columns]
         df.reset_index(drop=False, inplace=True)
-        df = df.melt(id_vars="index", var_name="CellType", value_name="PValue")
+        df = df.melt(id_vars="index", var_name="CellType", value_name="FDR")
         df[['ProbeName', 'SNPName']] = df["index"].str.split("_", n=1, expand=True)
-        df["FDR"] = multitest.multipletests(df['PValue'], method='fdr_bh')[1]
 
         if trans_dict is None:
             df["HGNCSymbol"] = None
         else:
             df["HGNCSymbol"] = df["ProbeName"].map(trans_dict)
 
-        df = df[['ProbeName', 'HGNCSymbol', 'SNPName', 'CellType', 'PValue', 'FDR']]
+        df = df[['ProbeName', 'HGNCSymbol', 'SNPName', 'CellType', 'FDR']]
 
         pre_shape = df.shape
 

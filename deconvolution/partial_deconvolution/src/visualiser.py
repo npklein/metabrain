@@ -61,6 +61,10 @@ class Visualiser:
             "Pericytes": "#808080"
         }
 
+        # Set the right pdf font for exporting.
+        matplotlib.rcParams['pdf.fonttype'] = 42
+        matplotlib.rcParams['ps.fonttype'] = 42
+
     def set_order(self):
         linkage = sch.linkage(self.signature)
         deno = sch.dendrogram(linkage, orientation='right')
