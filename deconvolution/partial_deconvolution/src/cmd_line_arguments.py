@@ -182,7 +182,7 @@ class CommandLineArguments:
         parser.add_argument("-e",
                             "--extension",
                             type=str,
-                            choices=["png", "pdf"],
+                            choices=["png", "pdf", "eps"],
                             default="png",
                             help="The figure file extension. "
                                  "Default: 'png'.")
