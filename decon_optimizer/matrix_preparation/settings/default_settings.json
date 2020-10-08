@@ -1,0 +1,44 @@
+{
+  "combine_gte_files": {
+    "input_directory": "",
+    "filename_regex": ""
+  },
+  "combine_eqtlprobes": {
+    "input_directory": "",
+    "iteration_dirname": "",
+    "in_filename": "",
+    "iterations": 1,
+    "snp_to_gwasid_filename": "",
+    "gwasid_to_trait_filename": "",
+    "trait": ""
+  },
+  "create_cohort_matrix": {
+    "info_datafile": "",
+    "sample_id": "",
+    "cohort_id": ""
+  },
+  "create_matrices": {
+    "genotype_datafile": "",
+    "expression_datafile": "",
+    "signature_datafile": "",
+    "gene_translate": {
+      "datafile": "",
+      "ENS_column": "",
+      "HGNC_column": ""
+    }
+  },
+  "correct_cohort_effects": {
+
+  },
+  "perform_deconvolution": {
+
+  },
+  "create_cov_matrix": {
+    "covariate_datafile": "",
+    "technical_covariates": [],
+    "phenotype_datafile": "",
+    "eigenvectors_datafile": "",
+    "num_eigenvectors": 50,
+    "eigenvectors_before_cov_corr_datafile": ""
+  }
+}
