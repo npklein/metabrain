@@ -122,17 +122,18 @@ class Main:
                            deconvolution=pf.get_deconvolution(),
                            ground_truth=dl.get_ground_truth(),
                            comparison=dc.get_comparison())
-            # v.plot_profile_clustermap()
-            # v.plot_profile_stripplot()
+            v.plot_profile_clustermap()
+            v.plot_profile_stripplot()
             v.plot_profile_boxplot()
-            # v.plot_deconvolution_clustermap()
-            # v.plot_deconvolution_per_sample()
-            # #v.plot_deconvolution_distribution()
-            # v.plot_deconvolution_boxplot()
-            # #v.plot_ground_truth_distribution()
-            # v.plot_ground_truth_boxplot()
-            # v.plot_prediction_comparison()
+            v.plot_deconvolution_clustermap()
+            v.plot_deconvolution_per_sample()
+            #v.plot_deconvolution_distribution()
+            v.plot_deconvolution_boxplot()
+            #v.plot_ground_truth_distribution()
+            v.plot_ground_truth_boxplot()
+            v.plot_prediction_comparison()
 
-            for plot_id in self.plot_ids:
-                print("Plotting {}".format(plot_id))
-                v.plot_violin_comparison(plot_id, df.get_translate_dict(value=plot_id))
+            if self.plot_ids is not None:
+                for plot_id in self.plot_ids:
+                    print("Plotting {}".format(plot_id))
+                    v.plot_violin_comparison(plot_id, df.get_translate_dict(value=plot_id))
