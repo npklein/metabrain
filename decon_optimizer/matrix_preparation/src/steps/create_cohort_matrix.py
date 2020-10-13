@@ -1,7 +1,7 @@
 """
 File:         create_cohort_matrix.py
 Created:      2020/10/08
-Last Changed:
+Last Changed: 2020/10/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -30,59 +30,72 @@ from matrix_preparation.src.utilities import prepare_output_dir, check_file_exis
 
 
 class CreateCohortMatrix:
-    def __init__(self, settings, sample_order, force, outdir):
+    def __init__(self, settings, sample_dict, sample_order, force, outdir):
         self.inpath = settings["info_datafile"]
         self.sample_id = settings["sample_id"]
         self.cohort_id = settings["cohort_id"]
+        self.sample_dict = sample_dict
         self.sample_order = sample_order
         self.force = force
 
         # Prepare an output directory.
-        self.outdir = os.path.join(outdir, 'create_cohort_matrix')
-        prepare_output_dir(self.outdir)
-        self.outpath = os.path.join(self.outdir, "cohort_matrix.txt.gz")
+        outdir = os.path.join(outdir, 'create_cohort_matrix')
+        prepare_output_dir(outdir)
+        self.outpath = os.path.join(outdir, "cohort_matrix.txt.gz")
 
         # Declare variables.
         self.sample_info_df = None
         self.cohort_df = None
 
     def start(self):
-        print("Starting creating sample matrix.")
+        print("Starting creating cohort matrix.")
         self.print_arguments()
+
         # Check if output file exist.
-        if check_file_exists(self.outpath) and not self.force:
-            print("Skipping step, loading result.")
-            self.cohort_df = load_dataframe(inpath=self.outpath,
-                                            header=None,
-                                            index_col=None)
-        else:
+        if not check_file_exists(self.outpath) or self.force:
             # Load the sample info.
-            self.sample_info_df = load_dataframe(inpath=self.outpath,
-                                                 header=None,
+            print("Loading sample information matrix.")
+            self.sample_info_df = load_dataframe(inpath=self.inpath,
+                                                 header=0,
                                                  index_col=None,
                                                  low_memory=False)
 
             # Construct sample-cohort dict.
+            print("Creating sample to cohort dict.")
             sample_cohort_dict = construct_dict_from_df(self.sample_info_df,
                                                         self.sample_id,
                                                         self.cohort_id)
 
-            # Load each GTE file.
-            self.cohort_df = self.create_cohort_df(self.sample_order,
+            # Create cohort dataframe.
+            print("Constructing cohort matrix.")
+            self.cohort_df = self.create_cohort_df(self.sample_dict,
+                                                   self.sample_order,
                                                    sample_cohort_dict)
             self.save()
+        else:
+            print("Skipping step.")
 
     @staticmethod
-    def create_cohort_df(sample_order, sample_cohort_dict):
+    def create_cohort_df(sample_dict, sample_order, sample_cohort_dict):
         cohort_df = pd.DataFrame(0,
-                                 index=sample_cohort_dict.values(),
+                                 index=set(sample_cohort_dict.values()),
                                  columns=sample_order)
 
         for sample in sample_order:
-            cohort_df.loc[sample_cohort_dict[sample], sample] = 1
+            cohort = None
+            if sample in sample_cohort_dict:
+                cohort = sample_cohort_dict[sample]
+            else:
+                if sample_dict[sample] in sample_cohort_dict:
+                    cohort = sample_cohort_dict[sample_dict[sample]]
+
+            if cohort is not None:
+                cohort_df.loc[cohort, sample] = 1
+            else:
+                print("Sample {} has no cohort.".format(sample))
 
         # Validate.
-        if not cohort_df.sum(axis=1).all():
+        if not cohort_df.sum(axis=0).all():
             print("\tSome samples do not have a cohort.")
             exit()
 
@@ -95,6 +108,7 @@ class CreateCohortMatrix:
     def clear_variables(self):
         self.inpath = None
         self.sample_dict = None
+        self.sample_dict = None
         self.sample_order = None
         self.force = None
 
@@ -103,6 +117,9 @@ class CreateCohortMatrix:
 
     def get_sample_info_df(self):
         return self.sample_info_df
+
+    def get_cohort_file(self):
+        return self.outpath
 
     def get_cohort_df(self):
         return self.cohort_df

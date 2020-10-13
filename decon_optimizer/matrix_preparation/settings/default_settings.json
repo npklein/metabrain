@@ -7,10 +7,7 @@
     "input_directory": "",
     "iteration_dirname": "",
     "in_filename": "",
-    "iterations": 1,
-    "snp_to_gwasid_filename": "",
-    "gwasid_to_trait_filename": "",
-    "trait": ""
+    "iterations": 1
   },
   "create_cohort_matrix": {
     "info_datafile": "",
@@ -23,9 +20,10 @@
     "signature_datafile": "",
     "gene_translate": {
       "datafile": "",
-      "ENS_column": "",
+      "ENSG_column": "",
       "HGNC_column": ""
-    }
+    },
+    "deconvolution_expr_datafile": ""
   },
   "correct_cohort_effects": {
 
@@ -36,9 +34,7 @@
   "create_cov_matrix": {
     "covariate_datafile": "",
     "technical_covariates": [],
-    "phenotype_datafile": "",
     "eigenvectors_datafile": "",
-    "num_eigenvectors": 50,
-    "eigenvectors_before_cov_corr_datafile": ""
+    "num_eigenvectors": 50
   }
 }
