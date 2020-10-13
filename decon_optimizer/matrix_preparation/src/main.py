@@ -30,6 +30,7 @@ import os
 # Local application imports.
 from local_settings import LocalSettings
 from utilities import prepare_output_dir
+from logger import Logger
 from .steps.combine_gte_files import CombineGTEFiles
 from .steps.combine_eqtlprobes import CombineEQTLProbes
 from .steps.create_cohort_matrix import CreateCohortMatrix
@@ -41,7 +42,12 @@ from .steps.create_cov_matrix import CreateCovMatrix
 
 
 class Main:
-    def __init__(self, name, settings_file, force_steps):
+    def __init__(self, name, settings_file, force_steps, clear_log):
+        self.name = name
+        self.settings_file = settings_file
+        self.force_steps = force_steps
+        self.clear_log = clear_log
+
         # Define the current directory.
         current_dir = str(Path(__file__).parent.parent)
 
@@ -54,6 +60,10 @@ class Main:
         # Prepare an output directory.
         self.outdir = os.path.join(current_dir, name)
         prepare_output_dir(self.outdir)
+
+        # Initialize logger.
+        logger = Logger(outdir=self.outdir, clear_log=clear_log)
+        self.log = logger.get_logger()
 
     @staticmethod
     def create_force_dict(force_steps):
@@ -83,40 +93,53 @@ class Main:
         return force_dict
 
     def start(self):
-        print("Starting program.")
-        print("\n### STEP1 ###\n")
+        self.log.info("Starting program.")
+        self.print_arguments()
+
+        self.log.info("### STEP1 ###")
+        self.log.info("")
         # Step 1. Combine GTE files.
         cgtef = CombineGTEFiles(
             settings=self.settings.get_setting('combine_gte_files'),
+            log=self.log,
             force=self.force_dict['combine_gte_files'],
             outdir=self.outdir)
         cgtef.start()
         cgtef.clear_variables()
+        self.log.info("")
 
         # Step2. Combine eQTL probes files.
-        print("\n### STEP2 ###\n")
+        self.log.info("### STEP2 ###")
+        self.log.info("")
         cepf = CombineEQTLProbes(
             settings=self.settings.get_setting('combine_eqtlprobes'),
+            log=self.log,
             force=self.force_dict['combine_eqtlprobes'],
             outdir=self.outdir)
         cepf.start()
         cepf.clear_variables()
+        self.log.info("")
 
         # Step3. Create the cohort matrix.
-        print("\n### STEP3 ###\n")
+        self.log.info("### STEP3 ###")
+        self.log.info("")
         ccm = CreateCohortMatrix(
             settings=self.settings.get_setting('create_cohort_matrix'),
+            log=self.log,
             sample_dict=cgtef.get_sample_dict(reverse=True),
             sample_order=cgtef.get_sample_order(),
             force=self.force_dict['create_cohort_matrix'],
             outdir=self.outdir)
         ccm.start()
         ccm.clear_variables()
+        self.log.info("")
 
         # Step4. Create the ordered matrices.
-        print("\n### STEP4 ###\n")
+        self.log.info("### STEP4 ###")
+        self.log.info("")
         cm = CreateMatrices(
             settings=self.settings.get_setting('create_matrices'),
+            log=self.log,
             sample_dict=cgtef.get_sample_dict(),
             sample_order=cgtef.get_sample_order(),
             eqtl_file=cepf.get_eqtl_file(),
@@ -125,11 +148,14 @@ class Main:
             outdir=self.outdir)
         cm.start()
         cm.clear_variables()
+        self.log.info("")
 
         # Step5. Correct the gene expression for cohort effects.
-        print("\n### STEP5 ###\n")
+        self.log.info("### STEP5 ###")
+        self.log.info("")
         cce = CorrectCohortEffects(
             settings=self.settings.get_setting('correct_cohort_effects'),
+            log=self.log,
             cohort_file=ccm.get_cohort_file(),
             cohort_df=ccm.get_cohort_df(),
             expr_file=cm.get_expr_file(),
@@ -140,11 +166,14 @@ class Main:
             outdir=self.outdir)
         cce.start()
         cce.clear_variables()
+        self.log.info("")
 
         # Step6. Perform NNLS deconvolution.
-        print("\n### STEP6 ###\n")
+        self.log.info("### STEP6 ###")
+        self.log.info("")
         pd = PerformDeconvolution(
             settings=self.settings.get_setting('perform_deconvolution'),
+            log=self.log,
             sign_file=cm.get_sign_file(),
             sign_df=cm.get_sign_df(),
             sign_expr_file=cce.get_sign_expr_cc_file(),
@@ -153,22 +182,28 @@ class Main:
             outdir=self.outdir)
         pd.start()
         pd.clear_variables()
+        self.log.info("")
 
         # Step7. Filter technical covariates.
-        print("\n### STEP7 ###\n")
+        self.log.info("### STEP7 ###")
+        self.log.info("")
         ftc = FilterTechnicalCovariates(
             settings=self.settings.get_setting('filter_technical_covariates'),
+            log=self.log,
             force=self.force_dict['filter_technical_covariates'],
             sample_dict=cgtef.get_sample_dict(),
             sample_order=cgtef.get_sample_order(),
             outdir=self.outdir)
         ftc.start()
         ftc.clear_variables()
+        self.log.info("")
 
         # Step8. Create the covariance matrix.
-        print("\n### STEP8 ###\n")
+        self.log.info("### STEP8 ###")
+        self.log.info("")
         ccm = CreateCovMatrix(
             settings=self.settings.get_setting('create_cov_matrix'),
+            log=self.log,
             tech_covs_file=ftc.get_tech_covs_file(),
             tech_covs_df=ftc.get_tech_covs_df(),
             cohort_file=ccm.get_cohort_file(),
@@ -181,5 +216,17 @@ class Main:
             outdir=self.outdir)
         ccm.start()
         ccm.clear_variables()
+        self.log.info("")
 
+        # End.
+        self.log.info("")
+        self.log.info("Program completed.")
 
+    def print_arguments(self):
+        self.log.info("Arguments:")
+        self.log.info("  > Name: {}".format(self.name))
+        self.log.info("  > Settings file: {}".format(self.settings_file))
+        self.log.info("  > Force steps: {}".format(self.force_steps))
+        self.log.info("  > Clear log: {}".format(self.clear_log))
+        self.log.info("  > Output directory: {}".format(self.outdir))
+        self.log.info("")

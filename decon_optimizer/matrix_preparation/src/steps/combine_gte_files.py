@@ -31,9 +31,10 @@ from utilities import prepare_output_dir, check_file_exists, load_dataframe, sav
 
 
 class CombineGTEFiles:
-    def __init__(self, settings, force, outdir):
+    def __init__(self, settings, log, force, outdir):
         self.inpath = os.path.join(settings["input_directory"],
                                    settings["filename_regex"])
+        self.log = log
         self.force = force
 
         # Prepare an output directory.
@@ -48,17 +49,17 @@ class CombineGTEFiles:
         self.sample_order = None
 
     def start(self):
-        print("Starting combining GTE files.")
+        self.log.info("Starting combining GTE files.")
         self.print_arguments()
 
         # Check if output file exist.
         if check_file_exists(self.outpath) and not self.force:
-            print("Skipping step, loading result.")
+            self.log.info("Skipping step, loading result.")
             self.gte = load_dataframe(inpath=self.outpath, header=None,
-                                      index_col=None)
+                                      index_col=None, logger=self.log)
         else:
             # Load each GTE file.
-            print("Loading GTE files.")
+            self.log.info("Loading GTE files.")
             self.gte = self.combine_files()
             self.save()
 
@@ -70,7 +71,8 @@ class CombineGTEFiles:
     def combine_files(self):
         combined = None
         for i, infile in enumerate(glob.glob(self.inpath)):
-            df = load_dataframe(inpath=infile, header=None, index_col=None)
+            df = load_dataframe(inpath=infile, header=None, index_col=None,
+                                logger=self.log)
             if combined is None:
                 combined = df
             else:
@@ -83,7 +85,7 @@ class CombineGTEFiles:
 
     def save(self):
         save_dataframe(df=self.gte, outpath=self.outpath,
-                       index=False, header=False)
+                       index=False, header=False, logger=self.log)
 
     def clear_variables(self):
         self.inpath = None
@@ -125,8 +127,8 @@ class CombineGTEFiles:
         return self.sample_order
 
     def print_arguments(self):
-        print("Arguments:")
-        print("  > Input files: {}".format(self.inpath))
-        print("  > Output path: {}".format(self.outpath))
-        print("  > Force: {}".format(self.force))
-        print("")
+        self.log.info("Arguments:")
+        self.log.info("  > Input files: {}".format(self.inpath))
+        self.log.info("  > Output path: {}".format(self.outpath))
+        self.log.info("  > Force: {}".format(self.force))
+        self.log.info("")

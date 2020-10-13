@@ -32,11 +32,12 @@ from utilities import prepare_output_dir, check_file_exists, load_dataframe, sav
 
 
 class CreateCovMatrix:
-    def __init__(self, settings, tech_covs_file, tech_covs_df, cohort_file,
+    def __init__(self, settings, log, tech_covs_file, tech_covs_df, cohort_file,
                  cohort_df, decon_file, decon_df, sample_dict, sample_order,
                  force, outdir):
         self.eig_file = settings["eigenvectors_datafile"]
         self.n_eigen = settings["num_eigenvectors"]
+        self.log = log
         self.tech_covs_file = tech_covs_file
         self.tech_covs_df = tech_covs_df
         self.cohort_file = cohort_file
@@ -57,45 +58,51 @@ class CreateCovMatrix:
         self.sex_dict = {"M": 0, "F": 1, np.nan: -1}
 
     def start(self):
-        print("Starting creating covariate file.")
+        self.log.info("Starting creating covariate file.")
         self.print_arguments()
 
         # Check if output file exist.
         if not check_file_exists(self.outpath) or self.force:
             self.cov_df = self.combine_files()
             self.save()
+        else:
+            self.log.info("Skipping step.")
 
     def combine_files(self):
         # loading technical covariates matrix.
-        print("Loading technical covariates matrix.")
+        self.log.info("Loading technical covariates matrix.")
         if self.tech_covs_df is None:
             self.tech_covs_df = load_dataframe(self.tech_covs_file,
                                                header=0,
-                                               index_col=0)
+                                               index_col=0,
+                                               logger=self.log)
 
         # loading cohort matrix.
-        print("Loading cohort matrix.")
+        self.log.info("Loading cohort matrix.")
         if self.cohort_df is None:
             self.cohort_df = load_dataframe(self.cohort_file,
                                             header=0,
-                                            index_col=0)
+                                            index_col=0,
+                                            logger=self.log)
 
         # read the eigenvectors file.
-        print("Loading eigenvectors matrix.")
-        eigen_df = load_dataframe(self.eig_file, header=0, index_col=0)
+        self.log.info("Loading eigenvectors matrix.")
+        eigen_df = load_dataframe(self.eig_file, header=0, index_col=0,
+                                  logger=self.log)
         eigen_df = eigen_df.loc[:, ["Comp{}".format(x) for x in range(1, self.n_eigen + 1)]]
         eigen_df.index = [self.sample_dict[x] if x in self.sample_dict else x for x in eigen_df.index]
         eigen_df = eigen_df.loc[self.sample_order, :]
 
         # loading deconvolution matrix.
-        print("Loading deconvolution matrix.")
+        self.log.info("Loading deconvolution matrix.")
         if self.decon_df is None:
             self.decon_df = load_dataframe(self.decon_file,
                                            header=0,
-                                           index_col=0)
+                                           index_col=0,
+                                           logger=self.log)
 
         # merge.
-        print("Merging matrices.")
+        self.log.info("Merging matrices.")
         comb_cov = reduce(lambda left, right: pd.merge(left, right, left_index=True, right_index=True),
                           [self.tech_covs_df, self.cohort_df.T, eigen_df, self.decon_df])
         comb_cov = comb_cov.T
@@ -112,7 +119,7 @@ class CreateCovMatrix:
 
     def save(self):
         save_dataframe(df=self.cov_df, outpath=self.outpath,
-                       index=True, header=True)
+                       index=True, header=True, logger=self.log)
 
     def clear_variables(self):
         self.tech_covs_file = None
@@ -128,21 +135,21 @@ class CreateCovMatrix:
         self.force = None
 
     def print_arguments(self):
-        print("Arguments:")
+        self.log.info("Arguments:")
         if self.tech_covs_df is not None:
-            print("  > Technival covariates input shape: {}".format(self.tech_covs_df.shape))
+            self.log.info("  > Technival covariates input shape: {}".format(self.tech_covs_df.shape))
         else:
-            print("  > Technical covariates input file: {}".format(self.tech_covs_file))
+            self.log.info("  > Technical covariates input file: {}".format(self.tech_covs_file))
         if self.cohort_df is not None:
-            print("  > Cohort input shape: {}".format(self.cohort_df.shape))
+            self.log.info("  > Cohort input shape: {}".format(self.cohort_df.shape))
         else:
-            print("  > Cohort input file: {}".format(self.cohort_file))
-        print("  > Eigenvectors input file: {}".format(self.eig_file))
-        print("  > N. Eigenvectors: {}".format(self.n_eigen))
+            self.log.info("  > Cohort input file: {}".format(self.cohort_file))
+        self.log.info("  > Eigenvectors input file: {}".format(self.eig_file))
+        self.log.info("  > N. Eigenvectors: {}".format(self.n_eigen))
         if self.decon_df is not None:
-            print("  > Deconvolution input shape: {}".format(self.decon_df.shape))
+            self.log.info("  > Deconvolution input shape: {}".format(self.decon_df.shape))
         else:
-            print("  > Deconvolution input file: {}".format(self.decon_file))
-        print("  > Output path: {}".format(self.outpath))
-        print("  > Force: {}".format(self.force))
-        print("")
+            self.log.info("  > Deconvolution input file: {}".format(self.decon_file))
+        self.log.info("  > Output path: {}".format(self.outpath))
+        self.log.info("  > Force: {}".format(self.force))
+        self.log.info("")

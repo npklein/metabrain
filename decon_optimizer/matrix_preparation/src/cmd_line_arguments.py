@@ -79,6 +79,10 @@ class CommandLineArguments:
                             help="The steps to force the program to redo, "
                                  "default: None. Note, all dependend steps"
                                  "are forced too.")
+        parser.add_argument("-clear_log",
+                            action='store_true',
+                            help="Clear already existing log files. default: "
+                                 "'False'.")
 
         return parser
 

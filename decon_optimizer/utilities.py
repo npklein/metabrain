@@ -33,24 +33,28 @@ def check_file_exists(file_path):
     return os.path.exists(file_path) and os.path.isfile(file_path)
 
 
-def load_dataframe(inpath, header, index_col, sep="\t", low_memory=True,
+def load_dataframe(inpath, header, index_col, logger, sep="\t", low_memory=True,
                    nrows=None, skiprows=None):
     df = pd.read_csv(inpath, sep=sep, header=header, index_col=index_col,
                      low_memory=low_memory, nrows=nrows, skiprows=skiprows)
-    print("\tLoaded dataframe: {} with shape: {}".format(os.path.basename(inpath),
-                                                         df.shape))
+    if logger is not None:
+        logger.info("\tLoaded dataframe: {} "
+                    "with shape: {}".format(os.path.basename(inpath),
+                                            df.shape))
     return df
 
 
-def save_dataframe(df, outpath, header, index, sep="\t"):
+def save_dataframe(df, outpath, header, index, logger, sep="\t"):
     compression = 'infer'
     if outpath.endswith('.gz'):
         compression = 'gzip'
 
     df.to_csv(outpath, sep=sep, index=index, header=header,
               compression=compression)
-    print("\tSaved dataframe: {} with shape: {}".format(os.path.basename(outpath),
-                                                        df.shape))
+    if logger is not None:
+        logger.info("\tSaved dataframe: {}"
+                    "with shape: {}".format(os.path.basename(outpath),
+                                            df.shape))
 
 
 def construct_dict_from_df(df, key, value):

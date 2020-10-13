@@ -30,10 +30,11 @@ from utilities import prepare_output_dir, check_file_exists, load_dataframe, sav
 
 
 class CreateCohortMatrix:
-    def __init__(self, settings, sample_dict, sample_order, force, outdir):
+    def __init__(self, settings, log, sample_dict, sample_order, force, outdir):
         self.inpath = settings["info_datafile"]
         self.sample_id = settings["sample_id"]
         self.cohort_id = settings["cohort_id"]
+        self.log = log
         self.sample_dict = sample_dict
         self.sample_order = sample_order
         self.force = force
@@ -48,35 +49,35 @@ class CreateCohortMatrix:
         self.cohort_df = None
 
     def start(self):
-        print("Starting creating cohort matrix.")
+        self.log.info("Starting creating cohort matrix.")
         self.print_arguments()
 
         # Check if output file exist.
         if not check_file_exists(self.outpath) or self.force:
             # Load the sample info.
-            print("Loading sample information matrix.")
+            self.log.info("Loading sample information matrix.")
             self.sample_info_df = load_dataframe(inpath=self.inpath,
                                                  header=0,
                                                  index_col=None,
-                                                 low_memory=False)
+                                                 low_memory=False,
+                                                 logger=self.log)
 
             # Construct sample-cohort dict.
-            print("Creating sample to cohort dict.")
+            self.log.info("Creating sample to cohort dict.")
             sample_cohort_dict = construct_dict_from_df(self.sample_info_df,
                                                         self.sample_id,
                                                         self.cohort_id)
 
             # Create cohort dataframe.
-            print("Constructing cohort matrix.")
+            self.log.info("Constructing cohort matrix.")
             self.cohort_df = self.create_cohort_df(self.sample_dict,
                                                    self.sample_order,
                                                    sample_cohort_dict)
             self.save()
         else:
-            print("Skipping step.")
+            self.log.info("Skipping step.")
 
-    @staticmethod
-    def create_cohort_df(sample_dict, sample_order, sample_cohort_dict):
+    def create_cohort_df(self, sample_dict, sample_order, sample_cohort_dict):
         cohort_df = pd.DataFrame(0,
                                  index=set(sample_cohort_dict.values()),
                                  columns=sample_order)
@@ -92,18 +93,18 @@ class CreateCohortMatrix:
             if cohort is not None:
                 cohort_df.loc[cohort, sample] = 1
             else:
-                print("Sample {} has no cohort.".format(sample))
+                self.log.warning("Sample {} has no cohort.".format(sample))
 
         # Validate.
         if not cohort_df.sum(axis=0).all():
-            print("\tSome samples do not have a cohort.")
+            self.log.error("\tSome samples do not have a cohort.")
             exit()
 
         return cohort_df
 
     def save(self):
         save_dataframe(df=self.cohort_df, outpath=self.outpath,
-                       index=True, header=True)
+                       index=True, header=True, logger=self.log)
 
     def clear_variables(self):
         self.inpath = None
@@ -125,10 +126,10 @@ class CreateCohortMatrix:
         return self.cohort_df
 
     def print_arguments(self):
-        print("Arguments:")
-        print("  > Input file: {}".format(self.inpath))
-        print("  > Sample ID: {}".format(self.sample_id))
-        print("  > Cohort ID: {}".format(self.cohort_id))
-        print("  > Output path: {}".format(self.outpath))
-        print("  > Force: {}".format(self.force))
-        print("")
+        self.log.info("Arguments:")
+        self.log.info("  > Input file: {}".format(self.inpath))
+        self.log.info("  > Sample ID: {}".format(self.sample_id))
+        self.log.info("  > Cohort ID: {}".format(self.cohort_id))
+        self.log.info("  > Output path: {}".format(self.outpath))
+        self.log.info("  > Force: {}".format(self.force))
+        self.log.info("")

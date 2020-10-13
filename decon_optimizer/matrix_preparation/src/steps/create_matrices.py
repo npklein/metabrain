@@ -32,8 +32,8 @@ from utilities import prepare_output_dir, check_file_exists, load_dataframe, sav
 
 
 class CreateMatrices:
-    def __init__(self, settings, sample_dict, sample_order, eqtl_file, eqtl_df,
-                 force, outdir):
+    def __init__(self, settings, log, sample_dict, sample_order, eqtl_file,
+                 eqtl_df, force, outdir):
         self.geno_file = settings["genotype_datafile"]
         self.expr_file = settings["expression_datafile"]
         self.sign_file = settings["signature_datafile"]
@@ -42,6 +42,7 @@ class CreateMatrices:
         self.ensg_id = gene_translate_settings["ENSG_column"]
         self.hgnc_id = gene_translate_settings["HGNC_column"]
         self.decon_expr_file = settings["deconvolution_expr_datafile"]
+        self.log = log
         self.sample_dict = sample_dict
         self.sample_order = sample_order
         self.eqtl_file = eqtl_file
@@ -68,36 +69,38 @@ class CreateMatrices:
         self.sign_expr_df = None
 
     def start(self):
-        print("Starting creating matrices.")
+        self.log.info("Starting creating matrices.")
         self.print_arguments()
 
-        print("Parsing genotype input data.")
+        self.log.info("Parsing genotype input data.")
         if not check_file_exists(self.geno_outpath) or not check_file_exists(self.alleles_outpath) or self.force:
             self.alleles_df, self.geno_df = self.parse_genotype_file()
 
-            print("Reorder, Filter, and save.")
+            self.log.info("Reorder, Filter, and save.")
             self.alleles_df = self.alleles_df.loc[self.eqtl_df.loc[:, "SNPName"], :]
             save_dataframe(df=self.alleles_df, outpath=self.alleles_outpath,
-                           index=True, header=True)
+                           index=True, header=True, logger=self.log)
 
             self.geno_df = self.geno_df.loc[self.eqtl_df.loc[:, "SNPName"], self.sample_order]
             save_dataframe(df=self.geno_df, outpath=self.geno_outpath,
-                           index=True, header=True)
+                           index=True, header=True, logger=self.log)
         else:
-            print("\tSkipping step.")
+            self.log.info("\tSkipping step.")
 
-        print("Parsing expression input data.")
+        self.log.info("Parsing expression input data.")
         if not check_file_exists(self.expr_outpath) or not check_file_exists(self.sign_expr_outpath) or self.force:
-            print("Loading signature matrix.")
+            self.log.info("Loading signature matrix.")
             self.sign_df = load_dataframe(inpath=self.sign_file,
                                           header=0,
-                                          index_col=0)
+                                          index_col=0,
+                                          logger=self.log)
             signature_genes = set(self.sign_df.index.to_list())
 
-            print("Loading gene traslate dict.")
+            self.log.info("Loading gene traslate dict.")
             self.gene_info_df = load_dataframe(inpath=self.gene_info_file,
                                                header=0,
-                                               index_col=None)
+                                               index_col=None,
+                                               logger=self.log)
             gene_trans_dict = construct_dict_from_df(self.gene_info_df, self.ensg_id, self.hgnc_id)
 
             # check if we are using the default expression or not for the
@@ -107,26 +110,27 @@ class CreateMatrices:
                 include_decon = True
 
             if not check_file_exists(self.expr_outpath) or (include_decon and not check_file_exists(self.sign_expr_outpath)) or self.force:
-                print("Parsing expression data.")
+                self.log.info("Parsing expression data.")
                 self.expr_df, self.sign_expr_df = self.parse_expression_file(self.expr_file, signature_genes, gene_trans_dict, include_decon=include_decon)
 
-            print("Reorder, Filter, and save.")
+            self.log.info("Reorder, Filter, and save.")
             if self.expr_df is not None:
                 self.expr_df = self.expr_df.loc[self.eqtl_df.loc[:, "ProbeName"], self.sample_order]
                 save_dataframe(df=self.expr_df, outpath=self.expr_outpath,
-                               index=True, header=True)
+                               index=True, header=True, logger=self.log)
 
             if not include_decon:
-                print("Parsing deconvolution expression data.")
+                self.log.info("Parsing deconvolution expression data.")
+                self.log.warning("Using different expresion file for deconvolution.")
                 _, self.sign_expr_df = self.parse_expression_file(self.decon_expr_file, signature_genes, gene_trans_dict, include_expr=False)
 
-            print("Reorder, Filter, and save.")
+            self.log.info("Reorder, Filter, and save.")
             if self.sign_expr_df is not None:
                 self.sign_expr_df = self.sign_expr_df.loc[:, self.sample_order]
                 save_dataframe(df=self.sign_expr_df, outpath=self.sign_expr_outpath,
-                               index=True, header=True)
+                               index=True, header=True, logger=self.log)
         else:
-            print("\tSkipping step.")
+            self.log.info("\tSkipping step.")
 
     def parse_genotype_file(self):
         interest = set(self.eqtl_df.loc[:, "SNPName"].to_list())
@@ -139,7 +143,7 @@ class CreateMatrices:
         with gzip.open(self.geno_file, 'rb') as f:
             for i, line in enumerate(f):
                 if (i == 0) or (i % self.print_interval == 0):
-                    print("\tprocessed {} lines\tfound {}/{} genotype lines.".format(i, len(indices), len(interest)))
+                    self.log.info("\tprocessed {} lines\tfound {}/{} genotype lines.".format(i, len(indices), len(interest)))
 
                 splitted_line = np.array(line.decode().strip('\n').split('\t'))
                 index = splitted_line[0]
@@ -155,7 +159,7 @@ class CreateMatrices:
                         genotype_data_collection.append([float(x) for x in genotype_data])
 
         f.close()
-        print("\tprocessed all lines\tfound {}/{} genotype lines.".format(
+        self.log.info("\tprocessed all lines\tfound {}/{} genotype lines.".format(
             len(indices), len(interest)))
 
         alleles_df = pd.DataFrame(alleles_data_collection,
@@ -174,7 +178,7 @@ class CreateMatrices:
                 alleles_df.loc[snp_name, :] = np.nan
             if snp_name not in genotype_df.index:
                 genotype_df.loc[snp_name, :] = np.nan
-        print("\tMissing SNP's [{}]: {}".format(len(missing), ", ".join(missing)))
+        self.log.warning("\tMissing SNP's [{}]: {}".format(len(missing), ", ".join(missing)))
 
         return alleles_df, genotype_df
 
@@ -197,7 +201,7 @@ class CreateMatrices:
                           process_str += "\tfound {}/{} expression lines".format(len(expression_indices), len(expression_interest))
                     if include_decon:
                         process_str += "\tfound {}/{} signature genes".format(len(sign_expr_indices), len(signature_genes))
-                    print(process_str)
+                    self.log.info(process_str)
 
                 splitted_line = np.array(line.decode().strip('\n').split('\t'))
                 index = splitted_line[0]
@@ -225,7 +229,7 @@ class CreateMatrices:
         if include_decon:
             process_str += "\tfound {}/{} signature genes".format(
                 len(sign_expr_indices), len(signature_genes))
-        print(process_str)
+        self.log.info(process_str)
 
         expression_df = pd.DataFrame(expression_data_collection,
                                      index=expression_indices,
@@ -241,14 +245,14 @@ class CreateMatrices:
                 if ensg not in expression_df.index:
                     missing.append(ensg)
                     expression_df.loc[ensg, :] = np.nan
-            print("\tExpression missing ENSG ID's [{}]: {}".format(len(missing), ", ".join(missing)))
+            self.log.warning("\tExpression missing ENSG ID's [{}]: {}".format(len(missing), ", ".join(missing)))
         if include_decon:
             missing = []
             for hgnc in signature_genes:
                 if hgnc not in sign_expr_df.index:
                     missing.append(hgnc)
                     sign_expr_df.loc[hgnc, :] = np.nan
-            print("\tSignature expression missing HGNC symbols [{}]: {}".format(len(missing), ", ".join(missing)))
+            self.log.warning("\tSignature expression missing HGNC symbols [{}]: {}".format(len(missing), ", ".join(missing)))
 
         return expression_df, sign_expr_df
 
@@ -291,18 +295,18 @@ class CreateMatrices:
         return self.sign_expr_df
 
     def print_arguments(self):
-        print("Arguments:")
-        print("  > Genotype input file: {}".format(self.geno_file))
-        print("  > Expression input file: {}".format(self.expr_file))
-        print("  > Signature input file: {}".format(self.sign_file))
-        print("  > Gene info input file: {}".format(self.gene_info_file))
-        print("  > Gene info - ENSG column: {}".format(self.ensg_id))
-        print("  > Gene info - HGNC column: {}".format(self.hgnc_id))
-        print("  > Deconvolution expr input file: {}".format(self.decon_expr_file))
+        self.log.info("Arguments:")
+        self.log.info("  > Genotype input file: {}".format(self.geno_file))
+        self.log.info("  > Expression input file: {}".format(self.expr_file))
+        self.log.info("  > Signature input file: {}".format(self.sign_file))
+        self.log.info("  > Gene info input file: {}".format(self.gene_info_file))
+        self.log.info("  > Gene info - ENSG column: {}".format(self.ensg_id))
+        self.log.info("  > Gene info - HGNC column: {}".format(self.hgnc_id))
+        self.log.info("  > Deconvolution expr input file: {}".format(self.decon_expr_file))
         if self.eqtl_df is not None:
-            print("  > eQTL input shape: {}".format(self.eqtl_df.shape))
+            self.log.info("  > eQTL input shape: {}".format(self.eqtl_df.shape))
         else:
-            print("  > eQTL input file: {}".format(self.eqtl_file))
-        print("  > Output directory: {}".format(self.outdir))
-        print("  > Force: {}".format(self.force))
-        print("")
+            self.log.info("  > eQTL input file: {}".format(self.eqtl_file))
+        self.log.info("  > Output directory: {}".format(self.outdir))
+        self.log.info("  > Force: {}".format(self.force))
+        self.log.info("")
