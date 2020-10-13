@@ -1,7 +1,7 @@
 """
 File:         combine_gte_files.py
 Created:      2020/10/08
-Last Changed:
+Last Changed: 2020/10/12
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -44,6 +44,7 @@ class CombineGTEFiles:
         # Declare variables.
         self.gte = None
         self.sample_dict = None
+        self.reverse_sample_dict = None
         self.sample_order = None
 
     def start(self):
@@ -57,11 +58,13 @@ class CombineGTEFiles:
                                       index_col=None)
         else:
             # Load each GTE file.
+            print("Loading GTE files.")
             self.gte = self.combine_files()
             self.save()
 
         # Construct sample translate dict.
         self.sample_dict = self.create_sample_dict()
+        self.reverse_sample_dict = self.create_reverse_sample_dict()
         self.sample_order = self.set_sample_order()
 
     def combine_files(self):
@@ -98,14 +101,22 @@ class CombineGTEFiles:
 
         return sample_dict
 
+    def create_reverse_sample_dict(self):
+        if self.sample_dict is None:
+            return None
+        return {v: k for k, v in self.sample_dict.items()}
+
     def get_outpath(self):
         return self.outpath
 
     def get_gte(self):
         return self.gte
 
-    def get_sample_dict(self):
-        return self.sample_dict
+    def get_sample_dict(self, reverse=False):
+        if reverse:
+            return self.reverse_sample_dict
+        else:
+            return self.sample_dict
 
     def set_sample_order(self):
         return list(self.gte.iloc[:, 1])

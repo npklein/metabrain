@@ -1,7 +1,7 @@
 """
 File:         combine_eqtlprobes.py
 Created:      2020/10/08
-Last Changed:
+Last Changed: 2020/10/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -33,8 +33,8 @@ class CombineEQTLProbes:
     def __init__(self, settings, force, outdir):
         self.indir = settings["input_directory"]
         self.iter_dirname = settings["iteration_dirname"]
-        self.n_iterations = settings["iterations"]
         self.in_filename = settings["in_filename"]
+        self.n_iterations = settings["iterations"]
         self.force = force
 
         # Prepare an output directory.
@@ -43,22 +43,20 @@ class CombineEQTLProbes:
         self.outpath = os.path.join(self.outdir, "eQTLprobes_combined.txt.gz")
 
         # Declare variables.
-        self.eqtl_probes = None
+        self.eqtl_df = None
 
     def start(self):
         print("Starting combining eQTL probe files.")
         self.print_arguments()
 
         # Check if output file exist.
-        if check_file_exists(self.outpath) and not self.force:
-            print("Skipping step, loading result.")
-            self.eqtl_probes = load_dataframe(inpath=self.outpath, header=0,
-                                              index_col=False)
-        else:
+        if not check_file_exists(self.outpath) or self.force:
             # Load each GTE file.
             print("Loading eQTLprobes files.")
-            self.eqtl_probes = self.combine_files()
+            self.eqtl_df = self.combine_files()
             self.save()
+        else:
+            print("Skipping step.")
 
     def combine_files(self):
         combined = None
@@ -78,7 +76,7 @@ class CombineEQTLProbes:
         return combined
 
     def save(self):
-        save_dataframe(df=self.eqtl_probes, outpath=self.outpath,
+        save_dataframe(df=self.eqtl_df, outpath=self.outpath,
                        index=False, header=True)
 
     def clear_variables(self):
@@ -91,8 +89,11 @@ class CombineEQTLProbes:
     def get_outpath(self):
         return self.outpath
 
-    def get_eqtlprobes(self):
-        return self.eqtl_probes
+    def get_eqtl_file(self):
+        return self.outpath
+
+    def get_eqtl_df(self):
+        return self.eqtl_df
 
     def print_arguments(self):
         print("Arguments:")

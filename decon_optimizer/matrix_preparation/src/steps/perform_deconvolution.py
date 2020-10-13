@@ -34,12 +34,11 @@ from matrix_preparation.src.utilities import prepare_output_dir, check_file_exis
 
 class PerformDeconvolution:
     def __init__(self, settings, sign_file, sign_df, sign_expr_file,
-                 sign_expr_df, cohort_df, force, outdir):
+                 sign_expr_df, force, outdir):
         self.sign_file = sign_file
         self.sign_df = sign_df
         self.sign_expr_file = sign_expr_file
         self.sign_expr_df = sign_expr_df
-        self.cohort_df = cohort_df
         self.force = force
 
         # Prepare an output directories.
@@ -57,13 +56,11 @@ class PerformDeconvolution:
         self.print_arguments()
 
         # Check if output file exist.
-        if check_file_exists(self.outpath) and not self.force:
-            print("Skipping step, loading result.")
-            self.decon_df = load_dataframe(inpath=self.outpath,
-                                                header=0, index_col=0)
-        else:
+        if not check_file_exists(self.outpath) or self.force:
             self.decon_df = self.perform_deconvolution()
             self.save()
+        else:
+            print("Skipping step.")
 
     def perform_deconvolution(self):
         if self.sign_df is None:
@@ -80,13 +77,17 @@ class PerformDeconvolution:
                                                header=0,
                                                index_col=0)
 
+        print(self.sign_df)
+        print(self.sign_expr_df)
+
         # Filter uninformative genes from the signature matrix.
         sign_df = self.filter(self.sign_df)
 
         # Subset and reorder.
-        sign_df, expr_df, cohort_df = self.subset(sign_df,
-                                                  self.sign_expr_df,
-                                                  self.cohort_df)
+        sign_df, expr_df = self.subset(sign_df, self.sign_expr_df)
+
+        print(sign_df)
+        print(expr_df)
 
         # Transform.
         sign_df = self.perform_log2_transform(sign_df)
@@ -119,17 +120,14 @@ class PerformDeconvolution:
         residuals_df = pd.Series(residuals_data, index=expr_df.columns)
 
         print("Estimated weights:")
-        print(decon_df)
         print(decon_df.mean(axis=0))
 
         # Make the weights sum up to 1.
         decon_df = self.sum_to_one(decon_df)
         print("Estimated proportions:")
-        print(decon_df)
         print(decon_df.mean(axis=0))
 
         # Calculate the average residuals.
-        print(residuals_df)
         print("Average residual: {:.2f}".format(residuals_df.mean()))
 
         return decon_df
@@ -140,7 +138,10 @@ class PerformDeconvolution:
         return tmp.loc[(tmp.std(axis=1) != 0) & (tmp.max(axis=1) > cutoff), :]
 
     @staticmethod
-    def subset(raw_signature, raw_expression, raw_cohorts):
+    def subset(raw_signature, raw_expression):
+        raw_signature.dropna(inplace=True)
+        raw_expression.dropna(inplace=True)
+
         gene_overlap = np.intersect1d(raw_signature.index, raw_expression.index)
         sign_df = raw_signature.loc[gene_overlap, :]
         expr_df = raw_expression.loc[gene_overlap, :]
@@ -152,17 +153,7 @@ class PerformDeconvolution:
             print("Invalid gene order")
             exit()
 
-        cohorts_df = None
-        if raw_cohorts is not None:
-            sample_overlap = np.intersect1d(expr_df.columns, raw_cohorts.index)
-            expr_df = expr_df.loc[:, sample_overlap]
-            cohorts_df = raw_cohorts.loc[sample_overlap, :]
-
-            if not expr_df.columns.equals(cohorts_df.index):
-                print("Invalid sample order")
-                exit()
-
-        return sign_df, expr_df, cohorts_df
+        return sign_df, expr_df
 
     @staticmethod
     def perform_log2_transform(df):
@@ -191,8 +182,10 @@ class PerformDeconvolution:
         self.sign_df = None
         self.sign_expr_file = None
         self.sign_expr_df = None
-        self.cohort_df = None
         self.force = None
+
+    def get_decon_file(self):
+        return self.outpath
 
     def get_decon_df(self):
         return self.decon_df

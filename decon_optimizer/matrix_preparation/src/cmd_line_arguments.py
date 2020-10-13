@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/10/08
-Last Changed:
+Last Changed: 2020/10/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -38,7 +38,7 @@ class CommandLineArguments:
         # Get the arguments.
         parser = self.create_argument_parser()
         self.arguments = parser.parse_args()
-        self.print()
+        self.print_arguments()
 
     def create_argument_parser(self):
         parser = argparse.ArgumentParser(prog=self.program,
@@ -74,13 +74,15 @@ class CommandLineArguments:
                                      "create_matrices",
                                      "correct_cohort_effects",
                                      "perform_deconvolution",
+                                     "filter_technical_covariates",
                                      "create_cov_matrix"],
                             help="The steps to force the program to redo, "
-                                 "default: None.")
+                                 "default: None. Note, all dependend steps"
+                                 "are forced too.")
 
         return parser
 
-    def print(self):
+    def print_arguments(self):
         for arg in vars(self.arguments):
             print("Input argument '{}' "
                   "has value '{}'.".format(arg, getattr(self.arguments, arg)))

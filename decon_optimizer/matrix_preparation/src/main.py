@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/10/08
-Last Changed:
+Last Changed: 2020/10/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -36,6 +36,7 @@ from .steps.create_cohort_matrix import CreateCohortMatrix
 from .steps.create_matrices import CreateMatrices
 from .steps.correct_cohort_effects import CorrectCohortEffects
 from .steps.perform_deconvolution import PerformDeconvolution
+from .steps.filter_technical_covariates import FilterTechnicalCovariates
 from .steps.create_cov_matrix import CreateCovMatrix
 
 
@@ -56,13 +57,16 @@ class Main:
 
     @staticmethod
     def create_force_dict(force_steps):
-        force_dict = {'combine_gte_files': False,
-                      'combine_eqtlprobes': False,
-                      'create_sample_matrix': False,
-                      'create_matrices': False,
-                      "correct_cohort_effects": False,
-                      "perform_deconvolution": False,
-                      "create_cov_matrix": False}
+        step_dependencies = {'combine_gte_files': ['create_cohort_matrix', 'create_matrices', 'correct_cohort_effects', 'perform_deconvolution', 'create_cov_matrix'],
+                             'combine_eqtlprobes': ['create_cohort_matrix', 'create_matrices', 'correct_cohort_effects', 'perform_deconvolution', 'create_cov_matrix'],
+                             'create_cohort_matrix': ['create_matrices', 'correct_cohort_effects', 'perform_deconvolution', 'create_cov_matrix'],
+                             'create_matrices': ['correct_cohort_effects', 'perform_deconvolution', 'create_cov_matrix'],
+                             'correct_cohort_effects': ['perform_deconvolution', 'create_cov_matrix'],
+                             'perform_deconvolution': ['create_cov_matrix'],
+                             'filter_technical_covariates': ['create_cov_matrix'],
+                             'create_cov_matrix': []}
+        force_dict = {step: False for step in step_dependencies.keys()}
+
         if force_steps is None or len(force_steps) == 0:
             return force_dict
 
@@ -71,8 +75,10 @@ class Main:
                 force_dict[key] = True
         else:
             for step in force_steps:
-                if step in force_dict.keys():
-                    force_dict[step] = True
+                dependencies = step_dependencies[step]
+                dependencies.append(step)
+                for substep in dependencies:
+                    force_dict[substep] = True
 
         return force_dict
 
@@ -96,10 +102,11 @@ class Main:
         cepf.start()
         cepf.clear_variables()
 
-        # Step3. Create the ordered unmasked matrices.
+        # Step3. Create the cohort matrix.
         print("\n### STEP3 ###\n")
         ccm = CreateCohortMatrix(
             settings=self.settings.get_setting('create_cohort_matrix'),
+            sample_dict=cgtef.get_sample_dict(reverse=True),
             sample_order=cgtef.get_sample_order(),
             force=self.force_dict['create_cohort_matrix'],
             outdir=self.outdir)
@@ -112,7 +119,8 @@ class Main:
             settings=self.settings.get_setting('create_matrices'),
             sample_dict=cgtef.get_sample_dict(),
             sample_order=cgtef.get_sample_order(),
-            eqtl_df=cepf.get_eqtlprobes(),
+            eqtl_file=cepf.get_eqtl_file(),
+            eqtl_df=cepf.get_eqtl_df(),
             force=self.force_dict['create_matrices'],
             outdir=self.outdir)
         cm.start()
@@ -122,8 +130,11 @@ class Main:
         print("\n### STEP5 ###\n")
         cce = CorrectCohortEffects(
             settings=self.settings.get_setting('correct_cohort_effects'),
+            cohort_file=ccm.get_cohort_file(),
             cohort_df=ccm.get_cohort_df(),
+            expr_file=cm.get_expr_file(),
             expr_df=cm.get_expr_df(),
+            sign_expr_file=cm.get_sign_expr_file(),
             sign_expr_df=cm.get_sign_expr_df(),
             force=self.force_dict['correct_cohort_effects'],
             outdir=self.outdir)
@@ -136,20 +147,35 @@ class Main:
             settings=self.settings.get_setting('perform_deconvolution'),
             sign_file=cm.get_sign_file(),
             sign_df=cm.get_sign_df(),
-            sign_expr_file=cm.get_sign_expr_outpath(),
-            sign_expr_df=cm.get_sign_expr_df(),
-            cohort_df=ccm.get_cohort_df(),
+            sign_expr_file=cce.get_sign_expr_cc_file(),
+            sign_expr_df=cce.get_sign_expr_cc_df(),
             force=self.force_dict['perform_deconvolution'],
             outdir=self.outdir)
         pd.start()
         pd.clear_variables()
 
-        # Step7. Create the covariance matrix.
+        # Step7. Filter technical covariates.
         print("\n### STEP7 ###\n")
+        ftc = FilterTechnicalCovariates(
+            settings=self.settings.get_setting('filter_technical_covariates'),
+            force=self.force_dict['filter_technical_covariates'],
+            sample_dict=cgtef.get_sample_dict(),
+            sample_order=cgtef.get_sample_order(),
+            outdir=self.outdir)
+        ftc.start()
+        ftc.clear_variables()
+
+        # Step8. Create the covariance matrix.
+        print("\n### STEP8 ###\n")
         ccm = CreateCovMatrix(
             settings=self.settings.get_setting('create_cov_matrix'),
+            tech_covs_file=ftc.get_tech_covs_file(),
+            tech_covs_df=ftc.get_tech_covs_df(),
+            cohort_file=ccm.get_cohort_file(),
             cohort_df=ccm.get_cohort_df(),
+            decon_file=pd.get_decon_file(),
             decon_df=pd.get_decon_df(),
+            sample_dict=cgtef.get_sample_dict(),
             sample_order=cgtef.get_sample_order(),
             force=self.force_dict['create_cov_matrix'],
             outdir=self.outdir)
