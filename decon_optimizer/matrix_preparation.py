@@ -51,9 +51,11 @@ if __name__ == '__main__':
     NAME = CLA.get_argument("name")
     SETTINGS_FILE = CLA.get_argument("settings")
     FORCE_STEPS = CLA.get_argument("force_steps")
+    CLEAR_LOG = CLA.get_argument("clear_log")
 
     # Start the program.
     PROGRAM = Main(name=NAME,
                    settings_file=SETTINGS_FILE,
-                   force_steps=FORCE_STEPS)
+                   force_steps=FORCE_STEPS,
+                   clear_log=CLEAR_LOG)
     PROGRAM.start()

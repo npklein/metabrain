@@ -62,6 +62,10 @@ class CommandLineArguments:
                             default="default_settings",
                             help="The settings input file (without '.json'), "
                                  "default: 'default_settings'.")
+        parser.add_argument("-clear_log",
+                            action='store_true',
+                            help="Clear already existing log files. default: "
+                                 "'False'.")
 
         return parser
 

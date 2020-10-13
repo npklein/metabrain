@@ -31,10 +31,15 @@ import os
 # Local application imports.
 from local_settings import LocalSettings
 from utilities import prepare_output_dir, check_file_exists, load_dataframe
+from logger import Logger
 
 
 class Main:
-    def __init__(self, name, settings_file):
+    def __init__(self, name, settings_file, clear_log):
+        self.name = name
+        self.settings_file = settings_file
+        self.clear_log = clear_log
+
         # Define the current directory.
         current_dir = str(Path(__file__).parent.parent)
 
@@ -52,42 +57,54 @@ class Main:
         self.outdir = os.path.join(current_dir, name)
         prepare_output_dir(self.outdir)
 
+        # Initialize logger.
+        logger = Logger(outdir=self.outdir, clear_log=clear_log)
+        self.log = logger.get_logger()
+
     def start(self):
-        print("Starting program.")
+        self.log.info("Starting program.")
         self.print_arguments()
 
-        print("Loading data.")
+        self.log.info("Loading data.")
         geno_df, expr_df, cov_df = self.load_data()
 
-        print("Validating input data.")
-        self.validate(geno_df, expr_df, cov_df)
+        self.log.info("Validating input data.")
+        valid = self.validate(geno_df, expr_df, cov_df)
+        if not valid:
+            self.log.error("Input files do not match.")
+            exit()
+        else:
+            self.log.info("Valid")
 
     def load_data(self):
         geno_df = None
         if check_file_exists(self.geno_file):
             geno_df = load_dataframe(inpath=self.geno_file,
                                      header=0,
-                                     index_col=0)
+                                     index_col=0,
+                                     logger=self.log)
         else:
-            print("Genotype file does not exist.")
+            self.log.error("Genotype file does not exist.")
             exit()
 
         expr_df = None
         if check_file_exists(self.expr_file):
             expr_df = load_dataframe(inpath=self.expr_file,
                                      header=0,
-                                     index_col=0)
+                                     index_col=0,
+                                     logger=self.log)
         else:
-            print("Expression file does not exist.")
+            self.log.error("Expression file does not exist.")
             exit()
 
         cov_df = None
         if check_file_exists(self.cov_file):
             cov_df = load_dataframe(inpath=self.cov_file,
                                     header=0,
-                                    index_col=0)
+                                    index_col=0,
+                                    logger=self.log)
         else:
-            print("Covariate file does not exist.")
+            self.log.error("Covariate file does not exist.")
             exit()
 
         return geno_df, expr_df, cov_df
@@ -97,14 +114,16 @@ class Main:
         dfs = [geno_df, expr_df, cov_df]
         for (a, b) in list(itertools.combinations(dfs, 2)):
             if not a.columns.identical(b.columns):
-                print("Order of samples are not identical.")
-                exit()
-        print("\tValid")
+                return False
+        return True
 
     def print_arguments(self):
-        print("Arguments:")
-        print("  > Genotype input file: {}".format(self.geno_file))
-        print("  > Expression input file: {}".format(self.expr_file))
-        print("  > Covariate input file: {}".format(self.cov_file))
-        print("  > Output directory: {}".format(self.outdir))
-        print("")
+        self.log.info("Arguments:")
+        self.log.info("  > Name: {}".format(self.name))
+        self.log.info("  > Settings file: {}".format(self.settings_file))
+        self.log.info("  > Clear log: {}".format(self.clear_log))
+        self.log.info("  > Genotype input file: {}".format(self.geno_file))
+        self.log.info("  > Expression input file: {}".format(self.expr_file))
+        self.log.info("  > Covariate input file: {}".format(self.cov_file))
+        self.log.info("  > Output directory: {}".format(self.outdir))
+        self.log.info("")

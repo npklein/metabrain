@@ -30,9 +30,10 @@ from utilities import prepare_output_dir, check_file_exists, load_dataframe, sav
 
 
 class FilterTechnicalCovariates:
-    def __init__(self, settings, sample_dict, sample_order, force, outdir):
+    def __init__(self, settings, log, sample_dict, sample_order, force, outdir):
         self.cov_file = settings["covariates_datafile"]
         self.tech_covs = settings["technical_covariates"]
+        self.log = log
         self.sample_dict = sample_dict
         self.sample_order = sample_order
         self.force = force
@@ -48,45 +49,45 @@ class FilterTechnicalCovariates:
         self.tech_covs_df = None
 
     def start(self):
-        print("Filtering technical covariates datafile.")
+        self.log.info("Filtering technical covariates datafile.")
         self.print_arguments()
 
         # Check if output file exist.
         if not check_file_exists(self.outpath) or self.force:
             # Load the sample info.
-            print("Loading covariates matrix.")
+            self.log.info("Loading covariates matrix.")
             cov_df = load_dataframe(inpath=self.cov_file,
                                     header=0,
-                                    index_col=0)
+                                    index_col=0,
+                                    logger=self.log)
 
             # Filter on samples and technical covariates.
-            print("Filtering on samples and technical covariates.")
+            self.log.info("Filtering on samples and technical covariates.")
             cov_df.index = [self.sample_dict[x] if x in self.sample_dict else x for x in cov_df.index]
             tech_cov_df = cov_df.loc[self.sample_order, self.tech_covs].copy()
             del cov_df
-            print("\tNew shape: {}".format(tech_cov_df.shape))
+            self.log.info("\tNew shape: {}".format(tech_cov_df.shape))
 
             # Remove technical covariates that are linearly dependent.
-            print("Removing linearly dependent column(s).")
+            self.log.info("Removing linearly dependent column(s).")
             self.tech_covs_df = self.filter_linear_dependent_covs(tech_cov_df)
-            print("\tNew shape: {}".format(self.tech_covs_df.shape))
+            self.log.info("\tNew shape: {}".format(self.tech_covs_df.shape))
 
             self.save()
         else:
-            print("Skipping step.")
+            self.log.info("Skipping step.")
 
-    @staticmethod
-    def filter_linear_dependent_covs(df):
+    def filter_linear_dependent_covs(self, df):
         _, inds = sympy.Matrix(df.values).rref()
 
         lin_dep_columns = [x for x in range(len(df.columns)) if x not in inds]
-        print("\tRemoving technical covariate(s): {}".format(', '.join(df.columns[lin_dep_columns])))
+        self.log.warning("\tRemoving technical covariate(s): {}".format(', '.join(df.columns[lin_dep_columns])))
 
         return df.iloc[:, list(inds)]
 
     def save(self):
         save_dataframe(df=self.tech_covs_df, outpath=self.outpath,
-                       index=True, header=True)
+                       index=True, header=True, logger=self.log)
 
     def clear_variables(self):
         self.cov_file = None
@@ -100,9 +101,9 @@ class FilterTechnicalCovariates:
         return self.tech_covs_df
 
     def print_arguments(self):
-        print("Arguments:")
-        print("  > Covariates input file: {}".format(self.cov_file))
-        print("  > Technical Covarates: {}".format(self.tech_covs))
-        print("  > Output path: {}".format(self.outpath))
-        print("  > Force: {}".format(self.force))
-        print("")
+        self.log.info("Arguments:")
+        self.log.info("  > Covariates input file: {}".format(self.cov_file))
+        self.log.info("  > Technical Covarates: {}".format(self.tech_covs))
+        self.log.info("  > Output path: {}".format(self.outpath))
+        self.log.info("  > Force: {}".format(self.force))
+        self.log.info("")

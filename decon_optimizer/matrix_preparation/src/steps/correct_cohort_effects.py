@@ -32,8 +32,9 @@ from utilities import prepare_output_dir, check_file_exists, load_dataframe, sav
 
 
 class CorrectCohortEffects:
-    def __init__(self, settings, cohort_file, cohort_df, expr_file, expr_df,
-                 sign_expr_file, sign_expr_df,  force, outdir):
+    def __init__(self, settings, log, cohort_file, cohort_df, expr_file,
+                 expr_df, sign_expr_file, sign_expr_df,  force, outdir):
+        self.log = log
         self.cohort_file = cohort_file
         self.cohort_df = cohort_df
         self.expr_file = expr_file
@@ -56,44 +57,48 @@ class CorrectCohortEffects:
         self.sign_expr_cc_df = None
 
     def start(self):
-        print("Correcting expression data for cohorts.")
+        self.log.info("Correcting expression data for cohorts.")
         self.print_arguments()
 
-        print("Correcting expression data.")
+        self.log.info("Correcting expression data.")
         if not check_file_exists(self.expr_cc_outpath) or self.force:
             if self.cohort_df is None:
                 self.cohort_df = load_dataframe(self.cohort_file,
                                                 header=0,
-                                                index_col=0)
+                                                index_col=0,
+                                                logger=self.log)
 
             if self.expr_df is None:
                 self.expr_df = load_dataframe(self.expr_file,
                                               header=0,
-                                              index_col=0)
+                                              index_col=0,
+                                              logger=self.log)
 
             self.expr_cc_df = self.cohort_correction(self.expr_df, self.cohort_df.T)
             save_dataframe(df=self.expr_cc_df, outpath=self.expr_cc_outpath,
-                           index=True, header=True)
+                           index=True, header=True, logger=self.log)
         else:
-            print("\tSkipping step.")
+            self.log.info("\tSkipping step.")
 
-        print("Correcting signature expression data.")
+        self.log.info("Correcting signature expression data.")
         if not check_file_exists(self.sign_expr_cc_outpath) or self.force:
             if self.cohort_df is None:
                 self.cohort_df = load_dataframe(self.cohort_file,
                                                 header=0,
-                                                index_col=0)
+                                                index_col=0,
+                                                logger=self.log)
 
             if self.sign_expr_df is None:
                 self.sign_expr_df = load_dataframe(self.sign_expr_file,
                                                    header=0,
-                                                   index_col=0)
+                                                   index_col=0,
+                                                   logger=self.log)
 
             self.sign_expr_cc_df = self.cohort_correction(self.sign_expr_df, self.cohort_df.T)
             save_dataframe(df=self.sign_expr_cc_df, outpath=self.sign_expr_cc_outpath,
-                           index=True, header=True)
+                           index=True, header=True, logger=self.log)
         else:
-            print("\tSkipping step.")
+            self.log.info("\tSkipping step.")
 
     def cohort_correction(self, raw_expression, cohorts):
         expression_df = raw_expression.dropna()
@@ -101,10 +106,10 @@ class CorrectCohortEffects:
         new_expression_data = []
         for i, (index, expression) in enumerate(expression_df.iterrows()):
             if (i % self.print_interval == 0) or (i == (expression_df.shape[0] - 1)):
-                print("\tProcessing {}/{} "
-                      "[{:.2f}%]".format(i,
-                                         (expression_df.shape[0] - 1),
-                                         (100 / (expression_df.shape[0] - 1)) * i))
+                self.log.info("\tProcessing {}/{} "
+                              "[{:.2f}%]".format(i,
+                                                 (expression_df.shape[0] - 1),
+                                                 (100 / (expression_df.shape[0] - 1)) * i))
 
             if expression.index.equals(cohorts.index):
                 ols = sm.OLS(expression, cohorts)
@@ -115,9 +120,9 @@ class CorrectCohortEffects:
                     new_expression_data.append(corrected_expression.tolist())
 
                 except np.linalg.LinAlgError as e:
-                    print("\t\tError: {}".format(e))
+                    self.log.error("\t\tError: {}".format(e))
             else:
-                print("Expression series does not match cohort matrix.")
+                self.log.error("Expression series does not match cohort matrix.")
                 exit()
 
         new_expression_df = pd.DataFrame(new_expression_data,
@@ -145,19 +150,19 @@ class CorrectCohortEffects:
         return self.sign_expr_cc_df
 
     def print_arguments(self):
-        print("Arguments:")
+        self.log.info("Arguments:")
         if self.cohort_df is not None:
-            print("  > Cohort input shape: {}".format(self.cohort_df.shape))
+            self.log.info("  > Cohort input shape: {}".format(self.cohort_df.shape))
         else:
-            print("  > Cohort input file: {}".format(self.cohort_file))
+            self.log.info("  > Cohort input file: {}".format(self.cohort_file))
         if self.expr_df is not None:
-            print("  > Expression input shape: {}".format(self.expr_df.shape))
+            self.log.info("  > Expression input shape: {}".format(self.expr_df.shape))
         else:
-            print("  > Expression input file: {}".format(self.expr_file))
+            self.log.info("  > Expression input file: {}".format(self.expr_file))
         if self.sign_expr_df is not None:
-            print("  > Signature expression input shape: {}".format(self.sign_expr_df.shape))
+            self.log.info("  > Signature expression input shape: {}".format(self.sign_expr_df.shape))
         else:
-            print("  > Signature expression input file: {}".format(self.sign_expr_file))
-        print("  > Output directory: {}".format(self.outdir))
-        print("  > Force: {}".format(self.force))
-        print("")
+            self.log.info("  > Signature expression input file: {}".format(self.sign_expr_file))
+        self.log.info("  > Output directory: {}".format(self.outdir))
+        self.log.info("  > Force: {}".format(self.force))
+        self.log.info("")

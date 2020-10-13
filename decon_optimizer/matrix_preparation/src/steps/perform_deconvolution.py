@@ -32,8 +32,9 @@ from utilities import prepare_output_dir, check_file_exists, load_dataframe, sav
 
 
 class PerformDeconvolution:
-    def __init__(self, settings, sign_file, sign_df, sign_expr_file,
+    def __init__(self, settings, log, sign_file, sign_df, sign_expr_file,
                  sign_expr_df, force, outdir):
+        self.log = log
         self.sign_file = sign_file
         self.sign_df = sign_df
         self.sign_expr_file = sign_expr_file
@@ -51,7 +52,7 @@ class PerformDeconvolution:
         self.decon_df = None
 
     def start(self):
-        print("Starting deconvolution.")
+        self.log.info("Starting deconvolution.")
         self.print_arguments()
 
         # Check if output file exist.
@@ -59,25 +60,24 @@ class PerformDeconvolution:
             self.decon_df = self.perform_deconvolution()
             self.save()
         else:
-            print("Skipping step.")
+            self.log.info("Skipping step.")
 
     def perform_deconvolution(self):
         if self.sign_df is None:
             # Load the celltype profile file.
-            print("Loading cell type profile matrix.")
+            self.log.info("Loading cell type profile matrix.")
             self.sign_df = load_dataframe(self.sign_file,
                                           header=0,
-                                          index_col=0)
+                                          index_col=0,
+                                          logger=self.log)
 
         if self.sign_expr_df is None:
             # Load the celltype expression file.
-            print("Loading cell type expression matrix.")
+            self.log.info("Loading cell type expression matrix.")
             self.sign_expr_df = load_dataframe(self.sign_expr_file,
                                                header=0,
-                                               index_col=0)
-
-        print(self.sign_df)
-        print(self.sign_expr_df)
+                                               index_col=0,
+                                               logger=self.log)
 
         # Filter uninformative genes from the signature matrix.
         sign_df = self.filter(self.sign_df)
@@ -85,27 +85,24 @@ class PerformDeconvolution:
         # Subset and reorder.
         sign_df, expr_df = self.subset(sign_df, self.sign_expr_df)
 
-        print(sign_df)
-        print(expr_df)
-
         # Transform.
         sign_df = self.perform_log2_transform(sign_df)
 
         # Shift the data to be positive.
-        print("Shifting data to be positive")
+        self.log.info("Shifting data to be positive")
         if sign_df.values.min() < 0:
-            print("\tSignature matrix is shifted.")
+            self.log.warning("\tSignature matrix is shifted.")
             sign_df = self.perform_shift(sign_df)
 
         if expr_df.values.min() < 0:
-            print("\tExpression matrix is shifted.")
+            self.log.warning("\tExpression matrix is shifted.")
             expr_df = self.perform_shift(expr_df)
 
-        print("Signature shape: {}".format(sign_df.shape))
-        print("Expression shape: {}".format(expr_df.shape))
+        self.log.info("Signature shape: {}".format(sign_df.shape))
+        self.log.info("Expression shape: {}".format(expr_df.shape))
 
         # Perform deconvolution per sample.
-        print("Performing partial deconvolution.")
+        self.log.info("Performing partial deconvolution.")
         decon_data = []
         residuals_data = []
         for _, sample in expr_df.T.iterrows():
@@ -118,16 +115,16 @@ class PerformDeconvolution:
                                 columns=["{}NNLS_{}".format(*x.split("_")) for x in sign_df.columns])
         residuals_df = pd.Series(residuals_data, index=expr_df.columns)
 
-        print("Estimated weights:")
-        print(decon_df.mean(axis=0))
+        self.log.info("Estimated weights:")
+        self.log.info(decon_df.mean(axis=0))
 
         # Make the weights sum up to 1.
         decon_df = self.sum_to_one(decon_df)
-        print("Estimated proportions:")
-        print(decon_df.mean(axis=0))
+        self.log.info("Estimated proportions:")
+        self.log.info(decon_df.mean(axis=0))
 
         # Calculate the average residuals.
-        print("Average residual: {:.2f}".format(residuals_df.mean()))
+        self.log.info("Average residual: {:.2f}".format(residuals_df.mean()))
 
         return decon_df
 
@@ -136,8 +133,7 @@ class PerformDeconvolution:
         tmp = df.copy()
         return tmp.loc[(tmp.std(axis=1) != 0) & (tmp.max(axis=1) > cutoff), :]
 
-    @staticmethod
-    def subset(raw_signature, raw_expression):
+    def subset(self, raw_signature, raw_expression):
         raw_signature.dropna(inplace=True)
         raw_expression.dropna(inplace=True)
 
@@ -149,7 +145,7 @@ class PerformDeconvolution:
         expr_df.index.name = "-"
 
         if not sign_df.index.equals(expr_df.index):
-            print("Invalid gene order")
+            self.log.error("Invalid gene order")
             exit()
 
         return sign_df, expr_df
@@ -174,7 +170,7 @@ class PerformDeconvolution:
 
     def save(self):
         save_dataframe(df=self.decon_df, outpath=self.outpath,
-                       index=True, header=True)
+                       index=True, header=True, logger=self.log)
 
     def clear_variables(self):
         self.sign_file = None
@@ -190,15 +186,15 @@ class PerformDeconvolution:
         return self.decon_df
 
     def print_arguments(self):
-        print("Arguments:")
+        self.log.info("Arguments:")
         if self.sign_df is not None:
-            print("  > Signature: {}".format(self.sign_df.shape))
+            self.log.info("  > Signature: {}".format(self.sign_df.shape))
         else:
-            print("  > Signature input file: {}".format(self.sign_file))
+            self.log.info("  > Signature input file: {}".format(self.sign_file))
         if self.sign_expr_df is not None:
-            print("  > Signature expression: {}".format(self.sign_expr_df.shape))
+            self.log.info("  > Signature expression: {}".format(self.sign_expr_df.shape))
         else:
-            print("  > Signature input path: {}".format(self.sign_expr_file))
-        print("  > Deconvolution output file: {}".format(self.outpath))
-        print("  > Force: {}".format(self.force))
-        print("")
+            self.log.info("  > Signature input path: {}".format(self.sign_expr_file))
+        self.log.info("  > Deconvolution output file: {}".format(self.outpath))
+        self.log.info("  > Force: {}".format(self.force))
+        self.log.info("")
