@@ -25,11 +25,10 @@ import os
 # Third party imports.
 import numpy as np
 import pandas as pd
-from scipy.optimize import nnls
 import statsmodels.api as sm
 
 # Local application imports.
-from matrix_preparation.src.utilities import prepare_output_dir, check_file_exists, load_dataframe, save_dataframe
+from utilities import prepare_output_dir, check_file_exists, load_dataframe, save_dataframe
 
 
 class CorrectCohortEffects:

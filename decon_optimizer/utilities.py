@@ -61,21 +61,3 @@ def prepare_output_dir(out_dir):
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
 
-
-def p_value_to_symbol(p_value):
-    output = ""
-    try:
-        if p_value > 0.05:
-            output = "NS"
-        elif 0.05 >= p_value > 0.01:
-            output = "*"
-        elif 0.01 >= p_value > 0.001:
-            output = "**"
-        elif 0.001 >= p_value > 0.0001:
-            output = "***"
-        elif p_value <= 0.0001:
-            output = "****"
-    except TypeError:
-        pass
-
-    return output

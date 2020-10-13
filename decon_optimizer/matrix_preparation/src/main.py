@@ -28,8 +28,8 @@ import os
 # Third party imports.
 
 # Local application imports.
-from .utilities import prepare_output_dir
-from .local_settings import LocalSettings
+from local_settings import LocalSettings
+from utilities import prepare_output_dir
 from .steps.combine_gte_files import CombineGTEFiles
 from .steps.combine_eqtlprobes import CombineEQTLProbes
 from .steps.create_cohort_matrix import CreateCohortMatrix
