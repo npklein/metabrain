@@ -28,7 +28,7 @@ import numpy as np
 import pandas as pd
 
 # Local application imports.
-from matrix_preparation.src.utilities import prepare_output_dir, check_file_exists, load_dataframe, save_dataframe
+from utilities import prepare_output_dir, check_file_exists, load_dataframe, save_dataframe
 
 
 class CreateCovMatrix:
@@ -100,14 +100,10 @@ class CreateCovMatrix:
                           [self.tech_covs_df, self.cohort_df.T, eigen_df, self.decon_df])
         comb_cov = comb_cov.T
         comb_cov.index.name = "-"
-        print("\tShape: {}".format(comb_cov.shape))
 
         # Validate sample order.
         if not comb_cov.columns.equals(self.sample_order):
             comb_cov = comb_cov[self.sample_order]
-
-        print(comb_cov)
-        exit()
 
         # Remove old dataframes.
         del eigen_df

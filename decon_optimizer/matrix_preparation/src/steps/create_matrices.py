@@ -28,7 +28,7 @@ import numpy as np
 import pandas as pd
 
 # Local application imports.
-from matrix_preparation.src.utilities import prepare_output_dir, check_file_exists, load_dataframe, save_dataframe, construct_dict_from_df
+from utilities import prepare_output_dir, check_file_exists, load_dataframe, save_dataframe, construct_dict_from_df
 
 
 class CreateMatrices:
