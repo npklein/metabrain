@@ -1,7 +1,7 @@
 """
 File:         utilities.py
 Created:      2020/10/08
-Last Changed:
+Last Changed: 2020/10/15
 Author(s):    M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -33,26 +33,34 @@ def check_file_exists(file_path):
     return os.path.exists(file_path) and os.path.isfile(file_path)
 
 
-def load_dataframe(inpath, header, index_col, logger, sep="\t", low_memory=True,
-                   nrows=None, skiprows=None):
+def load_dataframe(inpath, header, index_col, sep="\t", low_memory=True,
+                   nrows=None, skiprows=None, logger=None):
     df = pd.read_csv(inpath, sep=sep, header=header, index_col=index_col,
                      low_memory=low_memory, nrows=nrows, skiprows=skiprows)
-    if logger is not None:
+    if logger is None:
+        print("\tLoaded dataframe: {} "
+                    "with shape: {}".format(os.path.basename(inpath),
+                                            df.shape))
+    else:
         logger.info("\tLoaded dataframe: {} "
                     "with shape: {}".format(os.path.basename(inpath),
                                             df.shape))
     return df
 
 
-def save_dataframe(df, outpath, header, index, logger, sep="\t"):
+def save_dataframe(df, outpath, header, index, sep="\t", logger=None):
     compression = 'infer'
     if outpath.endswith('.gz'):
         compression = 'gzip'
 
     df.to_csv(outpath, sep=sep, index=index, header=header,
               compression=compression)
-    if logger is not None:
-        logger.info("\tSaved dataframe: {}"
+    if logger is  None:
+        print("\tSaved dataframe: {} "
+                    "with shape: {}".format(os.path.basename(outpath),
+                                            df.shape))
+    else:
+        logger.info("\tSaved dataframe: {} "
                     "with shape: {}".format(os.path.basename(outpath),
                                             df.shape))
 

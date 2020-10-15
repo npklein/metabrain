@@ -31,10 +31,12 @@
   "perform_deconvolution": {
 
   },
-  "create_cov_matrix": {
+  "create_tech_covs_matrix": {
     "covariate_datafile": "",
-    "technical_covariates": [],
+    "technical_covariates": []
+  },
+  "create_covs_matrix": {
     "eigenvectors_datafile": "",
     "num_eigenvectors": 50
   }
-}
+},
