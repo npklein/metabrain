@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
-Created:      2020/10/08
-Last Changed: 2020/10/15
+Created:      2020/10/15
+Last Changed:
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -62,27 +62,43 @@ class CommandLineArguments:
                             default="default_settings",
                             help="The settings input file (without '.json'), "
                                  "default: 'default_settings'.")
-        parser.add_argument("-f",
-                            "--force_steps",
-                            nargs="+",
-                            type=str,
+        parser.add_argument("-sr",
+                            "--skip_rows",
+                            type=int,
+                            default=0,
+                            help="The number of rows to skip in the input "
+                                 "files, default: 0.")
+        parser.add_argument("-ne",
+                            "--n_eqtls",
+                            type=int,
                             default=None,
-                            choices=["all",
-                                     "combine_gte_files",
-                                     "combine_eqtlprobes",
-                                     "create_cohort_matrix",
-                                     "create_matrices",
-                                     "correct_cohort_effects",
-                                     "perform_deconvolution",
-                                     "cerate_tech_covs_matrix",
-                                     "create_covs_matrix"],
-                            help="The steps to force the program to redo, "
-                                 "default: None. Note, all dependend steps"
-                                 "are forced too.")
-        parser.add_argument("-clear_log",
+                            help="The number of eQTLs in the input files, "
+                                 "default: None (determine automatically).")
+        parser.add_argument("-ns",
+                            "--n_samples",
+                            type=int,
+                            default=None,
+                            help="The number of samples in the input files, "
+                                 "default: None (determine automatically).")
+        parser.add_argument("-np",
+                            "--n_permutations",
+                            type=int,
+                            default=0,
+                            help="The number of permutation to perform for, "
+                                 "the FDR calculation. default: 0 "
+                                 "(Benjamini-Hochberg).")
+        parser.add_argument("-test_tech_covs",
                             action='store_true',
-                            help="Clear already existing log files. default: "
-                                 "'False'.")
+                            help="Wether or not to test the technical "
+                                 "covariates. Default: False.")
+        parser.add_argument("-verbose",
+                            action='store_true',
+                            help="Include steps and command prints, "
+                                 "default: False.")
+        parser.add_argument("-combine",
+                            action='store_true',
+                            help="Combine the created files, alternative "
+                                 "functionality. Default: False.")
 
         return parser
 
