@@ -66,7 +66,6 @@ if __name__ == '__main__':
         SKIP_ROWS = CLA.get_argument("skip_rows")
         N_EQTLS = CLA.get_argument("n_eqtls")
         N_SAMPLES = CLA.get_argument("n_samples")
-        N_PERMUTATIONS = CLA.get_argument("n_permutations")
         TEST_TECH_COVS = CLA.get_argument("test_tech_covs")
         VERBOSE = CLA.get_argument("verbose")
 
@@ -76,7 +75,6 @@ if __name__ == '__main__':
                        skip_rows=SKIP_ROWS,
                        n_eqtls=N_EQTLS,
                        n_samples=N_SAMPLES,
-                       n_permutations=N_PERMUTATIONS,
                        test_tech_covs=TEST_TECH_COVS,
                        verbose=VERBOSE)
         PROGRAM.start()

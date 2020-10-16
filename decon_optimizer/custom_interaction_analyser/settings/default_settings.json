@@ -17,6 +17,7 @@
   "inter_tvalue_pickle_filename": "inter_tvalue_data",
   "permutations_order_pickle_filename": "permutation_order",
   "permuted_pvalues_pickle_filename": "perm_pvalues",
+  "n_permutations": 0,
   "max_runtime_in_hours": 6,
   "panic_time_in_min": 10
 }

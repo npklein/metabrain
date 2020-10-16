@@ -80,12 +80,6 @@ class CommandLineArguments:
                             default=None,
                             help="The number of samples in the input files, "
                                  "default: None (determine automatically).")
-        parser.add_argument("-np",
-                            "--n_permutations",
-                            type=int,
-                            default=0,
-                            help="The number of permutation to perform for, "
-                                 "the FDR calculation. default: 0 ")
         parser.add_argument("-test_tech_covs",
                             action='store_true',
                             help="Wether or not to test the technical "

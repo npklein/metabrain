@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/10/14
-Last Changed:
+Last Changed: 2020/10/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -45,7 +45,7 @@ from utilities import check_file_exists, prepare_output_dir, load_dataframe
 
 class Main:
     def __init__(self, name, settings_file, skip_rows, n_eqtls, n_samples,
-                 n_permutations, test_tech_covs, verbose):
+                 test_tech_covs, verbose):
         # Define the current directory.
         current_dir = str(Path(__file__).parent.parent)
 
@@ -73,12 +73,12 @@ class Main:
         self.inter_std_err_filename = settings.get_setting("inter_std_err_pickle_filename")
         self.perm_order_filename = settings.get_setting("permutations_order_pickle_filename")
         self.perm_pvalues_filename = settings.get_setting("permuted_pvalues_pickle_filename")
+        self.n_perm = settings.get_setting("n_permutations")
         self.max_end_time = int(time.time()) + settings.get_setting("max_runtime_in_hours") * 60 * 60
         self.panic_time = self.max_end_time - (settings.get_setting("panic_time_in_min") * 60)
         self.skip_rows = skip_rows
         self.n_eqtls = n_eqtls
         self.n_samples = n_samples
-        self.n_permutations = n_permutations
         self.test_tech_covs = test_tech_covs
         self.verbose = verbose
 
@@ -99,7 +99,7 @@ class Main:
             permutation_orders = self.load_pickle(perm_orders_outfile)
 
             # Validate the permutation orders for the given input.
-            if len(permutation_orders) != (self.n_permutations + 1):
+            if len(permutation_orders) != (self.n_perm + 1):
                 print("\tinvalid")
                 permutation_orders = None
 
