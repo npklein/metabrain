@@ -3,7 +3,7 @@
 """
 File:         custom_interaction_analyser.py
 Created:      2020/10/15
-Last Changed:
+Last Changed: 2020/10/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -55,8 +55,12 @@ if __name__ == '__main__':
     COMBINE = CLA.get_argument("combine")
 
     if COMBINE:
+        ALPHA = CLA.get_argument("alpha")
+
+        # Start the program.
         PROGRAM = Combine(name=NAME,
-                          settings_file=SETTINGS_FILE)
+                          settings_file=SETTINGS_FILE,
+                          alpha=ALPHA)
         PROGRAM.start()
     else:
         SKIP_ROWS = CLA.get_argument("skip_rows")

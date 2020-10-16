@@ -1,7 +1,7 @@
 """
 File:         combiner.py
 Created:      2020/10/15
-Last Changed:
+Last Changed: 2020/10/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -25,6 +25,7 @@ from __future__ import print_function
 from pathlib import Path
 from bisect import bisect_left
 from itertools import groupby, count
+import random
 import pickle
 import glob
 import time
@@ -41,7 +42,9 @@ from utilities import save_dataframe
 
 
 class Combine:
-    def __init__(self, name, settings_file):
+    def __init__(self, name, settings_file, alpha):
+        self.alpha = alpha
+
         # Define the current directory.
         current_dir = str(Path(__file__).parent.parent)
 
@@ -72,8 +75,11 @@ class Combine:
 
         for outdir in [self.cov_outdir, self.tech_cov_outdir]:
             full_outdir = os.path.join(self.outdir, outdir)
+            print("Working on {}.".format(full_outdir))
+
             if not os.path.exists(full_outdir):
-                print("Error, output directory does not exist.")
+                print("Error, {} does not exist.".format(os.path.basename(full_outdir)))
+                continue
 
             self.work(full_outdir)
 
@@ -88,19 +94,23 @@ class Combine:
     def work(self, workdir):
         dataframes = {}
 
-        print("### Step 1 ###", flush=True)
-        print("Combine pickle files into dataframe.")
+        print("")
+        print("### Step 1 ###")
+        print("Combine pickle files into dataframe.", flush=True)
         for filename in [self.pvalues_filename,
                          self.snp_coef_filename,
                          self.snp_std_err_filename,
                          self.inter_coef_filename,
                          self.inter_std_err_filename]:
 
-            print("\t Loading {} data.".format(filename), flush=True)
+            print("\tLoading {} data.".format(filename), flush=True)
             columns, data = self.combine_pickles(workdir,
                                                  filename,
                                                  columns=True)
-            print(len(data))
+
+            if len(data) == 0:
+                print("\t\tNo {} data found.".format(filename))
+                continue
 
             print("Creating {} dataframe.".format(filename), flush=True)
             df = self.create_df(data, columns)
@@ -116,10 +126,14 @@ class Combine:
             del columns, data, df
 
         print("")
-        print("### Step 2 ###", flush=True)
-        print("Calculate t-values")
-        for coef_file, std_err_file, tvalue_file in [[self.snp_coef_filename, self.snp_std_err_filename, self.snp_tvalue_filename],
-                                                     [self.inter_coef_filename, self.inter_std_err_filename, self.inter_tvalue_filename]]:
+        print("### Step 2 ###")
+        print("Calculate t-values", flush=True)
+        for type, coef_file, std_err_file, tvalue_file in [["SNP", self.snp_coef_filename, self.snp_std_err_filename, self.snp_tvalue_filename],
+                                                           ["inter", self.inter_coef_filename, self.inter_std_err_filename, self.inter_tvalue_filename]]:
+            if coef_file not in dataframes or std_err_file not in dataframes:
+                print("\tNo {} data found.".format(type))
+                continue
+
             coef_df = dataframes[coef_file]
             std_err_df = dataframes[std_err_file]
             tvalue_df = coef_df / std_err_df
@@ -131,36 +145,94 @@ class Combine:
                            header=True, index=True)
 
         print("")
-        print("### Step 3 ###", flush=True)
-        print("Calculate z-scores")
+        print("### Step 3 ###")
+        print("Starting other calculations", flush=True)
+
+        if self.pvalues_filename not in dataframes:
+            print("\tNo pvalues data found.")
+            return
 
         pvalue_df = dataframes[self.pvalues_filename]
+        pvalue_df_columns = ["{}_{}".format(x, i) for i, x in enumerate(pvalue_df.columns)]
+        pvalue_df.columns = pvalue_df_columns
+        pvalue_df_indices = ["{}_{}".format(x, i) for i, x in enumerate(pvalue_df.index)]
+        pvalue_df.index = pvalue_df_indices
+        pvalue_df.reset_index(drop=False, inplace=True)
 
-        print("Creating z-score dataframe.", flush=True)
-        zscore_df = self.create_zscore_df(pvalue_df.copy())
+        print("Melting dataframe.", flush=True)
+        dfm = pvalue_df.melt(id_vars=["index"])
+        dfm.columns = ["covariate", "SNP", "pvalue"]
+        dfm = dfm.sort_values(by="pvalue", ascending=True)
+        dfm.reset_index(drop=True, inplace=True)
+        n_signif = dfm[dfm["pvalue"] < self.alpha].shape[0]
+        n_total = dfm.shape[0]
+        print("\t{}/{} [{:.2f}%] of pvalues < {}".format(n_signif, n_total, (100/n_total)*n_signif, self.alpha), flush=True)
 
-        print("Saving z-score dataframe.", flush=True)
-        save_dataframe(df=zscore_df,
+        print("Adding z-scores.", flush=True)
+        dfm["zscore"] = stats.norm.isf(dfm["pvalue"])
+        dfm.loc[dfm["pvalue"] > (1.0 - 1e-16), "zscore"] = -8.209536151601387
+        dfm.loc[dfm["pvalue"] < 1e-323, "zscore"] = 38.44939448087599
+
+        print("Adding BH-FDR.", flush=True)
+        dfm["BH-FDR"] = dfm["pvalue"] * (n_total / (dfm.index + 1))
+        dfm.loc[dfm["BH-FDR"] > 1, "BH-FDR"] = 1
+        prev_bh_fdr = -np.Inf
+        for i in range(n_total):
+            bh_fdr = dfm.loc[i, "BH-FDR"]
+            if bh_fdr > prev_bh_fdr:
+                prev_bh_fdr = bh_fdr
+            else:
+                dfm.loc[i, "BH-FDR"] = prev_bh_fdr
+        n_signif = dfm[dfm["BH-FDR"] < self.alpha].shape[0]
+        print("\t{}/{} [{:.2f}%] of BH-FDR values < {}".format(n_signif, n_total, (100/n_total)*n_signif, self.alpha), flush=True)
+
+        print("Adding permutation FDR.", flush=True)
+        print("\tLoading permutation pvalue data.", flush=True)
+        _, perm_pvalues = self.combine_pickles(workdir,
+                                               self.perm_pvalues_filename)
+        # perm_pvalues = [random.random() for _ in range(n_total * 10)]
+        print("Sorting p-values.", flush=True)
+        perm_pvalues = sorted(perm_pvalues)
+
+        if len(perm_pvalues) > 0:
+            n_perm = len(perm_pvalues) / n_total
+            perm_ranks = []
+            for pvalue in dfm["pvalue"]:
+                perm_ranks.append(bisect_left(perm_pvalues, pvalue))
+            dfm["perm-rank"] = perm_ranks
+            dfm["perm-FDR"] = (dfm["perm-rank"] / n_perm) / dfm.index
+            dfm.loc[(dfm.index == 0) | (dfm["perm-rank"] == 0), "perm-FDR"] = 0
+            dfm.loc[dfm["perm-FDR"] > 1, "perm-FDR"] = 1
+
+        print("Saving full dataframe.", flush=True)
+        save_dataframe(df=dfm,
                        outpath=os.path.join(workdir,
-                                            "zscore_table.txt.gz"),
+                                            "molten_table.txt.gz"),
                        header=True, index=True)
 
         print("")
-        print("### Step 4 ###", flush=True)
-        print("Calculate FDR-values")
+        print("### Step 4 ###")
+        print("Saving seperate dataframes.", flush=True)
 
-        print("Loading permutation pvalue data.", flush=True)
-        _, perm_pvalues = self.combine_pickles(workdir,
-                                               self.perm_pvalues_filename)
-        n_permutations = 0
-        fdr_df = None
-        if len(perm_pvalues) > 0:
-            n_permutations = len(perm_pvalues) / len(pvalue_df.index)
+        for col in ["zscore", "BH-FDR", "perm-FDR"]:
+            if col in dfm.columns:
+                print("Pivoting table.", flush=True)
+                pivot_df = dfm.pivot(index='covariate', columns='SNP', values=col)
 
-            # TODO
+                print("Reorder dataframe.")
+                pivot_df = pivot_df.loc[pvalue_df_indices, pvalue_df_columns]
+                pivot_df.index = ["_".join(x.split("_")[:-1]) for x in pivot_df.index]
+                pivot_df.index.name = "-"
+                pivot_df.columns = ["_".join(x.split("_")[:-1]) for x in pivot_df.columns]
+                pivot_df.columns.name = None
+
+                print("Saving {} dataframe.".format(col), flush=True)
+                save_dataframe(df=pivot_df,
+                               outpath=os.path.join(workdir,
+                                                    "{}_table.txt.gz".format(col)),
+                               header=True, index=True)
 
         print("")
-        print("Program completed.", flush=True)
 
     @staticmethod
     def combine_pickles(indir, filename, columns=False):
@@ -224,114 +296,8 @@ class Combine:
         tmp = [list(g) for k, g in groups]
         return [str(x[0]) if len(x) == 1 else "{}-{}".format(x[0], x[-1]) for x in tmp]
 
-    def create_zscore_df(self, df):
-        count = 1
-        total = df.shape[0] * df.shape[1]
-
-        zscore_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
-        for row_index in range(df.shape[0]):
-            for col_index in range(df.shape[1]):
-                if (count == 1) or (count % int(total / 10) == 0) or (count == total):
-                    print("\tworking on {}/{} [{:.2f}%]".format(count,
-                                                                total,
-                                                                (100 / total) * count))
-                pvalue = df.iloc[row_index, col_index]
-                zscore = self.get_z_score(pvalue)
-                zscore_df.iloc[row_index, col_index] = zscore
-                count += 1
-
-        return zscore_df
-
-    @staticmethod
-    def get_z_score(p_value):
-        if p_value > (1.0 - 1e-16):
-            p_value = (1.0 - 1e-16)
-        if p_value < 1e-323:
-            p_value = 1e-323
-
-        # The lower and upper limit of stats.norm.sf
-        # stats.norm.isf((1 - 1e-16)) = -8.209536151601387
-        # stats.norm.isf(1e-323) = 38.44939448087599
-        return stats.norm.isf(p_value)
-
-    @staticmethod
-    def create_perm_fdr_df(df, pvalues, perm_pvalues, n_perm):
-        count = 1
-        total = df.shape[0] * df.shape[1]
-
-        max_signif_pvalue = -np.inf
-
-        fdr_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
-        for row_index in range(df.shape[0]):
-            for col_index in range(df.shape[1]):
-                if (count == 1) or (count % int(total / 10) == 0) or (count == total):
-                    print("\tworking on {}/{} [{:.2f}%]".format(count,
-                                                                total,
-                                                                (100 / total) * count))
-                pvalue = df.iloc[row_index, col_index]
-                rank = bisect_left(pvalues, pvalue)
-                perm_rank = bisect_left(perm_pvalues, pvalue)
-                if (rank > 0) and (perm_rank > 0):
-                    fdr_value = (perm_rank / n_perm) / rank
-                    if fdr_value > 1:
-                        fdr_value = 1
-                else:
-                    fdr_value = 0
-                fdr_df.iloc[row_index, col_index] = fdr_value
-
-                if fdr_value < 0.05 and pvalue > max_signif_pvalue:
-                    max_signif_pvalue = pvalue
-
-                count += 1
-
-        return fdr_df, max_signif_pvalue
-
-    @staticmethod
-    def create_bh_fdr_df(df, pvalues):
-        count = 1
-        total = df.shape[0] * df.shape[1]
-
-        max_signif_pvalue = -np.inf
-
-        m = np.count_nonzero(~np.isnan(pvalues))
-        fdr_df = pd.DataFrame(np.nan, index=df.index, columns=df.columns)
-        fdr_values = []
-        for row_index in range(df.shape[0]):
-            for col_index in range(df.shape[1]):
-                if (count == 1) or (count % int(total / 10) == 0) or (count == total):
-                    print("\tworking on {}/{} [{:.2f}%]".format(count,
-                                                                total,
-                                                                (100 / total) * count))
-                pvalue = df.iloc[row_index, col_index]
-                rank = bisect_left(pvalues, pvalue) + 1
-                fdr_value = pvalue * (m / rank)
-                if fdr_value > 1:
-                    fdr_value = 1
-                fdr_values.append((rank, row_index, col_index, fdr_value))
-                fdr_df.iloc[row_index, col_index] = fdr_value
-
-                if fdr_value < 0.05 and pvalue > max_signif_pvalue:
-                    max_signif_pvalue = pvalue
-
-                count += 1
-
-        # Make sure the BH FDR is a monotome function. This goes through
-        # the FDR values backwords and make sure that the next FDR is always
-        # lower or equal to the previous.
-        fdr_values = sorted(fdr_values, key=lambda x: x[0], reverse=True)
-        prev_fdr_value = None
-        for (rank, row_index, col_index, fdr_value) in fdr_values:
-            if prev_fdr_value is not None and fdr_value > prev_fdr_value:
-                fdr_df.iloc[row_index, col_index] = prev_fdr_value
-                prev_fdr_value = prev_fdr_value
-            else:
-                prev_fdr_value = fdr_value
-
-        return fdr_df, max_signif_pvalue
-
-
-
     def print_arguments(self):
         print("Arguments:")
+        print("  > Alpha: {}".format(self.alpha))
         print("  > Output directory: {}".format(self.outdir))
         print("")
