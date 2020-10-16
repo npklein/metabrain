@@ -65,6 +65,7 @@ class Combine:
         self.inter_std_err_filename = settings.get_setting("inter_std_err_pickle_filename")
         self.inter_tvalue_filename = settings.get_setting("inter_tvalue_pickle_filename")
         self.perm_pvalues_filename = settings.get_setting("permuted_pvalues_pickle_filename")
+        self.n_perm = settings.get_setting("n_permutations")
 
     def start(self):
         print("Starting interaction analyser - combine and plot.")
@@ -196,6 +197,8 @@ class Combine:
 
         if len(perm_pvalues) > 0:
             n_perm = len(perm_pvalues) / n_total
+            if n_perm != self.n_perm:
+                print("\tWARNING: not all permutation pvalus are present")
             perm_ranks = []
             for pvalue in dfm["pvalue"]:
                 perm_ranks.append(bisect_left(perm_pvalues, pvalue))
