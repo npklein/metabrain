@@ -7,7 +7,7 @@
     "covariates": ""
   },
   "covariates_folder": "covariates",
-  "technical_covariates_folder": "covariates",
+  "technical_covariates_folder": "technical_covariates",
   "real_pvalues_pickle_filename": "pvalue_data",
   "snp_coef_pickle_filename": "snp_coef_data",
   "snp_std_err_pickle_filename": "snp_std_err_data",

@@ -246,7 +246,7 @@ class Main:
                                   tech_inter_matrix.T])
 
             # Initialize variables.
-            storage.add_row(eqtl_index, genotype.name)
+            storage.add_row(eqtl_index, "{}_{}".format(genotype.name, expression.name))
 
             # Combine technical and non technical covariates if we want to
             # test both.
@@ -379,6 +379,9 @@ class Main:
     @staticmethod
     def dump_pickle(content, directory, filename, filename_suffix="",
                     subdir=False, unique=False):
+        if content is None or (isinstance(content, list) and len(content) == 0):
+            return
+
         full_directory = directory
         if subdir:
             full_directory = os.path.join(directory, filename)

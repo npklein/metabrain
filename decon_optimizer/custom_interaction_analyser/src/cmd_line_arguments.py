@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/10/15
-Last Changed:
+Last Changed: 2020/10/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -85,12 +85,16 @@ class CommandLineArguments:
                             type=int,
                             default=0,
                             help="The number of permutation to perform for, "
-                                 "the FDR calculation. default: 0 "
-                                 "(Benjamini-Hochberg).")
+                                 "the FDR calculation. default: 0 ")
         parser.add_argument("-test_tech_covs",
                             action='store_true',
                             help="Wether or not to test the technical "
                                  "covariates. Default: False.")
+        parser.add_argument("-a",
+                            "--alpha",
+                            type=float,
+                            default=0.05,
+                            help="The signifiance cut-off. default: 0.05.")
         parser.add_argument("-verbose",
                             action='store_true',
                             help="Include steps and command prints, "
