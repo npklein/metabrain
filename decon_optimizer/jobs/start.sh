@@ -1,10 +1,11 @@
 #!/bin/bash
 
-JOBS_DIR=/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/jobs/
-LOGFILE=/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/jobs/start.txt
 JOB_PREFIX=$1
 START=$2
 END=$3
+
+JOBS_DIR=/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-decon-optimizer/jobs/$JOB_PREFIX/
+LOGFILE=/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-decon-optimizer/jobs/$JOB_PREFIX/start.txt
 
 echo $(date) > $LOGFILE
 

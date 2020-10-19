@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/10/08
-Last Changed: 2020/10/15
+Last Changed: 2020/10/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -166,8 +166,6 @@ class Main:
             log=self.log,
             cohort_file=ccm.get_cohort_file(),
             cohort_df=ccm.get_cohort_df(),
-            expr_file=cm.get_expr_file(),
-            expr_df=cm.get_expr_df(),
             sign_expr_file=cm.get_sign_expr_file(),
             sign_expr_df=cm.get_sign_expr_df(),
             force=self.force_dict['correct_cohort_effects'],

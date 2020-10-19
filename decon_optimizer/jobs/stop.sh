@@ -1,6 +1,7 @@
 #!/bin/bash
 
-LOGFILE=/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/jobs/start.txt
+JOB_PREFIX=$1
+LOGFILE=/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-decon-optimizer/jobs/$JOB_PREFIX/start.txt
 
 re='^[0-9]+$'
 while IFS= read -r LINE; do

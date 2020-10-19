@@ -1,7 +1,7 @@
 """
 File:         correct_cohort_effects.py
 Created:      2020/10/08
-Last Changed: 2020/10/13
+Last Changed: 2020/10/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -32,13 +32,11 @@ from utilities import prepare_output_dir, check_file_exists, load_dataframe, sav
 
 
 class CorrectCohortEffects:
-    def __init__(self, settings, log, cohort_file, cohort_df, expr_file,
-                 expr_df, sign_expr_file, sign_expr_df,  force, outdir):
+    def __init__(self, settings, log, cohort_file, cohort_df, sign_expr_file,
+                 sign_expr_df,  force, outdir):
         self.log = log
         self.cohort_file = cohort_file
         self.cohort_df = cohort_df
-        self.expr_file = expr_file
-        self.expr_df = expr_df
         self.sign_expr_file = sign_expr_file
         self.sign_expr_df = sign_expr_df
         self.force = force
@@ -49,7 +47,6 @@ class CorrectCohortEffects:
         prepare_output_dir(self.outdir)
 
         # Construct the output paths.
-        self.expr_cc_outpath = os.path.join(self.outdir, "expression_table_cc.txt.gz")
         self.sign_expr_cc_outpath = os.path.join(self.outdir, "signature_expr_table_cc.txt.gz")
 
         # Create empty variable.
@@ -59,26 +56,6 @@ class CorrectCohortEffects:
     def start(self):
         self.log.info("Correcting expression data for cohorts.")
         self.print_arguments()
-
-        self.log.info("Correcting expression data.")
-        if not check_file_exists(self.expr_cc_outpath) or self.force:
-            if self.cohort_df is None:
-                self.cohort_df = load_dataframe(self.cohort_file,
-                                                header=0,
-                                                index_col=0,
-                                                logger=self.log)
-
-            if self.expr_df is None:
-                self.expr_df = load_dataframe(self.expr_file,
-                                              header=0,
-                                              index_col=0,
-                                              logger=self.log)
-
-            self.expr_cc_df = self.cohort_correction(self.expr_df, self.cohort_df.T)
-            save_dataframe(df=self.expr_cc_df, outpath=self.expr_cc_outpath,
-                           index=True, header=True, logger=self.log)
-        else:
-            self.log.info("\tSkipping step.")
 
         self.log.info("Correcting signature expression data.")
         if not check_file_exists(self.sign_expr_cc_outpath) or self.force:
@@ -134,8 +111,6 @@ class CorrectCohortEffects:
     def clear_variables(self):
         self.cohort_file = None
         self.cohort_df = None
-        self.expr_file = None
-        self.expr_df = None
         self.sign_expr_file = None
         self.sign_expr_df = None
         self.force = None
@@ -155,10 +130,6 @@ class CorrectCohortEffects:
             self.log.info("  > Cohort input shape: {}".format(self.cohort_df.shape))
         else:
             self.log.info("  > Cohort input file: {}".format(self.cohort_file))
-        if self.expr_df is not None:
-            self.log.info("  > Expression input shape: {}".format(self.expr_df.shape))
-        else:
-            self.log.info("  > Expression input file: {}".format(self.expr_file))
         if self.sign_expr_df is not None:
             self.log.info("  > Signature expression input shape: {}".format(self.sign_expr_df.shape))
         else:

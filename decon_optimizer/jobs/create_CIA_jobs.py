@@ -61,14 +61,15 @@ class main():
         self.n_samples = getattr(arguments, 'n_samples')
 
         # Set the variables.
-        self.outdir = Path(__file__).parent.absolute()
+        self.outdir = os.path.join(Path(__file__).parent.absolute(), self.job)
         self.log_file_outdir = os.path.join(self.outdir, 'output')
         self.time = "05:59:00"
         self.cores = 1
         self.mem = 2
 
-        if not os.path.exists(self.log_file_outdir):
-            os.makedirs(self.log_file_outdir)
+        for outdir in [self.outdir, self.log_file_outdir]:
+            if not os.path.exists(outdir):
+                os.makedirs(outdir)
 
     def create_argument_parser(self):
         parser = argparse.ArgumentParser(prog=__program__,
