@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/10/14
-Last Changed: 2020/10/16
+Last Changed: 2020/10/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -173,7 +173,7 @@ class Main:
               "{} second(s)".format(int(run_time_hour),
                                     int(run_time_min),
                                     int(run_time_sec)))
-        print("Received {:.2f} analyses per minute".format((self.n_eqtls * (self.n_permutations + 1)) /
+        print("Received {:.2f} analyses per minute".format((self.n_eqtls * (self.n_perm + 1)) /
                                                            (run_time / 60)))
 
         # Shutdown the manager.
@@ -409,7 +409,7 @@ class Main:
 
     def create_perm_orders(self):
         sample_orders = [self.get_column_indices()]
-        for _ in range(self.n_permutations):
+        for _ in range(self.n_perm):
             sample_orders.append(self.create_random_shuffle())
         return sample_orders
 
@@ -511,7 +511,7 @@ class Main:
         print("  > Skip rows: {}".format(self.skip_rows))
         print("  > EQTLs: {}".format(self.n_eqtls))
         print("  > Samples: {}".format(self.n_samples))
-        print("  > Permutations: {}".format(self.n_permutations))
+        print("  > Permutations: {}".format(self.n_perm))
         print("  > Test tech.covs.: {}".format(self.test_tech_covs))
         print("  > Verbose: {}".format(self.verbose))
         print("", flush=True)
