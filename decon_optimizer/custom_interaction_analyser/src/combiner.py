@@ -1,7 +1,7 @@
 """
 File:         combiner.py
 Created:      2020/10/15
-Last Changed: 2020/10/16
+Last Changed: 2020/10/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -51,19 +51,14 @@ class Combine:
         # Load the LocalSettings singelton class.
         settings = LocalSettings(current_dir, settings_file)
 
-        # Prepare an output directory.
-        self.outdir = os.path.join(current_dir, name)
+        # Prepare the input / output directory.
+        self.work_dir = os.path.join(current_dir, name)
 
         # Get the needed settings.
-        self.cov_outdir = settings.get_setting("covariates_folder")
-        self.tech_cov_outdir = settings.get_setting("technical_covariates_folder")
         self.pvalues_filename = settings.get_setting("real_pvalues_pickle_filename")
-        self.snp_coef_filename = settings.get_setting("snp_coef_pickle_filename")
-        self.snp_std_err_filename = settings.get_setting("snp_std_err_pickle_filename")
-        self.snp_tvalue_filename = settings.get_setting("snp_tvalue_pickle_filename")
-        self.inter_coef_filename = settings.get_setting("inter_coef_pickle_filename")
-        self.inter_std_err_filename = settings.get_setting("inter_std_err_pickle_filename")
-        self.inter_tvalue_filename = settings.get_setting("inter_tvalue_pickle_filename")
+        self.coef_filename = settings.get_setting("coef_pickle_filename")
+        self.std_err_filename = settings.get_setting("std_err_pickle_filename")
+        self.tvalue_filename = settings.get_setting("tvalue_pickle_filename")
         self.perm_pvalues_filename = settings.get_setting("permuted_pvalues_pickle_filename")
         self.n_perm = settings.get_setting("n_permutations")
 
@@ -74,43 +69,21 @@ class Combine:
         # Start the timer.
         start_time = time.time()
 
-        for outdir in [self.cov_outdir, self.tech_cov_outdir]:
-            full_outdir = os.path.join(self.outdir, outdir)
-            print("Working on {}.".format(full_outdir))
-
-            if not os.path.exists(full_outdir):
-                print("Error, {} does not exist.".format(os.path.basename(full_outdir)))
-                continue
-
-            self.work(full_outdir)
-
-        # Print the time.
-        run_time_min, run_time_sec = divmod(time.time() - start_time, 60)
-        run_time_hour, run_time_min = divmod(run_time_min, 60)
-        print("finished in  {} hour(s), {} minute(s) and "
-              "{} second(s).".format(int(run_time_hour),
-                                     int(run_time_min),
-                                     int(run_time_sec)), flush=True)
-
-    def work(self, workdir):
-        dataframes = {}
-
         print("")
         print("### Step 1 ###")
         print("Combine pickle files into dataframe.", flush=True)
+        dataframes = {}
         for filename in [self.pvalues_filename,
-                         self.snp_coef_filename,
-                         self.snp_std_err_filename,
-                         self.inter_coef_filename,
-                         self.inter_std_err_filename]:
+                         self.coef_filename,
+                         self.std_err_filename]:
 
-            print("\tLoading {} data.".format(filename), flush=True)
-            columns, data = self.combine_pickles(workdir,
+            print("Loading {} data.".format(filename), flush=True)
+            columns, data = self.combine_pickles(self.work_dir,
                                                  filename,
                                                  columns=True)
 
             if len(data) == 0:
-                print("\t\tNo {} data found.".format(filename))
+                print("\tNo {} data found.".format(filename))
                 continue
 
             print("Creating {} dataframe.".format(filename), flush=True)
@@ -118,7 +91,7 @@ class Combine:
 
             print("Saving {} dataframe.".format(filename), flush=True)
             save_dataframe(df=df,
-                           outpath=os.path.join(workdir,
+                           outpath=os.path.join(self.work_dir,
                                                 "{}_table.txt.gz".format(filename)),
                            header=True, index=True)
 
@@ -126,24 +99,22 @@ class Combine:
 
             del columns, data, df
 
+        print(dataframes)
+
         print("")
         print("### Step 2 ###")
         print("Calculate t-values", flush=True)
-        for type, coef_file, std_err_file, tvalue_file in [["SNP", self.snp_coef_filename, self.snp_std_err_filename, self.snp_tvalue_filename],
-                                                           ["inter", self.inter_coef_filename, self.inter_std_err_filename, self.inter_tvalue_filename]]:
-            if coef_file not in dataframes or std_err_file not in dataframes:
-                print("\tNo {} data found.".format(type))
-                continue
+        if self.coef_filename in dataframes and self.std_err_filename in dataframes:
+            # Calculate t-values
+            tvalue_df = dataframes[self.coef_filename] / dataframes[self.std_err_filename]
 
-            coef_df = dataframes[coef_file]
-            std_err_df = dataframes[std_err_file]
-            tvalue_df = coef_df / std_err_df
-
-            print("Saving {} dataframe.".format(tvalue_file), flush=True)
+            print("Saving {} dataframe.".format(self.tvalue_filename), flush=True)
             save_dataframe(df=tvalue_df,
-                           outpath=os.path.join(workdir,
-                                                "{}_table.txt.gz".format(tvalue_file)),
+                           outpath=os.path.join(self.work_dir,
+                                                "{}_table.txt.gz".format(self.tvalue_filename)),
                            header=True, index=True)
+        else:
+            print("\tNo data found.")
 
         print("")
         print("### Step 3 ###")
@@ -189,7 +160,7 @@ class Combine:
 
         print("Adding permutation FDR.", flush=True)
         print("\tLoading permutation pvalue data.", flush=True)
-        _, perm_pvalues = self.combine_pickles(workdir,
+        _, perm_pvalues = self.combine_pickles(self.work_dir,
                                                self.perm_pvalues_filename)
         # perm_pvalues = [random.random() for _ in range(n_total * 10)]
         print("Sorting p-values.", flush=True)
@@ -209,7 +180,7 @@ class Combine:
 
         print("Saving full dataframe.", flush=True)
         save_dataframe(df=dfm,
-                       outpath=os.path.join(workdir,
+                       outpath=os.path.join(self.work_dir,
                                             "molten_table.txt.gz"),
                        header=True, index=True)
 
@@ -231,19 +202,25 @@ class Combine:
 
                 print("Saving {} dataframe.".format(col), flush=True)
                 save_dataframe(df=pivot_df,
-                               outpath=os.path.join(workdir,
+                               outpath=os.path.join(self.work_dir,
                                                     "{}_table.txt.gz".format(col)),
                                header=True, index=True)
 
         print("")
 
+        # Print the time.
+        run_time_min, run_time_sec = divmod(time.time() - start_time, 60)
+        run_time_hour, run_time_min = divmod(run_time_min, 60)
+        print("finished in  {} hour(s), {} minute(s) and "
+              "{} second(s).".format(int(run_time_hour),
+                                     int(run_time_min),
+                                     int(run_time_sec)), flush=True)
+
     @staticmethod
     def combine_pickles(indir, filename, columns=False):
-        # Declare variables.
         col_list = None
         data = []
 
-        # Combine the found files.
         for i, fpath in enumerate(glob.glob(os.path.join(indir, filename,
                                                          filename + "*.pkl"))):
             with open(fpath, "rb") as f:
@@ -253,7 +230,7 @@ class Combine:
                         col_list = content[0]
                     data.extend(content[1:])
                 except EOFError:
-                    print("\tEOFError in: {} ".format(os.path.basename(fpath)))
+                    print("\t\tEOFError in: {} ".format(os.path.basename(fpath)))
             f.close()
 
         return col_list, data
@@ -302,5 +279,5 @@ class Combine:
     def print_arguments(self):
         print("Arguments:")
         print("  > Alpha: {}".format(self.alpha))
-        print("  > Output directory: {}".format(self.outdir))
+        print("  > Working directory: {}".format(self.work_dir))
         print("")

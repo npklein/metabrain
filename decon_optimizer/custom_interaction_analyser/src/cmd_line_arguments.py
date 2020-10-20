@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/10/15
-Last Changed: 2020/10/16
+Last Changed: 2020/10/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -56,6 +56,13 @@ class CommandLineArguments:
                             type=str,
                             required=True,
                             help="The name of the input/output directory.")
+        parser.add_argument("-i",
+                            "--input",
+                            type=str,
+                            default=None,
+                            help="The name of the input directory. Overwrites"
+                                 "the -n / --name variable (output name is"
+                                 "retained). Default: None.")
         parser.add_argument("-s",
                             "--settings",
                             type=str,
@@ -80,10 +87,6 @@ class CommandLineArguments:
                             default=None,
                             help="The number of samples in the input files, "
                                  "default: None (determine automatically).")
-        parser.add_argument("-test_tech_covs",
-                            action='store_true',
-                            help="Wether or not to test the technical "
-                                 "covariates. Default: False.")
         parser.add_argument("-a",
                             "--alpha",
                             type=float,
