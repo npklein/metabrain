@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/10/14
-Last Changed: 2020/10/19
+Last Changed: 2020/10/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -38,14 +38,14 @@ import statsmodels.api as sm
 from functools import reduce
 
 # Local application imports.
-from .storage import Storage
+from .storage_container import StorageContainer
 from local_settings import LocalSettings
 from utilities import check_file_exists, prepare_output_dir, load_dataframe
 
 
 class Main:
-    def __init__(self, name, settings_file, skip_rows, n_eqtls, n_samples,
-                 test_tech_covs, verbose):
+    def __init__(self, name, input, settings_file, skip_rows, n_eqtls,
+                 n_samples, verbose):
         # Define the current directory.
         current_dir = str(Path(__file__).parent.parent)
 
@@ -56,21 +56,22 @@ class Main:
         self.outdir = os.path.join(current_dir, name)
         prepare_output_dir(self.outdir)
 
+        # Set the correct input directory.
+        if input is None:
+            input = name
+
         # Safe settings.
         input_dir = settings.get_setting("input_dir")
         filenames = settings.get_setting("filenames")
-        self.geno_inpath = os.path.join(input_dir, name, filenames["genotype"])
-        self.expr_inpath = os.path.join(input_dir, name, filenames["expression"])
-        self.tech_covs_inpath = os.path.join(input_dir, name, filenames["technical_covariates"])
-        self.covs_inpath = os.path.join(input_dir, name, filenames["covariates"])
+        self.input = os.path.join(input_dir, input)
+        self.geno_inpath = os.path.join(input_dir, input, filenames["genotype"])
+        self.expr_inpath = os.path.join(input_dir, input, filenames["expression"])
+        self.tech_covs_inpath = os.path.join(input_dir, input, filenames["technical_covariates"])
+        self.covs_inpath = os.path.join(input_dir, input, filenames["covariates"])
 
-        self.cov_outdir = settings.get_setting("covariates_folder")
-        self.tech_cov_outdir = settings.get_setting("technical_covariates_folder")
         self.pvalues_filename = settings.get_setting("real_pvalues_pickle_filename")
-        self.snp_coef_filename = settings.get_setting("snp_coef_pickle_filename")
-        self.snp_std_err_filename = settings.get_setting("snp_std_err_pickle_filename")
-        self.inter_coef_filename = settings.get_setting("inter_coef_pickle_filename")
-        self.inter_std_err_filename = settings.get_setting("inter_std_err_pickle_filename")
+        self.coef_filename = settings.get_setting("coef_pickle_filename")
+        self.std_err_filename = settings.get_setting("std_err_pickle_filename")
         self.perm_order_filename = settings.get_setting("permutations_order_pickle_filename")
         self.perm_pvalues_filename = settings.get_setting("permuted_pvalues_pickle_filename")
         self.n_perm = settings.get_setting("n_permutations")
@@ -79,7 +80,6 @@ class Main:
         self.skip_rows = skip_rows
         self.n_eqtls = n_eqtls
         self.n_samples = n_samples
-        self.test_tech_covs = test_tech_covs
         self.verbose = verbose
 
     def start(self):
@@ -121,49 +121,29 @@ class Main:
         # Start the work.
         print("Start the analysis", flush=True)
         storage = self.work(permutation_orders)
-        containers = [storage.get_cov_container()]
-        dirs = [self.cov_outdir]
-
-        if self.test_tech_covs:
-            containers.append(storage.get_tech_cov_container())
-            dirs.append(self.tech_cov_outdir)
 
         print("Saving output files", flush=True)
         filename_suffix = "{}_{}".format(self.skip_rows, self.n_eqtls)
-        for container, outdir in zip(containers, dirs):
-            full_outdir = os.path.join(self.outdir, outdir)
-            prepare_output_dir(full_outdir)
-
-            self.dump_pickle(container.get_pvalues(),
-                             full_outdir,
-                             self.pvalues_filename,
-                             filename_suffix=filename_suffix,
-                             subdir=True, unique=True)
-            self.dump_pickle(container.get_perm_pvalues(),
-                             full_outdir,
-                             self.perm_pvalues_filename,
-                             filename_suffix=filename_suffix,
-                             subdir=True, unique=True)
-            self.dump_pickle(container.get_snp_coefficients(),
-                             full_outdir,
-                             self.snp_coef_filename,
-                             filename_suffix=filename_suffix,
-                             subdir=True, unique=True)
-            self.dump_pickle(container.get_snp_std_errors(),
-                             full_outdir,
-                             self.snp_std_err_filename,
-                             filename_suffix=filename_suffix,
-                             subdir=True, unique=True)
-            self.dump_pickle(container.get_inter_coefficients(),
-                             full_outdir,
-                             self.inter_coef_filename,
-                             filename_suffix=filename_suffix,
-                             subdir=True, unique=True)
-            self.dump_pickle(container.get_inter_std_errors(),
-                             full_outdir,
-                             self.inter_std_err_filename,
-                             filename_suffix=filename_suffix,
-                             subdir=True, unique=True)
+        self.dump_pickle(storage.get_pvalues(),
+                         self.outdir,
+                         self.pvalues_filename,
+                         filename_suffix=filename_suffix,
+                         subdir=True, unique=True)
+        self.dump_pickle(storage.get_perm_pvalues(),
+                         self.outdir,
+                         self.perm_pvalues_filename,
+                         filename_suffix=filename_suffix,
+                         subdir=True, unique=True)
+        self.dump_pickle(storage.get_coefficients(),
+                         self.outdir,
+                         self.coef_filename,
+                         filename_suffix=filename_suffix,
+                         subdir=True, unique=True)
+        self.dump_pickle(storage.get_std_errors(),
+                         self.outdir,
+                         self.std_err_filename,
+                         filename_suffix=filename_suffix,
+                         subdir=True, unique=True)
 
         # Print the process time.
         run_time = int(time.time()) - start_time
@@ -201,8 +181,7 @@ class Main:
 
         # Initialize the storage object.
         print("Creating storage object")
-        storage = Storage(tech_covs=tech_covs_df.index.to_list(), covs=covs_df.index.to_list())
-        storage.print_info()
+        storage = StorageContainer(colnames=covs_df.index.to_list())
 
         # Start working.
         print("Starting interaction analyser", flush=True)
@@ -215,6 +194,7 @@ class Main:
                                      self.n_eqtls,
                                      (100 / self.n_eqtls) * (row_index + 1)),
                   flush=True)
+            start_time = time.time()
 
             # Get the complete genotype row for the permutation later.
             genotype_all = geno_df.iloc[row_index, :].copy()
@@ -229,7 +209,10 @@ class Main:
             technical_covs = tech_covs_df.iloc[:, eqtl_indices].copy()
             covariates = covs_df.iloc[:, eqtl_indices].copy()
 
-            # Create the null model. Null model are all the technical
+            # Initialize variables.
+            storage.add_row(eqtl_index, "{}_{}".format(genotype.name, expression.name))
+
+            # Create the base model. Null model are all the technical
             # covariates multiplied with the genotype + the SNP.
             tech_inter_matrix = technical_covs.mul(genotype, axis=1)
             tech_inter_matrix.index = ["{}_X_SNP".format(x) for x in
@@ -245,39 +228,26 @@ class Main:
                                   technical_covs.T,
                                   tech_inter_matrix.T])
 
-            # Initialize variables.
-            storage.add_row(eqtl_index, "{}_{}".format(genotype.name, expression.name))
-
-            # Combine technical and non technical covariates if we want to
-            # test both.
-            covs_of_interest = covariates.copy()
-            if self.test_tech_covs:
-                covs_of_interest = pd.concat([technical_covs, covariates], axis=1)
+            # Regress out the base model from the expression values.
+            expression_hat = self.remove_covariates(expression, base_matrix)
 
             # Loop over the covariates.
-            for cov_index in range(len(covs_of_interest.index)):
+            for cov_index in range(len(covariates.index)):
                 if storage.has_error():
                     break
 
                 # Get the covariate we are processing.
-                covariate = covs_of_interest.iloc[cov_index, :]
+                covariate = covariates.iloc[cov_index, :]
                 cov_name = covariate.name
 
                 if self.verbose:
                     print("\t\tWorking on '{}'".format(cov_name), flush=True)
 
-                # Add the covariate to the null matrix if it isn't already.
-                null_matrix = base_matrix.copy()
-                if cov_name not in null_matrix.columns:
-                    covariate_df = covariate.copy()
-                    null_matrix = null_matrix.merge(covariate_df.to_frame(),
-                                                    left_index=True,
-                                                    right_index=True)
-
                 # Create the null model.
+                null_matrix = covariate.to_frame()
                 n_null = null_matrix.shape[0]
                 df_null, rss_null, _, _ = self.create_model(null_matrix,
-                                                            expression)
+                                                            expression_hat)
 
                 # if self.verbose:
                 #     print("\t\tn_null: {}\tdf_null: {}\trss_null: {}\t".format(n_null, df_null, rss_null))
@@ -306,8 +276,6 @@ class Main:
                     # term.
                     inter_of_interest = covariate_all * genotype_all
                     inter_name = "{}_X_SNP".format(cov_name)
-                    if inter_name in null_matrix.columns:
-                        inter_name = inter_name + "_2"
                     inter_of_interest.name = inter_name
                     inter_of_interest = inter_of_interest.iloc[eqtl_indices]
 
@@ -328,17 +296,15 @@ class Main:
                     # Create the alternative model.
                     n_alt = alt_matrix.shape[0]
                     df_alt, rss_alt, coefficients_alt, std_errors_alt = self.create_model(alt_matrix,
-                                                                                          expression,
-                                                                                          cols=[genotype.name, inter_name])
+                                                                                          expression_hat,
+                                                                                          cols=[inter_name])
 
                     # if self.verbose:
                     #     print("\t\t\tn_alt: {}\tdf_alt: {}\trss_alt: {}\talt_tvalues: {}".format(n_alt, df_alt, rss_alt, alt_tvalues))
 
-                    # Safe the t-values.
-                    storage.add_value(cov_name, order_id, "snp", "coeff", coefficients_alt[genotype.name])
-                    storage.add_value(cov_name, order_id, "snp", "std_err", std_errors_alt[genotype.name])
-                    storage.add_value(cov_name, order_id, "inter", "coeff", coefficients_alt[inter_name])
-                    storage.add_value(cov_name, order_id, "inter", "std_err", std_errors_alt[inter_name])
+                    # Safe the coefficient and std error.
+                    storage.add_coefficient(order_id, coefficients_alt[inter_name])
+                    storage.add_std_error(order_id, std_errors_alt[inter_name])
 
                     # Make sure the n's are identical.
                     if n_null != n_alt:
@@ -356,7 +322,7 @@ class Main:
                     #     print("\t\t\tfvalue: {}\tpvalue: {}".format(fvalue, pvalue))
 
                     # Safe the p-values.
-                    storage.add_value(cov_name, order_id, "pvalue", None, pvalue)
+                    storage.add_pvalue(order_id, pvalue)
 
                     # Check whether we are almost running out of time.
                     if time.time() > self.panic_time:
@@ -365,6 +331,10 @@ class Main:
 
             # Safe the results of the eQTL.
             storage.store_row()
+
+            # Print the time.
+            run_time = time.time() - start_time
+            print("\t\tfinished in {:.4f} second(s).".format(run_time, flush=True))
 
         return storage
 
@@ -423,16 +393,23 @@ class Main:
 
     @staticmethod
     def write_buffer(filename, buffer):
-        # Write output files.
-        if os.path.isfile(filename):
-            mode = 'ab'
-        else:
-            mode = 'wb'
-
-        with gzip.open(filename, mode) as f:
+        with gzip.open(filename, 'wb') as f:
             for line in buffer:
                 f.write(line.encode())
         f.close()
+
+    @staticmethod
+    def remove_covariates(y, X):
+        ols = sm.OLS(y.values, X)
+        try:
+            ols_result = ols.fit()
+            residuals = ols_result.resid.values
+            return pd.Series(y.mean() + residuals, index=y.index, name=y.name)
+
+        except np.linalg.LinAlgError as e:
+            print("\t\tError: {}".format(e))
+
+        return [np.nan] * len(y)
 
     @staticmethod
     def create_model(X, y, cols=None):
@@ -501,17 +478,17 @@ class Main:
         end_time_string = datetime.fromtimestamp(self.max_end_time).strftime(
             "%d-%m-%Y, %H:%M:%S")
         print("Arguments:")
+        print("  > Input directory: {}".format(self.input))
+        print("  > Output directory: {}".format(self.outdir))
         print("  > Genotype datafile: {}".format(self.geno_inpath))
         print("  > Expression datafile: {}".format(self.expr_inpath))
         print("  > Technical covariates datafile: {}".format(self.tech_covs_inpath))
         print("  > Covariates datafile: {}".format(self.covs_inpath))
-        print("  > Output directory: {}".format(self.outdir))
         print("  > Panic datetime: {}".format(panic_time_string))
         print("  > Max end datetime: {}".format(end_time_string))
         print("  > Skip rows: {}".format(self.skip_rows))
         print("  > EQTLs: {}".format(self.n_eqtls))
         print("  > Samples: {}".format(self.n_samples))
         print("  > Permutations: {}".format(self.n_perm))
-        print("  > Test tech.covs.: {}".format(self.test_tech_covs))
         print("  > Verbose: {}".format(self.verbose))
         print("", flush=True)
