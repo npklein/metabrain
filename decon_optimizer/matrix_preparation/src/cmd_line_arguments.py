@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/10/08
-Last Changed: 2020/10/15
+Last Changed: 2020/10/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -75,10 +75,20 @@ class CommandLineArguments:
                                      "correct_cohort_effects",
                                      "perform_deconvolution",
                                      "cerate_tech_covs_matrix",
-                                     "create_covs_matrix"],
+                                     "create_covs_matrix",
+                                     "create_extra_covs_matrix"],
                             help="The steps to force the program to redo, "
                                  "default: None. Note, all dependend steps"
                                  "are forced too.")
+        parser.add_argument("-cm",
+                            "--cov_matrices",
+                            nargs="*",
+                            type=str,
+                            default=[],
+                            help="The path to matrices to prepare as"
+                                 "additional covariate matrix. Note: assumes"
+                                 "tab separated with header and index."
+                                 "Default: None.")
         parser.add_argument("-clear_log",
                             action='store_true',
                             help="Clear already existing log files. default: "

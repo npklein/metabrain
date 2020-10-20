@@ -3,7 +3,7 @@
 """
 File:         matrix_preparation.py
 Created:      2020/10/08
-Last Changed:
+Last Changed: 2020/10/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -51,11 +51,13 @@ if __name__ == '__main__':
     NAME = CLA.get_argument("name")
     SETTINGS_FILE = CLA.get_argument("settings")
     FORCE_STEPS = CLA.get_argument("force_steps")
+    COV_MATRICES = CLA.get_argument("cov_matrices")
     CLEAR_LOG = CLA.get_argument("clear_log")
 
     # Start the program.
     PROGRAM = Main(name=NAME,
                    settings_file=SETTINGS_FILE,
                    force_steps=FORCE_STEPS,
+                   cov_matrices=COV_MATRICES,
                    clear_log=CLEAR_LOG)
     PROGRAM.start()

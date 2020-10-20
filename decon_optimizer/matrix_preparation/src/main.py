@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/10/08
-Last Changed: 2020/10/19
+Last Changed: 2020/10/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -39,13 +39,16 @@ from .steps.correct_cohort_effects import CorrectCohortEffects
 from .steps.perform_deconvolution import PerformDeconvolution
 from .steps.create_tech_cov_matrix import CreateTechCovsMatrix
 from .steps.create_covs_matrix import CreateCovsMatrix
+from .steps.create_extra_covs_matrix import CreateExtraCovsMatrices
 
 
 class Main:
-    def __init__(self, name, settings_file, force_steps, clear_log):
+    def __init__(self, name, settings_file, force_steps, cov_matrices,
+                 clear_log):
         self.name = name
         self.settings_file = settings_file
         self.force_steps = force_steps
+        self.cov_matrices = cov_matrices
         self.clear_log = clear_log
 
         # Define the current directory.
@@ -70,15 +73,17 @@ class Main:
         order = ['combine_gte_files', 'combine_eqtlprobes',
                  'create_cohort_matrix', 'create_matrices',
                  'correct_cohort_effects', 'perform_deconvolution',
-                 'create_tech_covs_matrix', 'create_covs_matrix']
-        step_dependencies = {'combine_gte_files': {'create_cohort_matrix', 'create_matrices', 'create_tech_covs_matrix', 'create_covs_matrix'},
+                 'create_tech_covs_matrix', 'create_covs_matrix',
+                 'create_extra_covs_matrix']
+        step_dependencies = {'combine_gte_files': {'create_cohort_matrix', 'create_matrices', 'create_tech_covs_matrix', 'create_covs_matrix', 'create_extra_covs_matrix'},
                              'combine_eqtlprobes': {'create_matrices'},
                              'create_cohort_matrix': {'correct_cohort_effects', 'create_tech_covs_matrix'},
                              'create_matrices': {'correct_cohort_effects', 'perform_deconvolution', 'create_tech_covs_matrix', 'create_cov_matrix'},
                              'correct_cohort_effects': {'perform_deconvolution'},
                              'perform_deconvolution': {'create_cov_matrix'},
                              'create_tech_covs_matrix': {},
-                             'create_covs_matrix': {}}
+                             'create_covs_matrix': {},
+                             'create_extra_covs_matrix': {}}
         force_dict = {step: False for step in order}
 
         if force_steps is None or len(force_steps) == 0:
@@ -222,6 +227,21 @@ class Main:
         ccovm.clear_variables()
         self.log.info("")
 
+        # Step9. Create additional covariance matrix.
+        self.log.info("### STEP9 ###")
+        self.log.info("")
+        cecm = CreateExtraCovsMatrices(
+            settings=self.settings.get_setting('create_extra_covs_matrix'),
+            log=self.log,
+            matrices=self.cov_matrices,
+            sample_dict=cgtef.get_sample_dict(),
+            sample_order=cgtef.get_sample_order(),
+            force=self.force_dict['create_extra_covs_matrix'],
+            outdir=self.outdir)
+        cecm.start()
+        cecm.clear_variables()
+        self.log.info("")
+
         # End.
         self.log.info("")
         self.log.info("Program completed.")
@@ -231,6 +251,9 @@ class Main:
         self.log.info("  > Name: {}".format(self.name))
         self.log.info("  > Settings file: {}".format(self.settings_file))
         self.log.info("  > Force steps: {}".format(self.force_steps))
+        self.log.info("  > Additional covariate matrices: ")
+        for i, file in enumerate(self.cov_matrices):
+            self.log.info("\t  > [{}] {}".format(i, file))
         self.log.info("  > Clear log: {}".format(self.clear_log))
         self.log.info("  > Output directory: {}".format(self.outdir))
         self.log.info("")

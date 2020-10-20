@@ -38,5 +38,8 @@
   "create_covs_matrix": {
     "eigenvectors_datafile": "",
     "num_eigenvectors": 50
+  },
+  "create_extra_covs_matrix": {
+
   }
-},
+}
