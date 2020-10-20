@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/10/14
-Last Changed: 2020/10/19
+Last Changed: 2020/10/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -28,7 +28,6 @@ import os
 
 # Third party imports.
 import numpy as np
-import pandas as pd
 import statsmodels.api as sm
 
 # Local application imports.
@@ -61,6 +60,7 @@ class Main:
         # Check if input files exist.
         for filepath in [self.matrix_inpath, self.covariates_inpath, self.sample_dict_inpath]:
             if filepath is not None and not check_file_exists(filepath):
+                print("File {} does not exist".format(filepath))
                 return False
 
         # Check if correct extension.
@@ -81,6 +81,9 @@ class Main:
 
         print("### Step3 ###")
         self.work(covariates_df.T, order)
+
+        print("")
+        print("Program completed.")
 
     def load_data(self):
         print("Loading covariates.")
@@ -149,9 +152,6 @@ class Main:
 
         if len(buffer) > 0:
             self.write_buffer(self.outpath, buffer)
-
-        print("")
-        print("Program completed.")
 
     @staticmethod
     def remove_covariates(y, X):

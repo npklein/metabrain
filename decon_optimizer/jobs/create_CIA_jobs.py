@@ -60,13 +60,20 @@ class main():
         self.stop_index = getattr(arguments, 'last')
         self.batch_size = getattr(arguments, 'batch')
         self.n_samples = getattr(arguments, 'n_samples')
+        self.cores = 1
+        self.mem = getattr(arguments, 'mem')
 
         # Set the variables.
         self.outdir = os.path.join(Path(__file__).parent.absolute(), self.job)
         self.log_file_outdir = os.path.join(self.outdir, 'output')
-        self.time = "05:59:00"
-        self.cores = 1
-        self.mem = 2
+        time = getattr(arguments, 'time').lower()
+        self.time = None
+        if time == "short":
+            self.time = "05:59:00"
+        elif time == "medium":
+            self.time = "23:59:00"
+        elif time == "long":
+            self.time = "6-23:49:00"
 
         for outdir in [self.outdir, self.log_file_outdir]:
             if not os.path.exists(outdir):
@@ -127,6 +134,22 @@ class main():
                             type=int,
                             required=True,
                             help="The number of samples.")
+        parser.add_argument("-t",
+                            "--time",
+                            type=str,
+                            default="short",
+                            choices=["short", "medium", "long"],
+                            help="The time required.")
+        parser.add_argument("-c",
+                            "--cores",
+                            type=int,
+                            default=1,
+                            help="The number of cores required.")
+        parser.add_argument("-m",
+                            "--mem",
+                            type=int,
+                            default=2,
+                            help="The memory required.")
         parser.add_argument("-e",
                             "--exclude",
                             type=str,

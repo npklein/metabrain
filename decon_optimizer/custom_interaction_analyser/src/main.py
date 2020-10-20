@@ -24,6 +24,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 from __future__ import print_function
 from pathlib import Path
 from datetime import datetime
+import itertools
 import pickle
 import random
 import time
@@ -69,6 +70,7 @@ class Main:
         self.tech_covs_inpath = os.path.join(input_dir, input, filenames["technical_covariates"])
         self.covs_inpath = os.path.join(input_dir, input, filenames["covariates"])
 
+        self.correct_snp_tc_inter = settings.get_setting("correct_for_snp_tech_cov_interaction")
         self.pvalues_filename = settings.get_setting("real_pvalues_pickle_filename")
         self.coef_filename = settings.get_setting("coef_pickle_filename")
         self.std_err_filename = settings.get_setting("std_err_pickle_filename")
@@ -175,6 +177,14 @@ class Main:
                                            range(1,  self.skip_rows + 1)],
                                  nrows=self.n_eqtls)
 
+        # Validate the dataframes match up.
+        dfs = [tech_covs_df, covs_df, geno_df, expr_df]
+        for (a, b) in list(itertools.combinations(dfs, 2)):
+            if a is not None and b is not None and \
+                    not a.columns.identical(b.columns):
+                print("Order of samples are not identical.")
+                exit()
+
         # Replace -1 with NaN in the genotype dataframe. This way we can
         # drop missing values.
         geno_df.replace(-1, np.nan, inplace=True)
@@ -214,9 +224,6 @@ class Main:
 
             # Create the base model. Null model are all the technical
             # covariates multiplied with the genotype + the SNP.
-            tech_inter_matrix = technical_covs.mul(genotype, axis=1)
-            tech_inter_matrix.index = ["{}_X_SNP".format(x) for x in
-                                       technical_covs.index]
             intercept = pd.DataFrame(1, index=genotype.index,
                                      columns=["intercept"])
             base_matrix = reduce(lambda left, right: pd.merge(left,
@@ -225,8 +232,14 @@ class Main:
                                                               right_index=True),
                                  [intercept,
                                   genotype.to_frame(),
-                                  technical_covs.T,
-                                  tech_inter_matrix.T])
+                                  technical_covs.T])
+            if self.correct_snp_tc_inter:
+                tech_inter_matrix = technical_covs.mul(genotype, axis=1)
+                tech_inter_matrix.index = ["{}_X_SNP".format(x) for x in
+                                           technical_covs.index]
+                base_matrix = base_matrix.merge(tech_inter_matrix.T,
+                                                left_index=True,
+                                                right_index=True)
 
             # Regress out the base model from the expression values.
             expression_hat = self.remove_covariates(expression, base_matrix)
