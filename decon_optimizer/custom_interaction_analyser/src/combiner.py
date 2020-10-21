@@ -1,7 +1,7 @@
 """
 File:         combiner.py
 Created:      2020/10/15
-Last Changed: 2020/10/20
+Last Changed: 2020/10/21
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -98,8 +98,6 @@ class Combine:
             dataframes[filename] = df.copy()
 
             del columns, data, df
-
-        print(dataframes)
 
         print("")
         print("### Step 2 ###")

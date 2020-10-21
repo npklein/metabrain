@@ -1,7 +1,7 @@
 """
 File:         storage_container.py
 Created:      2020/10/14
-Last Changed: 2020/10/20
+Last Changed: 2020/10/21
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -43,6 +43,7 @@ class StorageContainer:
         self.std_errors = None
 
         # Initialize variables.
+        self.n_rows = 0
         self.error = False
 
     def add_row(self, eqtl_index, genotype_name):
@@ -62,6 +63,8 @@ class StorageContainer:
         self.perm_pvalues = None
         self.coefficients = None
         self.std_errors = None
+
+        self.n_rows = self.n_rows + 1
 
     def add_pvalue(self, order_id, value):
         if order_id == 0:
@@ -98,3 +101,6 @@ class StorageContainer:
 
     def set_error(self):
         self.error = True
+
+    def get_n_rows(self):
+        return self.n_rows

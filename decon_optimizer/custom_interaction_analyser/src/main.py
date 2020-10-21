@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/10/14
-Last Changed: 2020/10/20
+Last Changed: 2020/10/21
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -106,7 +106,10 @@ class Main:
                 permutation_orders = None
 
             if permutation_orders is not None:
-                for order in permutation_orders:
+                if permutation_orders[0] != None:
+                    print("\tinvalid")
+                    permutation_orders = None
+                for order in permutation_orders[1:]:
                     if len(order) != self.n_samples:
                         print("\tinvalid")
                         permutation_orders = None
@@ -125,7 +128,7 @@ class Main:
         storage = self.work(permutation_orders)
 
         print("Saving output files", flush=True)
-        filename_suffix = "{}_{}".format(self.skip_rows, self.n_eqtls)
+        filename_suffix = "{}_{}".format(self.skip_rows, self.skip_rows + storage.get_n_rows())
         self.dump_pickle(storage.get_pvalues(),
                          self.outdir,
                          self.pvalues_filename,
@@ -217,7 +220,6 @@ class Main:
             genotype = geno_df.iloc[row_index, eqtl_indices].copy()
             expression = expr_df.iloc[row_index, eqtl_indices].copy()
             technical_covs = tech_covs_df.iloc[:, eqtl_indices].copy()
-            covariates = covs_df.iloc[:, eqtl_indices].copy()
 
             # Initialize variables.
             storage.add_row(eqtl_index, "{}_{}".format(genotype.name, expression.name))
@@ -245,12 +247,12 @@ class Main:
             expression_hat = self.remove_covariates(expression, base_matrix)
 
             # Loop over the covariates.
-            for cov_index in range(len(covariates.index)):
+            for cov_index in range(len(covs_df.index)):
                 if storage.has_error():
                     break
 
                 # Get the covariate we are processing.
-                covariate = covariates.iloc[cov_index, :]
+                covariate = covs_df.iloc[cov_index, eqtl_indices].copy()
                 cov_name = covariate.name
 
                 if self.verbose:
@@ -279,10 +281,10 @@ class Main:
                     # Make sure the labels are in the same order, just
                     # shuffle the values.
                     covariate_all = covs_df.iloc[cov_index, :].copy()
-                    covariate_all_index = covariate_all.index
-                    covariate_all = covariate_all.reindex(
-                        covariate_all.index[sample_order])
-                    covariate_all.index = covariate_all_index
+                    if sample_order is not None:
+                        covariate_all_index = covariate_all.index
+                        covariate_all = covariate_all.reindex(covariate_all.index[sample_order])
+                        covariate_all.index = covariate_all_index
 
                     # Calculate the interaction effect of the covariate of
                     # interest. Then drop the NA's from the interaction
@@ -291,6 +293,8 @@ class Main:
                     inter_name = "{}_X_SNP".format(cov_name)
                     inter_of_interest.name = inter_name
                     inter_of_interest = inter_of_interest.iloc[eqtl_indices]
+
+                    del covariate_all
 
                     # Check if the drop is identical (see above).
                     if not inter_of_interest.index.equals(null_matrix.index):
@@ -306,18 +310,18 @@ class Main:
                                                   left_index=True,
                                                   right_index=True)
 
+                    del inter_of_interest
+
                     # Create the alternative model.
                     n_alt = alt_matrix.shape[0]
                     df_alt, rss_alt, coefficients_alt, std_errors_alt = self.create_model(alt_matrix,
                                                                                           expression_hat,
                                                                                           cols=[inter_name])
 
+                    del alt_matrix
+
                     # if self.verbose:
                     #     print("\t\t\tn_alt: {}\tdf_alt: {}\trss_alt: {}\talt_tvalues: {}".format(n_alt, df_alt, rss_alt, alt_tvalues))
-
-                    # Safe the coefficient and std error.
-                    storage.add_coefficient(order_id, coefficients_alt[inter_name])
-                    storage.add_std_error(order_id, std_errors_alt[inter_name])
 
                     # Make sure the n's are identical.
                     if n_null != n_alt:
@@ -325,6 +329,10 @@ class Main:
                               flush=True)
                         storage.set_error()
                         continue
+
+                    # Safe the coefficient and std error.
+                    storage.add_coefficient(order_id, coefficients_alt[inter_name])
+                    storage.add_std_error(order_id, std_errors_alt[inter_name])
 
                     # Compare the null and alternative model.
                     fvalue = self.calc_f_value(rss_null, rss_alt,
@@ -337,6 +345,8 @@ class Main:
                     # Safe the p-values.
                     storage.add_pvalue(order_id, pvalue)
 
+                    del fvalue, pvalue
+
                     # Check whether we are almost running out of time.
                     if time.time() > self.panic_time:
                         print("\tPanic!!!", flush=True)
@@ -346,8 +356,7 @@ class Main:
             storage.store_row()
 
             # Print the time.
-            run_time = time.time() - start_time
-            print("\t\tfinished in {:.4f} second(s).".format(run_time, flush=True))
+            print("\t\tfinished in {:.4f} second(s).".format(time.time() - start_time, flush=True))
 
         return storage
 
@@ -391,16 +400,13 @@ class Main:
         print("\tcreated {}".format(print_str))
 
     def create_perm_orders(self):
-        sample_orders = [self.get_column_indices()]
+        sample_orders = [None]
         for _ in range(self.n_perm):
             sample_orders.append(self.create_random_shuffle())
         return sample_orders
 
-    def get_column_indices(self):
-        return [x for x in range(self.n_samples)]
-
     def create_random_shuffle(self):
-        column_indices = self.get_column_indices()
+        column_indices = [x for x in range(self.n_samples)]
         random.shuffle(column_indices)
         return column_indices
 
@@ -426,18 +432,15 @@ class Main:
 
     @staticmethod
     def create_model(X, y, cols=None):
-        df = X.shape[1]
-
         # Perform the Ordinary least squares fit.
         ols = sm.OLS(y.values, X)
         try:
             ols_result = ols.fit()
         except np.linalg.LinAlgError as e:
             print("\t\tError: {}".format(e))
-            return df, np.nan, {col: np.nan for col in cols}, {col: np.nan for col in cols}
+            return X.shape[1], np.nan, {col: np.nan for col in cols}, {col: np.nan for col in cols}
 
-        ssr = ols_result.ssr
-
+        # Extract the required info from the model.
         coefficients = {}
         std_errors = {}
         if cols is not None:
@@ -451,7 +454,7 @@ class Main:
                 coefficients[col] = coef
                 std_errors[col] = std_err
 
-        return df, ssr, coefficients, std_errors
+        return X.shape[1], ols_result.ssr, coefficients, std_errors
 
     @staticmethod
     def calc_f_value(rss1, rss2, df1, df2, n):
