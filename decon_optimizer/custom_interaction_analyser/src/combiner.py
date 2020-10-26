@@ -1,7 +1,7 @@
 """
 File:         combiner.py
 Created:      2020/10/15
-Last Changed: 2020/10/21
+Last Changed: 2020/10/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -38,12 +38,13 @@ from scipy import stats
 
 # Local application imports.
 from local_settings import LocalSettings
-from utilities import save_dataframe
+from utilities import check_file_exists, save_dataframe, load_dataframe
 
 
 class Combine:
-    def __init__(self, name, settings_file, alpha):
+    def __init__(self, name, settings_file, alpha, force):
         self.alpha = alpha
+        self.force = force
 
         # Define the current directory.
         current_dir = str(Path(__file__).parent.parent)
@@ -76,43 +77,52 @@ class Combine:
         for filename in [self.pvalues_filename,
                          self.coef_filename,
                          self.std_err_filename]:
+            outpath = os.path.join(self.work_dir, "{}_table.txt.gz".format(filename))
+            if not check_file_exists(outpath) or self.force:
+                print("Loading {} data.".format(filename), flush=True)
+                columns, data = self.combine_pickles(self.work_dir,
+                                                     filename,
+                                                     columns=True)
 
-            print("Loading {} data.".format(filename), flush=True)
-            columns, data = self.combine_pickles(self.work_dir,
-                                                 filename,
-                                                 columns=True)
+                if len(data) == 0:
+                    print("\tNo {} data found.".format(filename))
+                    continue
 
-            if len(data) == 0:
-                print("\tNo {} data found.".format(filename))
-                continue
+                print("Creating {} dataframe.".format(filename), flush=True)
+                df = self.create_df(data, columns)
 
-            print("Creating {} dataframe.".format(filename), flush=True)
-            df = self.create_df(data, columns)
+                print("Saving {} dataframe.".format(filename), flush=True)
+                save_dataframe(df=df,
+                               outpath=outpath,
+                               header=True, index=True)
 
-            print("Saving {} dataframe.".format(filename), flush=True)
-            save_dataframe(df=df,
-                           outpath=os.path.join(self.work_dir,
-                                                "{}_table.txt.gz".format(filename)),
-                           header=True, index=True)
+                dataframes[filename] = df
 
-            dataframes[filename] = df.copy()
-
-            del columns, data, df
+                del columns, data, df
+            else:
+                print("Skipping step for {}".format(outpath))
+                dataframes[filename] = load_dataframe(outpath,
+                                                      header=0,
+                                                      index_col=0)
 
         print("")
         print("### Step 2 ###")
         print("Calculate t-values", flush=True)
-        if self.coef_filename in dataframes and self.std_err_filename in dataframes:
-            # Calculate t-values
-            tvalue_df = dataframes[self.coef_filename] / dataframes[self.std_err_filename]
+        outpath = os.path.join(self.work_dir,"{}_table.txt.gz".format(self.tvalue_filename))
+        if not check_file_exists(outpath) or self.force:
+            if self.coef_filename in dataframes and self.std_err_filename in dataframes:
+                # Calculate t-values
+                tvalue_df = dataframes[self.coef_filename] / dataframes[self.std_err_filename]
 
-            print("Saving {} dataframe.".format(self.tvalue_filename), flush=True)
-            save_dataframe(df=tvalue_df,
-                           outpath=os.path.join(self.work_dir,
-                                                "{}_table.txt.gz".format(self.tvalue_filename)),
-                           header=True, index=True)
+                print("Saving {} dataframe.".format(self.tvalue_filename), flush=True)
+                save_dataframe(df=tvalue_df,
+                               outpath=os.path.join(self.work_dir,
+                                                    "{}_table.txt.gz".format(self.tvalue_filename)),
+                               header=True, index=True)
+            else:
+                print("\tNo data found.")
         else:
-            print("\tNo data found.")
+            print("Skipping step.")
 
         print("")
         print("### Step 3 ###")

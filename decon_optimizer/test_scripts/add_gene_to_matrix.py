@@ -3,7 +3,7 @@
 """
 File:         add_gene_to_matrix.py
 Created:      2020/10/20
-Last Changed:
+Last Changed: 2020/10/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -24,7 +24,6 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 
 # Standard imports.
 from __future__ import print_function
-from pathlib import Path
 import argparse
 import gzip
 import os
@@ -63,16 +62,8 @@ class main():
         if not self.validate():
             exit()
 
-        # Define the current directory.
-        current_dir = str(Path(__file__).parent.parent)
-
-        # Prepare an output directory.
-        outdir = os.path.join(current_dir, 'output')
-        if not os.path.exists(outdir):
-            os.makedirs(outdir)
-
         # Define the output file.
-        self.outpath = os.path.join(outdir, os.path.basename(self.matrix_inpath))
+        self.outpath = self.matrix_inpath.replace(".txt.gz", "_with{}Genes.txt.gz".format(len(self.genes)))
 
     @staticmethod
     def create_argument_parser():
@@ -85,19 +76,19 @@ class main():
                             action="version",
                             version="{} {}".format(__program__,
                                                    __version__),
-                            help="show program's version number and exit")
+                            help="show program's version number and exit.")
         parser.add_argument("-m",
                             "--matrix",
                             type=str,
                             required=True,
-                            help="The path to the matrix")
+                            help="The path to the matrix.")
         parser.add_argument("-e",
                             "--expression",
                             type=str,
                             required=True,
-                            help="The path to the expression matrix")
+                            help="The path to the expression matrix.")
         parser.add_argument("-g",
-                            "--gene",
+                            "--genes",
                             nargs="*",
                             type=str,
                             required=True,
@@ -114,7 +105,7 @@ class main():
         return parser.parse_args()
 
     def validate(self):
-        for filepath in [self.matrix_inpath, self.expression_inpath, self.sample_dict_inpath]:
+        for filepath in [self.matrix_inpath, self.expression_inpath]:
             if filepath is not None and not (os.path.exists(filepath) and os.path.isfile(filepath)):
                 print("File {} does not exist".format(filepath))
                 return False
@@ -132,9 +123,10 @@ class main():
         print("### Step1 ###")
         matrix_df, sample_dict = self.load_data()
         print(matrix_df)
+        print(sample_dict)
 
         print("### Step2 ###")
-        new_matrix_df = self.work(matrix_df)
+        new_matrix_df = self.work(sample_dict)
         print(new_matrix_df)
 
         print("### Step3 ###")
@@ -148,17 +140,15 @@ class main():
                            compression='gzip')
 
     def load_data(self):
-        print("Loading matrix header.")
-        print("Loading matrix header.")
+        print("Loading matrix.")
         matrix_df = pd.read_csv(self.matrix_inpath,
                                 sep="\t",
                                 header=0,
-                                index_col=0,
-                                nrows=0)
+                                index_col=0)
 
-        print("Loading sample_dict.")
-        sample_dict = None
+        sample_dict = {}
         if self.sample_dict_inpath is not None:
+            print("Loading sample_dict.")
             sample_dict_df = pd.read_csv(self.sample_dict_inpath,
                                          sep="\t",
                                          header=0)
@@ -177,6 +167,7 @@ class main():
         new_data = []
 
         search_list = set(self.genes)
+        print("Searching for {}".format(", ".join(search_list)))
         with gzip.open(self.expression_inpath, 'rb') as f:
             for i, line in enumerate(f):
                 if (i == 0) or (i % self.print_interval == 0):
@@ -192,6 +183,7 @@ class main():
                     new_columns = [trans_dict[x] if x in trans_dict else x for x in data]
                 else:
                     if index in search_list:
+                        print("\t\tFound {}".format(index))
                         new_indices.append(index)
                         new_data.append(data)
 

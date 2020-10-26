@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/10/15
-Last Changed: 2020/10/20
+Last Changed: 2020/10/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -100,6 +100,10 @@ class CommandLineArguments:
                             action='store_true',
                             help="Combine the created files, alternative "
                                  "functionality. Default: False.")
+        parser.add_argument("-force",
+                            action='store_true',
+                            help="Combine the created files with force."
+                                 " Default: False.")
 
         return parser
 
