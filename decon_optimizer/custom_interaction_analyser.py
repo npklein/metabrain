@@ -3,7 +3,7 @@
 """
 File:         custom_interaction_analyser.py
 Created:      2020/10/15
-Last Changed: 2020/10/20
+Last Changed: 2020/10/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -56,11 +56,13 @@ if __name__ == '__main__':
 
     if COMBINE:
         ALPHA = CLA.get_argument("alpha")
+        FORCE = CLA.get_argument("force")
 
         # Start the program.
         PROGRAM = Combine(name=NAME,
                           settings_file=SETTINGS_FILE,
-                          alpha=ALPHA)
+                          alpha=ALPHA,
+                          force=FORCE)
         PROGRAM.start()
     else:
         INPUT = CLA.get_argument("input")
