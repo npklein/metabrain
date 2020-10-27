@@ -1,5 +1,5 @@
 """
-File:         create_extra_cov_matrices.py
+File:         create_extra_cov_matrix.py
 Created:      2020/10/20
 Last Changed:
 Author:       M.Vochteloo
@@ -20,7 +20,6 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Standard imports.
-from functools import reduce
 import os
 
 # Third party imports.
@@ -31,36 +30,37 @@ import pandas as pd
 from utilities import prepare_output_dir, check_file_exists, load_dataframe, save_dataframe
 
 
-class CreateExtraCovsMatrices:
-    def __init__(self, settings, log, matrices, sample_dict, sample_order,
+class CreateExtraCovsMatrix:
+    def __init__(self, settings, log, inpath, sample_dict, sample_order,
                  force, outdir):
         self.log = log
-        self.matrices = matrices
+        self.inpath = inpath
         self.sample_dict = sample_dict
         self.sample_order = sample_order
         self.force = force
 
         # Prepare an output directories.
-        self.outdir = os.path.join(outdir, 'create_extra_covs_matrices')
-        prepare_output_dir(self.outdir)
+        outdir = os.path.join(outdir, 'create_extra_covs_matrix')
+        prepare_output_dir(outdir)
+
+        # Declare variables.
+        self.outpath = os.path.join(outdir, os.path.basename(self.inpath))
+        self.df = None
 
     def start(self):
         self.log.info("Starting creating extra covariate file(s).")
         self.print_arguments()
 
         # Check if output file exist.
-        for filepath in self.matrices:
-            outpath = os.path.join(self.outdir, os.path.basename(filepath))
-            if not check_file_exists(outpath) or self.force:
-                self.log.info("Working on {}.".format(filepath))
-                df = self.prepare_matrix(filepath)
-                self.save(df, outpath)
-            else:
-                self.log.info("Skipping {}.".format(filepath))
+        if not check_file_exists(self.outpath) or self.force:
+            self.df = self.prepare_matrix()
+            self.save()
+        else:
+            self.log.info("Skipping {}.".format(self.inpath))
 
-    def prepare_matrix(self, filepath):
+    def prepare_matrix(self):
         self.log.info("\tLoading matrix.")
-        df = load_dataframe(filepath, header=0, index_col=0, logger=self.log)
+        df = load_dataframe(self.inpath, header=0, index_col=0, logger=self.log)
 
         self.log.info("\tPreprocessing.")
         df.columns = [self.sample_dict[x] if x in self.sample_dict else x for x in df.columns]
@@ -84,22 +84,26 @@ class CreateExtraCovsMatrices:
 
         return subset
 
-    def save(self, df, outpath):
+    def save(self):
         print("\tSaving matrix.")
-        save_dataframe(df=df, outpath=outpath,
+        save_dataframe(df=self.df, outpath=self.outpath,
                        index=True, header=True, logger=self.log)
 
+    def get_df(self):
+        return self.df
+
+    def get_outpath(self):
+        return self.outpath
+
     def clear_variables(self):
-        self.matrices = None
+        self.inpath = None
         self.sample_dict = None
         self.sample_order = None
         self.force = None
 
     def print_arguments(self):
         self.log.info("Arguments:")
-        self.log.info("  > Matrices: ")
-        for i, file in enumerate(self.matrices):
-            self.log.info("\t  > [{}] {}".format(i, file))
-        self.log.info("  > Output directory: {}".format(self.outdir))
+        self.log.info("  > Input path: {}".format(self.inpath))
+        self.log.info("  > Output path: {}".format(self.outpath))
         self.log.info("  > Force: {}".format(self.force))
         self.log.info("")

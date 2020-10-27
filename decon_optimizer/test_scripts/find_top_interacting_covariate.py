@@ -36,7 +36,7 @@ import pandas as pd
 # Local application imports.
 
 # Metadata
-__program__ = "Find Top Interacting Covaraite"
+__program__ = "Find Top Interacting Covariate"
 __author__ = "Martijn Vochteloo"
 __maintainer__ = "Martijn Vochteloo"
 __email__ = "m.vochteloo@rug.nl"
@@ -129,6 +129,9 @@ class main():
 
         print("Top covariates:")
         print(combined_df.head(5))
+
+        print("Bottom covariates:")
+        print(combined_df.tail(5))
 
         print("### Step4 ###")
         print("Safe")

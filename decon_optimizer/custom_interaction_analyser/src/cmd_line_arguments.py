@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/10/15
-Last Changed: 2020/10/26
+Last Changed: 2020/10/27
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -51,18 +51,18 @@ class CommandLineArguments:
                             version="{} {}".format(self.program,
                                                    self.version),
                             help="show program's version number and exit")
-        parser.add_argument("-n",
-                            "--name",
-                            type=str,
-                            required=True,
-                            help="The name of the input/output directory.")
         parser.add_argument("-i",
                             "--input",
                             type=str,
                             default=None,
-                            help="The name of the input directory. Overwrites"
-                                 "the -n / --name variable (output name is"
-                                 "retained). Default: None.")
+                            help="The name of the input directory. "
+                                 "Default: 'output'.")
+        parser.add_argument("-o",
+                            "--output",
+                            type=str,
+                            default=None,
+                            help="The name of the output directory. "
+                                 " Default: same as -i / --input.")
         parser.add_argument("-s",
                             "--settings",
                             type=str,

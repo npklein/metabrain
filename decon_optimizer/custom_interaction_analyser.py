@@ -3,7 +3,7 @@
 """
 File:         custom_interaction_analyser.py
 Created:      2020/10/15
-Last Changed: 2020/10/26
+Last Changed: 2020/10/27
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -50,30 +50,33 @@ if __name__ == '__main__':
     CLA = CommandLineArguments(program=__program__,
                                version=__version__,
                                description=__description__)
-    NAME = CLA.get_argument("name")
+    INPUT = CLA.get_argument("input")
+    OUTPUT = CLA.get_argument("output")
     SETTINGS_FILE = CLA.get_argument("settings")
     COMBINE = CLA.get_argument("combine")
+
+    if OUTPUT is None:
+        OUTPUT = INPUT
 
     if COMBINE:
         ALPHA = CLA.get_argument("alpha")
         FORCE = CLA.get_argument("force")
 
         # Start the program.
-        PROGRAM = Combine(name=NAME,
+        PROGRAM = Combine(input_folder=OUTPUT,
                           settings_file=SETTINGS_FILE,
                           alpha=ALPHA,
                           force=FORCE)
         PROGRAM.start()
     else:
-        INPUT = CLA.get_argument("input")
         SKIP_ROWS = CLA.get_argument("skip_rows")
         N_EQTLS = CLA.get_argument("n_eqtls")
         N_SAMPLES = CLA.get_argument("n_samples")
         VERBOSE = CLA.get_argument("verbose")
 
         # Start the program.
-        PROGRAM = Main(name=NAME,
-                       input=INPUT,
+        PROGRAM = Main(input_folder=INPUT,
+                       output_folder=OUTPUT,
                        settings_file=SETTINGS_FILE,
                        skip_rows=SKIP_ROWS,
                        n_eqtls=N_EQTLS,

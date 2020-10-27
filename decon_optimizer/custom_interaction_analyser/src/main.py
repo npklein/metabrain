@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/10/14
-Last Changed: 2020/10/21
+Last Changed: 2020/10/27
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -45,7 +45,7 @@ from utilities import check_file_exists, prepare_output_dir, load_dataframe
 
 
 class Main:
-    def __init__(self, name, input, settings_file, skip_rows, n_eqtls,
+    def __init__(self, input_folder, output_folder, settings_file, skip_rows, n_eqtls,
                  n_samples, verbose):
         # Define the current directory.
         current_dir = str(Path(__file__).parent.parent)
@@ -54,21 +54,17 @@ class Main:
         settings = LocalSettings(current_dir, settings_file)
 
         # Prepare an output directory.
-        self.outdir = os.path.join(current_dir, name)
+        self.outdir = os.path.join(current_dir, output_folder)
         prepare_output_dir(self.outdir)
-
-        # Set the correct input directory.
-        if input is None:
-            input = name
 
         # Safe settings.
         input_dir = settings.get_setting("input_dir")
         filenames = settings.get_setting("filenames")
-        self.input = os.path.join(input_dir, input)
-        self.geno_inpath = os.path.join(input_dir, input, filenames["genotype"])
-        self.expr_inpath = os.path.join(input_dir, input, filenames["expression"])
-        self.tech_covs_inpath = os.path.join(input_dir, input, filenames["technical_covariates"])
-        self.covs_inpath = os.path.join(input_dir, input, filenames["covariates"])
+        self.input = os.path.join(input_dir, input_folder)
+        self.geno_inpath = os.path.join(input_dir, input_folder, filenames["genotype"])
+        self.expr_inpath = os.path.join(input_dir, input_folder, filenames["expression"])
+        self.tech_covs_inpath = os.path.join(input_dir, input_folder, filenames["technical_covariates"])
+        self.covs_inpath = os.path.join(input_dir, input_folder, filenames["covariates"])
 
         self.correct_snp_tc_inter = settings.get_setting("correct_for_snp_tech_cov_interaction")
         self.pvalues_filename = settings.get_setting("real_pvalues_pickle_filename")

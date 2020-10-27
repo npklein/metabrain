@@ -3,7 +3,7 @@
 """
 File:         create_extra_CIA_jobs.py
 Created:      2020/10/25
-Last Changed:
+Last Changed: 2020/10/27
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -52,8 +52,8 @@ class main():
         # Get the command line arguments.
         arguments = self.create_argument_parser()
         self.job = getattr(arguments, 'job').upper()
-        self.name = getattr(arguments, 'name').lower()
         self.input = getattr(arguments, 'input').lower()
+        self.output = getattr(arguments, 'output').lower()
         self.settings = getattr(arguments, 'settings').lower()
         self.exclude = getattr(arguments, 'exclude')
         self.batch_size = getattr(arguments, 'batch')
@@ -96,18 +96,18 @@ class main():
                             type=str,
                             required=True,
                             help="The name of the job.")
-        parser.add_argument("-n",
-                            "--name",
-                            type=str,
-                            required=True,
-                            help="The name of the input/output directory.")
         parser.add_argument("-i",
                             "--input",
                             type=str,
                             default=None,
-                            help="The name of the input directory. Overwrites"
-                                 "the -n / --name variable (output name is"
-                                 "retained). Default: None.")
+                            help="The name of the input directory. "
+                                 "Default: 'output'.")
+        parser.add_argument("-o",
+                            "--output",
+                            type=str,
+                            default=None,
+                            help="The name of the output directory. "
+                                 " Default: same as -i / --input.")
         parser.add_argument("-s",
                             "--settings",
                             type=str,
@@ -178,10 +178,6 @@ class main():
         if start_index > 0:
             skip_rows = " -sr {}".format(start_index)
 
-        input_str = ""
-        if self.input is not None:
-            input_str = " -i {}".format(self.input)
-
         job_name = "{}_E{}".format(self.job.upper(), job_id)
         out_filepath = os.path.join(self.log_file_outdir, job_name + ".out")
         bash_filepath = os.path.join(self.outdir, job_name + ".sh")
@@ -206,7 +202,7 @@ class main():
                  "module load Python/3.6.3-foss-2015b\n",
                  "source $HOME/venv/bin/activate\n",
                  "\n",
-                 "python3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-decon-optimizer/custom_interaction_analyser.py -n {}{} -s {}{} -ne {} -ns {}\n".format(self.name, input_str, self.settings, skip_rows, batch_size, self.n_samples),
+                 "python3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-decon-optimizer/custom_interaction_analyser.py -i {} -o {} -s {}{} -ne {} -ns {}\n".format(self.input_folder, self.output_folder, self.settings, skip_rows, batch_size, self.n_samples),
                  "\n",
                  "deactivate\n"]
 
