@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/10/08
-Last Changed: 2020/10/20
+Last Changed: 2020/10/27
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -76,15 +76,15 @@ class CommandLineArguments:
                                      "perform_deconvolution",
                                      "cerate_tech_covs_matrix",
                                      "create_covs_matrix",
-                                     "create_extra_covs_matrix"],
+                                     "create_extra_covs_matrix",
+                                     "normal_transform_matrix"],
                             help="The steps to force the program to redo, "
                                  "default: None. Note, all dependend steps"
                                  "are forced too.")
-        parser.add_argument("-cm",
-                            "--cov_matrices",
-                            nargs="*",
+        parser.add_argument("-ecm",
+                            "--extra_cov_matrix",
                             type=str,
-                            default=[],
+                            default=None,
                             help="The path to matrices to prepare as"
                                  "additional covariate matrix. Note: assumes"
                                  "tab separated with header and index."

@@ -51,13 +51,13 @@ if __name__ == '__main__':
     NAME = CLA.get_argument("name")
     SETTINGS_FILE = CLA.get_argument("settings")
     FORCE_STEPS = CLA.get_argument("force_steps")
-    COV_MATRICES = CLA.get_argument("cov_matrices")
+    EXTRA_COV_MATRIX = CLA.get_argument("extra_cov_matrix")
     CLEAR_LOG = CLA.get_argument("clear_log")
 
     # Start the program.
     PROGRAM = Main(name=NAME,
                    settings_file=SETTINGS_FILE,
                    force_steps=FORCE_STEPS,
-                   cov_matrices=COV_MATRICES,
+                   extra_cov_matrix=EXTRA_COV_MATRIX,
                    clear_log=CLEAR_LOG)
     PROGRAM.start()

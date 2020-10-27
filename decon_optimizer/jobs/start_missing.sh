@@ -19,11 +19,12 @@ LOGFILE=$JOBS_DIR/start.txt
 
 for I in $(seq $START $END); do
 	JOBNAME="${JOB_PREFIX}${I}"
-	FILENAME="${JOBS_DIR}/${JOBNAME}.sh"
+	FILENAME="${LOG_DIR}${JOBNAME}.out"
 	if [ -f $FILENAME ]; then
-	  # echo sbatch --qos=$QOS $FILENAME
-		echo -e "$JOBNAME:\t$(sbatch --qos=$QOS $FILENAME)" >> $LOGFILE
-	else
-		echo -e "error: no such file $FILENAME" >> $LOGFILE
+		FINISHED=$(tail $FILENAME | grep 'Shutting down' | wc -l)
+		if [ $FINISHED = 0 ]; then
+      # echo sbatch --qos=$QOS $FILENAME
+      echo -e "$JOBNAME:\t$(sbatch --qos=$QOS $FILENAME)" >> $LOGFILE
+		fi
 	fi
 done

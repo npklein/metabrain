@@ -42,7 +42,7 @@ from utilities import check_file_exists, save_dataframe, load_dataframe
 
 
 class Combine:
-    def __init__(self, name, settings_file, alpha, force):
+    def __init__(self, input_folder, settings_file, alpha, force):
         self.alpha = alpha
         self.force = force
 
@@ -53,7 +53,7 @@ class Combine:
         settings = LocalSettings(current_dir, settings_file)
 
         # Prepare the input / output directory.
-        self.work_dir = os.path.join(current_dir, name)
+        self.work_dir = os.path.join(current_dir, input_folder)
 
         # Get the needed settings.
         self.pvalues_filename = settings.get_setting("real_pvalues_pickle_filename")
