@@ -1,7 +1,7 @@
 """
 File:         normal_transform_matrix.py
 Created:      2020/10/27
-Last Changed:
+Last Changed: 2020/10/28
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -64,6 +64,7 @@ class NormalTransformMatrix:
             self.df = load_dataframe(self.inpath,
                                      header=0,
                                      index_col=0,
+                                     nrows=50,
                                      logger=self.log)
 
         new_data = []
@@ -73,18 +74,9 @@ class NormalTransformMatrix:
                 print("\tprocessed {}\{} [{:.2f}%] lines".format(i, self.df.shape[0], (100 / self.df.shape[0])*i))
 
             work_df = row.to_frame()
-
-            # Get the rank of each value.
-            tmp = work_df.copy()
-            tmp.sort_values(by=index, ascending=True, inplace=True)
-            tmp["rank"] = range(1, tmp.shape[0] + 1 )
-            tmp = tmp.drop([index], axis=1)
-
-            # Combine the dataframes.
-            work_df = work_df.merge(tmp, left_index=True, right_index=True)
-
-            work_df["pvalue"] = 1 - (work_df["rank"] / (work_df.shape[0] + 1))
-            work_df["zscore"] = stats.norm.isf(work_df["pvalue"])
+            work_df["rank"] = work_df.loc[:, index].rank(ascending=True)
+            work_df["pvalue"] = (work_df["rank"] - 0.5) / work_df.shape[0]
+            work_df["zscore"] = stats.norm.ppf(work_df["pvalue"])
             work_df.loc[work_df["pvalue"] > (1.0 - 1e-16), "zscore"] = -8.209536151601387
             work_df.loc[work_df["pvalue"] < 1e-323, "zscore"] = 38.44939448087599
 

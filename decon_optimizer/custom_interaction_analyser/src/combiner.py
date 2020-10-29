@@ -1,7 +1,7 @@
 """
 File:         combiner.py
 Created:      2020/10/15
-Last Changed: 2020/10/26
+Last Changed: 2020/10/28
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -112,13 +112,34 @@ class Combine:
         if not check_file_exists(outpath) or self.force:
             if self.coef_filename in dataframes and self.std_err_filename in dataframes:
                 # Calculate t-values
-                tvalue_df = dataframes[self.coef_filename] / dataframes[self.std_err_filename]
+                coef_df = dataframes[self.coef_filename]
+                std_err_df = dataframes[self.std_err_filename]
 
-                print("Saving {} dataframe.".format(self.tvalue_filename), flush=True)
-                save_dataframe(df=tvalue_df,
-                               outpath=os.path.join(self.work_dir,
-                                                    "{}_table.txt.gz".format(self.tvalue_filename)),
-                               header=True, index=True)
+                if not coef_df.columns.identical(std_err_df.columns):
+                    overlap = set(coef_df.columns).intersection(set(std_err_df.columns))
+                    if len(overlap) == 0:
+                        print("No overlapping eQTLs between coef and std_err "
+                              "data frame columns.")
+                    else:
+                        coef_df = coef_df.loc[:, overlap]
+                        std_err_df = std_err_df.loc[:, overlap]
+                if not coef_df.index.identical(std_err_df.index):
+                    overlap = set(coef_df.index).intersection(set(std_err_df.index))
+                    if len(overlap) == 0:
+                        print("No overlapping eQTLs between coef and std_err "
+                              "data frames indices.")
+                    else:
+                        coef_df = coef_df.loc[overlap, :]
+                        std_err_df = std_err_df.loc[overlap, :]
+
+                if coef_df.columns.identical(std_err_df.columns) and coef_df.index.identical(std_err_df.index):
+                    tvalue_df = coef_df / std_err_df
+
+                    print("Saving {} dataframe.".format(self.tvalue_filename), flush=True)
+                    save_dataframe(df=tvalue_df,
+                                   outpath=os.path.join(self.work_dir,
+                                                        "{}_table.txt.gz".format(self.tvalue_filename)),
+                                   header=True, index=True)
             else:
                 print("\tNo data found.")
         else:
@@ -142,8 +163,7 @@ class Combine:
         print("Melting dataframe.", flush=True)
         dfm = pvalue_df.melt(id_vars=["index"])
         dfm.columns = ["covariate", "SNP", "pvalue"]
-        dfm = dfm.sort_values(by="pvalue", ascending=True)
-        dfm.reset_index(drop=True, inplace=True)
+        dfm["rank"] = dfm.loc[:, "pvalue"].rank(ascending=True)
         n_signif = dfm[dfm["pvalue"] < self.alpha].shape[0]
         n_total = dfm.shape[0]
         print("\t{}/{} [{:.2f}%] of pvalues < {}".format(n_signif, n_total, (100/n_total)*n_signif, self.alpha), flush=True)
@@ -152,9 +172,10 @@ class Combine:
         dfm["zscore"] = stats.norm.isf(dfm["pvalue"])
         dfm.loc[dfm["pvalue"] > (1.0 - 1e-16), "zscore"] = -8.209536151601387
         dfm.loc[dfm["pvalue"] < 1e-323, "zscore"] = 38.44939448087599
+        self.pivot_and_save(dfm, "zscore", pvalue_df_indices, pvalue_df_columns)
 
         print("Adding BH-FDR.", flush=True)
-        dfm["BH-FDR"] = dfm["pvalue"] * (n_total / (dfm.index + 1))
+        dfm["BH-FDR"] = dfm["pvalue"] * (n_total / (dfm["rank"] + 1))
         dfm.loc[dfm["BH-FDR"] > 1, "BH-FDR"] = 1
         prev_bh_fdr = -np.Inf
         for i in range(n_total):
@@ -165,6 +186,7 @@ class Combine:
                 dfm.loc[i, "BH-FDR"] = prev_bh_fdr
         n_signif = dfm[dfm["BH-FDR"] < self.alpha].shape[0]
         print("\t{}/{} [{:.2f}%] of BH-FDR values < {}".format(n_signif, n_total, (100/n_total)*n_signif, self.alpha), flush=True)
+        self.pivot_and_save(dfm, "BH-FDR", pvalue_df_indices, pvalue_df_columns)
 
         print("Adding permutation FDR.", flush=True)
         print("\tLoading permutation pvalue data.", flush=True)
@@ -182,38 +204,18 @@ class Combine:
             for pvalue in dfm["pvalue"]:
                 perm_ranks.append(bisect_left(perm_pvalues, pvalue))
             dfm["perm-rank"] = perm_ranks
-            dfm["perm-FDR"] = (dfm["perm-rank"] / n_perm) / dfm.index
+            dfm["perm-FDR"] = (dfm["perm-rank"] / n_perm) / dfm["rank"]
             dfm.loc[(dfm.index == 0) | (dfm["perm-rank"] == 0), "perm-FDR"] = 0
             dfm.loc[dfm["perm-FDR"] > 1, "perm-FDR"] = 1
+
+            self.pivot_and_save(dfm, "perm-FDR", pvalue_df_indices,
+                                pvalue_df_columns)
 
         print("Saving full dataframe.", flush=True)
         save_dataframe(df=dfm,
                        outpath=os.path.join(self.work_dir,
                                             "molten_table.txt.gz"),
                        header=True, index=True)
-
-        print("")
-        print("### Step 4 ###")
-        print("Saving seperate dataframes.", flush=True)
-
-        for col in ["zscore", "BH-FDR", "perm-FDR"]:
-            if col in dfm.columns:
-                print("Pivoting table.", flush=True)
-                pivot_df = dfm.pivot(index='covariate', columns='SNP', values=col)
-
-                print("Reorder dataframe.")
-                pivot_df = pivot_df.loc[pvalue_df_indices, pvalue_df_columns]
-                pivot_df.index = ["_".join(x.split("_")[:-1]) for x in pivot_df.index]
-                pivot_df.index.name = "-"
-                pivot_df.columns = ["_".join(x.split("_")[:-1]) for x in pivot_df.columns]
-                pivot_df.columns.name = None
-
-                print("Saving {} dataframe.".format(col), flush=True)
-                save_dataframe(df=pivot_df,
-                               outpath=os.path.join(self.work_dir,
-                                                    "{}_table.txt.gz".format(col)),
-                               header=True, index=True)
-
         print("")
 
         # Print the time.
@@ -283,6 +285,24 @@ class Combine:
         groups = groupby(numbers, key=lambda item, c=count(): item - next(c))
         tmp = [list(g) for k, g in groups]
         return [str(x[0]) if len(x) == 1 else "{}-{}".format(x[0], x[-1]) for x in tmp]
+
+    def pivot_and_save(self, dfm, col, indices, columns):
+        print("Pivoting table.", flush=True)
+        pivot_df = dfm.pivot(index='covariate', columns='SNP', values=col)
+
+        print("Reorder dataframe.")
+        pivot_df = pivot_df.loc[indices, columns]
+        pivot_df.index = ["_".join(x.split("_")[:-1]) for x in pivot_df.index]
+        pivot_df.index.name = "-"
+        pivot_df.columns = ["_".join(x.split("_")[:-1]) for x in
+                            pivot_df.columns]
+        pivot_df.columns.name = None
+
+        print("Saving {} dataframe.".format(col), flush=True)
+        save_dataframe(df=pivot_df,
+                       outpath=os.path.join(self.work_dir,
+                                            "{}_table.txt.gz".format(col)),
+                       header=True, index=True)
 
     def print_arguments(self):
         print("Arguments:")
