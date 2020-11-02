@@ -156,6 +156,7 @@ class main():
 
     def work(self):
         new_data = []
+        sign_steps = [0.01, 0.02, 0.03, 0.04, 0.05]
 
         print("Start parsing file.")
         with gzip.open(self.decon_inpath, 'rb') as f:
@@ -167,11 +168,14 @@ class main():
                     splitted_line = line.decode().strip('\n').split('\t')
                     index = splitted_line[0]
                     data = np.array(splitted_line[1:], dtype=float)
-                    new_data.append([index, np.sum(np.power(data, 2))])
+                    counts = []
+                    for step in sign_steps:
+                        counts.append(np.sum(data < step))
+                    new_data.append([index] + counts + [np.sum(np.power(data, 2))])
 
         f.close()
 
-        return pd.DataFrame(new_data, columns=["index", "chi2sum"])
+        return pd.DataFrame(new_data, columns=["index"] + ["p<{}".format(x) for x in sign_steps] + ["chi2sum"])
 
     def print_arguments(self):
         print("Arguments:")

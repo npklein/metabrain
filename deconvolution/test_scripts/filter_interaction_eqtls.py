@@ -60,7 +60,9 @@ class main():
 
         # Set variables.
         outdir = str(Path(__file__).parent.parent)
-        self.outfile = os.path.join(outdir, "{}_{}FDRFiltered.txt.gz".format(outfile, self.alpha))
+        self.outfile = None
+        if outfile is not None:
+            self.outfile = os.path.join(outdir, "{}_{}FDRFiltered.txt.gz".format(outfile, self.alpha))
 
     def create_argument_parser(self):
         parser = argparse.ArgumentParser(prog=__program__,
@@ -101,8 +103,9 @@ class main():
         parser.add_argument("-o",
                             "--outfile",
                             type=str,
-                            required=True,
-                            help="The name of the output file (no extension).")
+                            default=None,
+                            help="The name of the output file (no extension)."
+                                 " Default: None.")
 
         return parser.parse_args()
 
@@ -114,8 +117,7 @@ class main():
         gene_dict = None
         if self.gene_info_path is not None:
             gene_info_df = self.load_file(self.gene_info_path, index_col=None)
-            gene_dict = dict(
-                zip(gene_info_df["ArrayAddress"], gene_info_df["Symbol"]))
+            gene_dict = dict(zip(gene_info_df["ArrayAddress"], gene_info_df["Symbol"]))
 
         decon_fdr_df = self.bh_correct(decon_df)
         filtered_decon_df, pre_shape, post_shape = self.filter(decon_fdr_df,
@@ -128,8 +130,9 @@ class main():
                         self.alpha,
                         self.interest)
 
-        self.save_file(filtered_decon_df,
-                       self.outfile)
+        if self.outfile is not None:
+            self.save_file(filtered_decon_df,
+                           self.outfile)
 
     @staticmethod
     def bh_correct(pvalue_df):
@@ -144,12 +147,13 @@ class main():
 
         return fdr_df.T
 
-
     @staticmethod
     def filter(df, trans_dict, alpha):
+        print(df)
         df.reset_index(drop=False, inplace=True)
         df = df.melt(id_vars="index", var_name="CellType", value_name="FDR")
         df[['ProbeName', 'SNPName']] = df["index"].str.split("_", n=1, expand=True)
+        print(df)
 
         if trans_dict is None:
             df["HGNCSymbol"] = None
@@ -157,12 +161,14 @@ class main():
             df["HGNCSymbol"] = df["ProbeName"].map(trans_dict)
 
         df = df[['ProbeName', 'HGNCSymbol', 'SNPName', 'CellType', 'FDR']]
+        print(df)
 
         pre_shape = df.shape
 
         df = df.loc[df["FDR"] < alpha, :]
         df = df.sort_values(by="FDR", ascending=True)
         df.reset_index(drop=True, inplace=True)
+        print(df)
 
         post_shape = df.shape
 
