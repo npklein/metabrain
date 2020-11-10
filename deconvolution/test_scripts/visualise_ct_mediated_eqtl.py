@@ -159,7 +159,7 @@ class main():
                             nargs="+",
                             type=str,
                             choices=["png", "pdf", "eps"],
-                            default="png",
+                            default=["png"],
                             help="The figure file extension. "
                                  "Default: 'png'.")
 
@@ -185,7 +185,7 @@ class main():
     def start(self):
         self.print_arguments()
         eqtl_df, geno_df, alleles_df, expr_df, cc_df, decon_df = self.load()
-        decon_fdr_df = self.bh_correct(decon_df)
+        decon_pval_df, decon_fdr_df = self.bh_correct(decon_df)
         self.plot_upsetplot(decon_fdr_df)
         self.plot_eqtls(eqtl_df, geno_df, alleles_df, expr_df, cc_df, decon_fdr_df)
 
@@ -203,15 +203,18 @@ class main():
     @staticmethod
     def bh_correct(pvalue_df):
         df = pvalue_df.copy()
-        data = []
+        pval_data = []
+        fdr_data = []
         indices = []
         for col in df.columns:
             if col.endswith("_pvalue"):
-                data.append(multitest.multipletests(df.loc[:, col], method='fdr_bh')[1])
+                pval_data.append(df.loc[:, col])
+                fdr_data.append(multitest.multipletests(df.loc[:, col], method='fdr_bh')[1])
                 indices.append(col.replace("_pvalue", ""))
-        fdr_df = pd.DataFrame(data, index=indices, columns=df.index)
+        pval_df = pd.DataFrame(pval_data, index=indices, columns=df.index)
+        fdr_df = pd.DataFrame(fdr_data, index=indices, columns=df.index)
 
-        return fdr_df.T
+        return pval_df.T, fdr_df.T
 
     @staticmethod
     def load_file(path, sep="\t", header=0, index_col=0, nrows=None):
@@ -296,7 +299,6 @@ class main():
                       index=pd.MultiIndex.from_tuples(indices, names=abbr_cols))
         s.name = "value"
         return s
-
 
     def plot_eqtls(self, eqtl_df, geno_df, alleles_df, expr_df, cc_df, decon_df):
         print("Plotting interaction eQTL plots.")
@@ -405,8 +407,9 @@ class main():
                                       self.extensions)
 
                 for index2, (fdr,) in interaction_effect.iterrows():
+                    print("\t\t{}: FDR = {}".format(index2, fdr))
                     eqtl_data = data.copy()
-                    cov_data = cc_df.loc[:, index2].to_frame()
+                    cov_data = cc_df.loc[:, "CellMapNNLS_{}".format(index2)].to_frame()
                     eqtl_data = eqtl_data.merge(cov_data, left_index=True,
                                                 right_index=True)
 
@@ -592,6 +595,7 @@ class main():
         print("  > Cell count % path: {}".format(self.cc_path))
         print("  > Deconvolution path: {}".format(self.decon_path))
         print("  > Alpha: {}".format(self.alpha))
+        print("  > Interest: {}".format(self.interest))
         print("  > Extension: {}".format(self.extensions))
         print("  > Output directory: {}".format(self.outdir))
         print("")

@@ -307,10 +307,6 @@ class Main:
         fig.savefig(os.path.join(self.outdir, "{}_distributions.{}".format(name, self.extension)))
         plt.close()
 
-    @staticmethod
-    def vertical_mean_line(x, **kwargs):
-        plt.axvline(x.mean(), ls="--", c="black")
-
     def print_arguments(self):
         print("Arguments:")
         print("  > Input directory path: {}".format(self.input_path))

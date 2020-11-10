@@ -59,7 +59,7 @@ class main():
         self.bulk_infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR/Iteration1/"
         self.bulk_filename = "eQTLProbesFDR0.05-ProbeLevel.txt.gz"
         self.decon_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/2020-07-16-decon-eQTL/cis/cortex/decon_out/deconvolutionResults_withFDR.txt.gz"
-        self.sn_infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/"
+        self.sn_infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/cis/"
         self.sn_filename = "eQTLsFDR-ProbeLevel.txt.gz"
         self.cell_types = [("AST", "Astrocyte", "#D55E00"),
                            ("END", "EndothelialCell", "#CC79A7"),
@@ -92,40 +92,35 @@ class main():
                                nrows=bulk_df.shape[0])
         print("\tDeconvolution results data frame: {}".format(decon_df.shape))
         print(decon_df)
+        print(list(decon_df.index))
+        exit()
 
         print("Preprocessing deconvolution data frame")
-        decon_work_df = self.filter_df(decon_df, prefix="Beta", suffix=":GT")
-        decon_work_df.columns = [x.split("_")[1] for x in decon_work_df.columns]
-        decon_work_df = self.log_modulus_beta(decon_work_df)
-        ylabel_suffix = "log modulus beta"
-
-        # decon_work_df = self.filter_df(decon_df, suffix="_FDR")
-        # ylabel_suffix = "OverallZScore"
-
-        # decon_work_df = self.filter_df(decon_df, suffix="_pvalue")
-        # decon_work_df = self.pvalue_to_zscore(decon_work_df)
-        # ylabel_suffix = "z_score"
-
         probe_names = []
         snp_names = []
-        for index in decon_work_df.index:
+        for index in decon_df.index:
             probe_names.append(index.split("_")[0])
             snp_names.append("_".join(index.split("_")[1:]))
-        decon_work_df["ProbeName"] = probe_names
-        decon_work_df["SNPName"] = snp_names
-        decon_work_df.reset_index(drop=True, inplace=True)
+        decon_df["ProbeName"] = probe_names
+        decon_df["SNPName"] = snp_names
+        decon_df.reset_index(drop=True, inplace=True)
+        print(decon_df)
 
         print("Merging results")
-        bulk_decon_df = bulk_df.merge(decon_work_df,
+        bulk_decon_df = bulk_df.merge(decon_df,
                                       left_on=["SNPName", "ProbeName"],
                                       right_on=["SNPName", "ProbeName"])
         del bulk_df
-
         bulk_decon_df.index = bulk_decon_df["SNPName"] + "_" + bulk_decon_df["ProbeName"]
         print(bulk_decon_df)
 
-        for sn_ct, b_ct, color in self.cell_types:
-            print("Analyzing {} / {}".format(sn_ct, b_ct))
+        print("Visualizing")
+
+        sns.set(rc={'figure.figsize': (len(self.cell_types)*8, 18)})
+        sns.set_style("ticks")
+        fig, axes = plt.subplots(nrows=3, ncols=len(self.cell_types))
+
+        for col_index, (sn_ct, b_ct, color) in enumerate(self.cell_types):
 
             print("\tLoading single-nucleus results")
             sn_df = pd.read_csv(os.path.join(self.sn_infolder, sn_ct, self.sn_filename),
@@ -154,33 +149,53 @@ class main():
 
             sn_df["flip"] = flip_mask
 
-            print("\tPrepare plot df.")
-            plot_df = pd.DataFrame({"x": sn_df["OverallZScore"] * flip_mask,
-                                    "y": ct_bulk_decon_df[b_ct]})
+            beta_col = None
+            for col in ct_bulk_decon_df.columns:
+                if col.startswith("Beta") and col.endswith("_{}:GT".format(b_ct)):
+                    beta_col = col
+                    break
 
-            print("\tPlotting.")
-            self.plot(plot_df,
-                      xlabel="single-nucleus [OverallZScore]",
-                      ylabel="bulk deconvolution [{}]".format(ylabel_suffix),
-                      name="{}_VS_{}".format(sn_ct, b_ct),
+            print("\tPrepare plot df.")
+            plot_df = pd.DataFrame({"sn_zscore": sn_df["OverallZScore"] * flip_mask,
+                                    "b_zscore": ct_bulk_decon_df["OverallZScore"],
+                                    "decon_beta": ct_bulk_decon_df[beta_col],
+                                    "FDR": ct_bulk_decon_df["{}_FDR".format(b_ct)]})
+
+            print("\tPlotting row 1.")
+            self.plot(df=plot_df,
+                      fig=fig,
+                      ax=axes[0, col_index],
+                      x="sn_zscore",
+                      y="b_zscore",
+                      xlabel="",
+                      ylabel="bulk decon [z-score]",
+                      name="{} VS {}".format(sn_ct, b_ct),
                       color=color)
 
-    @staticmethod
-    def filter_df(df, prefix=None, suffix=None):
-        cols = []
-        for col in df.columns:
-            if (prefix is not None and suffix is None and col.startswith(prefix)) or \
-                    (prefix is None and suffix is not None and col.endswith(suffix)) or \
-                    (prefix is not None and suffix is not None and col.startswith(prefix) and col.endswith(suffix)):
-                cols.append(col)
-        if len(cols) <= 0:
-            print("Error, no columns selected.")
-            exit()
-        df = df[cols]
-        for string in [prefix, suffix]:
-            if string is not None:
-                df.columns = [x.replace(string, "") for x in cols]
-        return df
+            print("\tPlotting row 2.")
+            self.plot(df=plot_df.loc[plot_df["FDR"] < 0.05, :],
+                      fig=fig,
+                      ax=axes[1, col_index],
+                      x="sn_zscore",
+                      y="b_zscore",
+                      xlabel="",
+                      ylabel="bulk decon [z-score]",
+                      name="",
+                      color=color)
+
+            print("\tPlotting row 3.")
+            self.plot(df=plot_df.loc[plot_df["FDR"] < 0.05, :],
+                      fig=fig,
+                      ax=axes[2, col_index],
+                      x="sn_zscore",
+                      y="decon_beta",
+                      xlabel="single-nucleus [z-score]",
+                      ylabel="bulk decon [log(abs(beta+1))]",
+                      name="",
+                      color=color)
+
+        fig.savefig(os.path.join(self.outdir, "zscore_comparison.{}".format(self.extension)))
+        plt.close()
 
     @staticmethod
     def log_modulus_beta(beta_df):
@@ -213,16 +228,42 @@ class main():
 
         return zscore_df.T
 
-    def plot(self, df, xlabel="", ylabel="", name="", color="#000000"):
-        sns.set(rc={'figure.figsize': (12, 9)})
-        sns.set_style("ticks")
-        fig, ax = plt.subplots()
+    def create_all_eQTL_df(self, sn_df, bulk_decon_df, b_ct):
+        overlap = set(sn_df.index).intersection(set(bulk_decon_df.index))
+
+        df1 = sn_df.loc[overlap, :].copy()
+        df2 = bulk_decon_df.loc[overlap, :].copy()
+
+        flip_mask = self.create_flip_mask(df1, df2)
+
+        df = pd.DataFrame({"x": df1["OverallZScore"] * flip_mask,
+                           "y": df2[b_ct]})
+
+        return df
+
+    @staticmethod
+    def create_flip_mask(df1, df2):
+        if df1.shape[0] != df2.shape[0]:
+            print("Unequal rows.")
+            exit()
+
+        flip_mask = []
+        for i in range(len(df1.shape[0])):
+            if df1.iloc[i, :]["SNPType"].split("/")[1] != df2.iloc[i, :]["AlleleAssessed"]:
+                flip_mask.append(-1)
+            else:
+                flip_mask.append(1)
+
+        return flip_mask
+
+    def plot(self, df, fig, ax, x="x", y="y", xlabel="", ylabel="", name="",
+             color="#000000"):
         sns.despine(fig=fig, ax=ax)
 
-        #coef, p = stats.spearmanr(subset["x"], subset["y"])
-        coef, p = stats.pearsonr(df["x"], df["y"])
+        #coef, p = stats.spearmanr(subset[x], subset[y])
+        coef, p = stats.pearsonr(df[x], df[y])
 
-        sns.regplot(x="x", y="y", data=df,
+        sns.regplot(x=x, y=y, data=df,
                     scatter_kws={'facecolors': "#808080",
                                  'edgecolors': "#808080"},
                     line_kws={"color": color},
@@ -249,16 +290,6 @@ class main():
         handles = []
         handles.append(mpatches.Patch(color=color, label="{} [{:.2f}]".format(name.replace("_VS_", " / "), coef)))
         ax.legend(handles=handles)
-
-        fig.savefig(os.path.join(self.outdir, "{}_regression.{}".format(name, self.extension)))
-        plt.close()
-
-
-
-
-
-
-
 
 
 if __name__ == '__main__':

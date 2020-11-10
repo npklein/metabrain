@@ -55,7 +55,7 @@ def save_dataframe(df, outpath, header, index, sep="\t", logger=None):
 
     df.to_csv(outpath, sep=sep, index=index, header=header,
               compression=compression)
-    if logger is  None:
+    if logger is None:
         print("\tSaved dataframe: {} "
                     "with shape: {}".format(os.path.basename(outpath),
                                             df.shape))
