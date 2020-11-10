@@ -260,8 +260,8 @@ class Main:
                 df_null, rss_null, _, _ = self.create_model(null_matrix,
                                                             expression_hat)
 
-                # if self.verbose:
-                #     print("\t\tn_null: {}\tdf_null: {}\trss_null: {}\t".format(n_null, df_null, rss_null))
+                if self.verbose:
+                    print("\t\tn_null: {}\tdf_null: {}\trss_null: {}\t".format(n_null, df_null, rss_null))
 
                 # Loop over each permutation sample order. The first order
                 # is the normal order and the remainder are random shuffles.
@@ -316,8 +316,8 @@ class Main:
 
                     del alt_matrix
 
-                    # if self.verbose:
-                    #     print("\t\t\tn_alt: {}\tdf_alt: {}\trss_alt: {}\talt_tvalues: {}".format(n_alt, df_alt, rss_alt, alt_tvalues))
+                    if self.verbose:
+                        print("\t\t\tn_alt: {}\tdf_alt: {}\trss_alt: {}\talt_coefficients: {}\talt_std_erros: {}".format(n_alt, df_alt, rss_alt, coefficients_alt, std_errors_alt))
 
                     # Make sure the n's are identical.
                     if n_null != n_alt:
@@ -335,8 +335,8 @@ class Main:
                                                df_null, df_alt, n_null)
                     pvalue = self.get_p_value(fvalue, df_null, df_alt, n_null)
 
-                    # if self.verbose:
-                    #     print("\t\t\tfvalue: {}\tpvalue: {}".format(fvalue, pvalue))
+                    if self.verbose:
+                        print("\t\t\tfvalue: {}\tpvalue: {}".format(fvalue, pvalue))
 
                     # Safe the p-values.
                     storage.add_pvalue(order_id, pvalue)

@@ -23,6 +23,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 import os
 
 # Third party imports.
+import numpy as np
 import pandas as pd
 from scipy import stats
 
@@ -64,25 +65,60 @@ class NormalTransformMatrix:
             self.df = load_dataframe(self.inpath,
                                      header=0,
                                      index_col=0,
-                                     nrows=50,
                                      logger=self.log)
 
         new_data = []
+        match = 0
+        count = 0
         print("Processing data.")
         for i, (index, row) in enumerate(self.df.iterrows()):
             if (i == 0) or (i % self.print_interval == 0):
-                print("\tprocessed {}\{} [{:.2f}%] lines".format(i, self.df.shape[0], (100 / self.df.shape[0])*i))
+                print("\tprocessed {}/{} [{:.2f}%] lines".format(i, self.df.shape[0], (100 / self.df.shape[0])*i))
+                print("\t\t{}/{} are identical".format(match, count))
 
-            work_df = row.to_frame()
-            work_df["rank"] = work_df.loc[:, index].rank(ascending=True)
-            work_df["pvalue"] = (work_df["rank"] - 0.5) / work_df.shape[0]
-            work_df["zscore"] = stats.norm.ppf(work_df["pvalue"])
-            work_df.loc[work_df["pvalue"] > (1.0 - 1e-16), "zscore"] = -8.209536151601387
-            work_df.loc[work_df["pvalue"] < 1e-323, "zscore"] = 38.44939448087599
+            zscores1 = self.rank_method1(index, row)
+            zscores2 = self.rank_method2(index, row)
 
-            new_data.append(work_df["zscore"].values)
+            if np.array_equal(zscores1, zscores2):
+                match += 1
 
+            count += 1
+
+        exit()
         return pd.DataFrame(new_data, index=self.df.index, columns=self.df.columns)
+
+    @staticmethod
+    def rank_method1(index, row):
+        work_df = row.to_frame()
+
+        # Get the rank of each value.
+        tmp = work_df.copy()
+        tmp.sort_values(by=index, ascending=True, inplace=True)
+        tmp["rank"] = range(1, tmp.shape[0] + 1)
+        tmp = tmp.drop([index], axis=1)
+
+        # Combine the dataframes.
+        work_df = work_df.merge(tmp, left_index=True, right_index=True)
+
+        # work_df["pvalue"] = 1 - (work_df["rank"] / (work_df.shape[0] + 1))
+        # work_df["zscore"] = stats.norm.isf(work_df["pvalue"])
+        work_df["pvalue"] = (work_df["rank"] - 0.5) / work_df.shape[0]
+        work_df["zscore"] = stats.norm.ppf(work_df["pvalue"])
+        work_df.loc[work_df["pvalue"] > (1.0 - 1e-16), "zscore"] = -8.209536151601387
+        work_df.loc[work_df["pvalue"] < 1e-323, "zscore"] = 38.44939448087599
+
+        return work_df["zscore"].values
+
+    @staticmethod
+    def rank_method2(index, row):
+        work_df = row.to_frame()
+        work_df["rank"] = work_df.loc[:, index].rank(ascending=True)
+        work_df["pvalue"] = (work_df["rank"] - 0.5) / work_df.shape[0]
+        work_df["zscore"] = stats.norm.ppf(work_df["pvalue"])
+        work_df.loc[work_df["pvalue"] > (1.0 - 1e-16), "zscore"] = -8.209536151601387
+        work_df.loc[work_df["pvalue"] < 1e-323, "zscore"] = 38.44939448087599
+
+        return work_df["zscore"].values
 
     def save(self):
         print("\tSaving matrix.")

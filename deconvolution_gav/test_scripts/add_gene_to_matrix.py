@@ -130,13 +130,9 @@ class main():
         new_matrix_df = self.work(sample_dict)
         print(new_matrix_df)
 
-        print("### Step3 ###")
-        normal_matrix_df = self.normal_transform(new_matrix_df)
-        print(normal_matrix_df)
-
-        print("### Step3 ###")
+        print("### Step2 ###")
         print("Combine and safe.")
-        combined_df = matrix_df.T.merge(normal_matrix_df.T, left_index=True, right_index=True).T
+        combined_df = matrix_df.T.merge(new_matrix_df.T, left_index=True, right_index=True).T
         print(combined_df)
         combined_df.to_csv(self.outpath,
                            sep="\t",
@@ -196,25 +192,6 @@ class main():
         f.close()
 
         return pd.DataFrame(new_data, index=new_indices, columns=new_columns)
-
-    @staticmethod
-    def normal_transform(df, print_interval=500):
-        new_data = []
-        print("Processing data.")
-        for i, (index, row) in enumerate(df.iterrows()):
-            if (i == 0) or (i % print_interval == 0):
-                print("\tprocessed {}\{} [{:.2f}%] lines".format(i, df.shape[0], (100 / df.shape[0])*i))
-
-            work_df = row.to_frame()
-            work_df["rank"] = work_df.loc[:, index].rank(ascending=True)
-            work_df["pvalue"] = (work_df["rank"] - 0.5) / work_df.shape[0]
-            work_df["zscore"] = stats.norm.ppf(work_df["pvalue"])
-            work_df.loc[work_df["pvalue"] > (1.0 - 1e-16), "zscore"] = -8.209536151601387
-            work_df.loc[work_df["pvalue"] < 1e-323, "zscore"] = 38.44939448087599
-
-            new_data.append(work_df["zscore"].values)
-
-        return pd.DataFrame(new_data, index=df.index, columns=df.columns)
 
     def print_arguments(self):
         print("Arguments:")
