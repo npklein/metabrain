@@ -35,6 +35,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from scipy import stats
+from adjustText import adjust_text
 
 
 # Local application imports.
@@ -56,18 +57,18 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 class main():
     def __init__(self):
-        self.bulk_infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR/Iteration1/"
-        self.bulk_filename = "eQTLProbesFDR0.05-ProbeLevel.txt.gz"
+        self.bulk_eqtl_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR/Iteration1/eQTLProbesFDR0.05-ProbeLevel.txt.gz"
+        self.bulk_alleles_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/cis_new_output_log2/create_matrices/genotype_alleles.txt.gz"
         self.decon_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/2020-07-16-decon-eQTL/cis/cortex/decon_out/deconvolutionResults_withFDR.txt.gz"
         self.sn_infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/cis/"
         self.sn_filename = "eQTLsFDR-ProbeLevel.txt.gz"
-        self.cell_types = [("AST", "Astrocyte", "#D55E00"),
-                           ("END", "EndothelialCell", "#CC79A7"),
-                           ("EX", "Neuron", "#0072B2"),
-                           ("IN", "Neuron", "#0072B2"),
-                           ("MIC", "Macrophage", "#E69F00"),
-                           ("OLI", "Oligodendrocyte", "#009E73")]
-        self.extension = "png"
+        self.cell_types = [("AST", "Astrocyte", "Astrocyte", "#D55E00"),
+                           ("END", "EndothelialCell", "Endothelial Cell", "#CC79A7"),
+                           ("EX", "Neuron", "Ex. Neuron VS Neuron", "#0072B2"),
+                           ("IN", "Neuron", "In. Neuron VS Neuron", "#0072B2"),
+                           ("MIC", "Macrophage", "Macrophage", "#E69F00"),
+                           ("OLI", "Oligodendrocyte", "Oligodendrocyte", "#009E73")]
+        self.extensions = ["png", "pdf"]
 
         self.outdir = os.path.join(str(Path(__file__).parent.parent),
                                    'plots')
@@ -75,25 +76,40 @@ class main():
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
 
+        matplotlib.rcParams['pdf.fonttype'] = 42
+
     def start(self):
         print("Loading data")
 
-        bulk_df = pd.read_csv(os.path.join(self.bulk_infolder, self.bulk_filename),
-                              sep="\t",
-                              header=0,
-                              index_col=None)
-        print("\tBulk eQTL data frame: {}".format(bulk_df.shape))
+        bulk_eqtl_df = pd.read_csv(self.bulk_eqtl_infile,
+                                   sep="\t",
+                                   header=0,
+                                   index_col=None)
+        bulk_eqtl_df.reset_index(drop=False, inplace=True)
+        print("\tBulk eQTL data frame: {}".format(bulk_eqtl_df.shape))
+        print(bulk_eqtl_df)
+
+        bulk_alleles_df = pd.read_csv(self.bulk_alleles_infile,
+                                      sep="\t",
+                                      header=0,
+                                      index_col=None,
+                                      nrows=bulk_eqtl_df.shape[0])
+        bulk_alleles_df.columns = ["SNPName", "Alleles", "MinorAllele"]
+        bulk_alleles_df["DeconAllele"] = [x.split("/")[1] for x in bulk_alleles_df["Alleles"]]
+        bulk_alleles_df.reset_index(drop=False, inplace=True)
+        print("\tBulk alleles data frame: {}".format(bulk_alleles_df.shape))
+        print(bulk_alleles_df)
+
+        bulk_df = bulk_eqtl_df.merge(bulk_alleles_df,
+                                     left_on=["index", "SNPName"],
+                                     right_on=["index", "SNPName"])
         print(bulk_df)
 
         decon_df = pd.read_csv(self.decon_infile,
                                sep="\t",
                                header=0,
-                               index_col=0,
-                               nrows=bulk_df.shape[0])
+                               index_col=0)
         print("\tDeconvolution results data frame: {}".format(decon_df.shape))
-        print(decon_df)
-        print(list(decon_df.index))
-        exit()
 
         print("Preprocessing deconvolution data frame")
         probe_names = []
@@ -116,167 +132,200 @@ class main():
 
         print("Visualizing")
 
-        sns.set(rc={'figure.figsize': (len(self.cell_types)*8, 18)})
+        sns.set(rc={'figure.figsize': (len(self.cell_types)*8, 5*6)})
         sns.set_style("ticks")
-        fig, axes = plt.subplots(nrows=3, ncols=len(self.cell_types))
+        fig, axes = plt.subplots(nrows=5, ncols=len(self.cell_types),
+                                 sharex='col', sharey='row')
 
-        for col_index, (sn_ct, b_ct, color) in enumerate(self.cell_types):
-
-            print("\tLoading single-nucleus results")
+        for col_index, (sn_ct, b_ct, title, color) in enumerate(self.cell_types):
             sn_df = pd.read_csv(os.path.join(self.sn_infolder, sn_ct, self.sn_filename),
                                 sep="\t",
                                 header=0,
                                 index_col=0)
             sn_df.index = sn_df["SNPName"] + "_" + sn_df["ProbeName"]
-            print("\t\tSingle-nucleus eQTL data frame: {}".format(sn_df.shape))
+            print("\tSingle-nucleus {} eQTL data frame: {}".format(sn_ct, sn_df.shape))
 
-            overlap = set(sn_df.index).intersection(set(bulk_decon_df.index))
-            print("\t{} overlapping keys".format(len(overlap)))
+            # test = sn_df[["OverallZScore", "FDR"]].copy()
+            # test.sort_values(by="FDR", inplace=True)
+            # print(test.iloc[0:50, :])
+            # exit()
 
-            sn_df = sn_df.loc[overlap, :].copy()
-            print("\t\tSingle-nucleus eQTL data frame: {}".format(sn_df.shape))
-            ct_bulk_decon_df = bulk_decon_df.loc[overlap, :].copy()
-            print("\t\t{} bulk deconvolution data frame: {}".format(b_ct, ct_bulk_decon_df.shape))
+            merged_df = bulk_decon_df.merge(sn_df, left_index=True, right_index=True,
+                                          suffixes=["_bulk", "_sn"])
 
-            print("\tComparing alleles")
-            flip_mask = []
-            for i in range(len(overlap)):
-                if sn_df.iloc[i, :]["AlleleAssessed"] != \
-                        ct_bulk_decon_df.iloc[i, :]["AlleleAssessed"]:
-                    flip_mask.append(-1)
-                else:
-                    flip_mask.append(1)
-
-            sn_df["flip"] = flip_mask
+            merged_df["eQTLFlipMask"] = (merged_df["AlleleAssessed_sn"] == merged_df["AlleleAssessed_bulk"]).replace({0: -1, 1: 1})
+            merged_df["DeconFlipMask"] = (merged_df["AlleleAssessed_sn"] == merged_df["DeconAllele"]).replace({0: -1, 1: 1})
 
             beta_col = None
-            for col in ct_bulk_decon_df.columns:
+            for col in merged_df.columns:
                 if col.startswith("Beta") and col.endswith("_{}:GT".format(b_ct)):
                     beta_col = col
                     break
 
+            merged_df["OverallZScore_bulk_flipped"] = merged_df["OverallZScore_bulk"] * merged_df["eQTLFlipMask"]
+            merged_df["log_{}_flipped".format(beta_col)] = self.log_modulus_beta(merged_df[beta_col]) * merged_df["DeconFlipMask"]
+
             print("\tPrepare plot df.")
-            plot_df = pd.DataFrame({"sn_zscore": sn_df["OverallZScore"] * flip_mask,
-                                    "b_zscore": ct_bulk_decon_df["OverallZScore"],
-                                    "decon_beta": ct_bulk_decon_df[beta_col],
-                                    "FDR": ct_bulk_decon_df["{}_FDR".format(b_ct)]})
+            plot_df = merged_df[["HGNCName_bulk", "OverallZScore_sn", "FDR_sn", "OverallZScore_bulk_flipped", "log_{}_flipped".format(beta_col), "{}_FDR".format(b_ct)]].copy()
+            del merged_df
+            plot_df["hue"] = "#808080"
+            plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (plot_df["{}_FDR".format(b_ct)] < 0.05), "hue"] = color
+
+            # plot_df.sort_values(by="FDR_sn", inplace=True)
+            # print(plot_df.iloc[0:50, :])
+
+            include_ylabel = False
+            if col_index == 0:
+                include_ylabel = True
 
             print("\tPlotting row 1.")
             self.plot(df=plot_df,
                       fig=fig,
                       ax=axes[0, col_index],
-                      x="sn_zscore",
-                      y="b_zscore",
+                      x="OverallZScore_sn",
+                      y="OverallZScore_bulk_flipped",
                       xlabel="",
-                      ylabel="bulk decon [z-score]",
-                      name="{} VS {}".format(sn_ct, b_ct),
-                      color=color)
+                      ylabel="cortex eQTL z-score",
+                      title=title,
+                      color=color,
+                      include_ylabel=include_ylabel)
 
             print("\tPlotting row 2.")
-            self.plot(df=plot_df.loc[plot_df["FDR"] < 0.05, :],
+            self.plot(df=plot_df.loc[plot_df["{}_FDR".format(b_ct)] < 0.05, :],
                       fig=fig,
                       ax=axes[1, col_index],
-                      x="sn_zscore",
-                      y="b_zscore",
+                      x="OverallZScore_sn",
+                      y="OverallZScore_bulk_flipped",
                       xlabel="",
-                      ylabel="bulk decon [z-score]",
-                      name="",
-                      color=color)
+                      ylabel="cortex eQTL z-score",
+                      title="",
+                      color=color,
+                      include_ylabel=include_ylabel)
 
             print("\tPlotting row 3.")
-            self.plot(df=plot_df.loc[plot_df["FDR"] < 0.05, :],
+            self.plot(df=plot_df.loc[plot_df["{}_FDR".format(b_ct)] < 0.05, :],
                       fig=fig,
                       ax=axes[2, col_index],
-                      x="sn_zscore",
-                      y="decon_beta",
-                      xlabel="single-nucleus [z-score]",
-                      ylabel="bulk decon [log(abs(beta+1))]",
-                      name="",
-                      color=color)
+                      x="OverallZScore_sn",
+                      y="log_{}_flipped".format(beta_col),
+                      xlabel="",
+                      ylabel="log deconvolution beta",
+                      title="",
+                      color=color,
+                      include_ylabel=include_ylabel)
 
-        fig.savefig(os.path.join(self.outdir, "zscore_comparison.{}".format(self.extension)))
+            print("\tPlotting row 4.")
+            self.plot(df=plot_df.loc[plot_df["FDR_sn"] < 0.05, :],
+                      fig=fig,
+                      ax=axes[3, col_index],
+                      x="OverallZScore_sn",
+                      y="OverallZScore_bulk_flipped",
+                      facecolors="hue",
+                      xlabel="",
+                      ylabel="cortex eQTL z-score",
+                      title="",
+                      color=color,
+                      include_ylabel=include_ylabel)
+
+            print("\tPlotting row 5.")
+            self.plot(df=plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (plot_df["{}_FDR".format(b_ct)] < 0.05), :],
+                      fig=fig,
+                      ax=axes[4, col_index],
+                      x="OverallZScore_sn",
+                      y="log_{}_flipped".format(beta_col),
+                      label="HGNCName_bulk",
+                      xlabel="single-nucleus z-score",
+                      ylabel="log deconvolution beta",
+                      title="",
+                      color=color,
+                      include_ylabel=include_ylabel)
+
+            print("")
+
+        for extension in self.extensions:
+            fig.savefig(os.path.join(self.outdir, "zscore_comparison.{}".format(extension)))
         plt.close()
 
     @staticmethod
-    def log_modulus_beta(beta_df):
-        df = beta_df.copy()
+    def log_modulus_beta(series):
+        s = series.copy()
         data = []
-        for _, row in beta_df.T.iterrows():
-            values = []
-            for beta in row:
-                values.append(np.log(abs(beta)+1) * np.sign(beta))
-            data.append(values)
-        new_df = pd.DataFrame(data, index=df.columns, columns=df.index)
+        for index, beta in s.T.iteritems():
+            data.append(np.log(abs(beta)+1) * np.sign(beta))
+        new_df = pd.Series(data, index=s.index)
 
-        return new_df.T
+        return new_df
 
     @staticmethod
-    def pvalue_to_zscore(pvalue_df):
-        df = pvalue_df.copy()
-        data = []
-        for _, row in pvalue_df.T.iterrows():
-            zscores = []
-            for pvalue in row:
-                if pvalue > (1.0 - 1e-16):
-                    zscores.append(-8.209536151601387)
-                elif pvalue < 1e-323:
-                    zscores.append(-8.209536151601387)
-                else:
-                    zscores.append(stats.norm.isf(pvalue))
-            data.append(zscores)
-        zscore_df = pd.DataFrame(data, index=df.columns, columns=df.index)
-
-        return zscore_df.T
-
-    def create_all_eQTL_df(self, sn_df, bulk_decon_df, b_ct):
-        overlap = set(sn_df.index).intersection(set(bulk_decon_df.index))
-
-        df1 = sn_df.loc[overlap, :].copy()
-        df2 = bulk_decon_df.loc[overlap, :].copy()
-
-        flip_mask = self.create_flip_mask(df1, df2)
-
-        df = pd.DataFrame({"x": df1["OverallZScore"] * flip_mask,
-                           "y": df2[b_ct]})
-
-        return df
-
-    @staticmethod
-    def create_flip_mask(df1, df2):
+    def create_flisk_mask(df1, df1_key, df2, df2_key):
         if df1.shape[0] != df2.shape[0]:
-            print("Unequal rows.")
+            print("ERROR, unequal data frame sizes")
             exit()
 
         flip_mask = []
-        for i in range(len(df1.shape[0])):
-            if df1.iloc[i, :]["SNPType"].split("/")[1] != df2.iloc[i, :]["AlleleAssessed"]:
+        count = 0
+        for i in range(df1.shape[0]):
+            if df1.iloc[i, :][df1_key] != df2.iloc[i, :][df2_key]:
                 flip_mask.append(-1)
+                count += 1
             else:
                 flip_mask.append(1)
+        print("\t\t{} vs {}:\t-1 = {}\t1 = {}".format(df1_key, df2_key, count,
+                                                         len(flip_mask) - count))
 
         return flip_mask
 
-    def plot(self, df, fig, ax, x="x", y="y", xlabel="", ylabel="", name="",
-             color="#000000"):
+    def plot(self, df, fig, ax, x="x", y="y", facecolors=None, label=None,
+             xlabel="", ylabel="", title="", color="#000000", ci=95,
+             include_ylabel=True):
         sns.despine(fig=fig, ax=ax)
 
-        #coef, p = stats.spearmanr(subset[x], subset[y])
-        coef, p = stats.pearsonr(df[x], df[y])
+        if not include_ylabel:
+            ylabel = ""
 
-        sns.regplot(x=x, y=y, data=df,
-                    scatter_kws={'facecolors': "#808080",
-                                 'edgecolors': "#808080"},
-                    line_kws={"color": color},
-                    ax=ax
-                    )
+        if facecolors is None:
+            facecolors = "#808080"
+        else:
+            facecolors = df[facecolors]
+
+        n = df.shape[0]
+        coef = np.nan
+        concordance = 0
+
+        if n < 10:
+            ci = None
+
+        if n > 0:
+            lower_quadrant = df.loc[(df[x] < 0) & (df[y] < 0), :]
+            upper_quadrant = df.loc[(df[x] > 0) & (df[y] > 0), :]
+            concordance = (100 / n) * (lower_quadrant.shape[0] + upper_quadrant.shape[0])
+
+            #coef, p = stats.spearmanr(subset[x], subset[y])
+            coef, p = stats.pearsonr(df[x], df[y])
+
+            sns.regplot(x=x, y=y, data=df, ci=ci,
+                        scatter_kws={'facecolors': facecolors,
+                                     'edgecolors': "#808080"},
+                        line_kws={"color": color},
+                        ax=ax
+                        )
+
+            if label is not None:
+                texts = []
+                for i, point in df.iterrows():
+                    texts.append(ax.text(point[x] + .02,
+                                         point[y],
+                                         str(point[label]),
+                                         color=color))
+                adjust_text(texts, ax=ax)
 
         ax.axhline(0, ls='--', color="#D7191C", alpha=0.3, zorder=-1)
         ax.axvline(0, ls='--', color="#D7191C", alpha=0.3, zorder=-1)
 
-        ax.text(0.5, 1.1, name.replace("_", " "),
+        ax.text(0.5, 1.1, title,
                 fontsize=18, weight='bold', ha='center', va='bottom',
                 transform=ax.transAxes)
-        ax.text(0.5, 1.02, "N = {}".format(df.shape[0]),
+        ax.text(0.5, 1.02, "Allelic concordance: {:.2f}% [N = {}]".format(concordance, n),
                 fontsize=14, alpha=0.75, ha='center', va='bottom',
                 transform=ax.transAxes)
 
@@ -287,9 +336,7 @@ class main():
                       fontsize=14,
                       fontweight='bold')
 
-        handles = []
-        handles.append(mpatches.Patch(color=color, label="{} [{:.2f}]".format(name.replace("_VS_", " / "), coef)))
-        ax.legend(handles=handles)
+        ax.legend(handles=[mpatches.Patch(color=color, label="r = {:.2f}".format(coef))], loc=4)
 
 
 if __name__ == '__main__':

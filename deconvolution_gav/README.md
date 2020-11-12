@@ -1,4 +1,4 @@
-# Decon Optimizer  
+# Deconvolution - Genes as Covariates
 
 ## Introduction
 

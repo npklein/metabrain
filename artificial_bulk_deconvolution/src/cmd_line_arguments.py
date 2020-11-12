@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/11/09
-Last Changed:
+Last Changed: 2020/11/12
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -64,6 +64,11 @@ class CommandLineArguments:
                             default="tsv",
                             help="The suffix of the cell type specific expression"
                                  "matrices. Default: 'tsv'.")
+        parser.add_argument("-cc",
+                            "--cell_counts_path",
+                            type=str,
+                            default=None,
+                            help="The path to the cell counts. Default: None.")
         parser.add_argument("-r",
                             "--reference_profile_path",
                             type=str,
@@ -75,12 +80,6 @@ class CommandLineArguments:
                             type=str,
                             required=True,
                             help="The path to the gene info file.")
-        parser.add_argument("-n",
-                            "--n_samples",
-                            type=int,
-                            default=1000,
-                            help="The number of artifical bulk samples to "
-                                 "create. Default: 1000.")
         parser.add_argument("-c",
                             "--combine",
                             nargs="*",

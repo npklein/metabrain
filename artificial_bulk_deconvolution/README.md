@@ -1,4 +1,4 @@
-# Decon Optimizer  
+# Artificial Bulk Deconvolution
 
 ## Introduction
 
