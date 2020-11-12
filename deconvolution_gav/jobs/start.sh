@@ -14,7 +14,7 @@ if [[ " ${QOS_OPTIONS[@]} " =~ " $QOS_INPUT " ]]; then
     QOS=$QOS_INPUT
 fi
 
-JOBS_DIR=/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-decon-optimizer/jobs/$JOB_PREFIX
+JOBS_DIR=/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/jobs/$JOB_PREFIX
 OUTPUT_DIR=output
 LOGFILE=$JOBS_DIR/start.txt
 
@@ -25,12 +25,12 @@ for I in $(seq $START $END); do
 	if [ -f $OUTFILE ]; then
     PANIC=$(cat $OUTFILE | grep 'Panic!!!' | wc -l)
 		if [ $PANIC = 1 ]; then
-      echo sbatch --qos=$QOS $JOBFILE
+      # echo sbatch --qos=$QOS $JOBFILE
       echo -e "$JOBNAME:\t$(sbatch --qos=$QOS $JOBFILE)" >> $LOGFILE
 		fi
 	else
 	  if [ -f $JOBFILE ]; then
-	    echo sbatch --qos=$QOS $JOBFILE
+	    # echo sbatch --qos=$QOS $JOBFILE
 		  echo -e "$JOBNAME:\t$(sbatch --qos=$QOS $JOBFILE)" >> $LOGFILE
 	  else
 		  echo -e "error: no such file $JOBFILE" >> $LOGFILE

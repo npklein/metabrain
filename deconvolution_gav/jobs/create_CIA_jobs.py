@@ -200,7 +200,7 @@ class main():
                  "module load Python/3.6.3-foss-2015b\n",
                  "source $HOME/venv/bin/activate\n",
                  "\n",
-                 "python3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-decon-optimizer/custom_interaction_analyser.py -i {} -o {} -s {}{} -ne {} -ns {}\n".format(self.input_folder, self.output_folder, self.settings, skip_rows, batch_size, self.n_samples),
+                 "python3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/custom_interaction_analyser.py -i {} -o {} -s {}{} -ne {} -ns {}\n".format(self.input_folder, self.output_folder, self.settings, skip_rows, batch_size, self.n_samples),
                  "\n",
                  "deactivate\n"]
 

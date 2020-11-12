@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/11/09
-Last Changed:
+Last Changed: 2020/11/12
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -41,14 +41,14 @@ from .utilities import prepare_output_dir, load_dataframe
 
 
 class Main:
-    def __init__(self, input_path, input_suffix, ref_profile_path,
-                 gene_info_path, combine, n_samples):
+    def __init__(self, input_path, input_suffix, cell_counts_path,
+                 ref_profile_path, gene_info_path, combine, n_samples):
         self.input_path = input_path
         self.input_suffix = input_suffix
+        self.cell_counts_path = cell_counts_path
         self.ref_profile_path = ref_profile_path
         self.gene_info_path = gene_info_path
         self.combine = combine
-        self.n_samples = n_samples
         self.extension = "png"
 
         if self.input_suffix is None:
@@ -95,24 +95,27 @@ class Main:
 
         print("")
         print("### Step3 ###")
+        cc_df = self.load_cell_counts(cell_types=input_cell_types)
+        print(cc_df)
+
+        print("")
+        print("### Step4 ###")
         sample_matrices = self.merge_samples(samples=samples,
                                              cell_types=cell_types,
                                              matrices=matrices)
 
         print("")
-        print("### Step4 ###")
+        print("### Step5 ###")
         real_data = []
         predict_data = []
         diff_data = []
-        for i in range(self.n_samples):
-            if (i % 1000 == 0) or (i == (self.n_samples - 1)):
-                print("\t simulation {}/{} "
-                      "[{:.2f}%]".format(i,
-                                         (self.n_samples - 1),
-                                         (100 / (self.n_samples - 1)) * i))
+        for sample in samples:
+            if sample not in cc_df:
+                continue
+            real_weights = cc_df.loc[:, sample]
 
-            sample = samples[i % len(samples)]
-            real_weights, bulk_expression = self.create_artifical_bulk_data(df=sample_matrices[sample])
+            _, bulk_expression = self.create_artifical_bulk_data(df=sample_matrices[sample],
+                                                                 weights=real_weights)
 
             decon_weights = self.deconvolute(ref_profile_df, bulk_expression)
 
@@ -131,7 +134,7 @@ class Main:
         diff_df = pd.DataFrame(diff_data, columns=cell_types).abs()
 
         print("")
-        print("### Step4 ###")
+        print("### Step6 ###")
         print("Visualizing differences")
         real_weights_df_m = real_weights_df.melt()
         real_weights_df_m["hue"] = "real"
@@ -240,6 +243,25 @@ class Main:
 
         return columns, full_matrices
 
+    def load_cell_counts(self, cell_types):
+        df = load_dataframe(self.cell_counts_path,
+                            sep="\t",
+                            header=0,
+                            index_col=0)
+
+        df = df.loc[cell_types, :]
+        print(df)
+
+        if self.combine is not None:
+            for pair in self.combine:
+                left_ct, right_ct, name = pair.split("-")
+
+                df.loc[name, :] = df.loc[left_ct, :] + df.loc[right_ct, :]
+                df.drop(left_ct, axis=0, inplace=True)
+                df.drop(right_ct, axis=0, inplace=True)
+
+        return df / df.sum(axis=0)
+
     @staticmethod
     def merge_samples(samples, cell_types, matrices):
         sample_matrices = {}
@@ -263,9 +285,10 @@ class Main:
         return sample_matrices
 
     @staticmethod
-    def create_artifical_bulk_data(df):
-        weights = np.array([random.uniform(0, 1) for _ in range(df.shape[1])])
-        weights = weights / np.sum(weights)
+    def create_artifical_bulk_data(df, weights=None):
+        if weights is None:
+            weights = np.array([random.uniform(0, 1) for _ in range(df.shape[1])])
+            weights = weights / np.sum(weights)
 
         return weights, pd.Series(np.dot(df, weights), index=df.index)
 
@@ -314,6 +337,5 @@ class Main:
         print("  > Reference profile path: {}".format(self.ref_profile_path))
         print("  > Gene info path: {}".format(self.gene_info_path))
         print("  > Combine: {}".format(self.combine))
-        print("  > N Samples: {}".format(self.n_samples))
         print("  > Output directory path: {}".format(self.outdir))
         print("")

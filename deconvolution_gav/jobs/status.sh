@@ -4,7 +4,7 @@ JOB_PREFIX=$1
 START=$2
 END=$3
 
-LOG_DIR=/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-decon-optimizer/jobs/$JOB_PREFIX/output/
+LOG_DIR=/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/jobs/$JOB_PREFIX/output/
 
 TOTAL_DONE=0
 TOTAL_EQTLS=0

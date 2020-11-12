@@ -3,7 +3,7 @@
 """
 File:         artificial_bulk_deconvolution.py
 Created:      2020/11/09
-Last Changed:
+Last Changed: 2020/11/12
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -50,6 +50,7 @@ if __name__ == '__main__':
                                description=__description__)
     INPUT_DIR_PATH = CLA.get_argument("input_dir_path")
     INPUT_SUFFIX = CLA.get_argument("input_suffix")
+    CELL_COUNTS_PATH = CLA.get_argument("cell_counts_path")
     REFERENCE_PROFILE = CLA.get_argument("reference_profile_path")
     GENE_INFO_PATH = CLA.get_argument("gene_info_path")
     COMBINE = CLA.get_argument("combine")
@@ -58,6 +59,7 @@ if __name__ == '__main__':
     # Start the program.
     PROGRAM = Main(input_path=INPUT_DIR_PATH,
                    input_suffix=INPUT_SUFFIX,
+                   cell_counts_path=CELL_COUNTS_PATH,
                    ref_profile_path=REFERENCE_PROFILE,
                    gene_info_path=GENE_INFO_PATH,
                    combine=COMBINE,
