@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-File:         compare_zscores.py
+File:         compare_zscores_cis.py
 Created:      2020/11/04
 Last Changed:
 Author:       M.Vochteloo
@@ -41,7 +41,7 @@ from adjustText import adjust_text
 # Local application imports.
 
 # Metadata
-__program__ = "Compare Zscores"
+__program__ = "Compare Zscores Cis"
 __author__ = "Martijn Vochteloo"
 __maintainer__ = "Martijn Vochteloo"
 __email__ = "m.vochteloo@rug.nl"
@@ -60,13 +60,13 @@ class main():
         self.bulk_eqtl_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR/Iteration1/eQTLProbesFDR0.05-ProbeLevel.txt.gz"
         self.bulk_alleles_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/cis_new_output_log2/create_matrices/genotype_alleles.txt.gz"
         self.decon_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/2020-07-16-decon-eQTL/cis/cortex/decon_out/deconvolutionResults_withFDR.txt.gz"
-        self.sn_infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/cis/"
+        self.sn_infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/cis_100Perm/"
         self.sn_filename = "eQTLsFDR-ProbeLevel.txt.gz"
         self.cell_types = [("AST", "Astrocyte", "Astrocyte", "#D55E00"),
                            ("END", "EndothelialCell", "Endothelial Cell", "#CC79A7"),
                            ("EX", "Neuron", "Ex. Neuron VS Neuron", "#0072B2"),
                            ("IN", "Neuron", "In. Neuron VS Neuron", "#0072B2"),
-                           ("MIC", "Macrophage", "Macrophage", "#E69F00"),
+                           ("MIC", "Macrophage", "Microglia VS Macrophage", "#E69F00"),
                            ("OLI", "Oligodendrocyte", "Oligodendrocyte", "#009E73")]
         self.extensions = ["png", "pdf"]
 
@@ -238,12 +238,13 @@ class main():
                       ylabel="log deconvolution beta",
                       title="",
                       color=color,
+                      ci=None,
                       include_ylabel=include_ylabel)
 
             print("")
 
         for extension in self.extensions:
-            fig.savefig(os.path.join(self.outdir, "zscore_comparison.{}".format(extension)))
+            fig.savefig(os.path.join(self.outdir, "cis_zscore_comparison.{}".format(extension)))
         plt.close()
 
     @staticmethod
@@ -291,9 +292,6 @@ class main():
         n = df.shape[0]
         coef = np.nan
         concordance = 0
-
-        if n < 10:
-            ci = None
 
         if n > 0:
             lower_quadrant = df.loc[(df[x] < 0) & (df[y] < 0), :]

@@ -1,7 +1,7 @@
 """
 File:         cell_type_object.py
 Created:      2020/11/16
-Last Changed:
+Last Changed: 2020/11/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -21,12 +21,15 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Standard imports.
+import time
 
 # Third party imports.
+import numpy as np
 import pandas as pd
 from scipy import stats
 
 # Local application imports.
+from .mle import MaximumLiklihoodEstimator
 
 
 class CellType:
@@ -35,6 +38,8 @@ class CellType:
         # Safe arguments.
         self.cell_type = cell_type
         self.eqtl_df = eqtl_df
+        self.eqtl_df.reset_index(drop=True, inplace=True)
+        self.n = self.eqtl_df.shape[0]
         self.geno_df = geno_df
         self.alleles_df = alleles_df
         self.cohort_sample_dict = cohort_sample_dict
@@ -42,10 +47,13 @@ class CellType:
 
         # Force normal on expression and cell count matrices.
         self.expr_df = self.force_normal_per_cohort(expr_df)
-        self.ct_fractions = self.force_normal(ct_fractions, value_axis=0)
+        self.ct_frac_df = self.force_normal(ct_fractions, value_axis=0)
 
         # Validate.
         self.validate()
+
+        # Declare empty variables.
+        self.mle_objects = self.create_mle_objects()
 
     def validate(self):
         snp_reference = self.eqtl_df["SNPName"].copy()
@@ -75,12 +83,12 @@ class CellType:
                            "file.")
             exit()
 
-        if not self.ct_fractions.index.equals(self.geno_df.columns):
+        if not self.ct_frac_df.index.equals(self.geno_df.columns):
             self.log.error("The genotype file columns do not match the cell "
                            "type fractions file.")
             exit()
 
-        if not self.ct_fractions.index.equals(self.expr_df.columns):
+        if not self.ct_frac_df.index.equals(self.expr_df.columns):
             self.log.error("The expressiom file columns do not match the cell "
                            "type fractions file.")
             exit()
@@ -151,4 +159,52 @@ class CellType:
     @staticmethod
     def force_normal_series(s):
         return stats.norm.ppf((s.rank(ascending=True) - 0.5) / s.size)
+
+    def create_mle_objects(self):
+        mle_objects = {}
+        for index, row in self.eqtl_df.iterrows():
+            key = row["SNPName"] + "_" + row["ProbeName"]
+            mle_objects[key] = MaximumLiklihoodEstimator(genotype=self.geno_df.iloc[[index], :].copy(),
+                                                         cell_fractions=self.ct_frac_df,
+                                                         expression=self.expr_df.iloc[index, :].copy(),
+                                                         log=self.log)
+
+        return mle_objects
+
+    def test_all_cell_fractions(self, sample):
+        self.log.info("\tTesting all possible cell type fractions for sample "
+                      "'{}'".format(sample))
+        start_time = int(time.time())
+
+        all_data = []
+        indices = []
+        columns = list(np.arange(-4, 4, 0.1))
+        for i, (eqtl_name, mle_object) in enumerate(self.mle_objects.items()):
+            if (i % 25 == 0) or (i == (self.n - 1)):
+                self.log.info("\t\tProcessing eQTL {} / {} [{:.2f}%]".format(i, self.n - 1, (100/(self.n - 1)) * i))
+            row_data = []
+            for cell_fraction in columns:
+                mll = mle_object.get_maximum_log_likelihood(sample=sample,
+                                                            cell_fraction=cell_fraction)
+                row_data.append(mll)
+
+            all_data.append(row_data)
+            indices.append(eqtl_name)
+
+        results = pd.DataFrame(all_data, index=indices, columns=columns)
+        results.dropna(axis=0, inplace=True)
+        cell_frac_results = results.sum(axis=0)
+        print(cell_frac_results)
+
+        self.log.info("\tReal fraction: {:.4f}\tmll fraction: {:.4f}".format(self.ct_frac_df.loc[sample][0],
+                                                                             cell_frac_results.idxmax()))
+
+        run_time_min, run_time_sec = divmod(int(time.time()) - start_time, 60)
+        self.log.info("\tFinished in {} minute(s) and "
+                      "{} second(s)".format(int(run_time_min),
+                                            int(run_time_sec)))
+
+        return results
+
+
 

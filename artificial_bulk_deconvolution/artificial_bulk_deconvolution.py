@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-File:         artificial_bulk_deconvolution.py
+File:         decon_optimizer.py
 Created:      2020/11/09
 Last Changed: 2020/11/12
 Author:       M.Vochteloo

@@ -24,17 +24,19 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 from __future__ import print_function
 from pathlib import Path
 import random
+import glob
 import os
 
 # Third party imports.
 import numpy as np
 import pandas as pd
 from scipy.optimize import nnls
+from scipy import stats
 import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-
+import matplotlib.patches as mpatches
 
 # Local application imports.
 from .utilities import prepare_output_dir, load_dataframe
@@ -61,13 +63,12 @@ class Main:
         self.outdir = os.path.join(work_dir, 'output')
         prepare_output_dir(self.outdir)
 
-        self.palette = {
-            "NEU": "#0072B2",
-            "OLI": "#009E73",
-            "END": "#CC79A7",
-            "MIC": "#E69F00",
-            "AST": "#D55E00"
-        }
+        self.cell_type_list = [("END", "END", "Endothelial Cell", "#CC79A7"),
+                               ("MIC", "MAC", "Microglia VS Macrophage", "#E69F00"),
+                               ("AST", "AST", "Astrocyte", "#D55E00"),
+                               ("IN", "NEU", "In. Neuron VS Neuron", "#0072B2"),
+                               ("OLI", "OLI", "Oligodendrocyte", "#009E73"),
+                               ("EX", "NEU", "Ex. Neuron VS Neuron", "#0072B2")]
 
     def start(self):
         self.print_arguments()
@@ -79,24 +80,18 @@ class Main:
         if ref_profile_df.values.min() < 0:
             ref_profile_df = self.perform_shift(ref_profile_df)
 
-        cell_types = list(ref_profile_df.columns)
-        input_cell_types = list(ref_profile_df.columns)
-        if self.combine:
-            combine_list = [x.split("-") for x in self.combine]
-            for old1, old2, new in combine_list:
-                input_cell_types.remove(new)
-                input_cell_types.append(old1)
-                input_cell_types.append(old2)
-
         print("")
         print("### Step2 ###")
-        samples, matrices = self.load_ct_matrices(cell_types=input_cell_types,
-                                                  genes=ref_profile_df.index)
+        samples, matrices = self.load_ct_matrices(genes=ref_profile_df.index)
 
         print("")
         print("### Step3 ###")
-        cc_df = self.load_cell_counts(cell_types=input_cell_types)
+        cc_df, cell_types = self.load_cell_counts()
         print(cc_df)
+
+        if len(set(list(matrices.keys())).symmetric_difference(set(cell_types))) != 0:
+            print("Missing cell type info")
+            exit()
 
         print("")
         print("### Step4 ###")
@@ -108,7 +103,7 @@ class Main:
         print("### Step5 ###")
         real_data = []
         predict_data = []
-        diff_data = []
+        indices = []
         for sample in samples:
             if sample not in cc_df:
                 continue
@@ -116,6 +111,8 @@ class Main:
 
             _, bulk_expression = self.create_artifical_bulk_data(df=sample_matrices[sample],
                                                                  weights=real_weights)
+
+            # real_weights, bulk_expression = self.create_artifical_bulk_data(df=sample_matrices[sample])
 
             decon_weights = self.deconvolute(ref_profile_df, bulk_expression)
 
@@ -127,27 +124,27 @@ class Main:
 
             real_data.append(real_weights)
             predict_data.append(decon_weights)
-            diff_data.append([a-b for a, b in zip(real_weights, decon_weights)])
+            indices.append(sample)
 
-        real_weights_df = pd.DataFrame(real_data, columns=cell_types)
-        decon_weights_df = pd.DataFrame(predict_data, columns=cell_types)
-        diff_df = pd.DataFrame(diff_data, columns=cell_types).abs()
+        real_weights_df = pd.DataFrame(real_data, columns=cell_types, index=indices)
+        print(real_weights_df)
+        decon_weights_df = pd.DataFrame(predict_data, columns=ref_profile_df.columns, index=indices)
+        print(decon_weights_df)
 
         print("")
         print("### Step6 ###")
         print("Visualizing differences")
+
+        self.plot_spider(real_weights_df, decon_weights_df, cell_types)
+        self.plot_regression(real_weights_df, decon_weights_df, cell_types)
+
         real_weights_df_m = real_weights_df.melt()
         real_weights_df_m["hue"] = "real"
         decon_weights_df_m = decon_weights_df.melt()
         decon_weights_df_m["hue"] = "predict"
 
         dfm = pd.concat([real_weights_df_m, decon_weights_df_m], axis=0)
-        self.plot_distributions(dfm, name="weights_comparison")
-
-        print("")
-        print("### Results ###")
-        print("Difference between real and predicted weights:")
-        print(diff_df.describe())
+        self.plot_distributions(dfm)
 
     def load_reference_profile(self):
         print("Load reference profile")
@@ -192,13 +189,14 @@ class Main:
     def perform_shift(df):
         return df + abs(df.values.min())
 
-    def load_ct_matrices(self, cell_types, genes):
+    def load_ct_matrices(self, genes):
         print("Loading cell type matrices")
         columns = None
         matrices = {}
 
-        for cell_type in cell_types:
-            inpath = os.path.join(self.input_path, cell_type + self.input_suffix)
+        for inpath in glob.glob(os.path.join(self.input_path, "*" + self.input_suffix)):
+            cell_type = os.path.basename(inpath).replace(self.input_suffix, "")
+
             df = load_dataframe(inpath,
                                 sep="\t",
                                 header=0,
@@ -232,42 +230,27 @@ class Main:
 
         del matrices
 
-        if self.combine is not None:
-            for pair in self.combine:
-                left_ct, right_ct, name = pair.split("-")
-
-                left_df = full_matrices[left_ct]
-                right_df = full_matrices[right_ct]
-
-                full_matrices[name] = left_df.add(right_df, fill_value=0).div(2)
-
         return columns, full_matrices
 
-    def load_cell_counts(self, cell_types):
+    def load_cell_counts(self):
         df = load_dataframe(self.cell_counts_path,
                             sep="\t",
                             header=0,
                             index_col=0)
 
-        df = df.loc[cell_types, :]
-        print(df)
+        ratios_df = df / df.sum(axis=0)
+        order_df = df.mean(axis=1)
+        order_df.sort_values(inplace=True, ascending=True)
+        order = list(order_df.index)
 
-        if self.combine is not None:
-            for pair in self.combine:
-                left_ct, right_ct, name = pair.split("-")
-
-                df.loc[name, :] = df.loc[left_ct, :] + df.loc[right_ct, :]
-                df.drop(left_ct, axis=0, inplace=True)
-                df.drop(right_ct, axis=0, inplace=True)
-
-        return df / df.sum(axis=0)
+        return ratios_df.loc[order, :], order
 
     @staticmethod
     def merge_samples(samples, cell_types, matrices):
         sample_matrices = {}
 
-        for sample in samples:
-            print("\tCombining cell type expression for sample {}".format(sample))
+        for i, sample in enumerate(samples):
+            print("\t[{}] Combining cell type expression for sample {}".format(i, sample))
             sample_df = None
 
             for ct in cell_types:
@@ -295,39 +278,166 @@ class Main:
     @staticmethod
     def deconvolute(profile_df, bulk_array):
         weights = nnls(profile_df, bulk_array)[0]
-        return weights / np.sum(weights)
+        #return weights / np.sum(weights)
+        return weights
+
+    def plot_spider(self, real_df, decon_df, cell_types):
+        my_dpi = 96
+        fig = plt.figure(figsize=(18, 6), dpi=my_dpi)
+
+        # Loop to plot
+        for i, (sn_ct, decon_ct, title, color) in enumerate(self.cell_type_list):
+            real = real_df[[sn_ct]]
+            real.columns = ["real"]
+            decon = decon_df[[decon_ct]]
+            decon.columns = ["predict"]
+            df = real.merge(decon, left_index=True,right_index=True)
+            df.sort_values(by="real", ascending=False, inplace=True)
+
+            N = df.shape[0] - 1
+            angles = [n / float(N) * 2 * np.pi for n in range(N)]
+            angles += angles[:1]
+
+            ax = plt.subplot(1, len(cell_types), i+1, polar=True)
+
+            ax.set_theta_offset(np.pi / 2)
+            ax.set_theta_direction(-1)
+
+            plt.xticks(angles[:-1], [""] * len(angles[:-1]), color='white', size=8)
+
+            ax.set_rlabel_position(0)
+            ticks = []
+            for x in np.arange(0, 1.25, 0.25):
+                if (df.values.max() + 0.25) > x:
+                    ticks.append(x)
+            plt.yticks(ticks, ticks, color="grey", size=7)
+            plt.ylim(0, max(ticks))
+
+            ax.plot(angles, df["real"], color="#808080", linewidth=2, linestyle='solid')
+            ax.plot(angles, df["predict"], color=color, linewidth=2, linestyle='solid')
+
+            # Add a title
+            plt.title(title, size=11, y=1.1)
+
+        plt.tight_layout()
+        fig.savefig(os.path.join(self.outdir, "weights_radarplot.{}".format(self.extension)))
+        plt.close()
+
+    def plot_regression(self, real_df, decon_df, cell_types):
+        sns.set_style("ticks")
+        fig, axes = plt.subplots(nrows=1,
+                                 ncols=len(self.cell_type_list),
+                                 figsize=(8*len(self.cell_type_list), 6))
+
+        # Loop to plot
+        for i, (sn_ct, decon_ct, title, color) in enumerate(
+                self.cell_type_list):
+            real = real_df[[sn_ct]]
+            real.columns = ["real"]
+            decon = decon_df[[decon_ct]]
+            decon.columns = ["predict"]
+            df = real.merge(decon, left_index=True, right_index=True)
+
+            include_ylabel = False
+            if i == 0:
+                include_ylabel = True
+
+            self.regplot(df=df,
+                         fig=fig,
+                         ax=axes[i],
+                         x="real",
+                         y="predict",
+                         xlabel="real cc%",
+                         ylabel="predicted cc%",
+                         title=title,
+                         color=color,
+                         include_ylabel=include_ylabel)
+
+        fig.savefig(os.path.join(self.outdir, "weights_correlation.{}".format(self.extension)))
+        plt.close()
+
+    def regplot(self, df, fig, ax, x="x", y="y", facecolors=None,
+             xlabel="", ylabel="", title="", color="#000000",
+             include_ylabel=True):
+        sns.despine(fig=fig, ax=ax)
+
+        if not include_ylabel:
+            ylabel = ""
+
+        if facecolors is None:
+            facecolors = "#808080"
+        else:
+            facecolors = df[facecolors]
+
+        n = df.shape[0]
+        coef = np.nan
+
+        if n > 0:
+            coef, p = stats.spearmanr(df[x], df[y])
+            # coef, p = stats.pearsonr(df[x], df[y])
+
+            sns.regplot(x=x, y=y, data=df,
+                        scatter_kws={'facecolors': facecolors,
+                                     'edgecolors': "#808080"},
+                        line_kws={"color": color},
+                        ax=ax
+                        )
+
+        ax.text(0.5, 1.1, title,
+                fontsize=18, weight='bold', ha='center', va='bottom',
+                transform=ax.transAxes)
+        ax.text(0.5, 1.02, "N = {}".format(n),
+                fontsize=14, alpha=0.75, ha='center', va='bottom',
+                transform=ax.transAxes)
+
+        ax.set_ylabel(ylabel,
+                      fontsize=14,
+                      fontweight='bold')
+        ax.set_xlabel(xlabel,
+                      fontsize=14,
+                      fontweight='bold')
+
+        ax.legend(handles=[mpatches.Patch(color=color, label="r = {:.2f}".format(coef))], loc=4)
 
     def plot_distributions(self, df, name=""):
         sns.set_style("ticks")
         fig, axes = plt.subplots(nrows=1,
-                                 ncols=len(df["variable"].unique()),
-                                 figsize=(8*len(df["variable"].unique()), 6))
+                                 ncols=len(self.cell_type_list),
+                                 figsize=(8*len(self.cell_type_list), 6))
 
-        for i, ct in enumerate(df["variable"].unique()):
+        for i, (sn_ct, decon_ct, title, color) in enumerate(self.cell_type_list):
             ax = axes[i]
             sns.despine(fig=fig, ax=ax)
 
-            real_values = df.loc[(df["variable"] == ct) & (df["hue"] == "real"), "value"]
+            real_values = df.loc[(df["variable"] == sn_ct) & (df["hue"] == "real"), "value"]
             real_values.name = "real"
-            predict_values = df.loc[(df["variable"] == ct) & (df["hue"] == "predict"), "value"]
+            predict_values = df.loc[(df["variable"] == decon_ct) & (df["hue"] == "predict"), "value"]
             predict_values.name = "predict"
 
-            sns.kdeplot(real_values, shade=True, color="#808080", ax=ax,
-                        zorder=-1)
-            ax.axvline(real_values.mean(), ls='--', color="#808080",
-                       zorder=-1)
+            if max(real_values) > 0:
+                try:
+                    sns.kdeplot(real_values, shade=True, color="#808080", ax=ax,
+                                zorder=-1)
+                    ax.axvline(real_values.mean(), ls='--', color="#808080",
+                               zorder=-1)
+                except RuntimeError:
+                    pass
 
-            sns.kdeplot(predict_values, shade=True, color=self.palette[ct], ax=ax,
-                        zorder=1)
-            ax.axvline(predict_values.mean(), ls='--', color=self.palette[ct],
-                       zorder=1)
+            if max(predict_values) > 0:
+                try:
+                    sns.kdeplot(predict_values, shade=True, color=color, ax=ax,
+                                zorder=1)
+                    ax.axvline(predict_values.mean(), ls='--', color=color,
+                               zorder=1)
+                except RuntimeError:
+                    pass
 
-            ax.set_title(ct, fontsize=20, fontweight='bold')
+            ax.set_title(title, fontsize=20, fontweight='bold')
             ax.set_xlabel("weights", fontsize=16, fontweight='bold')
             ax.tick_params(labelsize=14)
 
         plt.tight_layout()
-        fig.savefig(os.path.join(self.outdir, "{}_distributions.{}".format(name, self.extension)))
+        fig.savefig(os.path.join(self.outdir, "weights_distributions.{}".format(name, self.extension)))
         plt.close()
 
     def print_arguments(self):

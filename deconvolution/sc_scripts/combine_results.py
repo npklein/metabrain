@@ -47,7 +47,7 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 class main():
     def __init__(self):
-        self.infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/trans"
+        self.infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/trans_100Perm"
         self.cell_types = ["AST", "END", "EX", "IN", "MIC", "OLI", "OPC", "PER"]
         self.result_files = ["eQTLProbesFDR0.05-ProbeLevel.txt.gz",
                              "eQTLSNPsFDR0.05-ProbeLevel.txt.gz",
