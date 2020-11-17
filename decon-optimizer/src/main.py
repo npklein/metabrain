@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/11/16
-Last Changed:
+Last Changed: 1010/11/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -36,8 +36,7 @@ from .cell_type_object import CellType
 class Main:
     def __init__(self, eqtl_path, genotype_path, alleles_path, expression_path,
                  cell_fractions_path, decon_path, sample_annotation_path,
-                 sample_id, cohort_id, alpha, outdir, extensions,
-                 clear_log):
+                 sample_id, cohort_id, alpha, outdir, extensions):
         # Safe arguments.
         self.alpha = alpha
         self.extensions = extensions
@@ -51,7 +50,7 @@ class Main:
             os.makedirs(self.outdir)
 
         # Initialize logger.
-        logger = Logger(outdir=self.outdir, clear_log=clear_log)
+        logger = Logger(outdir=self.outdir, clear_log=True)
         self.log = logger.get_logger()
 
         # Initialize data object.
@@ -87,7 +86,6 @@ class Main:
         self.log.info("Filtering cell type mediated eQTLs")
         eqtl_signif_decon_df = eqtl_decon_df.loc[eqtl_decon_df[cell_types].min(axis=1) < self.alpha, :].copy()
         eqtl_signif_decon_df.reset_index(drop=True, inplace=True)
-        print(eqtl_signif_decon_df)
 
         self.log.info("Loading genotype / expression data of cell type mediated "
                       "eQTLs")
@@ -114,6 +112,8 @@ class Main:
                                  ct_fractions=ct_fractions,
                                  cohort_sample_dict=cohort_sample_dict,
                                  log=self.log)
+            results = cell_type.test_all_cell_fractions(sample="HRA_01267")
+            results.to_pickle(os.path.join(self.outdir, "results.pkl"))
             exit()
 
     def print_arguments(self):

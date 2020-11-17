@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/11/16
-Last Changed:
+Last Changed: 2020/11/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -118,10 +118,6 @@ class CommandLineArguments:
                             default=["png"],
                             help="The figure file extension. "
                                  "Default: 'png'.")
-        parser.add_argument("-clear_log",
-                            action='store_true',
-                            help="Clear already existing log files. default: "
-                                 "'False'.")
 
         return parser
 

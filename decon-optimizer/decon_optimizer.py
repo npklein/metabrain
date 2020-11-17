@@ -3,7 +3,7 @@
 """
 File:         decon_optimizer.py
 Created:      2020/11/16
-Last Changed:
+Last Changed: 2020/11/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -64,7 +64,6 @@ if __name__ == '__main__':
     ALPHA = CLA.get_argument('alpha')
     OUTDIR = CLA.get_argument('outdir')
     EXTENSIONS = CLA.get_argument('extension')
-    CLEAR_LOG = CLA.get_argument("clear_log")
 
     # Start the program.
     PROGRAM = Main(eqtl_path=EQTL_PATH,
@@ -78,6 +77,5 @@ if __name__ == '__main__':
                    cohort_id=COHORT_ID,
                    alpha=ALPHA,
                    outdir=OUTDIR,
-                   extensions=EXTENSIONS,
-                   clear_log=CLEAR_LOG)
+                   extensions=EXTENSIONS)
     PROGRAM.start()

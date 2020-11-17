@@ -56,6 +56,7 @@ class main():
         arguments = self.create_argument_parser()
         self.decon_inpath = getattr(arguments, 'decon')
         self.gene_info_inpath = getattr(arguments, 'gene_info')
+        self.outfile_prefix = getattr(arguments, 'outfile_prefix')
         self.print_interval = 500
 
         # Validate input.
@@ -71,7 +72,7 @@ class main():
             os.makedirs(outdir)
 
         # Define the output file.
-        self.outpath = os.path.join(outdir, os.path.basename(self.decon_inpath).replace(".txt.gz", "_chi2sum.txt.gz"))
+        self.outpath = os.path.join(outdir, self.outfile_prefix + "_" + os.path.basename(self.decon_inpath).replace(".txt.gz", "_chi2sum.txt.gz"))
 
     @staticmethod
     def create_argument_parser():
@@ -95,7 +96,11 @@ class main():
                             type=str,
                             default=None,
                             help="The path to the gene info matrix.")
-
+        parser.add_argument("-p",
+                            "--outfile_prefix",
+                            type=str,
+                            default="",
+                            help="The outputfile prefix. Default: ''.")
 
         return parser.parse_args()
 
