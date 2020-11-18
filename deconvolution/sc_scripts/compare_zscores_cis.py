@@ -241,6 +241,12 @@ class main():
                       ci=None,
                       include_ylabel=include_ylabel)
 
+            test = plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (plot_df["{}_FDR".format(b_ct)] < 0.05), :]
+            with pd.option_context('display.max_rows', None,
+                                   'display.max_columns',
+                                   None):
+                print(test)
+
             print("")
 
         for extension in self.extensions:

@@ -3,7 +3,7 @@
 """
 File:         decon_optimizer.py
 Created:      2020/11/16
-Last Changed: 2020/11/17
+Last Changed: 2020/11/18
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -23,7 +23,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 """
-./decon_optimizer.py -eq ../2020-03-12-deconvolution/matrix_preparation/cis_new_output_log2/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ge ../2020-03-12-deconvolution/matrix_preparation/cis_new_output_log2/create_matrices/genotype_table.txt.gz -al ../2020-03-12-deconvolution/matrix_preparation/cis_new_output_log2/create_matrices/genotype_alleles.txt.gz -ex ../2020-03-12-deconvolution/matrix_preparation/cis_new_output_log2/create_matrices/expression_table.txt.gz -cf ../2020-03-12-deconvolution/matrix_preparation/cis_new_output_log2/perform_deconvolution/deconvolution_table.txt.gz -de test_scripts/output/cis_cortex_deconvolutionResults_withFDR.txt.gz -sa /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-02-03-phenotype-table/2020-09-04.brain.phenotypes.withReannotatedDiagnosis.txt -sid rnaseq_id -cid cohort
+./decon_optimizer.py -eq ../2020-03-12-deconvolution/matrix_preparation/cis_new_output_log2/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ge ../2020-03-12-deconvolution/matrix_preparation/cis_new_output_log2/create_matrices/genotype_table.txt.gz -al ../2020-03-12-deconvolution/matrix_preparation/cis_new_output_log2/create_matrices/genotype_alleles.txt.gz -ex ../2020-03-12-deconvolution/matrix_preparation/cis_new_output_log2/create_matrices/expression_table.txt.gz -cf data/deconvolution_table.txt.gz -de test_scripts/output/cis_cortex_deconvolutionResults_withFDR.txt.gz -sa /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-02-03-phenotype-table/2020-09-04.brain.phenotypes.withReannotatedDiagnosis.txt -sid rnaseq_id -cid cohort
 """
 
 # Standard imports.

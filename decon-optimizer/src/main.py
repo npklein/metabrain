@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/11/16
-Last Changed: 1010/11/17
+Last Changed: 1010/11/18
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -30,8 +30,8 @@ import os
 # Local application imports.
 from .logger import Logger
 from .data_object import Data
+from .cohort_object import Cohort
 from .cell_type_object import CellType
-
 
 class Main:
     def __init__(self, eqtl_path, genotype_path, alleles_path, expression_path,
@@ -94,26 +94,69 @@ class Main:
         alleles_df = self.data.get_alle_df(skiprows=skiprows, nrows=max(eqtl_signif_decon_df.index))
         expr_df = self.data.get_expr_df(skiprows=skiprows, nrows=max(eqtl_signif_decon_df.index))
         cohort_sample_dict = self.data.get_cohort_to_sample_dict()
+        del eqtl_decon_df
 
-        self.log.info("Optimizing per cell type")
+        self.log.info("Validating matrices.")
+        self.validate(geno_df, expr_df, cf_df)
+
+        self.log.info("Create cohort objects.")
+        cohorts = {}
+        sample_order = expr_df.columns
+        for cohort, cohort_samples in cohort_sample_dict.items():
+            mask = []
+            for sample in sample_order:
+                if sample not in cohort_samples:
+                    mask.append(False)
+                else:
+                    mask.append(True)
+
+            samples = set(geno_df.columns[mask])
+            if len(samples) == 0:
+                continue
+
+            cohort_object = Cohort(cohort=cohort,
+                                   samples=samples,
+                                   geno_df=geno_df.loc[:, mask].copy(),
+                                   expr_df=expr_df.loc[:, mask].copy(),
+                                   cf_df=cf_df.loc[mask, :].copy(),
+                                   log=self.log)
+
+            #cohort_object.print_info()
+            cohorts[cohort] = cohort_object
+        del geno_df, expr_df, cf_df
+        self.log.info("\tCreated {} cohort objects.".format(len(cohorts.keys())))
+
+        self.log.info("Create cell type objects.")
         for cell_type in cell_types:
-            # Subset the cell type.
             ct_mediated_eqtls = eqtl_signif_decon_df.loc[eqtl_signif_decon_df[cell_type] < self.alpha, :].copy()
-            ct_fractions = cf_df.loc[:, [cell_type in x for x in cf_df.columns]].copy()
-            self.log.info("\tCell {} has {} cell type mediated eQTLs (FDR < {})".format(cell_type, ct_mediated_eqtls.shape[0], self.alpha))
+            indices = ct_mediated_eqtls.index
+            ct_mediated_eqtls.reset_index(drop=False, inplace=True)
+            self.log.info("\tCell '{}' has {} cell type mediated eQTLs (FDR < {})".format(cell_type, ct_mediated_eqtls.shape[0], self.alpha))
 
-            # Create the cell type object.
-            self.log.info("\tCreating cell type object")
-            cell_type = CellType(cell_type=cell_type,
-                                 eqtl_df=ct_mediated_eqtls,
-                                 geno_df=geno_df.iloc[ct_mediated_eqtls.index, :].copy(),
-                                 alleles_df=alleles_df.iloc[ct_mediated_eqtls.index, :].copy(),
-                                 expr_df=expr_df.iloc[ct_mediated_eqtls.index, :].copy(),
-                                 ct_fractions=ct_fractions,
-                                 cohort_sample_dict=cohort_sample_dict,
-                                 log=self.log)
-            results = cell_type.test_all_cell_fractions(sample="HRA_01267")
-            results.to_pickle(os.path.join(self.outdir, "results.pkl"))
+            cell_type_object = CellType(cell_type=cell_type,
+                                        eqtl_df=ct_mediated_eqtls,
+                                        alleles_df=alleles_df.iloc[indices, :].copy(),
+                                        indices=indices,
+                                        cohorts=cohorts,
+                                        sample_order=sample_order,
+                                        log=self.log)
+
+            cell_type_object.print_info()
+            results = cell_type_object.test_all_cell_fractions(sample="HRA_01267")
+            results.to_pickle(os.path.join(self.outdir, "results2.pkl"))
+            exit()
+
+        del alleles_df, eqtl_signif_decon_df
+
+    def validate(self, geno_df, expr_df, ct_frac_df):
+        if not ct_frac_df.index.equals(geno_df.columns):
+            self.log.error("The genotype file columns do not match the cell "
+                           "type fractions file.")
+            exit()
+
+        if not ct_frac_df.index.equals(expr_df.columns):
+            self.log.error("The expressiom file columns do not match the cell "
+                           "type fractions file.")
             exit()
 
     def print_arguments(self):

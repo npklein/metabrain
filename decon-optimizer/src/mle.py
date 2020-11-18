@@ -1,7 +1,7 @@
 """
 File:         mle.py
 Created:      2020/11/17
-Last Changed:
+Last Changed: 2020/11/18
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -41,7 +41,7 @@ class MaximumLiklihoodEstimator:
 
     def construct_model_matrix(self, genotype, cell_fractions, y):
         # Construct the X matrix.
-        X = genotype.T.merge(cell_fractions, left_index=True, right_index=True)
+        X = genotype.T.merge(cell_fractions.to_frame(), left_index=True, right_index=True)
         X.columns = ["genotype", "cell_fractions"]
         X.insert(loc=0, column='intercept', value=1)
         X["genotype_x_cell_fractions"] = X["genotype"] * X["cell_fractions"]
