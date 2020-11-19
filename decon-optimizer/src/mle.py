@@ -54,17 +54,13 @@ class MaximumLiklihoodEstimator:
     def get_n(self):
         return self.X.shape[0]
 
-    def get_maximum_log_likelihood(self, sample=None, cell_fraction=None):
+    def get_maximum_log_likelihood(self, cell_fractions=None):
         X = self.X
-        if sample is not None and cell_fraction is not None:
-            if sample not in self.samples:
-                return np.nan
-            X = self.change_sample_cell_fraction(sample=sample,
-                                                 cell_fraction=cell_fraction)
+        if cell_fractions is not None:
+            X = self.change_sample_cell_fraction(cell_fractions=cell_fractions)
 
         y_hat = self.create_model(X, self.y)
         mll = self.calculate_maximum_log_likelihood(self.y, y_hat)
-        # print("\t\tsample={}\tcell_fraction={}\tmll={}".format(sample, cell_fraction, mll))
 
         return mll
 
@@ -85,10 +81,19 @@ class MaximumLiklihoodEstimator:
 
         return np.log(stats.norm.pdf(y_hat, mu, sd)).sum()
 
-    def change_sample_cell_fraction(self, sample, cell_fraction):
+    def change_sample_cell_fraction(self, cell_fractions):
+        # Remove samples that have genotype of '-1'.
+        keep = []
+        for sample in cell_fractions.index:
+            if sample in self.X.index:
+                keep.append(sample)
+        cell_fractions = cell_fractions.loc[keep]
+
+        # Replace the cell fractions values for all samples that are part of
+        # the cohort of which we want to change 1 value.
         X = self.X.copy()
-        X.loc[sample, "cell_fractions"] = cell_fraction
-        X.loc[sample, "genotype_x_cell_fractions"] = X.loc[sample, "genotype"] * cell_fraction
+        X.loc[cell_fractions.index, "cell_fractions"] = cell_fractions
+        X.loc[cell_fractions.index, "genotype_x_cell_fractions"] = X.loc[cell_fractions.index, "genotype"] * cell_fractions
 
         return X
 

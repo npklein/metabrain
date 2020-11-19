@@ -50,7 +50,8 @@ class CellType:
         print(self.geno_df)
         self.expr_df = self.get_combined_matrix(df="expr", type="normal")
         print(self.expr_df)
-        self.cf_s = self.get_combined_matrix(df="cf_df", type="normal")
+        #self.cf_s = self.get_combined_matrix(df="cf_df", type="normal")
+        self.cf_s = self.get_combined_matrix(df="cf_df")
         print(self.cf_s)
 
         # Create MLE objects.
@@ -154,24 +155,19 @@ class CellType:
                       "'{}'".format(sample))
         start_time = int(time.time())
 
+        original_cf = self.cf_s.loc[sample]
         all_data = []
         indices = []
-        columns = list(np.arange(0, 1, 0.025))
+        columns = list(np.arange(0, 1.025, 0.025))
+        #columns = list(np.arange(-8, 8, 0.1))
         for i, (eqtl_name, mle_object) in enumerate(self.mle_objects.items()):
             if (i % 25 == 0) or (i == (self.n - 1)):
                 self.log.info("\t\tProcessing eQTL {} / {} [{:.2f}%]".format(i, self.n - 1, (100/(self.n - 1)) * i))
             row_data = []
             for cell_fraction in columns:
-                original_value, normalized_cell_fraction = self.calculate_new_normalized_ct_fraction(sample, cell_fraction)
-                mll = mle_object.get_maximum_log_likelihood(sample=sample,
-                                                            cell_fraction=normalized_cell_fraction)
-                # print("Original value: {:.4f}\tcell fraction: {:.4f}\t"
-                #       "normalized cell fraction: {:.4f}\t"
-                #       "mll: {}".format(original_value,
-                #                        cell_fraction,
-                #                        normalized_cell_fraction,
-                #                        mll))
-                row_data.append(mll)
+                #original_cf, new_cf_s = self.calculate_new_normalized_cf_s(sample, cell_fraction)
+                new_cf_s = pd.Series([cell_fraction], index=[sample])
+                row_data.append(mle_object.get_maximum_log_likelihood(cell_fractions=new_cf_s))
 
             all_data.append(row_data)
             indices.append(eqtl_name)
@@ -182,8 +178,8 @@ class CellType:
         cell_frac_results = results.sum(axis=0)
         print(cell_frac_results)
 
-        self.log.info("\tReal fraction: {:.4f}\tmll fraction: {:.4f}".format(self.cf_s.loc[sample],
-                                                                             cell_frac_results.idxmax()))
+        self.log.info("\tReal fraction: {:.4f}\tmll fraction: {:.4f}".format(original_cf,
+                                                                             cell_frac_results.idxmin()))
 
         run_time_min, run_time_sec = divmod(int(time.time()) - start_time, 60)
         self.log.info("\tFinished in {} minute(s) and "
@@ -192,19 +188,22 @@ class CellType:
 
         return results
 
-    def calculate_new_normalized_ct_fraction(self, sample, new_value):
-        original_value = None
-        new_normalized_value = None
+    def calculate_new_normalized_cf_s(self, sample, new_value):
+        original_cf = None
+        new_cf_s = None
         for cohort, cohort_object in self.cohorts.items():
             if cohort_object.contains_sample(sample):
-                original_value, new_normalized_value = cohort_object.calculate_new_normalized_ct_fraction(sample, self.cell_type, new_value)
+                original_cf, new_cf_s = cohort_object.calculate_new_normalized_cf_s(sample, self.cell_type, new_value)
                 break
 
-        return original_value, new_normalized_value
+        if original_cf is None or new_cf_s is None:
+            self.log.error("Could not find sample in cohorts.")
+            exit()
+
+        return original_cf, new_cf_s
 
     def print_info(self):
-        self.log.info("Celltype: {}".format(self.cell_type))
-        self.log.info(" > N-eQTLs: {}".format(self.eqtl_df.shape[0]))
-        self.log.info(" > N-samples: {}".format(self.eqtl_df.shape[1]))
-        self.log.info("")
+        self.log.info("\tCelltype: {}".format(self.cell_type))
+        self.log.info("\t > N-eQTLs: {}".format(self.eqtl_df.shape[0]))
+        self.log.info("\t > N-samples: {}".format(len(self.sample_order)))
 

@@ -1,7 +1,7 @@
 """
 File:         data_filter.py
 Created:      2020/09/04
-Last Changed:
+Last Changed: 2020/11/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -82,7 +82,7 @@ class DataFilter:
 
         include = []
         for sample in raw_expression.columns:
-            if (sample in sample_filter) and \
+            if (sample_filter is None or sample in sample_filter) and \
                 (cohort_dict is None or sample in cohort_dict.keys()) and \
                 (cohort_dict is None or self.cohort_filter is None or str(cohort_dict[sample]).upper() in self.cohort_filter) and \
                     (annotation_dict is None or self.annotation_filter is None or str(annotation_dict[sample]).upper() in self.annotation_filter):
