@@ -126,10 +126,18 @@ class main():
         for i, (index, row) in enumerate(df.iterrows()):
             ax = axes[row_index, col_index]
 
+            include_y_axis = False
+            if col_index == 0:
+                include_y_axis = True
+
             subset = row.to_frame()
             subset.reset_index(drop=False, inplace=True)
             subset.columns = ["x", "y"]
-            self.plot(subset, ax, index)
+            self.plot(subset, ax,
+                      xlabel="cell fraction (z-score)",
+                      ylabel="log likelihood",
+                      title=index,
+                      include_y_axis=include_y_axis)
 
             col_index += 1
             if col_index > (ncols - 1):
@@ -148,16 +156,22 @@ class main():
         fig, ax = plt.subplots()
         sns.despine(fig=fig, ax=ax)
 
-        self.plot(df, ax, title)
+        self.plot(df, ax,
+                  xlabel="cell fraction (z-score)",
+                  ylabel="log likelihood",
+                  title=title)
 
         fig.savefig(os.path.join(self.outdir, "{}_mle_estimates.png".format(title)))
         plt.close()
 
-    def plot(self, df, ax, title):
+    def plot(self, df, ax, xlabel="", ylabel="", title="", include_y_axis=True):
         sns.lineplot(data=df,
                      x="x",
                      y="y",
                      ax=ax)
+
+        if not include_y_axis:
+            ylabel = ""
 
         best_estimate = df.loc[df['y'].argmin(), 'x']
         ax.axvline(best_estimate, ls='--', color="#D7191C", alpha=0.3, zorder=-1)
@@ -165,7 +179,7 @@ class main():
         start_ct_frac_string = ""
         if self.start_ct_frac is not None:
             ax.axvline(self.start_ct_frac, ls='--', color="#228B22", alpha=0.3, zorder=-1)
-            start_ct_frac_string = "starting cell type fraction: {}  ".format(self.start_ct_frac)
+            start_ct_frac_string = "starting cell type fraction: {:.2f}  ".format(self.start_ct_frac)
 
         ax.text(0.5, 1.06,
                 title,
@@ -175,10 +189,10 @@ class main():
                 "{}MLE estimate: {:.2f}".format(start_ct_frac_string, best_estimate),
                 fontsize=10, alpha=0.75, ha='center', va='bottom',
                 transform=ax.transAxes)
-        ax.set_xlabel('cell fraction (z-score)',
+        ax.set_xlabel(xlabel,
                       fontsize=16,
                       fontweight='bold')
-        ax.set_ylabel('log likelihood',
+        ax.set_ylabel(ylabel,
                       fontsize=16,
                       fontweight='bold')
 

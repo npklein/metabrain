@@ -97,14 +97,25 @@ class Cohort:
         return normal_df
 
     @staticmethod
-    def force_normal_series(s):
-        return stats.norm.ppf((s.rank(ascending=True) - 0.5) / s.size)
+    def force_normal_series(s, as_series=False):
+        normal_s = stats.norm.ppf((s.rank(ascending=True) - 0.5) / s.size)
+        if as_series:
+            return pd.Series(normal_s, index=s.index)
+        else:
+            return normal_s
 
-    def calculate_new_normalized_ct_fraction(self, sample, cell_type, new_value):
-        tmp_cf_df = self.cf_df.copy()
-        tmp_cf_df.loc[sample, cell_type] = new_value
-        new_cf_df = self.force_normal(tmp_cf_df, value_axis=0)
-        return self.cf_df.loc[sample, cell_type], new_cf_df.loc[sample, cell_type]
+    def calculate_new_normalized_cf_s(self, sample, cell_type, new_value):
+        tmp_cf_s = self.cf_df.loc[:, cell_type].copy()
+        tmp_cf_s.loc[sample] = new_value
+        new_cf_s = self.force_normal_series(tmp_cf_s, as_series=True)
+        new_cf_s.name = "new"
+
+        original_normal_values = self.normal_cf_df.loc[:, cell_type].copy()
+        original_normal_values.name = "original"
+
+        combined_df = original_normal_values.to_frame().merge(new_cf_s, left_index=True, right_index=True)
+
+        return self.cf_df.loc[sample, cell_type], combined_df.loc[combined_df["new"] != combined_df["original"], "new"]
 
     def print_info(self):
         self.log.info("Cohort: {}".format(self.cohort))
