@@ -29,7 +29,7 @@
 
   },
   "perform_deconvolution": {
-
+    "min_expr_cutoff": 0
   },
   "create_tech_covs_matrix": {
     "covariate_datafile": "",
@@ -40,6 +40,9 @@
     "num_eigenvectors": 50
   },
   "create_extra_covs_matrix": {
+
+  },
+  "normal_transform_matrix": {
 
   }
 }

@@ -42,8 +42,8 @@ class CombineEQTLProbes:
         """
         self.indir = settings["input_directory"]
         self.iter_dirname = settings["iteration_dirname"]
-        self.n_iterations = settings["iterations"]
         self.in_filename = settings["in_filename"]
+        self.n_iterations = settings["iterations"]
         self.snp_to_gwasid_filename = settings["snp_to_gwasid_filename"]
         self.gwasid_to_trait_filename = settings["gwasid_to_trait_filename"]
         self.disease = disease

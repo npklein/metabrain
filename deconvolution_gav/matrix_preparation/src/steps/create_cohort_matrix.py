@@ -1,7 +1,7 @@
 """
 File:         create_cohort_matrix.py
 Created:      2020/10/08
-Last Changed: 2020/10/13
+Last Changed: 2020/11/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -99,6 +99,9 @@ class CreateCohortMatrix:
         if not cohort_df.sum(axis=0).all():
             self.log.error("\tSome samples do not have a cohort.")
             exit()
+
+        # Remove cohorts without a sample.
+        cohort_df = cohort_df.loc[cohort_df.sum(axis=1) > 0, :]
 
         return cohort_df
 

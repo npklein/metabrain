@@ -9,14 +9,14 @@
     "in_filename": "",
     "iterations": 1,
     "snp_to_gwasid_filename": "",
-    "gwasid_to_trait_filename": "",
-    "trait": ""
+    "gwasid_to_trait_filename": ""
   },
   "create_matrices": {
     "genotype_datafile": "",
     "expression_datafile": ""
   },
   "create_deconvolution_matrices": {
+    "decon_expression_datafile": "",
     "celltype_profile_datafile": "",
     "translate_datafile": "",
     "marker_genes_suffix": "",
@@ -31,11 +31,13 @@
       ]
     }
   },
-  "perform_celltype_pca": {
-
+  "perform_celltype_factorization": {
   },
   "perform_deconvolution": {
-
+    "sample_cohort_datafile": {
+      "sample": "",
+      "cohort": ""
+    }
   },
   "create_cov_matrix": {
     "covariate_datafile": "",

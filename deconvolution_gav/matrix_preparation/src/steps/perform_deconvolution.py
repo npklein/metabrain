@@ -1,7 +1,7 @@
 """
 File:         perform_deconvolution.py
 Created:      2020/10/08
-Last Changed:
+Last Changed: 2020/11/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -34,6 +34,7 @@ from utilities import prepare_output_dir, check_file_exists, load_dataframe, sav
 class PerformDeconvolution:
     def __init__(self, settings, log, sign_file, sign_df, sign_expr_file,
                  sign_expr_df, force, outdir):
+        self.min_expr_cutoff = settings["min_expr_cutoff"]
         self.log = log
         self.sign_file = sign_file
         self.sign_df = sign_df
@@ -80,7 +81,7 @@ class PerformDeconvolution:
                                                logger=self.log)
 
         # Filter uninformative genes from the signature matrix.
-        sign_df = self.filter(self.sign_df)
+        sign_df = self.filter(self.sign_df, cutoff=self.min_expr_cutoff)
 
         # Subset and reorder.
         sign_df, expr_df = self.subset(sign_df, self.sign_expr_df)
@@ -129,7 +130,7 @@ class PerformDeconvolution:
         return decon_df
 
     @staticmethod
-    def filter(df, cutoff=0):
+    def filter(df, cutoff):
         tmp = df.copy()
         return tmp.loc[(tmp.std(axis=1) != 0) & (tmp.max(axis=1) > cutoff), :]
 
@@ -187,6 +188,7 @@ class PerformDeconvolution:
 
     def print_arguments(self):
         self.log.info("Arguments:")
+        self.log.info("  > Min. expression cut-off: {}".format(self.min_expr_cutoff))
         if self.sign_df is not None:
             self.log.info("  > Signature: {}".format(self.sign_df.shape))
         else:
