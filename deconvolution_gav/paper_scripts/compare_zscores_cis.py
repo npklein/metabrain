@@ -3,7 +3,7 @@
 """
 File:         compare_zscores_cis.py
 Created:      2020/11/04
-Last Changed:
+Last Changed: 2020/11/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -36,6 +36,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from scipy import stats
 from adjustText import adjust_text
+from statsmodels.stats import multitest
 
 
 # Local application imports.
@@ -59,7 +60,7 @@ class main():
     def __init__(self):
         self.bulk_eqtl_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR/Iteration1/eQTLProbesFDR0.05-ProbeLevel.txt.gz"
         self.bulk_alleles_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/cis_new_output_log2/create_matrices/genotype_alleles.txt.gz"
-        self.decon_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/2020-07-16-decon-eQTL/cis/cortex/decon_out/deconvolutionResults_withFDR.txt.gz"
+        self.decon_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/2020-10-20-decon-eQTL/cis/cortex/decon_out/deconvolutionResults.txt.gz"
         self.sn_infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/cis_100Perm/"
         self.sn_filename = "eQTLsFDR-ProbeLevel.txt.gz"
         self.cell_types = [("AST", "Astrocyte", "Astrocyte", "#D55E00"),
@@ -110,6 +111,9 @@ class main():
                                header=0,
                                index_col=0)
         print("\tDeconvolution results data frame: {}".format(decon_df.shape))
+        for col in decon_df.columns:
+            if col.endswith("_pvalue"):
+                decon_df[col.replace("_pvalue", "_FDR")] = multitest.multipletests(decon_df.loc[:, col], method='fdr_bh')[1]
 
         print("Preprocessing deconvolution data frame")
         probe_names = []

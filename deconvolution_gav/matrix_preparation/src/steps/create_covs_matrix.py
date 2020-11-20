@@ -1,7 +1,7 @@
 """
 File:         create_cov_matrices.py
 Created:      2020/10/08
-Last Changed: 2020/10/13
+Last Changed: 2020/11/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -66,10 +66,9 @@ class CreateCovsMatrix:
         # read the eigenvectors file.
         self.log.info("Loading eigenvectors matrix.")
         eigen_df = load_dataframe(self.eig_file, header=0, index_col=0,
-                                  logger=self.log)
-        eigen_df = eigen_df.loc[:, ["Comp{}".format(x) for x in range(1, self.n_eigen + 1)]]
-        eigen_df.index = [self.sample_dict[x] if x in self.sample_dict else x for x in eigen_df.index]
-        eigen_df = eigen_df.loc[self.sample_order, :]
+                                  nrows=self.n_eigen, logger=self.log)
+        eigen_df.columns = [self.sample_dict[x] if x in self.sample_dict else x for x in eigen_df.columns]
+        eigen_df = eigen_df.loc[:, self.sample_order]
 
         # loading deconvolution matrix.
         self.log.info("Loading deconvolution matrix.")
@@ -81,7 +80,7 @@ class CreateCovsMatrix:
 
         # merge.
         self.log.info("Merging matrices.")
-        covs_df = pd.merge(eigen_df, self.decon_df,
+        covs_df = pd.merge(eigen_df.T, self.decon_df,
                            left_index=True, right_index=True)
         covs_df = covs_df.T
         covs_df.index.name = "-"
