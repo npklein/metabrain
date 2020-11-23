@@ -72,16 +72,22 @@ class CreateMatrices:
         self.log.info("Starting creating matrices.")
         self.print_arguments()
 
+        if self.eqtl_df is None:
+            self.eqtl_df = load_dataframe(self.eqtl_file,
+                                          header=0,
+                                          index_col=None,
+                                          logger=self.log)
+
         self.log.info("Parsing genotype input data.")
         if not check_file_exists(self.geno_outpath) or not check_file_exists(self.alleles_outpath) or self.force:
-            self.alleles_df, self.geno_df = self.parse_genotype_file()
+            alleles_df, geno_df = self.parse_genotype_file()
 
             self.log.info("Reorder, Filter, and save.")
-            self.alleles_df = self.alleles_df.loc[self.eqtl_df.loc[:, "SNPName"], :]
+            self.alleles_df = alleles_df.loc[self.eqtl_df.loc[:, "SNPName"], :]
             save_dataframe(df=self.alleles_df, outpath=self.alleles_outpath,
                            index=True, header=True, logger=self.log)
 
-            self.geno_df = self.geno_df.loc[self.eqtl_df.loc[:, "SNPName"], self.sample_order]
+            self.geno_df = geno_df.loc[self.eqtl_df.loc[:, "SNPName"], self.sample_order]
             save_dataframe(df=self.geno_df, outpath=self.geno_outpath,
                            index=True, header=True, logger=self.log)
         else:

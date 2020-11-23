@@ -24,6 +24,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 # Standard imports.
 from __future__ import print_function
 from pathlib import Path
+import argparse
 import os
 
 # Third party imports.
@@ -58,10 +59,16 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 class main():
     def __init__(self):
-        self.bulk_eqtl_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR/Iteration1/eQTLProbesFDR0.05-ProbeLevel.txt.gz"
-        self.bulk_alleles_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation/cis_new_output_log2/create_matrices/genotype_alleles.txt.gz"
-        self.decon_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/2020-10-20-decon-eQTL/cis/cortex/decon_out/deconvolutionResults.txt.gz"
-        self.sn_infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/cis_100Perm/"
+        # Get the command line arguments.
+        arguments = self.create_argument_parser()
+        eqtl_type = getattr(arguments, 'type')
+        self.extensions = getattr(arguments, 'extension')
+
+        # Declare input files.
+        self.bulk_eqtl_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_{}/combine_eqtlprobes/eQTLprobes_combined.txt.gz".format(eqtl_type)
+        self.bulk_alleles_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_{}/create_matrices/genotype_alleles.txt.gz".format(eqtl_type)
+        self.decon_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/{}/cortex/decon_out/deconvolutionResults.csv".format(eqtl_type)
+        self.sn_infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/{}_100Perm/".format(eqtl_type)
         self.sn_filename = "eQTLsFDR-ProbeLevel.txt.gz"
         self.cell_types = [("AST", "Astrocyte", "Astrocyte", "#D55E00"),
                            ("END", "EndothelialCell", "Endothelial Cell", "#CC79A7"),
@@ -72,12 +79,40 @@ class main():
         self.extensions = ["png", "pdf"]
 
         self.outdir = os.path.join(str(Path(__file__).parent.parent),
-                                   'plots')
+                                   'compare_zscores_{}'.format(eqtl_type))
 
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
 
         matplotlib.rcParams['pdf.fonttype'] = 42
+
+    def create_argument_parser(self):
+        parser = argparse.ArgumentParser(prog=__program__,
+                                         description=__description__)
+
+        # Add optional arguments.
+        parser.add_argument("-v",
+                            "--version",
+                            action="version",
+                            version="{} {}".format(__program__,
+                                                   __version__),
+                            help="show program's version number and exit")
+        parser.add_argument("-type",
+                            type=str,
+                            required=False,
+                            choices=["cis", "trans"],
+                            default="cis",
+                            help="The type of eQTLs to plot.")
+        parser.add_argument("-e",
+                            "--extension",
+                            nargs="+",
+                            type=str,
+                            choices=["png", "pdf", "eps"],
+                            default=["png"],
+                            help="The figure file extension. "
+                                 "Default: 'png'.")
+
+        return parser.parse_args()
 
     def start(self):
         print("Loading data")

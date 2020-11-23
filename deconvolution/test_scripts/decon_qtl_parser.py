@@ -55,9 +55,12 @@ class main():
         self.eqtl_path = getattr(arguments, 'eqtl')
         self.decon_path = getattr(arguments, 'decon')
 
+        if not self.decon_path.endswith(".csv"):
+            print("Decon file must have '.csv' extension.")
+            exit()
+
         # Set variables.
-        outdir = Path(__file__).parent.absolute()
-        self.outfile = os.path.join(outdir, self.get_basename(self.decon_path) + "alleles_FDR_betas.txt.gz")
+        self.outfile = os.path.join(self.decon_path.replace(".csv", "_alleles_FDR_betas.txt.gz"))
 
     def create_argument_parser(self):
         parser = argparse.ArgumentParser(prog=__program__,
@@ -82,17 +85,6 @@ class main():
                             help="The path to the deconvolution matrix.")
 
         return parser.parse_args()
-
-    @staticmethod
-    def get_basename(filepath):
-        basename = os.path.basename(filepath)
-        splitted_name = basename.split(".")
-        new_basename = []
-        for part in splitted_name:
-            if part not in ["txt", "csv", "tsv", "gz", "xlsx"]:
-                new_basename.append(part)
-
-        return ".".join(new_basename)
 
     def start(self):
         self.print_arguments()
@@ -123,6 +115,10 @@ class main():
         print(merged_df)
 
         print("### Step5 ###")
+        print("Determine AlleleAssessed.")
+        merged_df["DeconQTLAlleleAssessed"] = merged_df["SNPType"].str.split("/", n=1, expand=True)[1]
+
+        print("### Step5 ###")
         print("Adding BH-FDR.")
         fdr_columns = []
         for col in merged_df.columns:
@@ -137,12 +133,12 @@ class main():
         beta_columns = []
         for col in merged_df.columns:
             if col.endswith(":GT"):
-                colname = "_".join([col.split("_")[1].replace(":GT", ""), "Beta"])
+                colname = "_".join(col.split("_")[1:-1] + [col.split("_")[-1].replace(":GT", "")] + ["Beta"])
                 beta_colnames.append(colname)
                 beta_columns.append(col)
-        filtered_df = merged_df.loc[:, ["SNPName", "ProbeName", "HGNCName", "SNPType", "AlleleAssessed"] + beta_columns + fdr_columns]
+        filtered_df = merged_df.loc[:, ["SNPName", "ProbeName", "HGNCName", "SNPType", "AlleleAssessed", "DeconQTLAlleleAssessed"] + beta_columns + fdr_columns]
         print(filtered_df)
-        filtered_df.columns = ["SNPName", "ProbeName", "HGNCName", "SNPType", "AlleleAssessed"] + beta_colnames + fdr_columns
+        filtered_df.columns = ["SNPName", "ProbeName", "HGNCName", "SNPType", "AlleleAssessed", "DeconQTLAlleleAssessed"] + beta_colnames + fdr_columns
         print(filtered_df)
 
         self.save_file(filtered_df,
