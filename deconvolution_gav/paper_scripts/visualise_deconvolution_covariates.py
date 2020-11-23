@@ -53,24 +53,31 @@ __description__ = "{} is a program developed and maintained by {}. " \
                                         __author__,
                                         __license__)
 
+"""
+Syntax:
+./visualise_deconvolution_covariates.py -lt ../matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt -ut ../matrix_preparation/cerebellum_eur_cis/perform_deconvolution/deconvolution_table.txt -e png pdf
+"""
+
 
 class main():
     def __init__(self):
         # Get the command line arguments.
         arguments = self.create_argument_parser()
-        self.decon_path = getattr(arguments, 'decon')
         self.lt_path = getattr(arguments, 'lower_triangle')
         self.ut_path = getattr(arguments, 'upper_triangle')
         self.extensions = getattr(arguments, 'extension')
 
         # Set variables.
-        self.outdir = str(Path(__file__).parent.parent)
-        self.abbreviations = {"Neuron": "neuro",
-                              "Oligodendrocyte": "oligo",
-                              "EndothelialCell": "endo",
-                              "Microglia": "micro",
-                              "Macrophage": "macro",
-                              "Astrocyte": "astro"}
+        self.outdir = os.path.join(str(Path(__file__).parent.parent), 'visualise_deconvolution_covariates')
+        if not os.path.exists(self.outdir):
+            os.makedirs(self.outdir)
+
+        self.abbreviations = {"CellMapNNLS_Neuron": "neuro",
+                              "CellMapNNLS_Oligodendrocyte": "oligo",
+                              "CellMapNNLS_EndothelialCell": "endo",
+                              "CellMapNNLS_Microglia": "micro",
+                              "CellMapNNLS_Macrophage": "macro",
+                              "CellMapNNLS_Astrocyte": "astro"}
 
     def create_argument_parser(self):
         parser = argparse.ArgumentParser(prog=__program__,
@@ -83,11 +90,6 @@ class main():
                             version="{} {}".format(__program__,
                                                    __version__),
                             help="show program's version number and exit")
-        parser.add_argument("-d",
-                            "--decon",
-                            type=str,
-                            required=True,
-                            help="The path to the deconvolution matrix")
         parser.add_argument("-lt",
                             "--lower_triangle",
                             type=str,
@@ -105,44 +107,29 @@ class main():
                             nargs="+",
                             type=str,
                             choices=["png", "pdf", "eps"],
-                            default="png",
+                            default=["png"],
                             help="The figure file extension. "
                                  "Default: 'png'.")
 
         return parser.parse_args()
 
     def start(self):
-        print("Loading deconvolution matrix.")
-        decon_df = pd.read_csv(self.decon_path, sep="\t", header=0, index_col=0)
-        print("\tLoaded dataframe: {} "
-              "with shape: {}".format(os.path.basename(self.decon_path),
-                                      decon_df.shape))
-
-        print("Loading lower triangle GTEx matrix.")
-        lt_df = pd.read_csv(self.lt_path, sep="\t", header=0, index_col=0,
-                            nrows=1)
+        print("Loading lower triangle matrix.")
+        lt_df = pd.read_csv(self.lt_path, sep="\t", header=0, index_col=0)
         print("\tLoaded dataframe: {} "
               "with shape: {}".format(os.path.basename(self.lt_path),
                                       lt_df.shape))
-        lt_samples = list(lt_df.columns)
+        print(lt_df)
 
-        print("Loading upper triangle GTEx matrix.")
-        ut_df = pd.read_csv(self.ut_path, sep="\t", header=0, index_col=0,
-                            nrows=1)
+        print("Loading upper triangle matrix.")
+        ut_df = pd.read_csv(self.ut_path, sep="\t", header=0, index_col=0)
         print("\tLoaded dataframe: {} "
               "with shape: {}".format(os.path.basename(self.ut_path),
                                       ut_df.shape))
-        ut_samples = list(ut_df.columns)
-
-        # Split the data.
-        lower_df = decon_df.loc[lt_samples, :].copy()
-        upper_df = decon_df.loc[ut_samples, :].copy()
-
-        print("Lower triangle: N = {}".format(lower_df.shape[0]))
-        print("Upper triangle: N = {}".format(upper_df.shape[0]))
+        print(ut_df)
 
         # Correlate and merge.
-        data_df, annot_df = self.correlate(lower_df, upper_df)
+        data_df, annot_df = self.correlate(lt_df, ut_df)
 
         # Plot.
         self.plot(data_df, annot_df)
