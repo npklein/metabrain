@@ -356,8 +356,8 @@ class main():
                     exit()
                 # A/T = 0.0/2.0
                 # by default we assume T = 2.0 to be minor
-                minor_allele = alleles["Alleles"][-1]
-                major_allele = alleles["Alleles"][0]
+                major_allele = alleles["Alleles"].split("/")[0]
+                minor_allele = alleles["Alleles"].split("/")[1]
 
                 # Check if we need to flip the genotypes.
                 counts = data["group"].value_counts()
@@ -368,8 +368,8 @@ class main():
                 two_geno_count = (counts[2.0] * 2) + counts[1.0]
                 if two_geno_count > zero_geno_count:
                     # Turns out that 0.0 was the minor.
-                    minor_allele = alleles[0]
-                    major_allele = alleles[-1]
+                    minor_allele = alleles["Alleles"].split("/")[0]
+                    major_allele = alleles["Alleles"].split("/")[1]
                     data["genotype"] = 2.0 - data["genotype"]
                     data["group"] = 2.0 - data["group"]
 

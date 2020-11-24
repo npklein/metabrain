@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-File:         compare_zscores_cis.py
+File:         compare_bulk_and_sn_zscores.py
 Created:      2020/11/04
-Last Changed:
+Last Changed: 2020/11/24
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -24,6 +24,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 # Standard imports.
 from __future__ import print_function
 from pathlib import Path
+import argparse
 import os
 
 # Third party imports.
@@ -35,15 +36,13 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from scipy import stats
-from statsmodels.stats import multitest
 from adjustText import adjust_text
-
 
 
 # Local application imports.
 
 # Metadata
-__program__ = "Compare Zscores Cis"
+__program__ = "Compare Bulk and SN Z-scores"
 __author__ = "Martijn Vochteloo"
 __maintainer__ = "Martijn Vochteloo"
 __email__ = "m.vochteloo@rug.nl"
@@ -59,26 +58,59 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 class main():
     def __init__(self):
-        self.bulk_eqtl_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/trans/2020-05-26-Cortex-EUR-AFR-noENA-noPCA/Iteration1/eQTLs-crossMappingEQTLsRemoved-FDR0.05.txt.gz"
-        self.bulk_alleles_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/trans/2020-05-26-Cortex-EUR-run2/genotypedump/GenotypeData.txt.gz"
-        self.decon_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/2020-07-16-decon-eQTL/trans/decon_out/deconvolutionResults.csv"
-        self.sn_infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/trans_100Perm/"
+        # Get the command line arguments.
+        arguments = self.create_argument_parser()
+        self.eqtl_type = getattr(arguments, 'type')
+        self.extensions = getattr(arguments, 'extension')
+
+        # Declare input files.
+        self.bulk_eqtl_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_{}/combine_eqtlprobes/eQTLprobes_combined.txt.gz".format(self.eqtl_type)
+        self.bulk_alleles_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_{}/create_matrices/genotype_alleles.txt.gz".format(self.eqtl_type)
+        self.sn_infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/{}_100Perm/".format(self.eqtl_type)
         self.sn_filename = "eQTLsFDR-ProbeLevel.txt.gz"
-        self.cell_types = [("AST", "Astrocyte", "Astrocyte", "#D55E00"),
-                           ("END", "EndothelialCell", "Endothelial Cell", "#CC79A7"),
-                           ("EX", "Neuron", "Ex. Neuron VS Neuron", "#0072B2"),
-                           ("IN", "Neuron", "In. Neuron VS Neuron", "#0072B2"),
-                           ("MIC", "Macrophage", "Microglia VS Macrophage", "#E69F00"),
-                           ("OLI", "Oligodendrocyte", "Oligodendrocyte", "#009E73")]
+        self.cell_types = [("AST", "Astrocyte", "#D55E00"),
+                           ("END", "Endothelial Cell", "#CC79A7"),
+                           ("EX", "Ex. Neuron VS Neuron", "#0072B2"),
+                           ("IN", "In. Neuron VS Neuron", "#0072B2"),
+                           ("MIC", "Microglia VS Macrophage", "#E69F00"),
+                           ("OLI", "Oligodendrocyte", "#009E73")]
         self.extensions = ["png", "pdf"]
 
         self.outdir = os.path.join(str(Path(__file__).parent.parent),
-                                   'plots')
+                                   'compare_bulk_and_sn_zscores_{}'.format(self.eqtl_type))
 
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
 
         matplotlib.rcParams['pdf.fonttype'] = 42
+
+    def create_argument_parser(self):
+        parser = argparse.ArgumentParser(prog=__program__,
+                                         description=__description__)
+
+        # Add optional arguments.
+        parser.add_argument("-v",
+                            "--version",
+                            action="version",
+                            version="{} {}".format(__program__,
+                                                   __version__),
+                            help="show program's version number and exit")
+        parser.add_argument("-type",
+                            type=str,
+                            required=False,
+                            choices=["cis", "trans"],
+                            default="trans",
+                            help="The type of eQTLs to plot.")
+        parser.add_argument("-e",
+                            "--extension",
+                            nargs="+",
+                            type=str,
+                            choices=["png", "pdf", "eps"],
+                            default=["png"],
+                            help="The figure file extension. "
+                                 "Default: 'png'.")
+
+        return parser.parse_args()
 
     def start(self):
         print("Loading data")
@@ -87,6 +119,7 @@ class main():
                                    sep="\t",
                                    header=0,
                                    index_col=None)
+        bulk_eqtl_df.reset_index(drop=False, inplace=True)
         print("\tBulk eQTL data frame: {}".format(bulk_eqtl_df.shape))
         print(bulk_eqtl_df)
 
@@ -95,53 +128,26 @@ class main():
                                       header=0,
                                       index_col=None,
                                       nrows=bulk_eqtl_df.shape[0])
-        bulk_alleles_df = bulk_alleles_df[["SNP", "Alleles", "MinorAllele"]]
         bulk_alleles_df.columns = ["SNPName", "Alleles", "MinorAllele"]
-        bulk_alleles_df["DeconAllele"] = [x.split("/")[1] for x in bulk_alleles_df["Alleles"]]
+        bulk_alleles_df.reset_index(drop=False, inplace=True)
         print("\tBulk alleles data frame: {}".format(bulk_alleles_df.shape))
         print(bulk_alleles_df)
 
-        bulk_df = bulk_eqtl_df.merge(bulk_alleles_df,
-                                     left_on=["SNPName"],
-                                     right_on=["SNPName"])
-        print(bulk_df)
-
-        decon_df = pd.read_csv(self.decon_infile,
-                               sep="\t",
-                               header=0,
-                               index_col=0)
-        print("\tDeconvolution results data frame: {}".format(decon_df.shape))
-        for col in decon_df.columns:
-            if col.endswith("_pvalue"):
-                decon_df.loc[:, col.replace("CellMapNNLS_", "").replace("_pvalue", "_FDR")] = multitest.multipletests(decon_df.loc[:, col], method='fdr_bh')[1]
-
-        print("Preprocessing deconvolution data frame")
-        probe_names = []
-        snp_names = []
-        for index in decon_df.index:
-            probe_names.append(index.split("_")[0])
-            snp_names.append("_".join(index.split("_")[1:]))
-        decon_df["ProbeName"] = probe_names
-        decon_df["SNPName"] = snp_names
-        decon_df.reset_index(drop=True, inplace=True)
-        print(decon_df)
-
         print("Merging results")
-        bulk_decon_df = bulk_df.merge(decon_df,
-                                      left_on=["SNPName", "ProbeName"],
-                                      right_on=["SNPName", "ProbeName"])
-        del bulk_df
-        bulk_decon_df.index = bulk_decon_df["SNPName"] + "_" + bulk_decon_df["ProbeName"]
-        print(bulk_decon_df)
+        bulk_df = bulk_eqtl_df.merge(bulk_alleles_df,
+                                     left_on=["index", "SNPName"],
+                                     right_on=["index", "SNPName"])
+        bulk_df.index = bulk_df["SNPName"] + "_" + bulk_df["ProbeName"]
+        print(bulk_df)
 
         print("Visualizing")
 
-        sns.set(rc={'figure.figsize': (len(self.cell_types)*8, 5*6)})
+        sns.set(rc={'figure.figsize': (len(self.cell_types)*8, 2*6)})
         sns.set_style("ticks")
-        fig, axes = plt.subplots(nrows=5, ncols=len(self.cell_types),
+        fig, axes = plt.subplots(nrows=2, ncols=len(self.cell_types),
                                  sharex='col', sharey='row')
 
-        for col_index, (sn_ct, b_ct, title, color) in enumerate(self.cell_types):
+        for col_index, (sn_ct, title, color) in enumerate(self.cell_types):
             sn_df = pd.read_csv(os.path.join(self.sn_infolder, sn_ct, self.sn_filename),
                                 sep="\t",
                                 header=0,
@@ -154,30 +160,19 @@ class main():
             # print(test.iloc[0:50, :])
             # exit()
 
-            merged_df = bulk_decon_df.merge(sn_df, left_index=True, right_index=True,
-                                          suffixes=["_bulk", "_sn"])
+            merged_df = bulk_df.merge(sn_df, left_index=True, right_index=True,
+                                      suffixes=["_bulk", "_sn"])
 
             merged_df["eQTLFlipMask"] = (merged_df["AlleleAssessed_sn"] == merged_df["AlleleAssessed_bulk"]).replace({0: -1, 1: 1})
-            merged_df["DeconFlipMask"] = (merged_df["AlleleAssessed_sn"] == merged_df["DeconAllele"]).replace({0: -1, 1: 1})
-
-            beta_col = None
-            for col in merged_df.columns:
-                if col.startswith("Beta") and col.endswith("_{}:GT".format(b_ct)):
-                    beta_col = col
-                    break
-
             merged_df["OverallZScore_bulk_flipped"] = merged_df["OverallZScore_bulk"] * merged_df["eQTLFlipMask"]
-            merged_df["log_{}_flipped".format(beta_col)] = self.log_modulus_beta(merged_df[beta_col]) * merged_df["DeconFlipMask"]
 
             print("\tPrepare plot df.")
-            plot_df = merged_df[["HGNCName_bulk", "OverallZScore_sn", "FDR_sn", "OverallZScore_bulk_flipped", "log_{}_flipped".format(beta_col), "{}_FDR".format(b_ct)]].copy()
+            plot_df = merged_df[["HGNCName_bulk", "OverallZScore_sn", "FDR_sn", "OverallZScore_bulk_flipped"]].copy()
             del merged_df
-            plot_df["hue"] = "#808080"
-            plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (plot_df["{}_FDR".format(b_ct)] < 0.05), "hue"] = color
 
-            plot_df.sort_values(by="{}_FDR".format(b_ct), inplace=True)
-            #print(plot_df)
-            print(plot_df.shape)
+            # plot_df.sort_values(by="FDR_sn", inplace=True)
+            # print(plot_df.iloc[0:30, :])
+            # print(plot_df.shape)
 
             include_ylabel = False
             if col_index == 0:
@@ -196,51 +191,13 @@ class main():
                       include_ylabel=include_ylabel)
 
             print("\tPlotting row 2.")
-            self.plot(df=plot_df.loc[plot_df["{}_FDR".format(b_ct)] < 0.05, :],
+            self.plot(df=plot_df.loc[plot_df["FDR_sn"] < 0.05, :],
                       fig=fig,
                       ax=axes[1, col_index],
                       x="OverallZScore_sn",
                       y="OverallZScore_bulk_flipped",
-                      xlabel="",
-                      ylabel="cortex eQTL z-score",
-                      title="",
-                      color=color,
-                      include_ylabel=include_ylabel)
-
-            print("\tPlotting row 3.")
-            self.plot(df=plot_df.loc[plot_df["{}_FDR".format(b_ct)] < 0.05, :],
-                      fig=fig,
-                      ax=axes[2, col_index],
-                      x="OverallZScore_sn",
-                      y="log_{}_flipped".format(beta_col),
-                      xlabel="",
-                      ylabel="log deconvolution beta",
-                      title="",
-                      color=color,
-                      include_ylabel=include_ylabel)
-
-            print("\tPlotting row 4.")
-            self.plot(df=plot_df.loc[plot_df["FDR_sn"] < 0.05, :],
-                      fig=fig,
-                      ax=axes[3, col_index],
-                      x="OverallZScore_sn",
-                      y="OverallZScore_bulk_flipped",
-                      facecolors="hue",
-                      xlabel="",
-                      ylabel="cortex eQTL z-score",
-                      title="",
-                      color=color,
-                      include_ylabel=include_ylabel)
-
-            print("\tPlotting row 5.")
-            self.plot(df=plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (plot_df["{}_FDR".format(b_ct)] < 0.05), :],
-                      fig=fig,
-                      ax=axes[4, col_index],
-                      x="OverallZScore_sn",
-                      y="log_{}_flipped".format(beta_col),
-                      label="HGNCName_bulk",
                       xlabel="single-nucleus z-score",
-                      ylabel="log deconvolution beta",
+                      ylabel="cortex eQTL z-score",
                       title="",
                       color=color,
                       ci=None,
@@ -249,7 +206,7 @@ class main():
             print("")
 
         for extension in self.extensions:
-            fig.savefig(os.path.join(self.outdir, "trans2_zscore_comparison.{}".format(extension)))
+            fig.savefig(os.path.join(self.outdir, "compare_bulk_and_sn_zscores_{}.{}".format(self.eqtl_type, extension)))
         plt.close()
 
     @staticmethod
