@@ -3,7 +3,7 @@
 """
 File:         visualise_ct_mediated_eqtl.py
 Created:      2020/09/23
-Last Changed: 2020/09/29
+Last Changed: 2020/11/24
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -45,7 +45,7 @@ from scipy import stats
 __program__ = "Visualise CellType mediated eQTL"
 __author__ = "Martijn Vochteloo"
 __maintainer__ = "Martijn Vochteloo"
-__email__ = "m.vochteloo@st.hanze.nl"
+__email__ = "m.vochteloo@rug.nl"
 __license__ = "GPLv3"
 __version__ = 1.0
 __description__ = "{} is a program developed and maintained by {}. " \
@@ -54,6 +54,11 @@ __description__ = "{} is a program developed and maintained by {}. " \
                   "of any kind.".format(__program__,
                                         __author__,
                                         __license__)
+
+"""
+Syntax:
+./visualise_ct_mediated_eqtl.py -eq ../matrix_preparation/cortex_eur_cis/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ge ../matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -al ../matrix_preparation/cortex_eur_cis/create_matrices/genotype_alleles.txt.gz -ex ../matrix_preparation/cortex_eur_cis/create_matrices/expression_table.txt.gz -cc ../matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt.gz -d ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -i ADAMTS18 CYP24A1 CLECL1 -n 600 -e pdf
+"""
 
 
 class main():
@@ -68,26 +73,23 @@ class main():
         self.decon_path = getattr(arguments, 'decon')
         self.alpha = getattr(arguments, 'alpha')
         self.interest = getattr(arguments, 'interest')
+        self.nrows = getattr(arguments, 'nrows')
         self.extensions = getattr(arguments, 'extension')
 
         # Set variables.
-        self.outdir = os.path.join(str(Path(__file__).parent.parent), 'CT_mediated_eQTLs')
+        self.outdir = os.path.join(str(Path(__file__).parent.parent), 'visualise_ct_mediated_eqtl')
 
         self.colormap = {
-                            "minor": "#E69F00",
-                            "center": "#0072B2",
-                            "major": "#D55E00",
-                            "low": 246,
-                            "hig": 24,
-                            "male": "#56B4E9",
-                            "female": "#CC79A7",
-                            "Neuron": "#0072B2",
-                            "Oligodendrocyte": "#009E73",
-                            "EndothelialCell": "#CC79A7",
-                            "Microglia": "#E69F00",
-                            "Macrophage": "#E69F00",
-                            "Astrocyte": "#D55E00"
-                        }
+            "minor": "#E69F00",
+            "center": "#0072B2",
+            "major": "#D55E00",
+            "Neuron": "#0072B2",
+            "Oligodendrocyte": "#009E73",
+            "EndothelialCell": "#CC79A7",
+            "Microglia": "#E69F00",
+            "Macrophage": "#E69F00",
+            "Astrocyte": "#D55E00"
+        }
 
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
@@ -98,9 +100,9 @@ class main():
 
         # Create color map.
         self.group_color_map, self.value_color_map = self.create_color_map(self.colormap)
-        self.sex_color_map = {"Male": self.colormap["male"], "Female": self.colormap["female"]}
 
-    def create_argument_parser(self):
+    @staticmethod
+    def create_argument_parser():
         parser = argparse.ArgumentParser(prog=__program__,
                                          description=__description__)
 
@@ -154,6 +156,13 @@ class main():
                             required=False,
                             default=None,
                             help="The HGNCSymbols to plot. Default: none.")
+        parser.add_argument("-n",
+                            "--nrows",
+                            type=int,
+                            required=False,
+                            default=None,
+                            help="Cap the number of runs to load. "
+                                 "Default: None.")
         parser.add_argument("-e",
                             "--extension",
                             nargs="+",
@@ -185,18 +194,17 @@ class main():
     def start(self):
         self.print_arguments()
         eqtl_df, geno_df, alleles_df, expr_df, cc_df, decon_df = self.load()
-        decon_pval_df, decon_fdr_df = self.bh_correct(decon_df)
-        self.plot_upsetplot(decon_fdr_df)
+        _, decon_fdr_df = self.bh_correct(decon_df)
         self.plot_eqtls(eqtl_df, geno_df, alleles_df, expr_df, cc_df, decon_fdr_df)
 
     def load(self):
         print("Loading input files.")
-        eqtl_df = self.load_file(self.eqtl_path, index_col=None)
-        geno_df = self.load_file(self.geno_path)
-        alleles_df = self.load_file(self.alleles_path)
-        expr_df = self.load_file(self.expr_path)
-        cc_df = self.load_file(self.cc_path, nrows=None)
-        decon_df = self.load_file(self.decon_path, nrows=None)
+        eqtl_df = self.load_file(self.eqtl_path, index_col=None, nrows=self.nrows)
+        geno_df = self.load_file(self.geno_path, nrows=self.nrows)
+        alleles_df = self.load_file(self.alleles_path, nrows=self.nrows)
+        expr_df = self.load_file(self.expr_path, nrows=self.nrows)
+        cc_df = self.load_file(self.cc_path)
+        decon_df = self.load_file(self.decon_path)
 
         return eqtl_df, geno_df, alleles_df, expr_df, cc_df, decon_df
 
@@ -225,88 +233,13 @@ class main():
                                       df.shape))
         return df
 
-    def plot_upsetplot(self, decon_df):
-        data = self.parse_df(decon_df, self.alpha)
-        counts = self.count(data)
-        counts = counts[counts > 0]
-        up.plot(counts, sort_by='cardinality', show_counts=True)
-        for extension in self.extensions:
-            plt.savefig(os.path.join(self.outdir, "eQTL_upsetplot.{}".format(extension)))
-        plt.close()
-
-    @staticmethod
-    def parse_df(df, alpha):
-        tmp_df = df.copy()
-        tmp_df.reset_index(drop=False, inplace=True)
-        tmp_df = tmp_df.melt(id_vars="index", var_name="CellType", value_name="FDR")
-        tmp_df = tmp_df.loc[tmp_df["FDR"] < alpha, :]
-
-        data = {}
-        for ct in list(tmp_df["CellType"].unique()):
-            data[ct] = set(tmp_df.loc[tmp_df["CellType"] == ct, "index"])
-        return data
-
-    @staticmethod
-    def count(input_data):
-        combinations = []
-        cols = list(input_data.keys())
-        for i in range(1, len(cols) + 1):
-            combinations.extend(list(itertools.combinations(cols, i)))
-
-        abbreviations = {"Neuron": "neuro", "Oligodendrocyte": "oligo",
-                         "EndothelialCell": "endo", "Microglia": "micro",
-                         "Macrophage": "macro", "Astrocyte": "astro",
-                         "CellMapNNLS": "NNLS", "CellMapPCA_PC1": "PCA",
-                         "CellMapNMF_C1": "NMF", "McKenzie": "McKe"}
-        abbr_cols = []
-        for col in cols:
-            if col in abbreviations.keys():
-                abbr_cols.append(abbreviations[col])
-            else:
-                abbr_cols.append(col)
-
-        indices = []
-        data = []
-        for combination in combinations:
-            index = []
-            for col in cols:
-                if col in combination:
-                    index.append(True)
-                else:
-                    index.append(False)
-
-            background = set()
-            for key in cols:
-                if key not in combination:
-                    work_set = input_data[key].copy()
-                    background.update(work_set)
-
-            overlap = None
-            for key in combination:
-                work_set = input_data[key].copy()
-                if overlap is None:
-                    overlap = work_set
-                else:
-                    overlap = overlap.intersection(work_set)
-
-            duplicate_set = overlap.intersection(background)
-            length = len(overlap) - len(duplicate_set)
-
-            indices.append(index)
-            data.append(length)
-
-        s = pd.Series(data,
-                      index=pd.MultiIndex.from_tuples(indices, names=abbr_cols))
-        s.name = "value"
-        return s
-
     def plot_eqtls(self, eqtl_df, geno_df, alleles_df, expr_df, cc_df, decon_df):
         print("Plotting interaction eQTL plots.")
 
         print("Iterating over eQTLs.")
         for i, (index, row) in enumerate(eqtl_df.iterrows()):
             # Extract the usefull information from the row.
-            p_value = row["PValue"]
+            fdr_value = row["FDR"]
             snp_name = row["SNPName"]
             probe_name = row["ProbeName"]
             hgnc_name = row["HGNCName"]
@@ -345,8 +278,8 @@ class main():
                 exit()
             # A/T = 0.0/2.0
             # by default we assume T = 2.0 to be minor
-            minor_allele = alleles["Alleles"][-1]
-            major_allele = alleles["Alleles"][0]
+            major_allele = alleles["Alleles"].split("/")[0]
+            minor_allele = alleles["Alleles"].split("/")[1]
 
             # Check if we need to flip the genotypes.
             counts = data["group"].value_counts()
@@ -357,8 +290,8 @@ class main():
             two_geno_count = (counts[2.0] * 2) + counts[1.0]
             if two_geno_count > zero_geno_count:
                 # Turns out that 0.0 was the minor.
-                minor_allele = alleles[0]
-                major_allele = alleles[-1]
+                minor_allele = alleles["Alleles"].split("/")[0]
+                major_allele = alleles["Alleles"].split("/")[1]
                 data["genotype"] = 2.0 - data["genotype"]
                 data["group"] = 2.0 - data["group"]
 
@@ -379,7 +312,7 @@ class main():
             # Check if the SNP has an interaction effect.
             interaction_effect = decon_df.loc["{}_{}".format(probe_name, snp_name), :]
             if not interaction_effect.name.startswith(probe_name) or not interaction_effect.name.endswith(snp_name):
-                print("\t\tDecon file not in identical order as eQTL file.")
+                print("\t\tCannot find probe-snp combination in decon results.")
                 exit()
             interaction_effect = interaction_effect.to_frame()
             interaction_effect.columns = ["FDR"]
@@ -399,7 +332,7 @@ class main():
                 if not os.path.exists(eqtl_interaction_outdir):
                     os.makedirs(eqtl_interaction_outdir)
 
-                self.plot_simple_eqtl(i, p_value, snp_name, probe_name,
+                self.plot_simple_eqtl(i, fdr_value, snp_name, probe_name,
                                       hgnc_name, eqtl_type, data,
                                       minor_allele, minor_allele_frequency,
                                       allele_map, self.group_color_map,
@@ -409,7 +342,7 @@ class main():
                 for index2, (fdr,) in interaction_effect.iterrows():
                     print("\t\t{}: FDR = {}".format(index2, fdr))
                     eqtl_data = data.copy()
-                    cov_data = cc_df.loc[:, "CellMapNNLS_{}".format(index2)].to_frame()
+                    cov_data = cc_df.loc[:, index2].to_frame()
                     eqtl_data = eqtl_data.merge(cov_data, left_index=True,
                                                 right_index=True)
 
@@ -422,7 +355,7 @@ class main():
                 print("\t\tNo significant interactions.")
 
     @staticmethod
-    def plot_simple_eqtl(count, p_value, snp_name, probe_name, hgnc_name,
+    def plot_simple_eqtl(count, fdr_value, snp_name, probe_name, hgnc_name,
                          eqtl_type, df, minor_allele, minor_allele_frequency,
                          allele_map, group_color_map, outdir, extensions):
         # Calculate the correlation.
@@ -458,7 +391,7 @@ class main():
         ax.text(0.5, 1.06,
                 # '{} {}-eQTL [{}]'.format(hgnc_name, eqtl_type,
                 #                          p_value_to_symbol(p_value)),
-                '{} {}-eQTL [p = {:.2e}]'.format(hgnc_name, eqtl_type, p_value),
+                '{} {}-eQTL [FDR = {:.2e}]'.format(hgnc_name, eqtl_type, fdr_value),
                 fontsize=22, weight='bold', ha='center', va='bottom',
                 transform=ax.transAxes)
         ax.text(0.5, 1.02,
@@ -596,6 +529,7 @@ class main():
         print("  > Deconvolution path: {}".format(self.decon_path))
         print("  > Alpha: {}".format(self.alpha))
         print("  > Interest: {}".format(self.interest))
+        print("  > Nrows: {}".format(self.nrows))
         print("  > Extension: {}".format(self.extensions))
         print("  > Output directory: {}".format(self.outdir))
         print("")

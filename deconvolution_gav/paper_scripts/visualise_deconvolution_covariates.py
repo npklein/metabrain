@@ -3,7 +3,7 @@
 """
 File:         visualise_deconvolution_covariates.py
 Created:      2020/09/30
-Last Changed:
+Last Changed: 2020/11/24
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -43,7 +43,7 @@ import scipy.stats as stats
 __program__ = "Visualise Deconvolution Covariates"
 __author__ = "Martijn Vochteloo"
 __maintainer__ = "Martijn Vochteloo"
-__email__ = "m.vochteloo@st.hanze.nl"
+__email__ = "m.vochteloo@rug.nl"
 __license__ = "GPLv3"
 __version__ = 1.0
 __description__ = "{} is a program developed and maintained by {}. " \

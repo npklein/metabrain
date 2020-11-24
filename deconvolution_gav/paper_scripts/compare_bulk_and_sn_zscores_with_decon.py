@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-File:         compare_zscores_cis.py
+File:         compare_bulk_and_sn_zscores_with_decon.py
 Created:      2020/11/04
-Last Changed: 2020/11/20
+Last Changed: 2020/11/24
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -43,7 +43,7 @@ from statsmodels.stats import multitest
 # Local application imports.
 
 # Metadata
-__program__ = "Compare Zscores Cis"
+__program__ = "Compare Bulk and SN Z-scores with Decon"
 __author__ = "Martijn Vochteloo"
 __maintainer__ = "Martijn Vochteloo"
 __email__ = "m.vochteloo@rug.nl"
@@ -61,25 +61,25 @@ class main():
     def __init__(self):
         # Get the command line arguments.
         arguments = self.create_argument_parser()
-        eqtl_type = getattr(arguments, 'type')
+        self.eqtl_type = getattr(arguments, 'type')
         self.extensions = getattr(arguments, 'extension')
 
         # Declare input files.
-        self.bulk_eqtl_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_{}/combine_eqtlprobes/eQTLprobes_combined.txt.gz".format(eqtl_type)
-        self.bulk_alleles_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_{}/create_matrices/genotype_alleles.txt.gz".format(eqtl_type)
-        self.decon_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/{}/cortex/decon_out/deconvolutionResults.csv".format(eqtl_type)
-        self.sn_infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/{}_100Perm/".format(eqtl_type)
+        self.bulk_eqtl_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_{}/combine_eqtlprobes/eQTLprobes_combined.txt.gz".format(self.eqtl_type)
+        self.bulk_alleles_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_{}/create_matrices/genotype_alleles.txt.gz".format(self.eqtl_type)
+        self.decon_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/{}/cortex/decon_out/deconvolutionResults.csv".format(self.eqtl_type)
+        self.sn_infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/{}_100Perm/".format(self.eqtl_type)
         self.sn_filename = "eQTLsFDR-ProbeLevel.txt.gz"
-        self.cell_types = [("AST", "Astrocyte", "Astrocyte", "#D55E00"),
-                           ("END", "EndothelialCell", "Endothelial Cell", "#CC79A7"),
-                           ("EX", "Neuron", "Ex. Neuron VS Neuron", "#0072B2"),
-                           ("IN", "Neuron", "In. Neuron VS Neuron", "#0072B2"),
-                           ("MIC", "Macrophage", "Microglia VS Macrophage", "#E69F00"),
-                           ("OLI", "Oligodendrocyte", "Oligodendrocyte", "#009E73")]
+        self.cell_types = [("AST", "CellMapNNLS_Astrocyte", "Astrocyte", "#D55E00"),
+                           ("END", "CellMapNNLS_EndothelialCell", "Endothelial Cell", "#CC79A7"),
+                           ("EX", "CellMapNNLS_Neuron", "Ex. Neuron VS Neuron", "#0072B2"),
+                           ("IN", "CellMapNNLS_Neuron", "In. Neuron VS Neuron", "#0072B2"),
+                           ("MIC", "CellMapNNLS_Macrophage", "Microglia VS Macrophage", "#E69F00"),
+                           ("OLI", "CellMapNNLS_Oligodendrocyte", "Oligodendrocyte", "#009E73")]
         self.extensions = ["png", "pdf"]
 
         self.outdir = os.path.join(str(Path(__file__).parent.parent),
-                                   'compare_zscores_{}'.format(eqtl_type))
+                                   'compare_bulk_and_sn_zscores_with_decon_{}'.format(self.eqtl_type))
 
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
@@ -190,7 +190,7 @@ class main():
             # exit()
 
             merged_df = bulk_decon_df.merge(sn_df, left_index=True, right_index=True,
-                                          suffixes=["_bulk", "_sn"])
+                                            suffixes=["_bulk", "_sn"])
 
             merged_df["eQTLFlipMask"] = (merged_df["AlleleAssessed_sn"] == merged_df["AlleleAssessed_bulk"]).replace({0: -1, 1: 1})
             merged_df["DeconFlipMask"] = (merged_df["AlleleAssessed_sn"] == merged_df["DeconAllele"]).replace({0: -1, 1: 1})
@@ -289,7 +289,7 @@ class main():
             print("")
 
         for extension in self.extensions:
-            fig.savefig(os.path.join(self.outdir, "cis_zscore_comparison.{}".format(extension)))
+            fig.savefig(os.path.join(self.outdir, "compare_bulk_and_sn_zscores_with_decon_{}.{}".format(self.eqtl_type, extension)))
         plt.close()
 
     @staticmethod
