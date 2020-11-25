@@ -28,9 +28,12 @@ import argparse
 import os
 
 # Third party imports.
+import numpy as np
 import pandas as pd
+import joypy
 import seaborn as sns
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -70,7 +73,8 @@ class main():
         self.extensions = getattr(arguments, 'extension')
 
         # Set variables.
-        self.outdir = os.path.join(str(Path(__file__).parent.parent), 'visualise_cell_type_fractions')
+        self.outdir = os.path.join(str(Path(__file__).parent.parent),
+                                   'visualise_cell_type_fractions')
         self.palette = {
             "cortex": "#0072B2",
             "cerebellum": "#D55E00",
@@ -78,8 +82,14 @@ class main():
             "spinalcord": "#56B4E9",
             "hypothalamus": "#E69F00",
             "hippocampus": "#F0E442",
-            "amygdala": "#CC79A7"
+            "amygdala": "#CC79A7",
+            "Neuron": "#0072B2",
+            "Oligodendrocyte": "#009E73",
+            "EndothelialCell": "#CC79A7",
+            "Macrophage": "#E69F00",
+            "Astrocyte": "#D55E00"
         }
+
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
 
@@ -154,17 +164,17 @@ class main():
 
         print("Loading data.")
         cc_df = self.load_file(self.cc_path)
+        cell_types = list(cc_df.columns)
         sa_df = self.load_file(self.sa_path, index_col=None, low_memory=False)
 
         print("Preprocessing data.")
         cc_df.index.name = self.sample_id
         cc_df.reset_index(drop=False, inplace=True)
-        cc_dfm = cc_df.melt(id_vars=[self.sample_id])
 
         sa_df = sa_df[[self.sample_id, self.group_id]]
 
         print("Merging data.")
-        df = cc_dfm.merge(sa_df, left_on=[self.sample_id], right_on=[self.sample_id])
+        df = cc_df.merge(sa_df, left_on=[self.sample_id], right_on=[self.sample_id])
 
         print("Filtering data.")
         print("Pre-shape: {}".format(df.shape))
@@ -175,10 +185,26 @@ class main():
         print("Post-shape: {}".format(df.shape))
 
         print("Plotting.")
-        print("\tN: {}".format(df.shape[0]))
-        print("\tColumn groups: {}".format(df["variable"].unique()))
-        print("\tRow groups: {}".format(df[self.group_id].unique()))
-        self.plot_distributions(df)
+        self.plot_distributions(df, cell_types, self.group_id)
+
+        pivot_df = None
+        groups = df[self.group_id].unique()
+        for cell_type in cell_types:
+            subset = df.loc[:, [cell_type, self.group_id]].copy()
+            subset.columns = ["value", self.group_id]
+            n = subset[self.group_id].value_counts().max()
+            data = pd.DataFrame(np.nan, index=np.arange(0, n), columns=groups)
+            for group in groups:
+                group_subset = subset.loc[subset[self.group_id] == group, "value"]
+                data.loc[np.arange(0, len(group_subset)), group] = group_subset.values
+            data["cell type"] = cell_type
+
+            if pivot_df is None:
+                pivot_df = data
+            else:
+                pivot_df = pd.concat([pivot_df, data], axis=0, ignore_index=True)
+
+        self.plot_distributions(pivot_df, groups, 'cell type')
 
     @staticmethod
     def load_file(path, sep="\t", header=0, index_col=0, nrows=None,
@@ -190,58 +216,97 @@ class main():
                                       df.shape))
         return df
 
-    def plot_distributions(self, df):
-        cell_types = df["variable"].unique()
-        groups = df[self.group_id].unique()
+    def plot_distributions(self, df, cols, by):
+        print(df)
+        print(cols)
+        print(by)
 
-        sns.set(rc={'figure.figsize': (20, len(cell_types)*6)})
-        sns.set_style("ticks")
-        fig, axes = plt.subplots(nrows=len(cell_types), ncols=3,
-                                 gridspec_kw={'width_ratios': [0.45, 0.45, 0.05]})
-
-        for i, ct in enumerate(cell_types):
-            subset = df.loc[df["variable"] == ct, :]
-
-            ax1, ax2, ax3 = axes[i, :]
-
-            # AX1
-            sns.despine(fig=fig, ax=ax1)
-            handles = []
-            for group in groups:
-                data = subset.loc[subset[self.group_id] == group, "value"].copy()
-                data.name = group
-                sns.kdeplot(data, shade=True, alpha=0.3, ax=ax1, color=self.palette[group],
-                            legend=False)
-                handles.append(mpatches.Patch(color=self.palette[group], alpha=0.3, label="{} [n={}]".format(group, len(data))))
-
-            xlabel = ""
-            if ct == cell_types[-1]:
-                xlabel = "predicted cell proportion"
-            self.set_text(ax1, ct, subset.shape[0], xlabel, "frequency")
-
-            # AX2
-            sns.despine(fig=fig, ax=ax2)
-            ax2.axhline(subset["value"].mean(), ls='--', color="#000000", zorder=-1)
-            sns.boxplot(x=self.group_id, y="value", data=subset,
-                        palette=self.palette,
-                        boxprops=dict(alpha=.3),
-                        zorder=1,
-                        ax=ax2)
-            xlabels = ["" for _ in ax2.get_xticklabels()]
-            if ct == cell_types[-1]:
-                xlabels = ax2.get_xticklabels()
-            ax2.set_xticklabels(xlabels, rotation=65, horizontalalignment='right')
-            self.set_text(ax2, ct, subset.shape[0], "", "predicted cell proportion")
-
-            # AX3
-            ax3.axis('off')
-            if i == 0:
-                ax3.legend(handles=handles, loc="upper right")
+        plt.figure(dpi=380)
+        fig, axes = joypy.joyplot(df,
+                                  column=cols,
+                                  overlap=0,
+                                  by=by,
+                                  ylim='own',
+                                  bins=100,
+                                  fill=True,
+                                  figsize=(10, 13),
+                                  legend=True,
+                                  xlabels=True,
+                                  ylabels=True,
+                                  color=[self.palette[col] for col in cols],
+                                  alpha=0.8,
+                                  linewidth=.5,
+                                  linecolor='w',
+                                  fade=False,
+                                  title='MetaBrain Deconvolution by {}'.format(by))
+        plt.rc("font", size=12)
+        plt.xlabel('predicted cell fraction', fontsize=14, alpha=1)
 
         plt.tight_layout()
         for extension in self.extensions:
-            fig.savefig(os.path.join(self.outdir, "cell_fraction_distribution_{}.{}".format(self.group_id, extension)))
+            fig.savefig(os.path.join(self.outdir,
+                                     "cell_fraction_distribution_{}_by{}.{}".format(
+                                         self.group_id, by.replace(" ", ""), extension)))
         plt.close()
+
+    @staticmethod
+    def label(x, color, label):
+        ax = plt.gca()
+        ax.text(0, .2, label, fontweight="bold", color=color,
+                ha="left", va="center", transform=ax.transAxes)
+
+    # def plot_distributions(self, df):
+    #     cell_types = df["variable"].unique()
+    #     groups = df[self.group_id].unique()
+    #
+    #     sns.set(rc={'figure.figsize': (20, len(cell_types)*6)})
+    #     sns.set_style("ticks")
+    #     fig, axes = plt.subplots(nrows=len(cell_types), ncols=3,
+    #                              gridspec_kw={'width_ratios': [0.45, 0.45, 0.05]})
+    #
+    #     for i, ct in enumerate(cell_types):
+    #         subset = df.loc[df["variable"] == ct, :]
+    #
+    #         ax1, ax2, ax3 = axes[i, :]
+    #
+    #         # AX1
+    #         sns.despine(fig=fig, ax=ax1)
+    #         handles = []
+    #         for group in groups:
+    #             data = subset.loc[subset[self.group_id] == group, "value"].copy()
+    #             data.name = group
+    #             sns.kdeplot(data, shade=True, alpha=0.3, ax=ax1, color=self.palette[group],
+    #                         legend=False)
+    #             handles.append(mpatches.Patch(color=self.palette[group], alpha=0.3, label="{} [n={}]".format(group, len(data))))
+    #
+    #         xlabel = ""
+    #         if ct == cell_types[-1]:
+    #             xlabel = "predicted cell proportion"
+    #         self.set_text(ax1, ct, subset.shape[0], xlabel, "frequency")
+    #
+    #         # AX2
+    #         sns.despine(fig=fig, ax=ax2)
+    #         ax2.axhline(subset["value"].mean(), ls='--', color="#000000", zorder=-1)
+    #         sns.boxplot(x=self.group_id, y="value", data=subset,
+    #                     palette=self.palette,
+    #                     boxprops=dict(alpha=.3),
+    #                     zorder=1,
+    #                     ax=ax2)
+    #         xlabels = ["" for _ in ax2.get_xticklabels()]
+    #         if ct == cell_types[-1]:
+    #             xlabels = ax2.get_xticklabels()
+    #         ax2.set_xticklabels(xlabels, rotation=65, horizontalalignment='right')
+    #         self.set_text(ax2, ct, subset.shape[0], "", "predicted cell proportion")
+    #
+    #         # AX3
+    #         ax3.axis('off')
+    #         if i == 0:
+    #             ax3.legend(handles=handles, loc="upper right")
+    #
+    #     plt.tight_layout()
+    #     for extension in self.extensions:
+    #         fig.savefig(os.path.join(self.outdir, "cell_fraction_distribution_{}.{}".format(self.group_id, extension)))
+    #     plt.close()
 
     @staticmethod
     def set_text(ax, ct, n, xlabel, ylabel):
