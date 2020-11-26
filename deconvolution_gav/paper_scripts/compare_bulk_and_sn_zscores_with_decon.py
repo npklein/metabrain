@@ -3,7 +3,7 @@
 """
 File:         compare_bulk_and_sn_zscores_with_decon.py
 Created:      2020/11/04
-Last Changed: 2020/11/24
+Last Changed: 2020/11/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -227,7 +227,8 @@ class main():
                       ylabel="cortex eQTL z-score",
                       title=title,
                       color=color,
-                      include_ylabel=include_ylabel)
+                      include_ylabel=include_ylabel,
+                      padding=0.01)
 
             print("\tPlotting row 2.")
             self.plot(df=plot_df.loc[plot_df["{}_FDR".format(b_ct)] < 0.05, :],
@@ -239,7 +240,8 @@ class main():
                       ylabel="cortex eQTL z-score",
                       title="",
                       color=color,
-                      include_ylabel=include_ylabel)
+                      include_ylabel=include_ylabel,
+                      padding=0.01)
 
             print("\tPlotting row 3.")
             self.plot(df=plot_df.loc[plot_df["{}_FDR".format(b_ct)] < 0.05, :],
@@ -251,7 +253,8 @@ class main():
                       ylabel="log deconvolution beta",
                       title="",
                       color=color,
-                      include_ylabel=include_ylabel)
+                      include_ylabel=include_ylabel,
+                      padding=0.01)
 
             print("\tPlotting row 4.")
             self.plot(df=plot_df.loc[plot_df["FDR_sn"] < 0.05, :],
@@ -264,7 +267,8 @@ class main():
                       ylabel="cortex eQTL z-score",
                       title="",
                       color=color,
-                      include_ylabel=include_ylabel)
+                      include_ylabel=include_ylabel,
+                      padding=0.01)
 
             print("\tPlotting row 5.")
             self.plot(df=plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (plot_df["{}_FDR".format(b_ct)] < 0.05), :],
@@ -278,7 +282,8 @@ class main():
                       title="",
                       color=color,
                       ci=None,
-                      include_ylabel=include_ylabel)
+                      include_ylabel=include_ylabel,
+                      padding=0.1)
 
             test = plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (plot_df["{}_FDR".format(b_ct)] < 0.05), :]
             with pd.option_context('display.max_rows', None,
@@ -323,7 +328,7 @@ class main():
 
     def plot(self, df, fig, ax, x="x", y="y", facecolors=None, label=None,
              xlabel="", ylabel="", title="", color="#000000", ci=95,
-             include_ylabel=True):
+             include_ylabel=True, padding=0.05):
         sns.despine(fig=fig, ax=ax)
 
         if not include_ylabel:
@@ -353,14 +358,25 @@ class main():
                         ax=ax
                         )
 
+            xlim = ax.get_xlim()
+            ylim = ax.get_ylim()
+
+            xmargin = (xlim[1] - xlim[0]) * padding
+            ymargin = (ylim[1] - ylim[0]) * padding
+
+            ax.set_xlim(xlim[0] - xmargin, xlim[1] + xmargin)
+            ax.set_ylim(ylim[0] - ymargin, ylim[1] + ymargin)
+
             if label is not None:
                 texts = []
                 for i, point in df.iterrows():
-                    texts.append(ax.text(point[x] + .02,
+                    texts.append(ax.text(point[x],
                                          point[y],
                                          str(point[label]),
+                                         ha='center',
+                                         va='center',
                                          color=color))
-                adjust_text(texts, ax=ax)
+                adjust_text(texts, ax=ax, arrowprops=dict(arrowstyle='-', color='#808080'))
 
         ax.axhline(0, ls='--', color="#D7191C", alpha=0.3, zorder=-1)
         ax.axvline(0, ls='--', color="#D7191C", alpha=0.3, zorder=-1)
