@@ -3,7 +3,7 @@
 """
 File:         compare_bulk_and_sn_zscores.py
 Created:      2020/11/04
-Last Changed: 2020/11/24
+Last Changed: 2020/11/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -188,7 +188,8 @@ class main():
                       ylabel="cortex eQTL z-score",
                       title=title,
                       color=color,
-                      include_ylabel=include_ylabel)
+                      include_ylabel=include_ylabel,
+                      padding=0.01)
 
             print("\tPlotting row 2.")
             self.plot(df=plot_df.loc[plot_df["FDR_sn"] < 0.05, :],
@@ -201,7 +202,8 @@ class main():
                       title="",
                       color=color,
                       ci=None,
-                      include_ylabel=include_ylabel)
+                      include_ylabel=include_ylabel,
+                      padding=0.01)
 
             print("")
 
@@ -240,7 +242,7 @@ class main():
 
     def plot(self, df, fig, ax, x="x", y="y", facecolors=None, label=None,
              xlabel="", ylabel="", title="", color="#000000", ci=95,
-             include_ylabel=True):
+             include_ylabel=True, padding=0.05):
         sns.despine(fig=fig, ax=ax)
 
         if not include_ylabel:
@@ -269,6 +271,15 @@ class main():
                         line_kws={"color": color},
                         ax=ax
                         )
+
+            xlim = ax.get_xlim()
+            ylim = ax.get_ylim()
+
+            xmargin = (xlim[1] - xlim[0]) * padding
+            ymargin = (ylim[1] - ylim[0]) * padding
+
+            ax.set_xlim(xlim[0] - xmargin, xlim[1] + xmargin)
+            ax.set_ylim(ylim[0] - ymargin, ylim[1] + ymargin)
 
             if label is not None:
                 texts = []
