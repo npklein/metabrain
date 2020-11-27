@@ -23,7 +23,6 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 
 # Standard imports.
 from __future__ import print_function
-from datetime import datetime
 
 # Third party imports.
 import numpy as np
@@ -50,9 +49,12 @@ class main():
     def __init__(self):
         self.table_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/alltraits_MR_table_v3.xlsx"
         self.sheet_names = ['all_results', 'tophit_results']
+        self.table_ea = "EA"
         self.decon_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults_alleles_FDR_betas.txt.gz"
+        self.decon_ea = "DeconQTLAlleleAssessed"
+        self.decon_drop = ["SNPType", "AlleleAssessed"]
 
-        self.outfile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/{}-MRFindingsWithCTMediationScores.xlsx".format(datetime.now().strftime("%Y-%m-%d"))
+        self.outfile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/MRFindingsWithCTMediationScores.xlsx"
 
     def start(self):
         self.print_arguments()
@@ -63,9 +65,11 @@ class main():
         decon_df["chrom"] = decon_df["SNPName"].str.split(":", expand=True)[0].astype(np.int64)
         decon_df["pos"] = decon_df["SNPName"].str.split(":", expand=True)[1].astype(np.int64)
         decon_df["SNP"] = decon_df["SNPName"].str.split(":", expand=True)[2]
-        decon_df.drop(["SNPName"], axis=1, inplace=True)
+        decon_df.drop(["SNPName"] + self.decon_drop, axis=1, inplace=True)
         decon_df.rename(columns={"ProbeName": "ENSG", "HGNCName": "gene"}, inplace=True)
         decon_df.columns = [x.replace("CellMapNNLS_", "") for x in decon_df.columns]
+        beta_columns = [x for x in decon_df.columns if x.endswith("_Beta")]
+        print(beta_columns)
         print(decon_df)
 
         print("")
@@ -79,12 +83,24 @@ class main():
         with pd.ExcelWriter(self.outfile) as writer:
             for name, sheet in sheets_dict.items():
                 if name in self.sheet_names:
+                    print(sheet[["coloc.default.value", "coloc.Jimmy.value"]])
+
                     print("\tMerging sheet {} with decon-QTL data.".format(name))
                     df = sheet.merge(decon_df,
                                      left_on=["chrom", "pos", "SNP", "ENSG", "gene"],
                                      right_on=["chrom", "pos", "SNP", "ENSG", "gene"],
                                      how="left")
-                    df.to_excel(writer, sheet_name=name)
+                    print(df[["coloc.default.value", "coloc.Jimmy.value"]])
+
+                    # Flip.
+                    df["deconQTLFlip"] = df[self.table_ea] != df[self.decon_ea]
+                    print(df[[self.table_ea, self.decon_ea, "deconQTLFlip"] + beta_columns])
+                    for beta_col in beta_columns:
+                        df[beta_col] = df[beta_col] * df["deconQTLFlip"].map({True: -1, False: 1})
+                    print(df[[self.table_ea, self.decon_ea, "deconQTLFlip"] + beta_columns])
+                    df.drop([self.decon_ea], axis=1, inplace=True)
+
+                    df.to_excel(writer, sheet_name=name, na_rep="NA")
                     print("\t\tSaving sheet {} with shape {}".format(name, df.shape))
         print("")
 
