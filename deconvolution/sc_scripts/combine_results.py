@@ -3,7 +3,7 @@
 """
 File:         combine_results.py
 Created:      2020/11/04
-Last Changed:
+Last Changed: 2020/12/01
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -23,6 +23,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 
 # Standard imports.
 from __future__ import print_function
+import argparse
 import os
 
 # Third party imports.
@@ -47,7 +48,12 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 class main():
     def __init__(self):
-        self.infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/trans_100Perm"
+        # Get the command line arguments.
+        arguments = self.create_argument_parser()
+        self.eqtl_type = getattr(arguments, 'eqtl_type')
+
+        # Set the other arguments.
+        self.infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/{}_100Perm".format(self.eqtl_type)
         self.cell_types = ["AST", "END", "EX", "IN", "MIC", "OLI", "OPC", "PER"]
         self.result_files = ["eQTLProbesFDR0.05-ProbeLevel.txt.gz",
                              "eQTLSNPsFDR0.05-ProbeLevel.txt.gz",
@@ -59,6 +65,27 @@ class main():
 
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
+
+    @staticmethod
+    def create_argument_parser():
+        parser = argparse.ArgumentParser(prog=__program__,
+                                         description=__description__)
+
+        # Add optional arguments.
+        parser.add_argument("-v",
+                            "--version",
+                            action="version",
+                            version="{} {}".format(__program__,
+                                                   __version__),
+                            help="show program's version number and exit")
+        parser.add_argument("-e",
+                            "--eqtl_type",
+                            type=str,
+                            choices=["cis", "trans"],
+                            required=True,
+                            help="The type of eQTLs to combine.")
+
+        return parser.parse_args()
 
     def start(self):
         for filename in self.result_files:
