@@ -202,7 +202,7 @@ class main():
         col_groups = df[col].unique()
 
         sns.set(rc={'figure.figsize': (18, 18)})
-        sns.set_style("white")
+        sns.set_style("whitegrid")
         fig, axes = plt.subplots(nrows=len(row_groups), ncols=3, sharex='col',
                                  gridspec_kw={'width_ratios': [0.45, 0.45, 0.1]})
 
