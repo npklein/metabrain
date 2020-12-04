@@ -3,7 +3,7 @@
 """
 File:         sn_simple_eqtl_plot.py
 Created:      2020/11/27
-Last Changed: 2020/12/01
+Last Changed: 2020/12/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -71,9 +71,9 @@ class main():
         self.extensions = getattr(arguments, 'extension')
         self.interest = getattr(arguments, 'interest')
         self.plot_cc_corr = getattr(arguments, 'plot_cc_corr')
+        self.filter = getattr(arguments, 'filter')
 
         # Set variables.
-        self.outdir = os.path.join(str(Path(__file__).parent.parent), "sn_simple_eqtl_plot")
         self.palette = {
             "In": "#56B4E9",
             "Ex": "#0072B2",
@@ -87,14 +87,22 @@ class main():
 
         # Set file paths.
         self.eqtl_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/{}_100Perm/ROSMAP-scRNAseq-snpProbe-{}.txt".format(self.eqtl_type, self.eqtl_type)
+        self.signif_eqtl_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/{}_100Perm/COMBINED/eQTLProbesFDR0.05-ProbeLevel.txt.gz".format(self.eqtl_type)
         self.geno_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/genotypedump/GenotypeData.txt.gz"
         self.sn_expr_folder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/"
         self.cc_path = "/groups/umcg-biogen/tmp03/input/ROSMAP-scRNAseq/2020-10-22-MVochteloo-Copy/cell_counts.txt"
         self.gte_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/ROSMAP-scRNAseq-genometoexpressioncoupling.txt"
         self.gene_info_path = "/groups/umcg-biogen/tmp03/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz"
 
+        # Construct output directories.
+        self.outdir = os.path.join(str(Path(__file__).parent.parent), "sn_simple_eqtl_plot", self.eqtl_type)
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
+
+        self.cc_corr_outdir = os.path.join(self.outdir, "cf_corr")
+        if self.plot_cc_corr:
+            if not os.path.exists(self.cc_corr_outdir):
+                os.makedirs(self.cc_corr_outdir)
 
     @staticmethod
     def create_argument_parser():
@@ -112,8 +120,7 @@ class main():
                             "--eqtl_type",
                             type=str,
                             choices=["cis", "trans"],
-                            default="cis",
-                            help="The eQTL type to plot. Default: 'cis'")
+                            help="The eQTL type to plot.")
         parser.add_argument("-es",
                             "--expression_suffix",
                             type=str,
@@ -138,6 +145,10 @@ class main():
                             action='store_true',
                             help="Plot correlation with cell counts."
                                  " Default: False.")
+        parser.add_argument("-filter",
+                            action='store_true',
+                            help="Filter on only significant eQTLs."
+                                 " Default: False.")
 
         return parser.parse_args()
 
@@ -157,9 +168,14 @@ class main():
             cell_type = os.path.basename(sn_expr_path).replace(self.expr_file_suffix, "")
             sn_expr_data[cell_type] = self.load_file(sn_expr_path)
 
+        signif_eqtl_df = None
+        if self.filter:
+            signif_eqtl_df = self.load_file(self.signif_eqtl_path, index_col=None)
+
         print("### Step3 ###")
         print("Preprocess")
         cc_df = cc_df / cc_df.sum(axis=0)
+        cc_df.index = [x.upper() for x in cc_df.index]
 
         gte_dict = dict(zip(gte_df.iloc[:, 0], gte_df.iloc[:, 1]))
         del gte_df
@@ -187,10 +203,11 @@ class main():
         print("### Step4 ###")
         print("Visualise snp vs cc")
         plotted_snps = set()
+        corr_data = []
         for i, (_, (snp_name, probe_name)) in enumerate(eqtl_df.iterrows()):
             hgnc_name = gene_dict[probe_name]
 
-            if self.interest is not None and hgnc_name not in self.interest:
+            if (self.interest is not None and hgnc_name not in self.interest) or (signif_eqtl_df is not None and signif_eqtl_df.loc[(signif_eqtl_df["SNPName"] == snp_name) & (signif_eqtl_df["ProbeName"] == probe_name) & (signif_eqtl_df["HGNCName"] == hgnc_name), :].shape[0] == 0):
                 continue
 
             eqtl_outdir = os.path.join(self.outdir, "{}_{}_{}_{}".format(i, snp_name, probe_name, hgnc_name))
@@ -214,6 +231,9 @@ class main():
                           2.0: "{}/{}".format(minor_allele, minor_allele)}
 
             for ct, expr_df in sn_expr_data.items():
+                if signif_eqtl_df is not None and signif_eqtl_df.loc[(signif_eqtl_df["SNPName"] == snp_name) & (signif_eqtl_df["ProbeName"] == probe_name) & (signif_eqtl_df["HGNCName"] == hgnc_name) & (signif_eqtl_df["CellType"] == ct), :].shape[0] == 0:
+                    continue
+
                 # Get the expression data.
                 if probe_name not in expr_df.index:
                     print("\t\tCell type {} does not have expression for probe {}".format(ct, probe_name))
@@ -230,16 +250,25 @@ class main():
                           outdir=eqtl_outdir)
 
                 if self.plot_cc_corr and "{}_{}".format(snp_name, ct) not in plotted_snps:
-                    data = data.merge(cc_df.loc[:, [ct]].T, left_index=True, right_index=True)
+                    data = data.merge(cc_df.loc[[ct], :].T, left_index=True, right_index=True)
 
                     self.plot(df=data, x=snp_name, y=ct, alleles=allele_map,
                               xlabel="SNP {}".format(snp_name),
-                              ylabel="{} cell count".format(ct),
+                              ylabel="{} cell proportion".format(ct),
                               title="{} vs {} correlation".format(snp_name, ct),
                               file_suffix="_cellCounts",
-                              outdir=eqtl_outdir)
+                              outdir=self.cc_corr_outdir)
 
                     plotted_snps.add("{}_{}".format(snp_name, ct))
+
+                    coef, p = stats.spearmanr(data[snp_name], data[ct])
+                    corr_data.append([snp_name, ct, coef, p])
+        corr_df = pd.DataFrame(corr_data, columns = ["SNPName", "CellType", "Coef", "p"])
+        corr_df["AbsCoef"] = corr_df["Coef"].abs()
+        corr_df.sort_values(by="AbsCoef", ascending=False, inplace=True)
+        print(corr_df)
+        print(corr_df["AbsCoef"].mean())
+        corr_df.to_csv(os.path.join(self.cc_corr_outdir, "correlations.txt.gz"), compression="gzip", header=True, index=False, sep="\t")
 
     @staticmethod
     def load_file(path, sep="\t", header=0, index_col=0, nrows=None):
@@ -322,7 +351,10 @@ class main():
         print("  > Interest: {}".format(self.interest))
         print("  > Extension: {}".format(self.extensions))
         print("  > Plot cell count: {}".format(self.plot_cc_corr))
+        print("  > Filter FDR <0.05: {}".format(self.filter))
         print("  > Output directory: {}".format(self.outdir))
+        if self.plot_cc_corr:
+            print("  > Cell count correlations directory: {}".format(self.cc_corr_outdir))
         print("")
 
 

@@ -187,6 +187,7 @@ class main():
         print("Plotting.")
         self.plot_distributions(df, row='variable', col=self.group_id, label='predicted\ncell proportion\n')
         self.plot_distributions(df, row=self.group_id, col='variable', label='predicted\ncell proportion\n')
+
     @staticmethod
     def load_file(path, sep="\t", header=0, index_col=0, nrows=None,
                   low_memory=True):
