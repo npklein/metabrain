@@ -3,7 +3,7 @@
 """
 File:         compare_bulk_and_sn_zscores.py
 Created:      2020/11/04
-Last Changed: 2020/11/26
+Last Changed: 2020/12/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -78,6 +78,9 @@ class main():
 
         self.outdir = os.path.join(str(Path(__file__).parent.parent),
                                    'compare_bulk_and_sn_zscores_{}'.format(self.eqtl_type))
+
+        self.shared_xlim = {i: (0, 1) for i in range(len(self.cell_types))}
+        self.shared_ylim = {i: (0, 1) for i in range(2)}
 
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
@@ -179,7 +182,7 @@ class main():
                 include_ylabel = True
 
             print("\tPlotting row 1.")
-            self.plot(df=plot_df,
+            xlim, ylim = self.plot(df=plot_df,
                       fig=fig,
                       ax=axes[0, col_index],
                       x="OverallZScore_sn",
@@ -188,11 +191,11 @@ class main():
                       ylabel="cortex eQTL z-score",
                       title=title,
                       color=color,
-                      include_ylabel=include_ylabel,
-                      padding=0.01)
+                      include_ylabel=include_ylabel)
+            self.update_limits(xlim, ylim, 0, col_index)
 
             print("\tPlotting row 2.")
-            self.plot(df=plot_df.loc[plot_df["FDR_sn"] < 0.05, :],
+            xlim, ylim = self.plot(df=plot_df.loc[plot_df["FDR_sn"] < 0.05, :],
                       fig=fig,
                       ax=axes[1, col_index],
                       x="OverallZScore_sn",
@@ -202,10 +205,20 @@ class main():
                       title="",
                       color=color,
                       ci=None,
-                      include_ylabel=include_ylabel,
-                      padding=0.01)
+                      include_ylabel=include_ylabel)
+            self.update_limits(xlim, ylim, 1, col_index)
 
             print("")
+
+        for (m, n), ax in np.ndenumerate(axes):
+            (xmin, xmax) = self.shared_xlim[n]
+            (ymin, ymax) = self.shared_ylim[m]
+
+            xmargin = (xmax - xmin) * 0.05
+            ymargin = (ymax - ymin) * 0.05
+
+            ax.set_xlim(xmin - xmargin, xmax + xmargin)
+            ax.set_ylim(ymin - ymargin, ymax + ymargin)
 
         for extension in self.extensions:
             fig.savefig(os.path.join(self.outdir, "compare_bulk_and_sn_zscores_{}.{}".format(self.eqtl_type, extension)))
@@ -242,7 +255,7 @@ class main():
 
     def plot(self, df, fig, ax, x="x", y="y", facecolors=None, label=None,
              xlabel="", ylabel="", title="", color="#000000", ci=95,
-             include_ylabel=True, padding=0.05):
+             include_ylabel=True):
         sns.despine(fig=fig, ax=ax)
 
         if not include_ylabel:
@@ -262,8 +275,9 @@ class main():
             upper_quadrant = df.loc[(df[x] > 0) & (df[y] > 0), :]
             concordance = (100 / n) * (lower_quadrant.shape[0] + upper_quadrant.shape[0])
 
-            #coef, p = stats.spearmanr(subset[x], subset[y])
-            coef, p = stats.pearsonr(df[x], df[y])
+            if n > 1:
+                #coef, p = stats.spearmanr(subset[x], subset[y])
+                coef, p = stats.pearsonr(df[x], df[y])
 
             sns.regplot(x=x, y=y, data=df, ci=ci,
                         scatter_kws={'facecolors': facecolors,
@@ -271,15 +285,6 @@ class main():
                         line_kws={"color": color},
                         ax=ax
                         )
-
-            xlim = ax.get_xlim()
-            ylim = ax.get_ylim()
-
-            xmargin = (xlim[1] - xlim[0]) * padding
-            ymargin = (ylim[1] - ylim[0]) * padding
-
-            ax.set_xlim(xlim[0] - xmargin, xlim[1] + xmargin)
-            ax.set_ylim(ylim[0] - ymargin, ylim[1] + ymargin)
 
             if label is not None:
                 texts = []
@@ -308,6 +313,23 @@ class main():
                       fontweight='bold')
 
         ax.legend(handles=[mpatches.Patch(color=color, label="r = {:.2f}".format(coef))], loc=4)
+
+        return (df[x].min(), df[x].max()), (df[y].min(), df[y].max())
+
+    def update_limits(self, xlim, ylim, row, col):
+        row_ylim = self.shared_ylim[row]
+        if ylim[0] < row_ylim[0]:
+            row_ylim = (ylim[0], row_ylim[1])
+        if ylim[1] > row_ylim[1]:
+            row_ylim = (row_ylim[0], ylim[1])
+        self.shared_ylim[row] = row_ylim
+
+        col_xlim = self.shared_xlim[col]
+        if xlim[0] < col_xlim[0]:
+            col_xlim = (xlim[0], col_xlim[1])
+        if xlim[1] > col_xlim[1]:
+            col_xlim = (col_xlim[0], xlim[1])
+        self.shared_xlim[col] = col_xlim
 
 
 if __name__ == '__main__':

@@ -3,7 +3,7 @@
 """
 File:         compare_bulk_and_sn_zscores_with_decon.py
 Created:      2020/11/04
-Last Changed: 2020/11/26
+Last Changed: 2020/12/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -32,13 +32,13 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from scipy import stats
 from adjustText import adjust_text
 from statsmodels.stats import multitest
-
 
 # Local application imports.
 
@@ -65,21 +65,34 @@ class main():
         self.extensions = getattr(arguments, 'extension')
 
         # Declare input files.
-        self.bulk_eqtl_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_{}/combine_eqtlprobes/eQTLprobes_combined.txt.gz".format(self.eqtl_type)
-        self.bulk_alleles_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_{}/create_matrices/genotype_alleles.txt.gz".format(self.eqtl_type)
-        self.decon_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/{}/cortex/decon_out/deconvolutionResults.csv".format(self.eqtl_type)
-        self.sn_infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/{}_100Perm/".format(self.eqtl_type)
+        self.bulk_eqtl_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_{}/combine_eqtlprobes/eQTLprobes_combined.txt.gz".format(
+            self.eqtl_type)
+        self.bulk_alleles_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_{}/create_matrices/genotype_alleles.txt.gz".format(
+            self.eqtl_type)
+        self.decon_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/{}/cortex/decon_out/deconvolutionResults.csv".format(
+            self.eqtl_type)
+        self.sn_infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/{}_100Perm/".format(
+            self.eqtl_type)
         self.sn_filename = "eQTLsFDR-ProbeLevel.txt.gz"
-        self.cell_types = [("AST", "CellMapNNLS_Astrocyte", "Astrocyte", "#D55E00"),
-                           ("END", "CellMapNNLS_EndothelialCell", "Endothelial Cell", "#CC79A7"),
-                           ("EX", "CellMapNNLS_Neuron", "Ex. Neuron VS Neuron", "#0072B2"),
-                           ("IN", "CellMapNNLS_Neuron", "In. Neuron VS Neuron", "#0072B2"),
-                           ("MIC", "CellMapNNLS_Macrophage", "Microglia VS Macrophage", "#E69F00"),
-                           ("OLI", "CellMapNNLS_Oligodendrocyte", "Oligodendrocyte", "#009E73")]
+        self.cell_types = [
+            ("AST", "CellMapNNLS_Astrocyte", "Astrocyte", "#D55E00"),
+            ("END", "CellMapNNLS_EndothelialCell", "Endothelial Cell",
+             "#CC79A7"),
+            ("EX", "CellMapNNLS_Neuron", "Ex. Neuron VS Neuron", "#0072B2"),
+            ("IN", "CellMapNNLS_Neuron", "In. Neuron VS Neuron", "#0072B2"),
+            ("MIC", "CellMapNNLS_Macrophage", "Microglia VS Macrophage",
+             "#E69F00"),
+            (
+                "OLI", "CellMapNNLS_Oligodendrocyte", "Oligodendrocyte",
+                "#009E73")]
         self.extensions = ["png", "pdf"]
 
         self.outdir = os.path.join(str(Path(__file__).parent.parent),
-                                   'compare_bulk_and_sn_zscores_with_decon_{}'.format(self.eqtl_type))
+                                   'compare_bulk_and_sn_zscores_with_decon_{}'.format(
+                                       self.eqtl_type))
+
+        self.shared_xlim = {i: (0, 1) for i in range(len(self.cell_types))}
+        self.shared_ylim = {i: (0, 1) for i in range(5)}
 
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
@@ -131,7 +144,8 @@ class main():
                                       index_col=None,
                                       nrows=bulk_eqtl_df.shape[0])
         bulk_alleles_df.columns = ["SNPName", "Alleles", "MinorAllele"]
-        bulk_alleles_df["DeconAllele"] = [x.split("/")[1] for x in bulk_alleles_df["Alleles"]]
+        bulk_alleles_df["DeconAllele"] = [x.split("/")[1] for x in
+                                          bulk_alleles_df["Alleles"]]
         bulk_alleles_df.reset_index(drop=False, inplace=True)
         print("\tBulk alleles data frame: {}".format(bulk_alleles_df.shape))
         print(bulk_alleles_df)
@@ -148,7 +162,12 @@ class main():
         print("\tDeconvolution results data frame: {}".format(decon_df.shape))
         for col in decon_df.columns:
             if col.endswith("_pvalue"):
-                decon_df[col.replace("_pvalue", "_FDR")] = multitest.multipletests(decon_df.loc[:, col], method='fdr_bh')[1]
+                new_colname = col.replace("_pvalue", "_FDR")
+                decon_df[new_colname] = \
+                    multitest.multipletests(decon_df.loc[:, col],
+                                            method='fdr_bh')[
+                        1]
+                print(col, decon_df[decon_df[new_colname] < 0.05].shape[0])
 
         print("Preprocessing deconvolution data frame")
         probe_names = []
@@ -166,49 +185,67 @@ class main():
                                       left_on=["SNPName", "ProbeName"],
                                       right_on=["SNPName", "ProbeName"])
         del bulk_df
-        bulk_decon_df.index = bulk_decon_df["SNPName"] + "_" + bulk_decon_df["ProbeName"]
+        bulk_decon_df.index = bulk_decon_df["SNPName"] + "_" + bulk_decon_df[
+            "ProbeName"]
         print(bulk_decon_df)
 
         print("Visualizing")
 
-        sns.set(rc={'figure.figsize': (len(self.cell_types)*8, 5*6)})
+        sns.set(rc={'figure.figsize': (len(self.cell_types) * 8, 5 * 6)})
         sns.set_style("ticks")
         fig, axes = plt.subplots(nrows=5, ncols=len(self.cell_types),
                                  sharex='col', sharey='row')
 
-        for col_index, (sn_ct, b_ct, title, color) in enumerate(self.cell_types):
-            sn_df = pd.read_csv(os.path.join(self.sn_infolder, sn_ct, self.sn_filename),
-                                sep="\t",
-                                header=0,
-                                index_col=0)
+        for col_index, (sn_ct, b_ct, title, color) in enumerate(
+                self.cell_types):
+            sn_df = pd.read_csv(
+                os.path.join(self.sn_infolder, sn_ct, self.sn_filename),
+                sep="\t",
+                header=0,
+                index_col=0)
             sn_df.index = sn_df["SNPName"] + "_" + sn_df["ProbeName"]
-            print("\tSingle-nucleus {} eQTL data frame: {}".format(sn_ct, sn_df.shape))
+            print("\tSingle-nucleus {} eQTL data frame: {}".format(sn_ct,
+                                                                   sn_df.shape))
 
             # test = sn_df[["OverallZScore", "FDR"]].copy()
             # test.sort_values(by="FDR", inplace=True)
             # print(test.iloc[0:50, :])
             # exit()
 
-            merged_df = bulk_decon_df.merge(sn_df, left_index=True, right_index=True,
+            merged_df = bulk_decon_df.merge(sn_df, left_index=True,
+                                            right_index=True,
                                             suffixes=["_bulk", "_sn"])
 
-            merged_df["eQTLFlipMask"] = (merged_df["AlleleAssessed_sn"] == merged_df["AlleleAssessed_bulk"]).replace({0: -1, 1: 1})
-            merged_df["DeconFlipMask"] = (merged_df["AlleleAssessed_sn"] == merged_df["DeconAllele"]).replace({0: -1, 1: 1})
+            merged_df["eQTLFlipMask"] = (
+                    merged_df["AlleleAssessed_sn"] == merged_df[
+                "AlleleAssessed_bulk"]).replace({0: -1, 1: 1})
+            merged_df["DeconFlipMask"] = (
+                    merged_df["AlleleAssessed_sn"] == merged_df[
+                "DeconAllele"]).replace({0: -1, 1: 1})
 
             beta_col = None
             for col in merged_df.columns:
-                if col.startswith("Beta") and col.endswith("_{}:GT".format(b_ct)):
+                if col.startswith("Beta") and col.endswith(
+                        "_{}:GT".format(b_ct)):
                     beta_col = col
                     break
 
-            merged_df["OverallZScore_bulk_flipped"] = merged_df["OverallZScore_bulk"] * merged_df["eQTLFlipMask"]
-            merged_df["log_{}_flipped".format(beta_col)] = self.log_modulus_beta(merged_df[beta_col]) * merged_df["DeconFlipMask"]
+            merged_df["OverallZScore_bulk_flipped"] = merged_df[
+                                                          "OverallZScore_bulk"] * \
+                                                      merged_df["eQTLFlipMask"]
+            merged_df[
+                "log_{}_flipped".format(beta_col)] = self.log_modulus_beta(
+                merged_df[beta_col]) * merged_df["DeconFlipMask"]
 
             print("\tPrepare plot df.")
-            plot_df = merged_df[["HGNCName_bulk", "OverallZScore_sn", "FDR_sn", "OverallZScore_bulk_flipped", "log_{}_flipped".format(beta_col), "{}_FDR".format(b_ct)]].copy()
+            plot_df = merged_df[["HGNCName_bulk", "OverallZScore_sn", "FDR_sn",
+                                 "OverallZScore_bulk_flipped",
+                                 "log_{}_flipped".format(beta_col),
+                                 "{}_FDR".format(b_ct)]].copy()
             del merged_df
             plot_df["hue"] = "#808080"
-            plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (plot_df["{}_FDR".format(b_ct)] < 0.05), "hue"] = color
+            plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (
+                    plot_df["{}_FDR".format(b_ct)] < 0.05), "hue"] = color
 
             # plot_df.sort_values(by="FDR_sn", inplace=True)
             # print(plot_df.iloc[0:50, :])
@@ -218,7 +255,7 @@ class main():
                 include_ylabel = True
 
             print("\tPlotting row 1.")
-            self.plot(df=plot_df,
+            xlim, ylim = self.plot(df=plot_df,
                       fig=fig,
                       ax=axes[0, col_index],
                       x="OverallZScore_sn",
@@ -227,11 +264,11 @@ class main():
                       ylabel="cortex eQTL z-score",
                       title=title,
                       color=color,
-                      include_ylabel=include_ylabel,
-                      padding=0.01)
+                      include_ylabel=include_ylabel)
+            self.update_limits(xlim, ylim, 0, col_index)
 
             print("\tPlotting row 2.")
-            self.plot(df=plot_df.loc[plot_df["{}_FDR".format(b_ct)] < 0.05, :],
+            xlim, ylim = self.plot(df=plot_df.loc[plot_df["{}_FDR".format(b_ct)] < 0.05, :],
                       fig=fig,
                       ax=axes[1, col_index],
                       x="OverallZScore_sn",
@@ -240,11 +277,11 @@ class main():
                       ylabel="cortex eQTL z-score",
                       title="",
                       color=color,
-                      include_ylabel=include_ylabel,
-                      padding=0.01)
+                      include_ylabel=include_ylabel)
+            self.update_limits(xlim, ylim, 1, col_index)
 
             print("\tPlotting row 3.")
-            self.plot(df=plot_df.loc[plot_df["{}_FDR".format(b_ct)] < 0.05, :],
+            xlim, ylim = self.plot(df=plot_df.loc[plot_df["{}_FDR".format(b_ct)] < 0.05, :],
                       fig=fig,
                       ax=axes[2, col_index],
                       x="OverallZScore_sn",
@@ -253,11 +290,11 @@ class main():
                       ylabel="log deconvolution beta",
                       title="",
                       color=color,
-                      include_ylabel=include_ylabel,
-                      padding=0.01)
+                      include_ylabel=include_ylabel)
+            self.update_limits(xlim, ylim, 2, col_index)
 
             print("\tPlotting row 4.")
-            self.plot(df=plot_df.loc[plot_df["FDR_sn"] < 0.05, :],
+            xlim, ylim = self.plot(df=plot_df.loc[plot_df["FDR_sn"] < 0.05, :],
                       fig=fig,
                       ax=axes[3, col_index],
                       x="OverallZScore_sn",
@@ -267,11 +304,11 @@ class main():
                       ylabel="cortex eQTL z-score",
                       title="",
                       color=color,
-                      include_ylabel=include_ylabel,
-                      padding=0.01)
+                      include_ylabel=include_ylabel)
+            self.update_limits(xlim, ylim, 3, col_index)
 
             print("\tPlotting row 5.")
-            self.plot(df=plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (plot_df["{}_FDR".format(b_ct)] < 0.05), :],
+            xlim, ylim = self.plot(df=plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (plot_df["{}_FDR".format(b_ct)] < 0.05), :],
                       fig=fig,
                       ax=axes[4, col_index],
                       x="OverallZScore_sn",
@@ -282,10 +319,11 @@ class main():
                       title="",
                       color=color,
                       ci=None,
-                      include_ylabel=include_ylabel,
-                      padding=0.1)
+                      include_ylabel=include_ylabel)
+            self.update_limits(xlim, ylim, 4, col_index)
 
-            test = plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (plot_df["{}_FDR".format(b_ct)] < 0.05), :]
+            test = plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (
+                    plot_df["{}_FDR".format(b_ct)] < 0.05), :]
             with pd.option_context('display.max_rows', None,
                                    'display.max_columns',
                                    None):
@@ -293,8 +331,20 @@ class main():
 
             print("")
 
+        for (m, n), ax in np.ndenumerate(axes):
+            (xmin, xmax) = self.shared_xlim[n]
+            (ymin, ymax) = self.shared_ylim[m]
+
+            xmargin = (xmax - xmin) * 0.05
+            ymargin = (ymax - ymin) * 0.05
+
+            ax.set_xlim(xmin - xmargin, xmax + xmargin)
+            ax.set_ylim(ymin - ymargin, ymax + ymargin)
+
         for extension in self.extensions:
-            fig.savefig(os.path.join(self.outdir, "compare_bulk_and_sn_zscores_with_decon_{}.{}".format(self.eqtl_type, extension)))
+            fig.savefig(os.path.join(self.outdir,
+                                     "compare_bulk_and_sn_zscores_with_decon_{}.{}".format(
+                                         self.eqtl_type, extension)))
         plt.close()
 
     @staticmethod
@@ -302,7 +352,7 @@ class main():
         s = series.copy()
         data = []
         for index, beta in s.T.iteritems():
-            data.append(np.log(abs(beta)+1) * np.sign(beta))
+            data.append(np.log(abs(beta) + 1) * np.sign(beta))
         new_df = pd.Series(data, index=s.index)
 
         return new_df
@@ -322,13 +372,13 @@ class main():
             else:
                 flip_mask.append(1)
         print("\t\t{} vs {}:\t-1 = {}\t1 = {}".format(df1_key, df2_key, count,
-                                                         len(flip_mask) - count))
+                                                      len(flip_mask) - count))
 
         return flip_mask
 
     def plot(self, df, fig, ax, x="x", y="y", facecolors=None, label=None,
              xlabel="", ylabel="", title="", color="#000000", ci=95,
-             include_ylabel=True, padding=0.05):
+             include_ylabel=True):
         sns.despine(fig=fig, ax=ax)
 
         if not include_ylabel:
@@ -348,8 +398,9 @@ class main():
             upper_quadrant = df.loc[(df[x] > 0) & (df[y] > 0), :]
             concordance = (100 / n) * (lower_quadrant.shape[0] + upper_quadrant.shape[0])
 
-            #coef, p = stats.spearmanr(subset[x], subset[y])
-            coef, p = stats.pearsonr(df[x], df[y])
+            if n > 1:
+                # coef, p = stats.spearmanr(subset[x], subset[y])
+                coef, p = stats.pearsonr(df[x], df[y])
 
             sns.regplot(x=x, y=y, data=df, ci=ci,
                         scatter_kws={'facecolors': facecolors,
@@ -357,15 +408,6 @@ class main():
                         line_kws={"color": color},
                         ax=ax
                         )
-
-            xlim = ax.get_xlim()
-            ylim = ax.get_ylim()
-
-            xmargin = (xlim[1] - xlim[0]) * padding
-            ymargin = (ylim[1] - ylim[0]) * padding
-
-            ax.set_xlim(xlim[0] - xmargin, xlim[1] + xmargin)
-            ax.set_ylim(ylim[0] - ymargin, ylim[1] + ymargin)
 
             if label is not None:
                 texts = []
@@ -396,6 +438,23 @@ class main():
                       fontweight='bold')
 
         ax.legend(handles=[mpatches.Patch(color=color, label="r = {:.2f}".format(coef))], loc=4)
+
+        return (df[x].min(), df[x].max()), (df[y].min(), df[y].max())
+
+    def update_limits(self, xlim, ylim, row, col):
+        row_ylim = self.shared_ylim[row]
+        if ylim[0] < row_ylim[0]:
+            row_ylim = (ylim[0], row_ylim[1])
+        if ylim[1] > row_ylim[1]:
+            row_ylim = (row_ylim[0], ylim[1])
+        self.shared_ylim[row] = row_ylim
+
+        col_xlim = self.shared_xlim[col]
+        if xlim[0] < col_xlim[0]:
+            col_xlim = (xlim[0], col_xlim[1])
+        if xlim[1] > col_xlim[1]:
+            col_xlim = (col_xlim[0], xlim[1])
+        self.shared_xlim[col] = col_xlim
 
 
 if __name__ == '__main__':

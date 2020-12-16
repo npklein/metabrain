@@ -1,7 +1,7 @@
 """
 File:         visualiser.py
 Created:      2020/06/29
-Last Changed: 2020/09/03
+Last Changed: 2020/12/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -347,6 +347,9 @@ class Visualiser:
     def create_regression(self, df, xlabel="", ylabel="", name=""):
         df['color'] = df['hue'].map(self.palette)
 
+        total_coef, total_p = stats.pearsonr(df["x"], df["y"])
+        total_coef_str = "r = {:.2f}".format(total_coef)
+
         sns.set(rc={'figure.figsize': (12, 9)})
         sns.set_style("ticks")
         fig, ax = plt.subplots()
@@ -377,7 +380,7 @@ class Visualiser:
         ax.text(0.5, 1.1, self.title,
                 fontsize=18, weight='bold', ha='center', va='bottom',
                 transform=ax.transAxes)
-        ax.text(0.5, 1.02, self.subtitle,
+        ax.text(0.5, 1.02, self.subtitle + ", r = {:.2f}".format(total_coef),
                 fontsize=14, alpha=0.75, ha='center', va='bottom',
                 transform=ax.transAxes)
 
