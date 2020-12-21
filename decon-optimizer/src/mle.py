@@ -1,7 +1,7 @@
 """
 File:         mle.py
 Created:      2020/11/17
-Last Changed: 2020/11/18
+Last Changed: 2020/12/21
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -24,6 +24,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 
 # Third party imports.
 import numpy as np
+import pandas as pd
 from scipy import stats
 import statsmodels.api as sm
 
@@ -36,12 +37,15 @@ class MaximumLiklihoodEstimator:
         self.X, self.y = self.construct_model_matrix(genotype,
                                                      cell_fractions,
                                                      expression)
-        self.samples = list(self.X.index)
         self.log = log
 
-    def construct_model_matrix(self, genotype, cell_fractions, y):
-        # Construct the X matrix.
-        X = genotype.T.merge(cell_fractions.to_frame(), left_index=True, right_index=True)
+        # Calculate distribution properties.
+        self.mu = self.y.mean()
+        self.sd = self.y.std()
+
+    @staticmethod
+    def construct_model_matrix(genotype, cell_fractions, y):
+        X = pd.concat([genotype, cell_fractions], axis=1)
         X.columns = ["genotype", "cell_fractions"]
         X.insert(loc=0, column='intercept', value=1)
         X["genotype_x_cell_fractions"] = X["genotype"] * X["cell_fractions"]
@@ -54,18 +58,31 @@ class MaximumLiklihoodEstimator:
     def get_n(self):
         return self.X.shape[0]
 
-    def get_maximum_log_likelihood(self, cell_fractions=None):
+    def contains_sample(self, sample):
+        return sample in self.X.index
+
+    def likelihood_optimization(self, value=None, sample=None):
+        return -1 * self.get_log_likelihood(sample=sample, value=value)
+
+    def get_log_likelihood(self, sample=None, value=None):
         X = self.X
-        if cell_fractions is not None:
-            X = self.change_sample_cell_fraction(cell_fractions=cell_fractions)
+        if sample is not None and value is not None:
+            X = self.change_sample_cell_fraction(sample=sample,
+                                                 value=value)
 
         y_hat = self.create_model(X, self.y)
-        mll = self.calculate_maximum_log_likelihood(self.y, y_hat)
+        ll = self.calculate_log_likelihood(y_hat)
 
-        return mll
+        return ll
+
+    def change_sample_cell_fraction(self, sample, value):
+        X = self.X.copy()
+        X.loc[sample, "cell_fractions"] = value
+        X.loc[sample, "genotype_x_cell_fractions"] = X.loc[sample, "genotype"] * value
+
+        return X
 
     def create_model(self, X, y):
-        # Perform the Ordinary least squares fit.
         ols = sm.OLS(y.values, X)
         try:
             ols_result = ols.fit()
@@ -74,28 +91,9 @@ class MaximumLiklihoodEstimator:
             self.log.error("\tError in OLS: {}".format(e))
             return np.nan
 
-    @staticmethod
-    def calculate_maximum_log_likelihood(y, y_hat):
-        mu = y.mean()
-        sd = y.std()
+    def calculate_log_likelihood(self, y_hat):
+        return -np.sum(stats.norm.logpdf(y_hat, self.mu, self.sd))
 
-        return np.log(stats.norm.pdf(y_hat, mu, sd)).sum()
-
-    def change_sample_cell_fraction(self, cell_fractions):
-        # Remove samples that have genotype of '-1'.
-        keep = []
-        for sample in cell_fractions.index:
-            if sample in self.X.index:
-                keep.append(sample)
-        cell_fractions = cell_fractions.loc[keep]
-
-        # Replace the cell fractions values for all samples that are part of
-        # the cohort of which we want to change 1 value.
-        X = self.X.copy()
-        X.loc[cell_fractions.index, "cell_fractions"] = cell_fractions
-        X.loc[cell_fractions.index, "genotype_x_cell_fractions"] = X.loc[cell_fractions.index, "genotype"] * cell_fractions
-
-        return X
 
 
 

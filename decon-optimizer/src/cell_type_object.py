@@ -1,7 +1,7 @@
 """
 File:         cell_type_object.py
 Created:      2020/11/16
-Last Changed: 2020/11/18
+Last Changed: 2020/12/21
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -21,6 +21,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Standard imports.
+import pickle
 import time
 
 # Third party imports.
@@ -29,6 +30,8 @@ import pandas as pd
 
 # Local application imports.
 from .mle import MaximumLiklihoodEstimator
+from .utilities import force_normal_series
+from scipy.optimize import fmin
 
 
 class CellType:
@@ -53,6 +56,7 @@ class CellType:
         #self.cf_s = self.get_combined_matrix(df="cf_df", type="normal")
         self.cf_s = self.get_combined_matrix(df="cf_df")
         print(self.cf_s)
+        self.norm_cf_s = force_normal_series(self.cf_s, as_series=True)
 
         # Create MLE objects.
         self.mle_objects = self.create_mle_objects()
@@ -143,8 +147,8 @@ class CellType:
         mle_objects = {}
         for index, row in self.eqtl_df.iterrows():
             key = row["SNPName"] + "_" + row["ProbeName"]
-            mle_objects[key] = MaximumLiklihoodEstimator(genotype=self.geno_df.iloc[[index], :].copy(),
-                                                         cell_fractions=self.cf_s,
+            mle_objects[key] = MaximumLiklihoodEstimator(genotype=self.geno_df.iloc[index, :].copy(),
+                                                         cell_fractions=self.norm_cf_s,
                                                          expression=self.expr_df.iloc[index, :].copy(),
                                                          log=self.log)
 
@@ -156,30 +160,21 @@ class CellType:
         start_time = int(time.time())
 
         original_cf = self.cf_s.loc[sample]
-        all_data = []
-        indices = []
-        columns = list(np.arange(0, 1.025, 0.025))
-        #columns = list(np.arange(-8, 8, 0.1))
+        data = []
         for i, (eqtl_name, mle_object) in enumerate(self.mle_objects.items()):
             if (i % 25 == 0) or (i == (self.n - 1)):
                 self.log.info("\t\tProcessing eQTL {} / {} [{:.2f}%]".format(i, self.n - 1, (100/(self.n - 1)) * i))
-            row_data = []
-            for cell_fraction in columns:
-                #original_cf, new_cf_s = self.calculate_new_normalized_cf_s(sample, cell_fraction)
-                new_cf_s = pd.Series([cell_fraction], index=[sample])
-                row_data.append(mle_object.get_maximum_log_likelihood(cell_fractions=new_cf_s))
+            if mle_object.contains_sample(sample):
+                optimum = fmin(mle_object.likelihood_optimization,
+                               x0=np.array([original_cf]),
+                               args=(sample, ),
+                               disp=0)
+                print(i, optimum)
+                data.append(optimum[0])
 
-            all_data.append(row_data)
-            indices.append(eqtl_name)
-
-        results = pd.DataFrame(all_data, index=indices, columns=columns)
-        results.dropna(axis=0, inplace=True)
+        results = pd.Series(data)
         print(results)
-        cell_frac_results = results.sum(axis=0)
-        print(cell_frac_results)
-
-        self.log.info("\tReal fraction: {:.4f}\tmll fraction: {:.4f}".format(original_cf,
-                                                                             cell_frac_results.idxmin()))
+        self.log.info("\tReal fraction: {:.4f}\tmml fraction: mean = {:.4f}  median = {:.4f}".format(original_cf, results.mean(), results.median()))
 
         run_time_min, run_time_sec = divmod(int(time.time()) - start_time, 60)
         self.log.info("\tFinished in {} minute(s) and "

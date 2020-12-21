@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/11/16
-Last Changed: 1010/11/18
+Last Changed: 1010/12/21
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -32,6 +32,7 @@ from .logger import Logger
 from .data_object import Data
 from .cohort_object import Cohort
 from .cell_type_object import CellType
+
 
 class Main:
     def __init__(self, eqtl_path, genotype_path, alleles_path, expression_path,
@@ -72,7 +73,7 @@ class Main:
 
         self.log.info("Loading data")
         eqtl_df = self.data.get_eqtl_df()
-        decon_df = self.data.get_deco_df()
+        decon_df = self.data.get_deco_fdr_df()
         cell_types = [x for x in decon_df.columns if x not in ["SNPName", "ProbeName"]]
         self.log.info("\tCell types: {}".format(cell_types))
 
@@ -128,6 +129,8 @@ class Main:
 
         self.log.info("Create cell type objects.")
         for cell_type in cell_types:
+            if cell_type != "CellMapNNLS_Neuron":
+                continue
             ct_mediated_eqtls = eqtl_signif_decon_df.loc[eqtl_signif_decon_df[cell_type] < self.alpha, :].copy()
             indices = ct_mediated_eqtls.index
             ct_mediated_eqtls.reset_index(drop=False, inplace=True)

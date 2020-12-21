@@ -1,7 +1,7 @@
 """
 File:         cohort_object.py
 Created:      2020/11/18
-Last Changed:
+Last Changed: 2020/12/21
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -23,10 +23,9 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 # Standard imports.
 
 # Third party imports.
-import pandas as pd
-from scipy import stats
 
 # Local application imports.
+from .utilities import force_normal, force_normal_series
 
 
 class Cohort:
@@ -52,7 +51,7 @@ class Cohort:
 
     def get_normal_geno_df(self):
         if self.normal_geno_df is None:
-            self.normal_geno_df = self.force_normal(self.geno_df)
+            self.normal_geno_df = force_normal(self.geno_df, log=self.log)
 
         return self.normal_geno_df
 
@@ -61,7 +60,7 @@ class Cohort:
 
     def get_normal_expr_df(self):
         if self.normal_expr_df is None:
-            self.normal_expr_df = self.force_normal(self.expr_df)
+            self.normal_expr_df = force_normal(self.expr_df, log=self.log)
 
         return self.normal_expr_df
 
@@ -70,44 +69,14 @@ class Cohort:
 
     def get_normal_cf_df(self):
         if self.normal_cf_df is None:
-            self.normal_cf_df = self.force_normal(self.cf_df, value_axis=0)
+            self.normal_cf_df = force_normal(self.cf_df, value_axis=0, log=self.log)
 
         return self.normal_cf_df
-
-    def force_normal(self, df, value_axis=1):
-        work_df = df.copy()
-
-        if value_axis == 0:
-            work_df = work_df.T
-        elif value_axis == 1:
-            pass
-        else:
-            self.log.error("Unexpected axis in force normal function.")
-            exit()
-
-        data = []
-        for index, row in work_df.iterrows():
-            data.append(self.force_normal_series(row))
-
-        normal_df = pd.DataFrame(data, index=work_df.index, columns=work_df.columns)
-
-        if value_axis == 0:
-            normal_df = normal_df.T
-
-        return normal_df
-
-    @staticmethod
-    def force_normal_series(s, as_series=False):
-        normal_s = stats.norm.ppf((s.rank(ascending=True) - 0.5) / s.size)
-        if as_series:
-            return pd.Series(normal_s, index=s.index)
-        else:
-            return normal_s
 
     def calculate_new_normalized_cf_s(self, sample, cell_type, new_value):
         tmp_cf_s = self.cf_df.loc[:, cell_type].copy()
         tmp_cf_s.loc[sample] = new_value
-        new_cf_s = self.force_normal_series(tmp_cf_s, as_series=True)
+        new_cf_s = force_normal_series(tmp_cf_s, as_series=True)
         new_cf_s.name = "new"
 
         original_normal_values = self.normal_cf_df.loc[:, cell_type].copy()
