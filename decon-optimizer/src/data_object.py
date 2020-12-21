@@ -1,7 +1,7 @@
 """
 File:         data_object.py
 Created:      2020/11/16
-Last Changed:
+Last Changed: 2020/12/21
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -25,6 +25,7 @@ import os
 
 # Third party imports.
 import pandas as pd
+from statsmodels.stats import multitest
 
 # Local application imports.
 
@@ -52,6 +53,7 @@ class Data:
         self.expr_df = None
         self.frac_df = None
         self.deco_df = None
+        self.deco_fdr_df = None
         self.saan_df = None
 
     def get_eqtl_df(self, skiprows=None, nrows=None):
@@ -72,7 +74,7 @@ class Data:
                                                skiprows=skiprows,
                                                nrows=nrows)
 
-            return self.geno_df
+        return self.geno_df
 
     def get_alle_df(self, skiprows=None, nrows=None):
         if self.alle_df is None:
@@ -82,7 +84,7 @@ class Data:
                                                skiprows=skiprows,
                                                nrows=nrows)
 
-            return self.alle_df
+        return self.alle_df
 
     def get_expr_df(self, skiprows=None, nrows=None):
         if self.expr_df is None:
@@ -92,7 +94,7 @@ class Data:
                                                skiprows=skiprows,
                                                nrows=nrows)
 
-            return self.expr_df
+        return self.expr_df
 
     def get_frac_df(self, skiprows=None, nrows=None):
         if self.frac_df is None:
@@ -102,17 +104,47 @@ class Data:
                                                skiprows=skiprows,
                                                nrows=nrows)
 
-            return self.frac_df
+        return self.frac_df
 
     def get_deco_df(self, skiprows=None, nrows=None):
         if self.deco_df is None:
-            self.deco_df = self.load_dataframe(self.deco_path,
-                                               header=0,
-                                               index_col=None,
-                                               skiprows=skiprows,
-                                               nrows=nrows)
+            deco_df = self.load_dataframe(self.deco_path,
+                                          header=0,
+                                          index_col=0,
+                                          skiprows=skiprows,
+                                          nrows=nrows)
 
-            return self.deco_df
+            # Split index into ProbeName and SNPName
+            probe_names = []
+            snp_names = []
+            for index in deco_df.index:
+                probe_names.append(index.split("_")[0])
+                snp_names.append("_".join(index.split("_")[1:]))
+            deco_df["ProbeName"] = probe_names
+            deco_df["SNPName"] = snp_names
+            deco_df.reset_index(drop=True, inplace=True)
+
+            self.deco_df = deco_df
+
+        return self.deco_df
+
+    def get_deco_fdr_df(self):
+        if self.deco_fdr_df is None:
+            if self.deco_df is None:
+                _ = self.get_deco_df()
+
+            data = []
+            indices = []
+            for colname, values in self.deco_df.T.iterrows():
+                if colname in ["ProbeName", "SNPName"]:
+                    data.append(values)
+                    indices.append(colname)
+                if colname.endswith("_pvalue"):
+                    data.append(multitest.multipletests(values, method='fdr_bh')[1])
+                    indices.append(colname.replace("_pvalue", ""))
+            self.deco_fdr_df = pd.DataFrame(data, index=indices, columns=self.deco_df.index).T
+
+        return self.deco_fdr_df
 
     def load_dataframe(self, inpath, header, index_col, sep="\t", low_memory=True,
                        nrows=None, skiprows=None):
