@@ -21,7 +21,9 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Standard imports.
-import pickle
+import multiprocessing as mp
+import queue
+import random
 import time
 
 # Third party imports.
@@ -31,12 +33,13 @@ import pandas as pd
 # Local application imports.
 from .mle import MaximumLiklihoodEstimator
 from .utilities import force_normal_series
+from .multiprocessor import MultiProcessor
 from scipy.optimize import fmin
 
 
 class CellType:
     def __init__(self, cell_type, eqtl_df, alleles_df, indices, cohorts,
-                 sample_order, log):
+                 sample_order, cores, max_end_time, log):
         # Safe arguments.
         self.cell_type = cell_type
         self.indices = list(eqtl_df.index)
@@ -46,6 +49,8 @@ class CellType:
         self.indices = indices
         self.cohorts = cohorts
         self.sample_order = sample_order
+        self.cores = cores
+        self.max_end_time = max_end_time
         self.log = log
 
         # Create other arguments.
@@ -54,12 +59,14 @@ class CellType:
         self.expr_df = self.get_combined_matrix(df="expr", type="normal")
         print(self.expr_df)
         #self.cf_s = self.get_combined_matrix(df="cf_df", type="normal")
-        self.cf_s = self.get_combined_matrix(df="cf_df")
+        self.cf_s = force_normal_series(self.get_combined_matrix(df="cf_df"), as_series=True)
         print(self.cf_s)
-        self.norm_cf_s = force_normal_series(self.cf_s, as_series=True)
 
         # Create MLE objects.
         self.mle_objects = self.create_mle_objects()
+
+        # Create empty variables.
+        self.mp = None
 
     def get_combined_matrix(self, df, type=None):
         combined_df = None
@@ -148,54 +155,109 @@ class CellType:
         for index, row in self.eqtl_df.iterrows():
             key = row["SNPName"] + "_" + row["ProbeName"]
             mle_objects[key] = MaximumLiklihoodEstimator(genotype=self.geno_df.iloc[index, :].copy(),
-                                                         cell_fractions=self.norm_cf_s,
+                                                         cell_fractions=self.cf_s,
                                                          expression=self.expr_df.iloc[index, :].copy(),
                                                          log=self.log)
 
         return mle_objects
 
-    def test_all_cell_fractions(self, sample):
-        self.log.info("\tTesting all possible cell type fractions for sample "
-                      "'{}'".format(sample))
+    def test_cell_fraction_range(self, poi=None):
+        self.log.info("\tTesting all possible cell type fractions")
+        results = self.perform_analysis(work_func=self.work_function_test_cell_fraction_range,
+                                        poi=poi)
+
+        return self.combine_dict_of_series_into_df(results)
+
+    def optimize_cell_fraction_per_eqtl(self, poi=None):
+        self.log.info("\tFinding maximum log likelihood cell fraction per eQTL")
+        results = self.perform_analysis(work_func=self.work_function_optimize_cell_fraction_per_eqtl,
+                                        poi=poi)
+
+        return self.combine_dict_of_series_into_df(results)
+
+    def optimize_cell_fraction(self, poi=None):
+        self.log.info("\tFinding maximum log likelihood cell fractions")
+        results = self.perform_analysis(work_func=self.work_function_optimize_cell_fraction,
+                                        poi=poi)
+        return pd.Series(results)
+
+    @staticmethod
+    def combine_dict_of_series_into_df(dict):
+        columns = []
+        series = []
+        for sample, s in dict.items():
+            columns.append(sample)
+            series.append(s)
+
+        df = pd.concat(series, axis=1)
+        df.columns = columns
+        df.index.name = "-"
+        return df
+
+    def perform_analysis(self, work_func, poi):
         start_time = int(time.time())
 
-        original_cf = self.cf_s.loc[sample]
-        data = []
-        for i, (eqtl_name, mle_object) in enumerate(self.mle_objects.items()):
-            if (i % 25 == 0) or (i == (self.n - 1)):
-                self.log.info("\t\tProcessing eQTL {} / {} [{:.2f}%]".format(i, self.n - 1, (100/(self.n - 1)) * i))
-            if mle_object.contains_sample(sample):
-                optimum = fmin(mle_object.likelihood_optimization,
-                               x0=np.array([original_cf]),
-                               args=(sample, ),
-                               disp=0)
-                print(i, optimum)
-                data.append(optimum[0])
+        if isinstance(poi, str):
+            (sample, output) = work_func(sample=poi)
+            results = {sample: output}
+        elif isinstance(poi, list):
+            if self.mp is None:
+                self.mp = MultiProcessor(samples=self.sample_order,
+                                         cores=self.cores,
+                                         max_end_time=self.max_end_time,
+                                         log=self.log)
+            results = self.mp.multiprocessing(work_func=work_func, samples=poi)
+        else:
+            if self.mp is None:
+                self.mp = MultiProcessor(samples=self.sample_order,
+                                         cores=self.cores,
+                                         max_end_time=self.max_end_time,
+                                         log=self.log)
+            results = self.mp.multiprocessing(work_func=work_func)
 
-        results = pd.Series(data)
-        print(results)
-        self.log.info("\tReal fraction: {:.4f}\tmml fraction: mean = {:.4f}  median = {:.4f}".format(original_cf, results.mean(), results.median()))
-
-        run_time_min, run_time_sec = divmod(int(time.time()) - start_time, 60)
-        self.log.info("\tFinished in {} minute(s) and "
-                      "{} second(s)".format(int(run_time_min),
-                                            int(run_time_sec)))
+        rt_min, rt_sec = divmod(int(time.time()) - start_time, 60)
+        self.log.info("\t\tfinished in {} minute(s) and "
+                      "{} second(s)".format(int(rt_min),
+                                            int(rt_sec)))
 
         return results
 
-    def calculate_new_normalized_cf_s(self, sample, new_value):
-        original_cf = None
-        new_cf_s = None
-        for cohort, cohort_object in self.cohorts.items():
-            if cohort_object.contains_sample(sample):
-                original_cf, new_cf_s = cohort_object.calculate_new_normalized_cf_s(sample, self.cell_type, new_value)
-                break
+    def work_function_test_cell_fraction_range(self, sample):
+        sample_sll = []
+        sample_indices = []
+        for cf in list(np.arange(-8, 8, 0.1)):
+            sample_sll.append(self.get_summed_log_likelihood(sample=sample,
+                                                             value=cf))
+            sample_indices.append(cf)
 
-        if original_cf is None or new_cf_s is None:
-            self.log.error("Could not find sample in cohorts.")
-            exit()
+        return pd.Series(sample_sll, index=sample_indices)
 
-        return original_cf, new_cf_s
+    def work_function_optimize_cell_fraction(self, sample):
+        xopt = fmin(self.likelihood_optimization,
+                    x0=np.array([self.cf_s.at[sample]]),
+                    args=(sample,),
+                    disp=False)
+        return xopt[0]
+
+    def work_function_optimize_cell_fraction_per_eqtl(self, sample):
+        ll_values = []
+        indices = []
+        for eqtl_name, mle_object in self.mle_objects.items():
+            if mle_object.contains_sample(sample):
+                ll_values.append(mle_object.optimize_cell_fraction(sample))
+                indices.append(eqtl_name)
+        return pd.Series(ll_values, index=indices)
+
+    def likelihood_optimization(self, value, sample):
+        return -1 * self.get_summed_log_likelihood(value=value, sample=sample)
+
+    def get_summed_log_likelihood(self, value, sample):
+        total_ll = 0
+        for mle_object in self.mle_objects.values():
+            if mle_object.contains_sample(sample):
+                total_ll += mle_object.get_log_likelihood(sample=sample,
+                                                          value=value)
+        return total_ll
 
     def print_info(self):
         self.log.info("\tCelltype: {}".format(self.cell_type))

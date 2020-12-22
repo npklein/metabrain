@@ -2,8 +2,8 @@
 
 """
 File:         test_mle.py
-Created:      2020/11/16
-Last Changed:
+Created:      2020/11/21
+Last Changed: 2020/11/22
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -171,7 +171,8 @@ class main():
 
         return content
 
-    def construct_model_matrix(self, genotype, cell_fractions, y):
+    @staticmethod
+    def construct_model_matrix(genotype, cell_fractions, y):
         # Construct the X matrix.
         X = pd.concat([genotype, cell_fractions], axis=1)
         X.columns = ["genotype", "cell_fractions"]
@@ -204,7 +205,8 @@ class main():
 
         return X
 
-    def create_model(self, X, y):
+    @staticmethod
+    def create_model(X, y):
         # Perform the Ordinary least squares fit.
         ols = sm.OLS(y.values, X)
         try:
