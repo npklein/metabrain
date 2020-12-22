@@ -107,13 +107,16 @@ class main():
         print("Loading data.")
         df = pd.read_pickle(self.data_path)
         print("\tData results data frame: {}".format(df.shape))
+        print(df)
 
-        self.plot_multiple(df)
+        # self.plot_multiple(df)
 
-        cell_frac_results = df.sum(axis=0).to_frame()
+        #cell_frac_results = df.sum(axis=0).to_frame()
+        cell_frac_results = df.to_frame()
         cell_frac_results.reset_index(drop=False, inplace=True)
         cell_frac_results.columns = ["x", "y"]
-        self.plot_single("HRA_01267", cell_frac_results)
+        print(cell_frac_results)
+        self.plot_single(self.sample, cell_frac_results)
 
     def plot_multiple(self, df, nrows=4, ncols=4):
         sns.set_style("ticks")
@@ -173,7 +176,7 @@ class main():
         if not include_y_axis:
             ylabel = ""
 
-        best_estimate = df.loc[df['y'].argmin(), 'x']
+        best_estimate = df.loc[df['y'].argmax(), 'x']
         ax.axvline(best_estimate, ls='--', color="#D7191C", alpha=0.3, zorder=-1)
 
         start_ct_frac_string = ""

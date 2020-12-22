@@ -1,7 +1,7 @@
 """
 File:         mle.py
 Created:      2020/11/17
-Last Changed: 2020/12/21
+Last Changed: 2020/12/22
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 import statsmodels.api as sm
+from scipy.optimize import fmin
 
 # Local application imports.
 
@@ -55,11 +56,15 @@ class MaximumLiklihoodEstimator:
 
         return X.loc[~mask, :], y.loc[~mask]
 
-    def get_n(self):
-        return self.X.shape[0]
-
     def contains_sample(self, sample):
         return sample in self.X.index
+
+    def optimize_cell_fraction(self, sample):
+        xopt = fmin(self.likelihood_optimization,
+                    x0=np.array([self.X.at[sample, "cell_fractions"]]),
+                    args=(sample,),
+                    disp=False)
+        return xopt[0]
 
     def likelihood_optimization(self, value=None, sample=None):
         return -1 * self.get_log_likelihood(sample=sample, value=value)
@@ -77,8 +82,8 @@ class MaximumLiklihoodEstimator:
 
     def change_sample_cell_fraction(self, sample, value):
         X = self.X.copy()
-        X.loc[sample, "cell_fractions"] = value
-        X.loc[sample, "genotype_x_cell_fractions"] = X.loc[sample, "genotype"] * value
+        X.at[sample, "cell_fractions"] = value
+        X.at[sample, "genotype_x_cell_fractions"] = X.at[sample, "genotype"] * value
 
         return X
 

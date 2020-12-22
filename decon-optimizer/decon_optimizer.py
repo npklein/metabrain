@@ -3,7 +3,7 @@
 """
 File:         decon_optimizer.py
 Created:      2020/11/16
-Last Changed: 2020/12/21
+Last Changed: 2020/12/22
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -23,7 +23,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 """
-./decon_optimizer.py -eq ../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ge ../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -al ../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/genotype_alleles.txt.gz -ex ../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/expression_table.txt.gz -cf ../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt -de ../2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -sa /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-02-03-phenotype-table/2020-09-04.brain.phenotypes.withReannotatedDiagnosis.txt -sid rnaseq_id -cid cohort -a 0.01
+./decon_optimizer.py -eq ../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ge ../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -al ../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/genotype_alleles.txt.gz -ex ../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/expression_table.txt.gz -cf ../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt -de ../2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -sa /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-02-03-phenotype-table/2020-09-04.brain.phenotypes.withReannotatedDiagnosis.txt -sid rnaseq_id -cid cohort -a 0.01 -c 4
 """
 
 # Standard imports.
@@ -63,7 +63,8 @@ if __name__ == '__main__':
     COHORT_ID = CLA.get_argument('cohort_id')
     ALPHA = CLA.get_argument('alpha')
     OUTDIR = CLA.get_argument('outdir')
-    EXTENSIONS = CLA.get_argument('extension')
+    CORES = CLA.get_argument('cores')
+    MAX_RUNTIME = CLA.get_argument('time')
 
     # Start the program.
     PROGRAM = Main(eqtl_path=EQTL_PATH,
@@ -77,5 +78,6 @@ if __name__ == '__main__':
                    cohort_id=COHORT_ID,
                    alpha=ALPHA,
                    outdir=OUTDIR,
-                   extensions=EXTENSIONS)
+                   cores=CORES,
+                   max_runtime=MAX_RUNTIME)
     PROGRAM.start()

@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/11/16
-Last Changed: 2020/12/21
+Last Changed: 2020/12/22
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -110,14 +110,20 @@ class CommandLineArguments:
                             required=False,
                             default="output",
                             help="The name of the output folder.")
-        parser.add_argument("-e",
-                            "--extension",
-                            nargs="+",
+        parser.add_argument("-c",
+                            "--cores",
+                            type=int,
+                            required=False,
+                            default=1,
+                            help="The number of cores to use. Default: 1.")
+        parser.add_argument("-t",
+                            "--time",
                             type=str,
-                            choices=["png", "pdf", "eps"],
-                            default=["png"],
-                            help="The figure file extension. "
-                                 "Default: 'png'.")
+                            required=False,
+                            choices=["SHORT", "MEDIUM", "LONG"],
+                            default="SHORT",
+                            help="The maximum runtime of the program. Default:"
+                                 " SHORT")
 
         return parser
 

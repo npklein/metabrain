@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/11/16
-Last Changed: 1010/12/21
+Last Changed: 1010/12/22
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -23,6 +23,8 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 # Standard imports.
 from __future__ import print_function
 from pathlib import Path
+from datetime import datetime
+import time
 import os
 
 # Third party imports.
@@ -37,10 +39,11 @@ from .cell_type_object import CellType
 class Main:
     def __init__(self, eqtl_path, genotype_path, alleles_path, expression_path,
                  cell_fractions_path, decon_path, sample_annotation_path,
-                 sample_id, cohort_id, alpha, outdir, extensions):
+                 sample_id, cohort_id, alpha, outdir, cores, max_runtime):
         # Safe arguments.
         self.alpha = alpha
-        self.extensions = extensions
+        self.cores = cores
+        self.max_end_time = int(time.time()) + self.time_to_sec(max_runtime)
 
         # Define the current directory.
         current_dir = str(Path(__file__).parent.parent)
@@ -66,6 +69,17 @@ class Main:
                          cohort_id=cohort_id,
                          log=self.log)
         self.data.print_arguments()
+
+    def time_to_sec(self, time):
+        if time == "SHORT":
+            return 21300
+        elif time == "MEDIUM":
+            return 86100
+        elif time == "LONG":
+            return 604500
+        else:
+            self.log.error("Unexpected input for -t / --time.")
+            exit()
 
     def start(self):
         self.log.info("Starting program.")
@@ -142,11 +156,26 @@ class Main:
                                         indices=indices,
                                         cohorts=cohorts,
                                         sample_order=sample_order,
+                                        cores=self.cores,
+                                        max_end_time=self.max_end_time,
                                         log=self.log)
 
             cell_type_object.print_info()
-            results = cell_type_object.test_all_cell_fractions(sample="HRA_01267")
-            results.to_pickle(os.path.join(self.outdir, "results2.pkl"))
+
+            poi = sample_order[0:100]
+
+            ocf = cell_type_object.optimize_cell_fraction(poi=poi)
+            print(ocf)
+            ocf.to_csv("ocf.txt.gz", compression="gzip", sep="\t", header=False, index=True)
+
+            ocfpe = cell_type_object.optimize_cell_fraction_per_eqtl(poi=poi)
+            print(ocfpe)
+            ocfpe.to_csv("ocfpe.txt.gz", compression="gzip", sep="\t", header=True, index=True)
+
+            cfr = cell_type_object.test_cell_fraction_range(poi=poi)
+            print(cfr)
+            cfr.to_csv("cfr.txt.gz", compression="gzip", sep="\t", header=True, index=True)
+
             exit()
 
         del alleles_df, eqtl_signif_decon_df
@@ -165,7 +194,8 @@ class Main:
     def print_arguments(self):
         self.log.info("Arguments:")
         self.log.info("  > Alpha: {}".format(self.alpha))
-        self.log.info("  > Extensions: {}".format(self.extensions))
+        self.log.info("  > Cores: {}".format(self.cores))
+        self.log.info("  > Max. end time: {}".format(datetime.fromtimestamp(self.max_end_time).strftime("%Y-%m-%d %H:%M:%S")))
         self.log.info("  > Output directory: {}".format(self.outdir))
         self.log.info("")
 
