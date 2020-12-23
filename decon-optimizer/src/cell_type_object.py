@@ -1,7 +1,7 @@
 """
 File:         cell_type_object.py
 Created:      2020/11/16
-Last Changed: 2020/12/21
+Last Changed: 2020/12/23
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -21,9 +21,6 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
 # Standard imports.
-import multiprocessing as mp
-import queue
-import random
 import time
 
 # Third party imports.
@@ -31,10 +28,10 @@ import numpy as np
 import pandas as pd
 
 # Local application imports.
-from .mle import MaximumLiklihoodEstimator
+from .eqtl_object import EQTLObject
 from .utilities import force_normal_series
 from .multiprocessor import MultiProcessor
-from scipy.optimize import fmin
+from scipy.optimize import minimize
 
 
 class CellType:
@@ -55,15 +52,12 @@ class CellType:
 
         # Create other arguments.
         self.geno_df = self.get_combined_matrix(df="geno")
-        print(self.geno_df)
         self.expr_df = self.get_combined_matrix(df="expr", type="normal")
-        print(self.expr_df)
         #self.cf_s = self.get_combined_matrix(df="cf_df", type="normal")
         self.cf_s = force_normal_series(self.get_combined_matrix(df="cf_df"), as_series=True)
-        print(self.cf_s)
 
         # Create MLE objects.
-        self.mle_objects = self.create_mle_objects()
+        self.eqtl_objects = self.create_eqtl_objects()
 
         # Create empty variables.
         self.mp = None
@@ -150,16 +144,16 @@ class CellType:
                            "type fractions file.")
             exit()
 
-    def create_mle_objects(self):
-        mle_objects = {}
+    def create_eqtl_objects(self):
+        eqtl_objects = {}
         for index, row in self.eqtl_df.iterrows():
             key = row["SNPName"] + "_" + row["ProbeName"]
-            mle_objects[key] = MaximumLiklihoodEstimator(genotype=self.geno_df.iloc[index, :].copy(),
-                                                         cell_fractions=self.cf_s,
-                                                         expression=self.expr_df.iloc[index, :].copy(),
-                                                         log=self.log)
+            eqtl_objects[key] = EQTLObject(genotype=self.geno_df.iloc[index, :].copy(),
+                                           cell_fractions=self.cf_s,
+                                           expression=self.expr_df.iloc[index, :].copy(),
+                                           log=self.log)
 
-        return mle_objects
+        return eqtl_objects
 
     def test_cell_fraction_range(self, poi=None):
         self.log.info("\tTesting all possible cell type fractions")
@@ -168,15 +162,21 @@ class CellType:
 
         return self.combine_dict_of_series_into_df(results)
 
+    def calculate_optimal_cell_fraction(self, poi=None):
+        self.log.info("\tCalculating optimal log likelihood cell fraction")
+        results = self.perform_analysis(work_func=self.work_function_calculate_optimal_cell_fraction,
+                                        poi=poi)
+        return pd.Series(results)
+
     def optimize_cell_fraction_per_eqtl(self, poi=None):
-        self.log.info("\tFinding maximum log likelihood cell fraction per eQTL")
+        self.log.info("\tOptimizing maximum log likelihood cell fraction per eQTL")
         results = self.perform_analysis(work_func=self.work_function_optimize_cell_fraction_per_eqtl,
                                         poi=poi)
 
         return self.combine_dict_of_series_into_df(results)
 
     def optimize_cell_fraction(self, poi=None):
-        self.log.info("\tFinding maximum log likelihood cell fractions")
+        self.log.info("\tOptimizing maximum log likelihood cell fractions")
         results = self.perform_analysis(work_func=self.work_function_optimize_cell_fraction,
                                         poi=poi)
         return pd.Series(results)
@@ -200,20 +200,20 @@ class CellType:
         if isinstance(poi, str):
             (sample, output) = work_func(sample=poi)
             results = {sample: output}
-        elif isinstance(poi, list):
+        elif isinstance(poi, list) or isinstance(poi, set) or isinstance(poi, pd.Series):
             if self.mp is None:
                 self.mp = MultiProcessor(samples=self.sample_order,
                                          cores=self.cores,
                                          max_end_time=self.max_end_time,
                                          log=self.log)
-            results = self.mp.multiprocessing(work_func=work_func, samples=poi)
+            results = self.mp.process(work_func=work_func, samples=poi)
         else:
             if self.mp is None:
                 self.mp = MultiProcessor(samples=self.sample_order,
                                          cores=self.cores,
                                          max_end_time=self.max_end_time,
                                          log=self.log)
-            results = self.mp.multiprocessing(work_func=work_func)
+            results = self.mp.process(work_func=work_func)
 
         rt_min, rt_sec = divmod(int(time.time()) - start_time, 60)
         self.log.info("\t\tfinished in {} minute(s) and "
@@ -232,19 +232,36 @@ class CellType:
 
         return pd.Series(sample_sll, index=sample_indices)
 
+    def work_function_calculate_optimal_cell_fraction(self, sample):
+        a = 0
+        b = 0
+        for eqtl_object in self.eqtl_objects.values():
+            if eqtl_object.contains_sample(sample):
+                coefs = eqtl_object.get_ll_coef_representation(sample)
+                a += coefs[0]
+                b += coefs[1]
+
+        return self.calculate_vertex_x_coordinate(a, b)
+
+    @staticmethod
+    def calculate_vertex_x_coordinate(a, b):
+        return -b / (2 * a)
+
     def work_function_optimize_cell_fraction(self, sample):
-        xopt = fmin(self.likelihood_optimization,
-                    x0=np.array([self.cf_s.at[sample]]),
-                    args=(sample,),
-                    disp=False)
-        return xopt[0]
+        res = minimize(self.likelihood_optimization,
+                       x0=np.array([self.cf_s.at[sample]]),
+                       method="Powell",
+                       args=(sample,),
+                       tol=0.001,
+                       options={"disp": False})
+        return res.x
 
     def work_function_optimize_cell_fraction_per_eqtl(self, sample):
         ll_values = []
         indices = []
-        for eqtl_name, mle_object in self.mle_objects.items():
-            if mle_object.contains_sample(sample):
-                ll_values.append(mle_object.optimize_cell_fraction(sample))
+        for eqtl_name, eqtl_object in self.eqtl_objects.items():
+            if eqtl_object.contains_sample(sample):
+                ll_values.append(eqtl_object.optimize_cell_fraction(sample))
                 indices.append(eqtl_name)
         return pd.Series(ll_values, index=indices)
 
@@ -253,10 +270,10 @@ class CellType:
 
     def get_summed_log_likelihood(self, value, sample):
         total_ll = 0
-        for mle_object in self.mle_objects.values():
-            if mle_object.contains_sample(sample):
-                total_ll += mle_object.get_log_likelihood(sample=sample,
-                                                          value=value)
+        for eqtl_object in self.eqtl_objects.values():
+            if eqtl_object.contains_sample(sample):
+                total_ll += eqtl_object.get_log_likelihood(sample=sample,
+                                                           value=value)
         return total_ll
 
     def print_info(self):

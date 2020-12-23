@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-File:         test_mle.py
+File:         test_eqtl_object.py
 Created:      2020/11/21
-Last Changed: 2020/11/22
+Last Changed: 2020/11/23
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -26,23 +26,23 @@ from __future__ import print_function
 from pathlib import Path
 import argparse
 import pickle
+import time
 import os
 
 # Third party imports.
 import numpy as np
 import pandas as pd
 from scipy import stats
-import statsmodels.api as sm
 import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from scipy.optimize import fmin
+from scipy.optimize import minimize
 
 # Local application imports.
 
 # Metadata
-__program__ = "Test MLE"
+__program__ = "Test eQTL Object"
 __author__ = "Martijn Vochteloo"
 __maintainer__ = "Martijn Vochteloo"
 __email__ = "m.vochteloo@rug.nl"
@@ -58,7 +58,7 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./test_mle.py -p ../pickle.pkl
+./test_eqtl_object.py -p ../pickle.pkl
 """
 
 
@@ -127,35 +127,78 @@ class main():
         self.mu = self.y.mean()
         self.sd = self.y.std()
 
-        print("### Step2 ###")
-        print("Find max fast.")
-        original_cf = cell_fractions.loc[self.sample]
-        optimum = fmin(self.likelihood_optimization,
-                       x0=np.array([original_cf]),
-                       args=(self.sample, ),
-                       disp=0)
-        print(optimum)
-
         print("### Step3 ###")
-        print("Calculate liklihood for different cell fractions.")
-        data = []
-        for cell_fraction in list(np.arange(-8, 8, 0.1)):
-            data.append(self.get_log_likelihood(sample=self.sample, value=cell_fraction))
+        print("Get the coef representation.")
+        # start_time = int(time.time())
+        # for i in range(327):
+        #     coefs = self.get_coef_representation()
+        # rt_min, rt_sec = divmod(int(time.time()) - start_time, 60)
+        # print("\t\tfinished in {} minute(s) and "
+        #       "{} second(s)".format(int(rt_min),
+        #                             int(rt_sec)))
 
-        results = pd.DataFrame(data, index=list(np.arange(-8, 8, 0.1)))
-        results.reset_index(inplace=True, drop=False)
-        results.columns = ["cf", "ll"]
-        print(results)
+        coefs = self.get_coef_representation()
+        vertex = self.calculate_vertex(coefs)
+        if vertex is not None:
+            print("\tVertex: ({:.4f}, {:.4f})".format(vertex[0], vertex[1]))
+        pol_func = np.poly1d(coefs)
 
         print("### Step4 ###")
+        print("Find max fast.")
+        original_cf = cell_fractions.loc[self.sample]
+        optimum = self.optimize_cell_fraction(self.sample)
+        print(optimum)
+
+        print("### Step5 ###")
+        print("Calculate liklihood for different cell fractions.")
+        data = []
+        x_values = list(np.arange(-8, 8, 0.1))
+        for cell_fraction in x_values:
+            real = self.get_log_likelihood(sample=self.sample, value=cell_fraction)
+            pred = pol_func(cell_fraction)
+            data.append([real, pred])
+
+        results = pd.DataFrame(data, index=x_values, columns=["ll", "func"])
+        results.index.name = "cf"
+        results.reset_index(inplace=True, drop=False)
+        results = results.melt(id_vars=["cf"])
+        print(results)
+
+        print("### Step6 ###")
         print("Plot.")
-        self.plot_single(df=results,
-                         x="cf",
-                         y="ll",
-                         xlabel="cell fraction (z-score)",
-                         ylabel="log likelihood",
-                         title=self.sample,
-                         start_ct_frac=original_cf)
+        self.line_plot(df=results,
+                       x="cf",
+                       y="value",
+                       hue="variable",
+                       xlabel="cell fraction (z-score)",
+                       ylabel="log likelihood",
+                       title=self.sample,
+                       start_ct_frac=original_cf)
+
+        print("### Step7 ###")
+        print("Plot the interaction model.")
+        inter_df = self.X.copy()
+        inter_df["hue"] = inter_df["genotype"].round(0)
+        inter_df = inter_df[["cell_fractions", "hue"]].merge(self.y, left_index=True, right_index=True)
+        print(inter_df)
+
+        sample_df = inter_df.loc[[self.sample], ["cell_fractions", self.y.name]]
+        sample_df.columns = ["cf", "expr"]
+        sample_df.index = ["original"]
+        sample_df.loc["calculation"] = [float(vertex[0]), sample_df.at["original", "expr"]]
+        sample_df.loc["optimization"] = [float(optimum), sample_df.at["original", "expr"]]
+        sample_df.reset_index(drop=False, inplace=True)
+        print(sample_df)
+
+        self.inter_plot(df=inter_df,
+                        sample_df=sample_df,
+                        x="cell_fractions",
+                        y=self.y.name,
+                        hue="hue",
+                        xlabel="cell fraction (z-score)",
+                        ylabel=self.y.name,
+                        title="{} interaction eQTL".format(self.sample),
+                        subtitle="genotype: {}".format(self.X.at[self.sample, "genotype"]))
 
     @staticmethod
     def load_pickle(filename):
@@ -184,42 +227,65 @@ class main():
 
         return X.loc[~mask, :], y.loc[~mask]
 
+    def optimize_cell_fraction(self, sample):
+        res = minimize(self.likelihood_optimization,
+                       x0=np.array([self.X.at[sample, "cell_fractions"]]),
+                       method="Powell",
+                       args=(sample,),
+                       tol=0.001,
+                       options={"disp": False})
+        return res.x
+
+    def get_derivate_func(self):
+        return np.polyder(np.poly1d(self.get_coef_representation()))
+
     def likelihood_optimization(self, value=None, sample=None):
         return -1 * self.get_log_likelihood(sample=sample, value=value)
 
+    def get_coef_representation(self):
+        # evaluate the parabula at degree+1 points. Since it is quadratic,
+        # pick three points.
+        x_values = [-8, self.X.at[self.sample, "cell_fractions"], 8]
+        y_values = []
+        for value in x_values:
+            y_values.append(self.get_log_likelihood(sample=self.sample,
+                                                    value=value))
+
+        return np.polyfit(x_values, y_values, 2)
+
+    @staticmethod
+    def calculate_vertex(coefs):
+        if len(coefs) != 3:
+            return None
+        return (-coefs[1] / (2 * coefs[0])), (((4 * coefs[0] * coefs[2]) - (coefs[1] * coefs[1])) / (4 * coefs[0]))
+
     def get_log_likelihood(self, sample=None, value=None):
         X = self.X
-        if sample is not None and value is not None:
+        if sample is not None and value is not None and value != X.at[sample, "cell_fractions"]:
             X = self.change_sample_cell_fraction(sample=sample,
                                                  value=value)
 
-        y_hat = self.create_model(X, self.y)
+        y_hat = self.fit_and_predict_mlr_model(X, self.y)
         ll = self.calculate_log_likelihood(y_hat)
 
         return ll
 
     def change_sample_cell_fraction(self, sample, value):
         X = self.X.copy()
-        X.loc[sample, "cell_fractions"] = value
-        X.loc[sample, "genotype_x_cell_fractions"] = X.loc[sample, "genotype"] * value
+        X.at[sample, "cell_fractions"] = value
+        X.at[sample, "genotype_x_cell_fractions"] = X.at[sample, "genotype"] * value
 
         return X
 
     @staticmethod
-    def create_model(X, y):
-        # Perform the Ordinary least squares fit.
-        ols = sm.OLS(y.values, X)
-        try:
-            ols_result = ols.fit()
-            return ols_result.predict(X)
-        except np.linalg.LinAlgError as e:
-            print("\tError in OLS: {}".format(e))
-            return np.nan
+    def fit_and_predict_mlr_model(X, y):
+        return X.dot(np.linalg.inv(X.T.dot(X)).dot(X.T).dot(y))
 
     def calculate_log_likelihood(self, y_hat):
         return -np.sum(stats.norm.logpdf(y_hat, self.mu, self.sd))
 
-    def plot_single(self, df, x="x", y="y", xlabel="", ylabel="", title="", start_ct_frac=None):
+
+    def line_plot(self, df, x="x", y="y", hue=None, xlabel="", ylabel="", title="", start_ct_frac=None):
         sns.set(rc={'figure.figsize': (10, 7.5)})
         sns.set_style("ticks")
         fig, ax = plt.subplots()
@@ -228,6 +294,7 @@ class main():
         sns.lineplot(data=df,
                      x=x,
                      y=y,
+                     hue=hue,
                      ax=ax)
 
         best_estimate = df.loc[df[y].argmax(), x]
@@ -254,6 +321,76 @@ class main():
                       fontweight='bold')
 
         fig.savefig(os.path.join(self.outdir, "{}_single_eQTL_mle_estimates.png".format(title)))
+        plt.close()
+
+    def inter_plot(self, df, sample_df, x="x", y="y", hue=None, xlabel="", ylabel="", title="", subtitle=""):
+        if hue is None:
+            return
+        if len(set(df[hue].unique()).symmetric_difference({0, 1, 2})) > 0:
+            return
+
+        colors = {0.0: "#E69F00",
+                  1.0: "#0072B2",
+                  2.0: "#D55E00"}
+
+        sns.set(rc={'figure.figsize': (12, 9)})
+        sns.set_style("ticks")
+        fig, ax = plt.subplots()
+        sns.despine(fig=fig, ax=ax)
+
+        label_pos = {0.0: 0.94, 1.0: 0.90, 2.0: 0.86}
+        for i, group in enumerate(df[hue].unique()):
+            subset = df.loc[df[hue] == group, :].copy()
+            color = colors[group]
+
+            coef_str = "NA"
+            p_str = "NA"
+            if len(subset.index) > 1:
+                # Regression.
+                coef, p = stats.spearmanr(subset[x], subset[y])
+                coef_str = "{:.2f}".format(coef)
+                p_str = "p = {:.2e}".format(p)
+
+                # Plot.
+                sns.regplot(x=x, y=y, data=subset,
+                            scatter_kws={'facecolors': color,
+                                         'linewidth': 0,
+                                         'alpha': 0.15},
+                            line_kws={"color": color, "alpha": 0.75},
+                            ax=ax
+                            )
+
+            # Add the text.
+            ax.annotate(
+                '{}: r = {} [{}]'.format(group, coef_str, p_str),
+                # xy=(0.03, 0.94 - ((i / 100) * 4)),
+                xy=(0.03, label_pos[group]),
+                xycoords=ax.transAxes,
+                color=color,
+                alpha=0.75,
+                fontsize=12,
+                fontweight='bold')
+
+        # Plot the sample start point.
+        sns.scatterplot(x="cf", y="expr", hue="index", data=sample_df)
+
+        ax.text(0.5, 1.06,
+                title,
+                fontsize=18, weight='bold', ha='center', va='bottom',
+                transform=ax.transAxes)
+        ax.text(0.5, 1.02,
+                subtitle,
+                fontsize=12, alpha=0.75, ha='center', va='bottom',
+                transform=ax.transAxes)
+
+        ax.set_ylabel(ylabel,
+                      fontsize=14,
+                      fontweight='bold')
+        ax.set_xlabel(xlabel,
+                      fontsize=14,
+                      fontweight='bold')
+
+        fig.savefig(os.path.join(self.outdir, "{}.png".format(title.replace(" ", "_"))))
         plt.close()
 
     def print_arguments(self):
