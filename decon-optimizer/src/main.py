@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/11/16
-Last Changed: 1010/12/22
+Last Changed: 1010/12/23
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -142,6 +142,7 @@ class Main:
         self.log.info("\tCreated {} cohort objects.".format(len(cohorts.keys())))
 
         self.log.info("Create cell type objects.")
+        cell_type_objects = {}
         for cell_type in cell_types:
             if cell_type != "CellMapNNLS_Neuron":
                 continue
@@ -161,22 +162,25 @@ class Main:
                                         log=self.log)
 
             cell_type_object.print_info()
+            cell_type_objects[cell_type] = cell_type_object
 
-            poi = sample_order[0:100]
+            poi = None
 
-            ocf = cell_type_object.optimize_cell_fraction(poi=poi)
-            print(ocf)
-            ocf.to_csv("ocf.txt.gz", compression="gzip", sep="\t", header=False, index=True)
+            # ocf = cell_type_object.optimize_cell_fraction(poi=poi)
+            # print(ocf)
+            # ocf.to_csv("ocf.txt.gz", compression="gzip", sep="\t", header=False, index=True)
 
-            ocfpe = cell_type_object.optimize_cell_fraction_per_eqtl(poi=poi)
-            print(ocfpe)
-            ocfpe.to_csv("ocfpe.txt.gz", compression="gzip", sep="\t", header=True, index=True)
+            cocf = cell_type_object.calculate_optimal_cell_fraction(poi=poi)
+            print(cocf)
+            cocf.to_csv("cocf.txt.gz", compression="gzip", sep="\t", header=False, index=True)
 
-            cfr = cell_type_object.test_cell_fraction_range(poi=poi)
-            print(cfr)
-            cfr.to_csv("cfr.txt.gz", compression="gzip", sep="\t", header=True, index=True)
-
-            exit()
+            # ocfpe = cell_type_object.optimize_cell_fraction_per_eqtl(poi=poi)
+            # print(ocfpe)
+            # ocfpe.to_csv("ocfpe.txt.gz", compression="gzip", sep="\t", header=True, index=True)
+            #
+            # cfr = cell_type_object.test_cell_fraction_range(poi=poi)
+            # print(cfr)
+            # cfr.to_csv("cfr.txt.gz", compression="gzip", sep="\t", header=True, index=True)
 
         del alleles_df, eqtl_signif_decon_df
 
