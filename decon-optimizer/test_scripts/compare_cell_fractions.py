@@ -57,7 +57,7 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./compare_cell_fractions.py -eq ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ge ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -al ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/genotype_alleles.txt.gz -ex ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/expression_table.txt.gz -cf ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt -ocf ../data/cocf.txt.gz -d ../../2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -i CYP24A1 -n 250 -a 0.01 -e png pdf
+./compare_cell_fractions.py -eq ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ge ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -al ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/genotype_alleles.txt.gz -ex ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/expression_table.txt.gz -cf ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt -ocf ../data/ocf.txt.gz -d ../../2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -i CYP24A1 -n 250 -a 0.01 -e png pdf
 """
 
 
