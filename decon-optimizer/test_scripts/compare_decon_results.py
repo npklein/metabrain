@@ -54,7 +54,7 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./compare_decon_results.py -d /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-10-decon-optimizer/2020-12-28-decon-eQTL/cis/cortex/decon_out/deconvolutionResults.csv -cf /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-10-decon-optimizer/data/cell_fractions.txt -ocn CellMapNNLS_Neuron -acn CellMapNNLS_Neuron_ocf 
+./compare_decon_results.py -od /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -ad /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-10-decon-optimizer/2020-12-28-decon-eQTL/cis/cortex/decon_out/deconvolutionResults.csv -ocf /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt -acf /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-10-decon-optimizer/data/cell_fractions.txt -ocn CellMapNNLS_Neuron -acn CellMapNNLS_Neuron_ocf 
 """
 
 
@@ -62,8 +62,10 @@ class main():
     def __init__(self):
         # Get the command line arguments.
         arguments = self.create_argument_parser()
-        self.decon_path = getattr(arguments, 'decon')
-        self.cf_path = getattr(arguments, 'cell_fractions')
+        self.ori_decon_path = getattr(arguments, 'ori_decon')
+        self.alt_decon_path = getattr(arguments, 'alt_decon')
+        self.ori_cf_path = getattr(arguments, 'ori_cell_fractions')
+        self.alt_cf_path = getattr(arguments, 'alt_cell_fractions')
         self.ori_colname = getattr(arguments, 'ori_colname')
         self.alt_colname = getattr(arguments, 'alt_colname')
 
@@ -84,26 +86,40 @@ class main():
                             version="{} {}".format(__program__,
                                                    __version__),
                             help="show program's version number and exit.")
-        parser.add_argument("-d",
-                            "--decon",
+        parser.add_argument("-od",
+                            "--ori_decon",
                             type=str,
                             required=True,
-                            help="The path to the deconvolution matrix.")
-        parser.add_argument("-cf",
-                            "--cell_fractions",
+                            help="The path to the original deconvolution "
+                                 "matrix.")
+        parser.add_argument("-ad",
+                            "--alt_decon",
                             type=str,
                             required=True,
-                            help="The path to the cell fractions matrix.")
+                            help="The path to the alternative deconvolution "
+                                 "matrix.")
+        parser.add_argument("-ocf",
+                            "--ori_cell_fractions",
+                            type=str,
+                            required=True,
+                            help="The path to the original cell fractions "
+                                 "matrix.")
+        parser.add_argument("-acf",
+                            "--alt_cell_fractions",
+                            type=str,
+                            required=True,
+                            help="The path to the alternative cell fractions "
+                                 "matrix.")
         parser.add_argument("-ocn",
                             "--ori_colname",
                             type=str,
                             required=True,
-                            help="The name of the original results columns.")
+                            help="The name of the original results column.")
         parser.add_argument("-acn",
                             "--alt_colname",
                             type=str,
                             required=True,
-                            help="The name of the alterative results columns.")
+                            help="The name of the alterative results column.")
 
         return parser.parse_args()
 
@@ -111,30 +127,39 @@ class main():
         self.print_arguments()
 
         print("### Step1 ###")
-        print("Loading data.")
-        decon_df = pd.read_csv(self.decon_path,
-                               sep="\t",
-                               header=0,
-                               index_col=0)
-        print("\tDeconvolution data frame: {}".format(decon_df.shape))
-        print(decon_df)
+        print("Loading original data.")
+        ori_decon_df, ori_cf_df = self.load_data(self.ori_decon_path, self.ori_cf_path, self.ori_colname)
+        print("Loading alternative data.")
+        alt_decon_df, alt_cf_df = self.load_data(self.alt_decon_path, self.alt_cf_path, self.alt_colname)
 
-        cf_df = pd.read_csv(self.cf_path,
-                            sep="\t",
-                            header=0,
-                            index_col=0)
-        print("\tCell fractions data frame: {}".format(cf_df.shape))
-        print(cf_df)
+        if self.ori_colname == self.alt_colname:
+            ori_decon_df.columns = ["ori_{}".format(x) for x in ori_decon_df.columns]
+            ori_cf_df.columns = ["ori_{}".format(x) for x in ori_cf_df.columns]
+            ori_decon_df.columns = ["alt_{}".format(x) for x in ori_decon_df.columns]
+            alt_cf_df.columns = ["alt_{}".format(x) for x in alt_cf_df.columns]
+
+            self.ori_colname = "ori_{}".format(self.ori_colname)
+            self.alt_colname = "alt_{}".format(self.alt_colname)
 
         print("### Step2 ###")
         print("Calculate BH-FDR.")
-        decon_fdr_df = self.bh_correct(decon_df)
-        for col in decon_fdr_df.columns:
-            n_signif = decon_fdr_df.loc[decon_fdr_df[col] < 0.05, ].shape[0]
-            print("\t'{}' has {} values < 0.05.".format(col, n_signif))
-        print(decon_fdr_df)
+        ori_decon_df["{}_FDR".format(self.ori_colname)] = multitest.multipletests(ori_decon_df.loc[:, "{}_pvalue".format(self.ori_colname)], method='fdr_bh')[1]
+        alt_decon_df["{}_FDR".format(self.alt_colname)] = multitest.multipletests(alt_decon_df.loc[:, "{}_pvalue".format(self.alt_colname)], method='fdr_bh')[1]
+
+        print("### Step3 ###")
+        print("Merge.")
+        decon_df = ori_decon_df.merge(alt_decon_df, left_index=True, right_index=True)
+        cf_df = ori_cf_df.merge(alt_cf_df, left_index=True, right_index=True)
+        print(decon_df)
+        print(cf_df)
 
         print("### Step4 ###")
+        print("Calculate significant hits.")
+        counts = decon_df[decon_df < 0.05].count()
+        for index in counts.index:
+            print("\t'{}' has {} values < 0.05.".format(index, counts[index]))
+
+        print("### Step5 ###")
         print("Plotting cell fractions.")
         self.scatterplot(data=cf_df,
                          x=self.ori_colname,
@@ -144,31 +169,42 @@ class main():
                          title="cell fraction comparison",
                          filename="cell_fraction_comparison")
 
-        print("### Step5 ###")
-        print("Plotting significant hits.")
-
-        print("### Step5 ###")
+        print("### Step6 ###")
         print("Plotting FDR values.")
-        self.scatterplot(data=decon_fdr_df,
-                         x=self.ori_colname,
-                         y=self.alt_colname,
+        self.scatterplot(data=decon_df,
+                         x="{}_FDR".format(self.ori_colname),
+                         y="{}_FDR".format(self.alt_colname),
                          xlabel="original cf - FDR",
                          ylabel="optimized cf - FDR",
                          title="deconvolution FDR comparison",
                          filename="decon_fdr_comparison")
 
-    @staticmethod
-    def bh_correct(pvalue_df):
-        df = pvalue_df.copy()
-        data = []
-        indices = []
-        for col in df.columns:
-            if col.endswith("_pvalue"):
-                data.append(multitest.multipletests(df.loc[:, col], method='fdr_bh')[1])
-                indices.append(col.replace("_pvalue", ""))
-        fdr_df = pd.DataFrame(data, index=indices, columns=df.index)
+        print("### Step7 ###")
+        print("Plotting significant hits.")
+        sign_decon_df = decon_df.loc[decon_df["{}_FDR".format(self.ori_colname)] < 0.01, :].copy()
+        self.scatterplot(data=sign_decon_df,
+                         x="{}_FDR".format(self.ori_colname),
+                         y="{}_FDR".format(self.alt_colname),
+                         xlabel="original cf - FDR",
+                         ylabel="optimized cf - FDR",
+                         title="deconvolution FDR comparison",
+                         filename="sign_decon_fdr_comparison")
 
-        return fdr_df.T
+    @staticmethod
+    def load_data(decon_path, cf_path, colname):
+        decon_df = pd.read_csv(decon_path,
+                               sep="\t",
+                               header=0,
+                               index_col=0)
+        print("\tDeconvolution data frame: {}".format(decon_df.shape))
+
+        cf_df = pd.read_csv(cf_path,
+                            sep="\t",
+                            header=0,
+                            index_col=0)
+        print("\tCell fractions data frame: {}".format(cf_df.shape))
+
+        return decon_df[["{}_pvalue".format(colname)]], cf_df[[colname]]
 
     def scatterplot(self, data, x="x", y="y", xlabel="", ylabel="", title="",
                     filename="image"):
@@ -200,8 +236,10 @@ class main():
 
     def print_arguments(self):
         print("Arguments:")
-        print("  > Decon path: {}".format(self.decon_path))
-        print("  > Cell type fraction path: {}".format(self.cf_path))
+        print("  > Original decon path: {}".format(self.ori_decon_path))
+        print("  > Alternative decon path: {}".format(self.alt_decon_path))
+        print("  > Original cell type fraction path: {}".format(self.ori_cf_path))
+        print("  > Alternative cell type fraction path: {}".format(self.alt_cf_path))
         print("  > Original column name: {}".format(self.ori_colname))
         print("  > Alternative column name: {}".format(self.alt_colname))
         print("  > Outpath {}".format(self.outdir))
