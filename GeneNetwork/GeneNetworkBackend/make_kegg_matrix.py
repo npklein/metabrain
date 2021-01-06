@@ -6,7 +6,7 @@ from pathlib import Path
 import gzip
 import argparse
 
-parser = argparse.ArgumentParser(description='Make REACTOME matrix.')
+parser = argparse.ArgumentParser(description='Make KEGG matrix.')
 parser.add_argument('ordered_gene_list',
                     help='List with ordered gene IDs')
 parser.add_argument('kegg_version',
