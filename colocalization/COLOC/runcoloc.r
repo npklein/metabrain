@@ -52,9 +52,9 @@ lapply(files,function(filename) {
 	data<-read.table(gzfile(filename),header=TRUE,sep="\t")
 	
 	beta1<-data$b1
-	varbeta1<-data$se1
+	varbeta1<-data$se1*data$se1
 	beta2<-data$b2
-	varbeta2<-data$se2
+	varbeta2<-data$se2*data$se2
 	
 	maf<-data$maf
 	
