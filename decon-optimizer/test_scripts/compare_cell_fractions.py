@@ -3,7 +3,7 @@
 """
 File:         compare_cell_fractions.py
 Created:      2020/11/24
-Last Changed:
+Last Changed: 2021/01/07
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -25,7 +25,6 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 from __future__ import print_function
 from pathlib import Path
 from colour import Color
-import itertools
 import argparse
 import os
 
@@ -35,9 +34,9 @@ import seaborn as sns
 import matplotlib
 from statsmodels.stats import multitest
 matplotlib.use('Agg')
-import upsetplot as up
 import matplotlib.pyplot as plt
 from scipy import stats
+from sklearn.linear_model import LinearRegression
 
 # Local application imports.
 
@@ -57,7 +56,7 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./compare_cell_fractions.py -eq ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ge ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -al ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/genotype_alleles.txt.gz -ex ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/expression_table.txt.gz -cf ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt -ocf ../data/ocf.txt.gz -d ../../2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -i CYP24A1 -n 250 -a 0.01 -e png pdf
+./compare_cell_fractions.py -eq ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ge ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -al ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/genotype_alleles.txt.gz -ex ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/expression_table.txt.gz -cf ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt -ocf /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-10-decon-optimizer/data/cell_fractions_norm_a005.txt -cfn CellMapNNLS_Neuron -ocfn CellMapNNLS_Neuron_ocf -d ../../2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -i CYP24A1 -n 250 -e png pdf
 """
 
 
@@ -70,7 +69,9 @@ class main():
         self.alleles_path = getattr(arguments, 'alleles')
         self.expr_path = getattr(arguments, 'expression')
         self.cf_path = getattr(arguments, 'cell_fractions')
+        self.cfn = getattr(arguments, 'cf_colname')
         self.ocf_path = getattr(arguments, 'optimized_cell_fractions')
+        self.ocfn = getattr(arguments, 'optimized_cf_colname')
         self.decon_path = getattr(arguments, 'decon')
         self.alpha = getattr(arguments, 'alpha')
         self.interest = getattr(arguments, 'interest')
@@ -140,12 +141,24 @@ class main():
                             required=True,
                             help="The path to the original cell_fractions "
                                  "matrix")
+        parser.add_argument("-cfn",
+                            "--cf_colname",
+                            type=str,
+                            required=True,
+                            help="The name of the original cell fraction "
+                                 "column.")
         parser.add_argument("-ocf",
                             "--optimized_cell_fractions",
                             type=str,
                             required=True,
                             help="The path to the optimized cell_fractions "
                                  "matrix")
+        parser.add_argument("-ocfn",
+                            "--optimized_cf_colname",
+                            type=str,
+                            required=True,
+                            help="The name of the optimized cell fraction "
+                                 "column.")
         parser.add_argument("-d",
                             "--decon",
                             type=str,
@@ -204,10 +217,10 @@ class main():
         eqtl_df, geno_df, alleles_df, expr_df, cf_df, ocf_df, decon_df = self.load()
         _, decon_fdr_df = self.bh_correct(decon_df)
 
-        # Get only overlapping cell types.
-        overlap = set(cf_df.columns).intersection(set(ocf_df.columns))
-        cf_df = cf_df[overlap]
-        ocf_df = ocf_df[overlap]
+        # Get the correct cell types.
+        cf_df = cf_df[[self.cfn]]
+        ocf_df = ocf_df[[self.ocfn]]
+        ocf_df.columns = [self.cfn]
 
         self.plot_eqtls(eqtl_df, geno_df, alleles_df, expr_df, cf_df, ocf_df, decon_fdr_df)
 
@@ -442,7 +455,19 @@ class main():
             return normal_s
 
     @staticmethod
-    def plot_inter_eqtl(df, ax, group_color_map, allele_map, x="x", y="y", xlabel="", ylabel="", title="", subtitle=""):
+    def plot_inter_eqtl(df, ax, group_color_map, allele_map, x="x", y="y", xlabel="", ylabel="", title=""):
+        print(df)
+
+        # Calculate R2.
+        tmp_X = df[["genotype", x]].copy()
+        tmp_X["genotype_x_{}".format(x)] = tmp_X["genotype"] * tmp_X[x]
+        tmp_X["intercept"] = 1
+        tmp_y = df[y].copy()
+        print(tmp_X)
+        print(tmp_y)
+
+        reg = LinearRegression().fit(tmp_X, tmp_y)
+        r2_score = reg.score(tmp_X, tmp_y)
 
         # calculate axis limits.
         ymin_value = df[y].min()
@@ -496,7 +521,7 @@ class main():
                 fontsize=18, weight='bold', ha='center', va='bottom',
                 transform=ax.transAxes)
         ax.text(0.5, 1.02,
-                subtitle,
+                "R2: {:.2f}".format(r2_score),
                 fontsize=12, alpha=0.75, ha='center', va='bottom',
                 transform=ax.transAxes)
 
@@ -514,7 +539,9 @@ class main():
         print("  > Alleles path: {}".format(self.alleles_path))
         print("  > Expression path: {}".format(self.expr_path))
         print("  > Cell fractions path: {}".format(self.cf_path))
+        print("  > Cell fractions colname: {}".format(self.cfn))
         print("  > Optimized cell fractions path: {}".format(self.ocf_path))
+        print("  > Optimized cell fractions colname: {}".format(self.ocfn))
         print("  > Deconvolution path: {}".format(self.decon_path))
         print("  > Alpha: {}".format(self.alpha))
         print("  > Interest: {}".format(self.interest))
