@@ -3,7 +3,7 @@
 """
 File:         compare_decon_results.py
 Created:      2020/12/28
-Last Changed:
+Last Changed: 2021/01/07
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -54,7 +54,11 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./compare_decon_results.py -od /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -ad /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-10-decon-optimizer/2020-12-28-decon-eQTL/cis/cortex/decon_out/deconvolutionResults.csv -ocf /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt -acf /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-10-decon-optimizer/data/cell_fractions.txt -ocn CellMapNNLS_Neuron -acn CellMapNNLS_Neuron_ocf 
+./compare_decon_results.py -od /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -ad /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-10-decon-optimizer/2020-12-28-decon-eQTL/cis/cortex/normalized/alpha005/decon_out/deconvolutionResults.csv -ocf /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt -acf /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-10-decon-optimizer/data/cell_fractions_norm_a005.txt -ocn CellMapNNLS_Neuron -acn CellMapNNLS_Neuron_ocf 
+
+./compare_decon_results.py -od /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -ad /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-10-decon-optimizer/2020-12-28-decon-eQTL/cis/cortex/normalized/alpha001/decon_out/deconvolutionResults.csv -ocf /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt -acf /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-10-decon-optimizer/data/cell_fractions_norm_a001.txt -ocn CellMapNNLS_Neuron -acn CellMapNNLS_Neuron_ocf 
+
+./compare_decon_results.py -od /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-10-decon-optimizer/2020-12-28-decon-eQTL/cis/cortex/normalized/alpha005/decon_out/deconvolutionResults.csv -ad /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-10-decon-optimizer/2020-12-28-decon-eQTL/cis/cortex/normalized/alpha001/decon_out/deconvolutionResults.csv -ocf /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-10-decon-optimizer/data/cell_fractions_norm_a005.txt -acf /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-10-decon-optimizer/data/cell_fractions_norm_a001.txt -ocn CellMapNNLS_Neuron_ocf -acn CellMapNNLS_Neuron_ocf 
 """
 
 
@@ -68,6 +72,7 @@ class main():
         self.alt_cf_path = getattr(arguments, 'alt_cell_fractions')
         self.ori_colname = getattr(arguments, 'ori_colname')
         self.alt_colname = getattr(arguments, 'alt_colname')
+        self.alpha = getattr(arguments, 'alpha')
 
         # Set variables.
         self.outdir = os.path.join(str(Path(__file__).parent.parent), 'plot')
@@ -120,6 +125,11 @@ class main():
                             type=str,
                             required=True,
                             help="The name of the alterative results column.")
+        parser.add_argument("-a",
+                            "--alpha",
+                            type=float,
+                            default=0.05,
+                            help="The significance cut-off.")
 
         return parser.parse_args()
 
@@ -135,7 +145,7 @@ class main():
         if self.ori_colname == self.alt_colname:
             ori_decon_df.columns = ["ori_{}".format(x) for x in ori_decon_df.columns]
             ori_cf_df.columns = ["ori_{}".format(x) for x in ori_cf_df.columns]
-            ori_decon_df.columns = ["alt_{}".format(x) for x in ori_decon_df.columns]
+            alt_decon_df.columns = ["alt_{}".format(x) for x in alt_decon_df.columns]
             alt_cf_df.columns = ["alt_{}".format(x) for x in alt_cf_df.columns]
 
             self.ori_colname = "ori_{}".format(self.ori_colname)
@@ -155,17 +165,22 @@ class main():
 
         print("### Step4 ###")
         print("Calculate significant hits.")
-        counts = decon_df[decon_df < 0.05].count()
-        for index in counts.index:
-            print("\t'{}' has {} values < 0.05.".format(index, counts[index]))
+        unique_hits = {}
+        for colname in [self.ori_colname, self.alt_colname]:
+            signif_df = decon_df.loc[decon_df["{}_FDR".format(colname)] < self.alpha, :].copy()
+            print("\t'{}' has {} FDR values < {}.".format(colname, signif_df.shape[0], self.alpha))
+            unique_hits[colname] = set(signif_df.index)
+        n = len(unique_hits[self.ori_colname])
+        overlap = len(unique_hits[self.ori_colname].intersection(unique_hits[self.alt_colname]))
+        print("\tOverlap: {}/{} [{:.2f}%]".format(overlap, n, (100 / n)*overlap))
 
         print("### Step5 ###")
         print("Plotting cell fractions.")
         self.scatterplot(data=cf_df,
                          x=self.ori_colname,
                          y=self.alt_colname,
-                         xlabel="original cell fraction",
-                         ylabel="optimized cell fraction",
+                         xlabel=self.ori_colname,
+                         ylabel=self.alt_colname,
                          title="cell fraction comparison",
                          filename="cell_fraction_comparison")
 
@@ -174,19 +189,19 @@ class main():
         self.scatterplot(data=decon_df,
                          x="{}_FDR".format(self.ori_colname),
                          y="{}_FDR".format(self.alt_colname),
-                         xlabel="original cf - FDR",
-                         ylabel="optimized cf - FDR",
+                         xlabel="{} - FDR".format(self.ori_colname),
+                         ylabel="{} - FDR".format(self.alt_colname),
                          title="deconvolution FDR comparison",
                          filename="decon_fdr_comparison")
 
         print("### Step7 ###")
         print("Plotting significant hits.")
-        sign_decon_df = decon_df.loc[decon_df["{}_FDR".format(self.ori_colname)] < 0.01, :].copy()
+        sign_decon_df = decon_df.loc[decon_df["{}_FDR".format(self.ori_colname)] < self.alpha, :].copy()
         self.scatterplot(data=sign_decon_df,
                          x="{}_FDR".format(self.ori_colname),
                          y="{}_FDR".format(self.alt_colname),
-                         xlabel="original cf - FDR",
-                         ylabel="optimized cf - FDR",
+                         xlabel="{} - FDR".format(self.ori_colname),
+                         ylabel="{} - FDR".format(self.alt_colname),
                          title="deconvolution FDR comparison",
                          filename="sign_decon_fdr_comparison")
 
@@ -203,6 +218,12 @@ class main():
                             header=0,
                             index_col=0)
         print("\tCell fractions data frame: {}".format(cf_df.shape))
+        print("\tmin: {:.2f}\tmax: {:.2f}\tmean: {:.2f}\t"
+              "median: {:.2f}\tsd: {:.2f}".format(cf_df[colname].min(),
+                                                  cf_df[colname].max(),
+                                                  cf_df[colname].mean(),
+                                                  cf_df[colname].median(),
+                                                  cf_df[colname].std()))
 
         return decon_df[["{}_pvalue".format(colname)]], cf_df[[colname]]
 
@@ -242,6 +263,7 @@ class main():
         print("  > Alternative cell type fraction path: {}".format(self.alt_cf_path))
         print("  > Original column name: {}".format(self.ori_colname))
         print("  > Alternative column name: {}".format(self.alt_colname))
+        print("  > Alpha {}".format(self.alpha))
         print("  > Outpath {}".format(self.outdir))
         print("")
 
