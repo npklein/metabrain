@@ -17,6 +17,7 @@ parse_samplesheet_files <- function(opt){
   UCLA_ASD <- parse_UCLA_ASD(opt)
   BipSeq <- parse_BipSeq(opt)
   CMC_HBCC <- parse_CMC_HBCC(opt)
+  
   merged_samplesheets <- data.frame()
   for(df in list(AMP_AD, Braineac, Brainseq, CMC, GTEx,
                  NABEC, TargetALS, ENA, BrainGVEx,UCLA_ASD,
@@ -25,6 +26,7 @@ parse_samplesheet_files <- function(opt){
   }
   # remove some columns that are easier to remove now than for specific cohorts
   merged_samplesheets <- harmonize_and_clean_col_values(merged_samplesheets)
+  
   return(merged_samplesheets)
 }
 
@@ -101,17 +103,19 @@ parse_Mayo <- function(opt){
 parse_MSBB <- function(opt){
   MSBB_genotype_id_map <- fread(paste0(opt$metadataDir,'/AMP_AD/MSBB_final.txt'),header=F)
   colnames(MSBB_genotype_id_map) <- c('rnaseq_id','genotype_id')
-
-  MSBB_covariates <- fread(paste0(opt$metadataDir,'/AMP_AD/MSBB_WES_covariatestsv'))
-  colnames(MSBB_covariates)[colnames(MSBB_covariates)=='Region'] <- 'BrodmannArea'
-  MSBB_covariates$barcode <- NULL
+  msbb_individuals <- read.csv(paste0(opt$metadataDir,'/AMP_AD/msbb_individual_metadata.csv'), header=T)
+  # WES data not necesarry
+  #MSBB_covariates <- fread(paste0(opt$metadataDir,'/AMP_AD/MSBB_WES_covariatestsv'))
+  #colnames(MSBB_covariates)[colnames(MSBB_covariates)=='Region'] <- 'BrodmannArea'
+  #MSBB_covariates$barcode <- NULL
   MSBB_update <- fread(paste0(opt$metadataDir,'/AMP_AD/MSBB_RNAseq_covariates_November2018Update.csv'))
   MSBB_update <- MSBB_update[MSBB_update$fileType=='fastq',]
   MSBB_update <- MSBB_update[,c('synapseId','fileName','barcode','fileType'):= NULL]
   
   if(nrow(MSBB_update) != length(unique(MSBB_update$sampleIdentifier))) { stop("should only be unique samples")}
   
-  MSBB_covariates <- rbind.fill(MSBB_update, MSBB_covariates)
+  #MSBB_covariates <- rbind.fill(MSBB_update, MSBB_covariates)
+  MSBB_covariates <- MSBB_update
   MSBB_covariates$BrodmannArea <- gsub('-','',MSBB_covariates$BrodmannArea)
   
   MSBB_covariates$genotype_id <- MSBB_covariates$individualIdentifier.inferred
@@ -119,9 +123,28 @@ parse_MSBB <- function(opt){
   MSBB_covariates[MSBB_covariates$genotype_id=='.',]$genotype_id <- MSBB_covariates[MSBB_covariates$genotype_id=='.',]$individualIdentifier
   
   MSBB_clinical <- fread(paste0(opt$metadataDir,'/AMP_AD/MSBB_clinical.csv'))
+  MSBB_clinical_w_individual <- merge(MSBB_clinical, msbb_individuals, by.x='individualIdentifier',by.y='individualID')
+  MSBB_clinical_w_individual <- MSBB_clinical_w_individual[!is.na(MSBB_clinical_w_individual$bbscor),]
+  v <- MSBB_clinical_w_individual$bbscore==MSBB_clinical_w_individual$Braak
+  n <- sum(v)
+  if(n != nrow(MSBB_clinical_w_individual)){
+    print(head(MSBB_clinical_w_individual))
+    print(paste(sum(MSBB_clinical_w_individual$bbscore==MSBB_clinical_w_individual$Braak), nrow(MSBB_clinical_w_individual)))
+    stop("MSBB_clinical_w_individual bbscore and braak not the samefor all rows")
+  }
+  MSBB_clinical_w_individual <- MSBB_clinical_w_individual[!is.na(MSBB_clinical_w_individual$CDR.x),]
+  v <- MSBB_clinical_w_individual$CDR.x==MSBB_clinical_w_individual$CDR.y
+  n <- sum(v)
+  if(n != nrow(MSBB_clinical_w_individual)){
+    print(head(MSBB_clinical_w_individual))
+    print(paste(sum(MSBB_clinical_w_individual$CDR.x==MSBB_clinical_w_individual$CDR.y), nrow(MSBB_clinical_w_individual)))
+    stop("MSBB_clinical_w_individual CDR.x and CDR.y not the samefor all rows")
+  }
     
   MSBB <- merge(MSBB_covariates, MSBB_clinical, by.x='genotype_id', by.y='individualIdentifier',all.x=T)
-  
+  # there is some double data in msbb_indivudas and msb_clnical, so select only some of the columns
+  msbb_individuals <- msbb_individuals[c("individualID","yearsEducation","ageDeath","causeDeath","mannerDeath","apoeGenotype","pH","diagnosis","diagnosisCriteria","CERAD")]
+  MSBB <- merge(MSBB_covariates, msbb_individuals, by.x='genotype_id', by.y='individualID', all.x=T)
   
   same_rows(MSBB, list(MSBB_covariates))
   colnames(MSBB)[colnames(MSBB)=='sampleIdentifier'] <- 'rnaseq_id'
@@ -133,19 +156,25 @@ parse_MSBB <- function(opt){
   # MSBB:   A=Asian, B=Black, H=Hispanic, W=White.
   # ROSMAP: 1= White, 2=Black, Negro, African-American,3 Native American, Indian,4 Eskimo,5 Aleut,6 Asian or Pacific Island,8 REFUSAL,9 DON'T KNOW
   # And add 10 for Hispanic
-  MSBB[MSBB$race=='A',]$race <- 6
-  MSBB[MSBB$race=='B',]$race <- 2
-  MSBB[MSBB$race=='H',]$race <- 10
-  MSBB[MSBB$race=='W',]$race <- 1
-
-  MSBB[MSBB$RACE.inferred=='A',]$RACE.inferred <- 6
-  MSBB[MSBB$RACE.inferred=='B',]$RACE.inferred <- 2
-  MSBB[MSBB$RACE.inferred=='H',]$RACE.inferred <- 10
-  MSBB[MSBB$RACE.inferred=='W',]$RACE.inferred <- 1
-  MSBB[MSBB$RACE.inferred=='.',]$RACE.inferred <- 9
+  MSBB$raceNumeric <- -1
+  MSBB[MSBB$race=='A',]$raceNumeric <- 6
+  MSBB[MSBB$race=='B',]$raceNumeric <- 2
+  MSBB[MSBB$race=='H',]$raceNumeric <- 10
+  MSBB[MSBB$race=='W',]$raceNumeric <- 1
+  MSBB$race <- MSBB$raceNumeric
+  MSBB$raceNumeric <-NULL
+  
+  MSBB$race.inferred.numeric <- -1
+  MSBB[MSBB$RACE.inferred=='A',]$race.inferred.numeric <- 6
+  MSBB[MSBB$RACE.inferred=='B',]$race.inferred.numeric <- 2
+  MSBB[MSBB$RACE.inferred=='H',]$race.inferred.numeric <- 10
+  MSBB[MSBB$RACE.inferred=='W',]$race.inferred.numeric <- 1
+  MSBB[MSBB$RACE.inferred=='.',]$race.inferred.numeric <- 9
+  MSBB$RACE.inferred <- MSBB$race.inferred.numeric
+  MSBB$race.inferred.numeric <- NULL
   
   # make the apoe genotype the same as in the other cohorts
-  MSBB$apoe_genotype <- NA
+  MSBB$apoe_genotype <- ''
   MSBB[!is.na(MSBB$Apo1),]$apoe_genotype <- paste0(MSBB[!is.na(MSBB$Apo1),]$Apo1,MSBB[!is.na(MSBB$Apo1),]$Apo2)
   MSBB$Apo1 <- NULL
   MSBB$Apo2 <- NULL
@@ -170,7 +199,7 @@ parse_amp_ad <- function(opt){
   AMP_AD <- rbind.fill(Mayo, ROSMAP)
   AMP_AD <- rbind.fill(AMP_AD, MSBB)
 
-  AMP_AD$SampleFull <- AMP_AD$rnaseq_id
+  AMP_AD$SampleFull <- paste0(AMP_AD$rnaseq_id,'_',AMP_AD$rnaseq_id)
   AMP_AD$MetaCohort <- 'AMP-AD'
   colnames(AMP_AD)[colnames(AMP_AD)=='PMI'] <- 'PMI_(in_hours)'
   AMP_AD$individualIdentifier <- NULL
@@ -212,10 +241,11 @@ parse_Brainseq <- function(opt){
   
   Brainseq$cohort <- 'Brainseq'
   Brainseq$MetaCohort <- 'Brainseq'
-  Brainseq$SampleFull <- paste0(Brainseq$individual_ID,'_',Brainseq$rnaseq_id)
   same_rows(Brainseq, list(Brainseq_phenotypes))
   
+  Brainseq$SampleFull <- paste0(Brainseq$BrNum,'_',Brainseq$RNum)
   Brainseq$rnaseq_id <- paste0(Brainseq$BrNum,'_',Brainseq$RNum)
+  
   Brainseq$RNum <- NULL
   setnames(Brainseq, old=c('BrNum','Region','Sex','PMI'),
            new=c('genotype_id','Brain_region','Gender','PMI_(in_hours)'))
@@ -313,6 +343,7 @@ parse_CMC <- function(opt){
   CMC[Cause_of_Death=='5',Cause_of_Death:='Other']
   CMC[Cause_of_Death=='-1',Cause_of_Death:=NA]
 
+  CMC <- CMC[!grepl('CMC_HBCC',CMC$rnaseq_id),]
   return(CMC)
 }
 
@@ -329,8 +360,7 @@ parse_GTEx <- function(opt){
                        'instrument_model','library_layout','library_selection',
                        'organism_part','histological_part',
                        'body_site_annotations'))
-  GTEx$MetaCohort <- 'GTEx'
-  GTEx$cohort <- 'GTEx'
+
   # protocol REF is in twice, so remove already 1
   GTEx$`Protocol REF` <- NULL
   GTEx$`Protocol REF` <- NULL
@@ -344,7 +374,8 @@ parse_GTEx <- function(opt){
   GTEx_sra_extra_samples <- fread(paste0(opt$metadataDir,'/GTEx/GTEx_SRA_samplesheet.txt'))
   GTEx <- rbind.fill(GTEx,GTEx_sra_extra_samples )
   GTEx$SampleFull <- paste0(GTEx$rnaseq_id,'_',GTEx$rnaseq_id)
-  
+  GTEx$MetaCohort <- 'GTEx'
+  GTEx$cohort <- 'GTEx'
   return(GTEx)
 }
 
@@ -352,7 +383,6 @@ parse_NABEC <- function(opt){
   NABEC <- fread(paste0(opt$metadataDir,'/NABEC/NABEC_phenotypes.txt'))
   NABEC$individualID <- gsub('_e$|-wes\\.2$|-wes\\.1$|-cage-fctx$|-rna-fctx\\.1$|-rna-fctx\\.2$|-rna-fctx\\.3$|-rna-fctx\\.4$|-mrna-fctx$|-wes.3$|-wes.4$|-wes.5$',
                              '',NABEC$Sample_Name)
-  
   NABEC_RNA <- NABEC[NABEC$Assay_Type=='RNA-Seq',]
 
   NABEC_WXS <- NABEC[NABEC$Assay_Type=='WXS',]
@@ -361,8 +391,12 @@ parse_NABEC <- function(opt){
   NABEC_WXS <- NABEC_WXS[,c('individualID','genotype_id')]
   
   
-
+  NABEC_RNA[grepl("SRR5589451",NABEC_RNA$Run),]
+  
   NABEC <- merge(NABEC_RNA, NABEC_WXS, by='individualID', all.x=T)
+  
+  NABEC <- NABEC[!duplicated(NABEC$Run),]
+  
   setnames(NABEC, old=c('sex','Center_Name','Run','LibraryLayout','LibrarySelection'), new=c('Gender','cohort','rnaseq_id','library_layout','library_selection'))
   # many columns are not informative, remove
   NABEC$SampleFull <- paste0(NABEC$BioSample,'_',NABEC$rnaseq_id)
@@ -371,6 +405,7 @@ parse_NABEC <- function(opt){
            'analyte_type','Sample_Name','SRA_Study','SRA_Sample','MBases','Library_Name','Experiment','BioProject',
            'BioSample','Assay_Type','ReleaseDate','LoadDate'):=NULL]
   NABEC$MetaCohort <- 'NABEC'
+  
   return(NABEC)
 }
 
@@ -437,6 +472,7 @@ parse_TargetALS <- function(opt){
   TargetALS$rnaseq_id <- gsub('-2','',TargetALS$rnaseq_id)
   TargetALS$rnaseq_id <- gsub('\\.2','',TargetALS$rnaseq_id)
   same_rows(TargetALS_metadata_rna, list(TargetALS))
+  TargetALS[TargetALS$SampleFull=='NEUDG727NTW_CGND_HRA_00431.2',]$rnaseq_id <- 'HRA_00431.1'
   return(TargetALS)
 }
 
@@ -477,24 +513,30 @@ parse_BrainGVEx <- function(opt){
   setnames(BrainGVEx, old=c('specimenID'), new=c('rnaseq_id'))
   BrainGVEx$cohort <- 'BrainGVEx'
   BrainGVEx$MetaCohort <- 'PsychEncode'
+  BrainGVEx$SampleFull <- paste0(BrainGVEx$individualID, '_', BrainGVEx$rnaseq_id)
   return(BrainGVEx)
 }
 
 parse_UCLA_ASD <- function(opt){
   rna_metadata <- fread(paste0(opt$metadataDir,'/UCLA_ASD/UCLA_R01MH094714_ASD_Metadata_RNAseq.csv'))
   rna_metadata <- rna_metadata[,c('Individual_ID','Sample_ID','BrodmannArea','BrainRegion','RIN','LibraryPrep','LibraryKit','RunType','SequencingPlatform')]
+  
   snp_metadata <- fread(paste0(opt$metadataDir,'/UCLA_ASD/KCL_R01MH094714_ASD_Metadata_Illumina450K.csv'))
   snp_metadata <- snp_metadata[,c('Individual_ID','BroadmannArea','BrainRegion','Diagnosis','Sex','Age','PMI','BrainBank','PrimaryCauseOfDeath','CETs','DNAmAge')]
   clinical_metadata <- fread(paste0(opt$metadataDir,'/UCLA_ASD/UCLA_R01MH094714_ASD_Metadata_Clinical_August2016Release.csv'))
   clinical_metadata <- clinical_metadata[,c('Grant','StudyName','Organism'):=NULL]
   
   
+  rna_metadata[rna_metadata$Sample_ID =='AN08161_vermis',]$Individual_ID
+  snp_metadata[snp_metadata$Individual_ID=='AN08161',]
   UCLA_ASD <- merge(rna_metadata, snp_metadata, by=c('Individual_ID','BrainRegion'),all.x=T,allow.cartesian=TRUE)
   UCLA_ASD <- merge(UCLA_ASD, clinical_metadata, by='Individual_ID',all.x=T,allow.cartesian=TRUE)
     
   setnames(UCLA_ASD, old=c('Individual_ID','Sample_ID'), new = c('individualID','rnaseq_id'))
   
   UCLA_ASD[,rnaseq_id := gsub('Sample_','',rnaseq_id)]
+  
+  
   UCLA_ASD[,rnaseq_id := gsub('_3rd','',rnaseq_id)]
   UCLA_ASD[,rnaseq_id := gsub('_2nd','',rnaseq_id)]
   UCLA_ASD[,rnaseq_id := gsub('_1st','',rnaseq_id)]
@@ -511,6 +553,11 @@ parse_UCLA_ASD <- function(opt){
   same_rows(rna_metadata, list(UCLA_ASD))
   UCLA_ASD$cohort <- 'UCLA_ASD'
   UCLA_ASD$MetaCohort <- 'PsychEncode'
+  UCLA_ASD$SampleFull <- paste0(UCLA_ASD$individualID, '_', UCLA_ASD$rnaseq_id)
+  
+  UCLA_ASD <- UCLA_ASD[!duplicated(UCLA_ASD$rnaseq_id),]
+  
+  
   return(UCLA_ASD)
 }
 
@@ -529,7 +576,7 @@ parse_BipSeq <- function(opt){
   setnames(BipSeq, old=c('individualID','specimenID'), new = c('individualID','rnaseq_id'))
   BipSeq$cohort <- 'BipSeq'
   BipSeq$MetaCohort <- 'PsychEncode'
-  
+  BipSeq$SampleFull <- paste0(BipSeq$individualID, '_', BipSeq$rnaseq_id)
   return(BipSeq)
 }
 
@@ -541,7 +588,7 @@ parse_CMC_HBCC <- function(opt){
   CMC_HBCC_rnaseq$genotype_id <- CMC_HBCC_rnaseq$individualID
   CMC_HBCC_rnaseq$cohort <- 'CMC_HBCC'
   CMC_HBCC_rnaseq$MetaCohort <- 'PsychEncode'
-  
+  CMC_HBCC_rnaseq$SampleFull <- paste0(CMC_HBCC_rnaseq$individualID, '_', CMC_HBCC_rnaseq$rnaseq_id)
   return(CMC_HBCC_rnaseq)
 }
 

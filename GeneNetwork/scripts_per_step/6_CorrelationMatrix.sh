@@ -1,4 +1,3 @@
-
 # This script runs 6th step to making GeneNetwork: Make the correlation matrix
 
 set -e
@@ -7,9 +6,11 @@ set -u
 project_dir=
 outfile=
 config_templates=
-jardir=
+github_dir=
 expression_file=
 threads=
+mem=
+qos=
 main(){
     module load Java/1.8.0_144-unlimited_JCE
     parse_commandline "$@"
@@ -28,11 +29,12 @@ main(){
 #SBATCH --error=$(dirname $outfile)/correlation.err
 #SBATCH --time=05:59:59
 #SBATCH --cpus-per-task $threads
-#SBATCH --mem 100gb
+#SBATCH --mem ${mem}b
 #SBATCH --nodes 1
+#SBATCH --qos=$qos
 
 ml Java;
-java -Xmx90g -Xms90g -jar $jardir/RunV13.jar $project_dir/configs/6_CorrelationMatrix.json
+java -Xmx$mem -Xms$mem -jar $github_dir/RunV13.jar $project_dir/configs/6_CorrelationMatrix.json
 
 if [ $? -eq 0 ];
 then
@@ -54,6 +56,10 @@ fi
     while [ ! -f $(dirname $outfile)/correlation.finished ]
     do
       echo "$(dirname $outfile)/correlation.finished does not exist yet"
+      echo "tail of the .out and .err file of the job:"
+      tail $(dirname $outfile)/correlation.out
+      tail $(dirname $outfile)/correlation.err
+
       echo "sleep 2 minutes before checking again"
       sleep 120
     done
@@ -69,7 +75,7 @@ fi
 usage(){
     # print the usage of the programme
     programname=$0
-    echo "usage: $programname -e expression_file -p project_directory -o output_dir"
+    echo "usage: $programname -e expression_file -p project_directory -o output_dir -j jar_dir -t threads -mem memory -qos qos"
     echo "  -e      Expression file to remove duplciates from"
     echo "  -p      Base of the project_dir where config files will be written"
     echo "  -o      Output file that will be written"
@@ -106,8 +112,14 @@ parse_commandline(){
             -t | --threads )            shift
                                         threads=$1
                                         ;;
-            -j | --jardir )             shift
-                                        jardir=$1
+            -g | --github_dir )         shift
+                                        github_dir=$1
+                                        ;;
+            -m | --mem )                shift
+                                        mem=$1
+                                        ;;
+            -q | --qos )                shift
+                                        qos=$1
                                         ;;
             -h | --help )               usage
                                         exit
@@ -138,9 +150,9 @@ parse_commandline(){
         usage
         exit 1;
     fi
-    if [ -z "$jardir" ];
+    if [ -z "$github_dir" ];
     then
-        echo "ERROR: -j/--jardir not set!"
+        echo "ERROR: -g/--github_dir not set!"
         usage
         exit 1;
     fi
@@ -153,6 +165,18 @@ parse_commandline(){
     if [ -z "$config_templates" ];
     then
         echo "ERROR: -c/--config_templates not set!"
+        usage
+        exit 1;
+    fi
+    if [ -z "$mem" ];
+    then
+        echo "ERROR: -m/--mem not set!"
+        usage
+        exit 1;
+    fi
+    if [ -z "$qos" ];
+    then
+        echo "ERROR: -q/--qos not set!"
         usage
         exit 1;
     fi

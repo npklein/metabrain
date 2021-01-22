@@ -53,7 +53,9 @@ number_of_transcript = 0
 with gzip.open(args.out_prefix+feature_type+'.txt.gz','wt') as out:
     x = 0
     out.write('-')
-    for f in glob.iglob(featureCount_directory+'/**/*txt.gz', recursive=True):
+    files = [x for x in glob.iglob(featureCount_directory+'/**/*txt.gz', recursive=True)]
+    print(len(files), 'files found. start processing')
+    for f in files:
         number_of_transcript_written = 0
         # open the first file to get a list of features
 

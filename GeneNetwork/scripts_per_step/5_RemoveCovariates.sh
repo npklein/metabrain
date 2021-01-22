@@ -7,23 +7,27 @@ set -u
 project_dir=
 outdir=
 config_templates=
-jardir=
 expression_file=
 covar_matrix=
 threads=
+github_dir=
+mem=
 main(){
     module load Java/1.8.0_144-unlimited_JCE
+    module load Python
     parse_commandline "$@"
 
     rsync -vP $config_templates/5_RemoveCovariates.json $project_dir/configs/
-
+    head -n1 $expression_file | sed -e 's;\t;\n;g' > $outdir/samples.txt
+    subset_covar="$outdir/$(basename ${covar_matrix%.*}).subset.txt"
+    python $github_dir/table_scripts/subset_covar_matrix_remove_noVariance_rows.py $covar_matrix $outdir/samples.txt $subset_covar
     sed -i "s;REPLACEEXPRFILE;$expression_file;" $project_dir/configs/5_RemoveCovariates.json
     sed -i "s;REPLACEOUTDIR;$outdir/;" $project_dir/configs/5_RemoveCovariates.json
-    sed -i "s;REPLCACECOVARMATRIX;$covar_matrix;" $project_dir/configs/5_RemoveCovariates.json
+    sed -i "s;REPLCACECOVARMATRIX;$subset_covar;" $project_dir/configs/5_RemoveCovariates.json
 
     mkdir -p $(dirname $outdir)
 
-    java -jar $jardir/RunV13.jar $project_dir/configs/5_RemoveCovariates.json
+    java -Xmx$mem -Xms$mem -jar $github_dir//RunV13.jar $project_dir/configs/5_RemoveCovariates.json
 
 
 }
@@ -31,13 +35,14 @@ main(){
 usage(){
     # print the usage of the programme
     programname=$0
-    echo "usage: $programname -e expression_file -p project_directory -o output_dir"
+    echo "usage: $programname -e expression_file -p project_directory -o output_dir -c config_dir -g github_dir -z covariance matrix -m memory"
     echo "  -e      Expression file to remove duplciates from"
     echo "  -p      Base of the project_dir where config files will be written"
     echo "  -o      Output directory that will be written"
     echo "  -c      Dir with configuration template files"
-    echo "  -j      Location of V13 jar file"
+    echo "  -g      Github dir where RunV13.jar is located"
     echo "  -z      Covariance matrix to regress out"
+    echo "  -m      Memory to reserve"
     echo "  -h      display help"
     exit 1
 }
@@ -65,11 +70,14 @@ parse_commandline(){
             -c | --config_templates )   shift
                                         config_templates=$1
                                         ;;
-            -j | --jardir )             shift
-                                        jardir=$1
+            -g | --github_dir )         shift
+                                        github_dir=$1
                                         ;;
             -z | --covar_matrix )       shift
                                         covar_matrix=$1
+                                        ;;
+            -m | --mem )                shift
+                                        mem=$1
                                         ;;
             -h | --help )               usage
                                         exit
@@ -100,9 +108,9 @@ parse_commandline(){
         usage
         exit 1;
     fi
-    if [ -z "$jardir" ];
+    if [ -z "$github_dir" ];
     then
-        echo "ERROR: -j/--jardir not set!"
+        echo "ERROR: -g/--github_dir not set!"
         usage
         exit 1;
     fi
@@ -115,6 +123,12 @@ parse_commandline(){
     if [ -z "$covar_matrix" ];
     then
         echo "ERROR: -z/--covar_matrix not set!"
+        usage
+        exit 1;
+    fi
+    if [ -z "$mem" ];
+    then
+        echo "ERROR: -m/--mem not set!"
         usage
         exit 1;
     fi

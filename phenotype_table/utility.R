@@ -107,7 +107,6 @@ change_rows_if_na <- function(dt, column_to_keep, column_to_merge_into, overwrit
   }
   # pH column had trouble with converting implicitly when running on the cluster (works without this if statement on my laptop)
   # Because it will warn about type conversion. Therefore, set warning lower for this loop
-  dt[,(column_to_keep)] <- ""
   for(column_name in column_to_merge_into){
     # Get the rows where column_to_keep == NA
     rows_na <- which(is.na(dt[,..column_to_keep]) | dt[,..column_to_keep]=='')
@@ -199,14 +198,14 @@ harmonize_and_clean_col_values <- function(merged_samplesheets){
     merged_samplesheets_fixed_columns <-   merged_samplesheets_fixed_columns[!merged_samplesheets_fixed_columns$rnaseq_id==T,]
     
     #### For some is reported Gender, others Sex, or other names. Merge into one column and then harmonize ####
-    change_rows_if_na(merged_samplesheets_fixed_columns,'Gender',c("Sex","Sequenced Sex","Sex Call","Sex Genotype",
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns,'Gender',c("Sex","Sequenced Sex","Sex Call","Sex Genotype",
                                                                    "Genomic Sex","Sex (Sequenced)", "Sex.x","Sex.y",
                                                                    "SEX.inferred"),overwrite=T)
     merged_samplesheets_fixed_columns[Gender=='female' | Gender == 'Female', Gender := 'F']
     merged_samplesheets_fixed_columns[Gender=='male' | Gender == 'Male', Gender := 'M']
     merged_samplesheets_fixed_columns[Gender=='?', Gender := NA]
     ##### fix the tissue/brainregion ####
-    change_rows_if_na(merged_samplesheets_fixed_columns,'BrodmannArea',c("Brodmann_Area","BroadmannArea","brodmannArea"))
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns,'BrodmannArea',c("Brodmann_Area","BroadmannArea","brodmannArea"))
     merged_samplesheets_fixed_columns <- fix_broadman_area(merged_samplesheets_fixed_columns)
     merged_samplesheets_fixed_columns$SpecificBrainRegion <- ''
     merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'SpecificBrainRegion',
@@ -248,31 +247,31 @@ harmonize_and_clean_col_values <- function(merged_samplesheets){
     merged_samplesheets_fixed_columns[,`Subject Group Subcategory` := NULL]
     ######
     
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'libraryPrep',c('LibraryPrep','LibraryKit','Prep'),overwrite=T)
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'libraryPrep',c('LibraryPrep','LibraryKit','Prep'),overwrite=T)
     merged_samplesheets_fixed_columns[grepl('Not Available|Unknown|?', pH), pH := NA]
     merged_samplesheets_fixed_columns[,pH := as.numeric(pH)]
 
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'pH',c('pH.x','pH.y'),overwrite=T)
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'pH',c('pH.x','pH.y'),overwrite=T)
     merged_samplesheets_fixed_columns[grepl('?', `PMI_(in_hours)`), `PMI_(in_hours)` := NA]
     merged_samplesheets_fixed_columns[,`PMI_(in_hours)` := as.numeric(`PMI_(in_hours)`)]
     merged_samplesheets_fixed_columns[grepl('Not Applicable|Unknown|?', `Post Mortem Interval in Hours`), `Post Mortem Interval in Hours` := NA]
     merged_samplesheets_fixed_columns[,`Post Mortem Interval in Hours` := as.numeric(`Post Mortem Interval in Hours`)]
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'PMI_(in_hours)',c('PMI.x','PMI.y','PMI','Post Mortem Interval in Hours'),overwrite=T)
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'PMI_(in_hours)',c('PMI.x','PMI.y','PMI','Post Mortem Interval in Hours'),overwrite=T)
     
     merged_samplesheets_fixed_columns[grepl('Not Available|Unknown|?', RIN), RIN := NA]
     merged_samplesheets_fixed_columns[, RIN := as.numeric(RIN)]
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'RIN',c('RIN.x','RIN.y'), overwrite=T)
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'RIN',c('RIN.x','RIN.y'), overwrite=T)
     
     #### library layout ####
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'library_layout',c('runType','RunType'))
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'library_layout',c('runType','RunType'))
     merged_samplesheets_fixed_columns[library_layout=='PAIRED' | library_layout == 'pairedEnd', library_layout := 'paired-end']
     merged_samplesheets_fixed_columns[library_layout=='SINGLE',library_layout := 'single-end']
     
     
     
     ##### death #####
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'AgeDeath',c('age_death','AOD'))
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'CauseDeath',c('MannerOfDeath','Cause of Death','Manner_Of_Death','Cause_of_Death','CODE'))
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'AgeDeath',c('age_death','AOD'))
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'CauseDeath',c('MannerOfDeath','Cause of Death','Manner_Of_Death','Cause_of_Death','CODE'))
     merged_samplesheets_fixed_columns[grepl('UNDETERMINED|Unknown|UNKOWN|Yes', CauseDeath), CauseDeath := NA ]
     merged_samplesheets_fixed_columns[CauseDeath == 'ASPHYXIA', CauseDeath := 'Asphyxia' ]
     merged_samplesheets_fixed_columns[CauseDeath == 'ASTHMA', CauseDeath := 'Asthma' ]
@@ -280,27 +279,27 @@ harmonize_and_clean_col_values <- function(merged_samplesheets){
     merged_samplesheets_fixed_columns[CauseDeath == 'Complications fro mALS' | CauseDeath == 'Complications from ALS', CauseDeath := 'Complications of ALS' ]
     
     ##### brain weight and other physical phenotypes ####
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'Brain_Weight_(in_grams)',c('Brain Weight (gram)','BrainWeight'))
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'Brain_Weight_(in_grams)',c('Brain Weight (gram)','BrainWeight'))
     merged_samplesheets_fixed_columns[grepl('N/A', Height), Height := NA]
     merged_samplesheets_fixed_columns[,Height:=as.numeric(Height)]
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'Height_(Inches)',c('Height (inches)','Height'))
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'Height_(Inches)',c('Height (inches)','Height'))
     merged_samplesheets_fixed_columns[grepl('N/A', Weight), Weight := NA]
     merged_samplesheets_fixed_columns[,Weight:=as.numeric(Weight)]
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'Weight_(pounds)',c('Weight','Weight (lbs)'))    
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'Weight_(pounds)',c('Weight','Weight (lbs)'))    
   
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'Age',c('age_at_visit_max'))
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'Age',c('age_at_visit_max'))
     merged_samplesheets_fixed_columns$AgeAtDiagnosis <- ''
     merged_samplesheets_fixed_columns[,`Age of Diagnosis`:=as.character(`Age of Diagnosis`)]
     merged_samplesheets_fixed_columns[,`Age at Diagnosis`:=as.character(`Age at Diagnosis`)]
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'AgeAtDiagnosis',c('Age at Diagnosis','Age of Diagnosis',
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'AgeAtDiagnosis',c('Age at Diagnosis','Age of Diagnosis',
                                                                             'age_first_ad_dx'), overwrite=T)
     
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'cts_mmse30_first_ad_dx',c('cts_mmse30_lv'), overwrite=T)
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'cts_mmse30_first_ad_dx',c('cts_mmse30_lv'), overwrite=T)
     setnames(merged_samplesheets_fixed_columns, old=c('cts_mmse30_first_ad_dx'),new=c('cts_mmse30'))
     
     merged_samplesheets_fixed_columns[,braaksc := as.integer(braaksc)]
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'braaksc',c('bbscore'))
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'Smoker', c('SmokingEither','Are you an active smoker?'))
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'braaksc',c('bbscore'))
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'Smoker', c('SmokingEither','Are you an active smoker?'))
     merged_samplesheets_fixed_columns[grepl('nknown',merged_samplesheets_fixed_columns$Smoker), Smoker := NA]
     merged_samplesheets_fixed_columns[Smoker=='no', Smoker := 'No']
     merged_samplesheets_fixed_columns[Smoker=='yes', Smoker := 'Yes']
@@ -311,20 +310,20 @@ harmonize_and_clean_col_values <- function(merged_samplesheets){
     merged_samplesheets_fixed_columns[, `Age of Symptom Onset` := as.integer(`Age of Symptom Onset`)]
     merged_samplesheets_fixed_columns[, `Age at Symptom Onset` := as.integer(`Age at Symptom Onset`)]
 
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'AgeOnset', c('Age of Symptom Onset','AgeOnsetMania','Age at Symptom Onset','AgeOnsetSchizo'),overwrite=T)
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'Hemisphere', c('hemisphere'))
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'AgeOnset', c('Age of Symptom Onset','AgeOnsetMania','Age at Symptom Onset','AgeOnsetSchizo'),overwrite=T)
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'Hemisphere', c('hemisphere'))
     
     merged_samplesheets_fixed_columns[`Family History of ALS/FTD?`=='Not Applicable' | `Family History of ALS/FTD?` == 'Unknown', `Family History of ALS/FTD?` := NA ]
 
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'Site of Motor Onset', c('Site of Motor'))
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'Site of Motor Onset', c('Site of Motor'))
     merged_samplesheets_fixed_columns[, DurationIllness := DurationIllness * 12]
     merged_samplesheets_fixed_columns[`Disease Duration (Onset to Tracheostomy or Death) in Months` == 'Unknown', `Disease Duration (Onset to Tracheostomy or Death) in Months` := NA]
     merged_samplesheets_fixed_columns[`Disease Duration (Onset to Tracheostomy or Death) in Months` == 'Not Applicable', `Disease Duration (Onset to Tracheostomy or Death) in Months` := NA]
     merged_samplesheets_fixed_columns[,`Disease Duration (Onset to Tracheostomy or Death) in Months` := gsub('~','', `Disease Duration (Onset to Tracheostomy or Death) in Months`)]
     merged_samplesheets_fixed_columns[,`Disease Duration (Onset to Tracheostomy or Death) in Months` := as.numeric(`Disease Duration (Onset to Tracheostomy or Death) in Months`)]
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'Disease Duration (Onset to Tracheostomy or Death) in Months', c('DurationIllness'))
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'Disease Duration (Onset to Tracheostomy or Death) in Months', c('DurationIllness'))
     
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'Reported Genomic Mutations', c('Reported Genomic Mutations (from Site, not associated with sequencing data from NYGC) '))
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'Reported Genomic Mutations', c('Reported Genomic Mutations (from Site, not associated with sequencing data from NYGC) '))
     
     merged_samplesheets_fixed_columns[`C9 repeat size` == 'N/A' |`C9 repeat size` == '', `C9 repeat size` := NA ]
     merged_samplesheets_fixed_columns[`C9 Expansion per IGM (TALS only)` == 'Unknown', `C9 Expansion per IGM (TALS only)` := NA ]
@@ -334,8 +333,8 @@ harmonize_and_clean_col_values <- function(merged_samplesheets){
     merged_samplesheets_fixed_columns[`ATXN2 Expansion per IGM (TALS only)` == 'Unknown', `ATXN2 Expansion per IGM (TALS only)` := NA ]
     merged_samplesheets_fixed_columns[`ATXN2 Repeat Expansion? (CUMC, Sep2018)` == 'Unknown', `ATXN2 Repeat Expansion? (CUMC, Sep2018)` := NA ]
     
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'C9 Expansion per IGM (TALS only)', c('C9orf72 Repeat Expansion (CUMC, Sep 2018)'))
-    change_rows_if_na(merged_samplesheets_fixed_columns, 'ATXN2 Expansion per IGM (TALS only)', c('ATXN2 Repeat Expansion? (CUMC, Sep2018)'))
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'C9 Expansion per IGM (TALS only)', c('C9orf72 Repeat Expansion (CUMC, Sep 2018)'))
+    merged_samplesheets_fixed_columns <- change_rows_if_na(merged_samplesheets_fixed_columns, 'ATXN2 Expansion per IGM (TALS only)', c('ATXN2 Repeat Expansion? (CUMC, Sep2018)'))
     
     setnames(merged_samplesheets_fixed_columns, old = c('C9 Expansion per IGM (TALS only)','ATXN2 Expansion per IGM (TALS only)'), 
              new = c('has_C9orf27_repeat_expansion','has_ATXN2_repeat_expansion'))
