@@ -44,13 +44,16 @@ java -Xmx8g -jar /groups/umcg-biogen/tmp03/tools/SequenceCrossmap.jar \
 # exit 1
 
 # index
-parallel -j $threads < "$readdir/index.sh"
+#parallel -j $threads < "$readdir/index.sh"
+bash "$readdir/index.sh"
 
 # align
-parallel -j $threads < "$readdir/align.sh"
+#parallel -j $threads < "$readdir/align.sh"
+bash < "$readdir/align.sh"
 
 # convert to samse
-parallel -j $threads < "$readdir/samse.sh"
+#parallel -j $threads < "$readdir/samse.sh"
+bash "$readdir/samse.sh"
 
 # quantify crossmapping reads per eqtl
 java -Xmx8g -jar /groups/umcg-biogen/tmp03/tools/SequenceCrossmap.jar \

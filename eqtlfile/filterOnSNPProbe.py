@@ -3,8 +3,14 @@ import gzip
 
 
 if len(sys.argv) < 4:
+	ctr = 0
+	for arg in sys.argv:
+		print("{}\t{}".format(ctr,arg))
+		ctr = ctr + 1
 	print("Usage: input.txt.gz output.txt.gz filter.txt")
 	exit()
+
+
 
 input=sys.argv[1]
 output=sys.argv[2]

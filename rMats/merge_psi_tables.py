@@ -1,10 +1,9 @@
 # merge psi (percent spliced-in)  tables together
-# Round incl. level to 4 decimal behind ocmma
 import glob
 import argparse
 import os
 
-parser = argparse.ArgumentParser(description='Generate rMATs files.')
+parser = argparse.ArgumentParser(description='Merge rMATs files.')
 parser.add_argument('psi_base_dir', help='Base dir which contains all subdirectories from which files need to be merged')
 parser.add_argument('output_directory', help='Outputdir to write results to')
 parser.add_argument('file_prefix', help='Prefix for the file names. Will create files in output_directory with <prefix>.<event>.txt')
