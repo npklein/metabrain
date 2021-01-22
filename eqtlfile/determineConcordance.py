@@ -29,6 +29,22 @@ def countSharedAlleles(al1, al2):
 		i = i + 1	
 	return shared	
 
+def complement(alleles):
+	output=[alleles[0],alleles[1]]
+	i = 0
+	while i < 2:
+		if output[i] == "A":
+			output[i] = "T"
+		elif output[i] == "C":
+			output[i] = "G"
+		elif output[i] == "T":
+			output[i] = "A"
+		elif output[i] == "G":
+			output[i] = "C"
+		i = i + 1
+	return output
+		
+
 def flipalleles(alleles1, assessed1, alleles2, assessed2):
 	al1 = alleles1.split("/")
 	al2 = alleles2.split("/")
@@ -51,9 +67,9 @@ def flipalleles(alleles1, assessed1, alleles2, assessed2):
 eqtlmap={}
 
 total = 0
-shared = 0
-mismatchingalleles = 0
-concordant = 0
+shared = set()
+mismatchingalleles = set()
+concordant = set()
 
 
 fh=gzip.open(file1, 'rt')
@@ -61,26 +77,30 @@ fh.readline()
 for line in fh:
 	elems = line.strip().split("\t")
 	snp = elems[1]
-	gene = elems[2]
+	gene = elems[4]
+	beta = elems[18].split(" ")[0]
+	fdr=elems[len(elems)-1]	
 	zscore = float(elems[10])
 	# fdr = float(elems[len(elems)-1])
 	alleles = elems[8]
 	assessed = elems[9]
 	eqtl = snp+"-"+gene
-	eqtlmap[eqtl] = [zscore, alleles, assessed]
-	total = total + 1
+	eqtlmap[eqtl] = [zscore, alleles, assessed, beta,fdr]
 fh.close()
 
+total = len(eqtlmap)
+
 fho = gzip.open(output, 'wt')
-fho.write("SNP\tGene\tAlleles1\tAssessed1\tZ1\tAlleles2\tAssessed2\tZ2\tflipped\n")
+fho.write("SNP\tGene\tAlleles1\tAssessed1\tZ1\tBeta1\tFDR1\tAlleles2\tAssessed2\tZ2\tBeta2\tFDR2\tflipped\n")
 fh=gzip.open(file2, 'rt')
 fh.readline()
 
 for line in fh:
 	elems = line.strip().split("\t")
 	snp = elems[1]
-	gene = elems[2]
+	gene = elems[4]
 	zscore = float(elems[10])
+	beta = elems[18].split(" ")[0]
 	fdr = float(elems[len(elems)-1])
 	alleles = elems[8]
 	assessed = elems[9]
@@ -90,10 +110,11 @@ for line in fh:
 		flip = flipalleles(ref[1],ref[2],alleles,assessed)
 		if flip == 1:
 			zscore = zscore * -1
+			beta = beta * -1
 		if flip < 0:
-			mismatchingalleles = mismatchingalleles + 1
+			mismatchingalleles.add(eqtl)
 		if flip > -1:
-			shared = shared + 1
+			shared.add(eqtl)
 #			print(snp)
 #			print(gene)
 #			print(ref[0])
@@ -103,18 +124,18 @@ for line in fh:
 #			print(assessed)
 #			print(zscore)
 #			print(flip)
-			fho.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(snp,gene,ref[1],ref[2],ref[0],alleles,assessed,zscore,flip))
+			fho.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(snp,gene,ref[1],ref[2],ref[0],ref[3],ref[4],alleles,assessed,zscore,beta,fdr,flip))
 			if (ref[0] >= 0 and zscore >=0) or (ref[0] < 0 and zscore < 0):
-				concordant = concordant + 1
+				concordant.add(eqtl)
 fh.close()
 fho.close()
 
 fho = open(output+"-Summary.txt",'w')
 fho.write("Dataset1\tDataset2\tEqtlsInDataset1\tShared\tConcordant\tConcordantOverTotal\tConcordantOverShared\tMismatchingAlleles\n")
-percovertotal = concordant / total
-percovershared = concordant / shared
+percovertotal = len(concordant) / total
+percovershared = len(concordant) / len(shared)
 
-outln = "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}".format(name1,name2,total,shared,concordant,percovertotal,percovershared,mismatchingalleles)
+outln = "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}".format(name1,name2,total,len(shared),len(concordant),percovertotal,percovershared,len(mismatchingalleles))
 fho.write(outln+"\n")
 print(outln)
 fho.close()
