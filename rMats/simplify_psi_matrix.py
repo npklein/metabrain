@@ -6,7 +6,7 @@ import multiprocessing
 import datetime
 import sys
 
-parser = argparse.ArgumentParser(description='Merge (gzipped) matrices by column')
+parser = argparse.ArgumentParser(description='Simplify psi matrix')
 parser.add_argument('psi_dir', help='Directory with psi files')
 parser.add_argument('outdir', help='outdir to write to')
 parser.add_argument('--multiprocess', help='if multiprocessing should be used', action='store_true')
