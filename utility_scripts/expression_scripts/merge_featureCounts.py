@@ -76,8 +76,6 @@ with gzip.open(args.out_prefix+feature_type+'.txt.gz','wt') as out:
                         continue
                     list_of_features.append(line[0])
                     if 'metaExon' not in feature_type:
-                        print(feature_info[line[1]+'_'+line[2]+'_'+line[3]])
-                        exit()
                         out.write('\t'+feature_info[line[1]+'_'+line[2]+'_'+line[3]]+'_'+line[1]+'_'+line[2]+'_'+line[3])
                     else:
                         out.write('\t'+line[0]+line[1]+'_'+line[2]+'_'+line[3]+'_'+line[4])
@@ -119,6 +117,4 @@ with gzip.open(args.out_prefix+feature_type+'.txt.gz','wt') as out:
                 y += 1
                 number_of_transcript_written += 1
         out.write('\n')
-    if number_of_transcript != number_of_transcript_written:
-        raise RuntimeError('number_of_transcript not same as number_of_transcript_written: '+str(number_of_transcript)+'\t'+str(number_of_transcript_written))
 print(feature_type+': Done')
