@@ -12,6 +12,7 @@ main(){
 
     file_dir=$(dirname "$0")
     mkdir -p $(dirname $outfile)
+
     Rscript $file_dir/../table_scripts/scale_columns_and_rows.R -i $infile -o ${outfile%.gz}
     gzip ${outfile%.gz}
 
