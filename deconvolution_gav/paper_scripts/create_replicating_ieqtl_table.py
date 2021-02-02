@@ -103,7 +103,6 @@ class main():
                                    sep="\t",
                                    header=0,
                                    index_col=None)
-        bulk_eqtl_df.reset_index(drop=False, inplace=True)
         print("\tBulk eQTL data frame: {}".format(bulk_eqtl_df.shape))
         print(bulk_eqtl_df)
         tmp = bulk_eqtl_df[["ProbeName", "SNPName"]].copy()
@@ -127,6 +126,14 @@ class main():
         bulk_df = bulk_eqtl_df.merge(buk_decon_fdr_df, on=["ProbeName", "SNPName"])
         print(bulk_df)
 
+        print("### Drop column with one distinct value ###")
+        for col in bulk_df.columns:
+            values = bulk_df[col].unique()
+            if len(values) == 1:
+                bulk_df.drop(col, inplace=True, axis=1)
+                print("\tColumn '{}' has one distinct value: '{}'".format(col, values[0]))
+        print(bulk_df)
+
         print("### Adding single-nucleus data ###")
         for col_index, (abbreviation, full_name) in enumerate(self.cell_types):
             # Load the data.
@@ -143,11 +150,10 @@ class main():
             # Merge.
             bulk_df = bulk_df.merge(sn_subset, on=["ProbeName", "SNPName"], how="left")
 
-        print("### Done ###")
         print(bulk_df)
 
         print("### Saving data frame ###")
-        bulk_df.to_excel(self.outpath, sheet_name="Bulk ieQTLs replication in SN", na_rep="NA")
+        bulk_df.to_excel(self.outpath, sheet_name="Bulk ieQTLs replication in SN", na_rep="NA", index=False)
         print("\tSaved dataframe: {} "
               "with shape: {}".format(os.path.basename(self.outpath),
                                       bulk_df.shape))
