@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-File:         visualise_ct_mediated_eqtl.py
-Created:      2020/09/23
-Last Changed: 2020/11/24
+File:         plot_ieqtl_with_two_cell_fractions.py
+Created:      2020/11/24
+Last Changed: 2021/01/11
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -36,11 +36,12 @@ from statsmodels.stats import multitest
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy import stats
+from sklearn.linear_model import LinearRegression
 
 # Local application imports.
 
 # Metadata
-__program__ = "Visualise CellType mediated eQTL"
+__program__ = "Plot ieQTL with 2 Cell Fractions"
 __author__ = "Martijn Vochteloo"
 __maintainer__ = "Martijn Vochteloo"
 __email__ = "m.vochteloo@rug.nl"
@@ -55,7 +56,8 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./visualise_ct_mediated_eqtl.py -eq ../matrix_preparation/cortex_eur_cis/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ge ../matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -al ../matrix_preparation/cortex_eur_cis/create_matrices/genotype_alleles.txt.gz -ex ../matrix_preparation/cortex_eur_cis/create_matrices/expression_table.txt.gz -cc ../matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt.gz -d ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -i ADAMTS18 CYP24A1 CLECL1 -n 600 -e pdf
+./plot_ieqtl_with_two_cell_fractions.py -eq ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ge ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -al ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/genotype_alleles.txt.gz -ex ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/expression_table.txt.gz -cf ../../2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt -ocf /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-10-decon-optimizer/data/cell_fractions_default_a005.txt -cfn CellMapNNLS_Neuron -ocfn CellMapNNLS_Neuron_ocf -d ../../2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -i CYP24A1 -n 250 -e png pdf
+
 """
 
 
@@ -67,7 +69,10 @@ class main():
         self.geno_path = getattr(arguments, 'genotype')
         self.alleles_path = getattr(arguments, 'alleles')
         self.expr_path = getattr(arguments, 'expression')
-        self.cc_path = getattr(arguments, 'cellcount%')
+        self.cf_path = getattr(arguments, 'cell_fractions')
+        self.cfn = getattr(arguments, 'cf_colname')
+        self.ocf_path = getattr(arguments, 'optimized_cell_fractions')
+        self.ocfn = getattr(arguments, 'optimized_cf_colname')
         self.decon_path = getattr(arguments, 'decon')
         self.alpha = getattr(arguments, 'alpha')
         self.interest = getattr(arguments, 'interest')
@@ -75,7 +80,7 @@ class main():
         self.extensions = getattr(arguments, 'extension')
 
         # Set variables.
-        self.outdir = os.path.join(str(Path(__file__).parent.parent), 'visualise_ct_mediated_eqtl')
+        self.outdir = os.path.join(str(Path(__file__).parent.parent), 'plot')
 
         self.colormap = {
             "minor": "#E69F00",
@@ -131,11 +136,30 @@ class main():
                             type=str,
                             required=True,
                             help="The path to the deconvolution matrix")
-        parser.add_argument("-cc",
-                            "--cellcount%",
+        parser.add_argument("-cf",
+                            "--cell_fractions",
                             type=str,
                             required=True,
-                            help="The path to the cell count % matrix")
+                            help="The path to the original cell_fractions "
+                                 "matrix")
+        parser.add_argument("-cfn",
+                            "--cf_colname",
+                            type=str,
+                            required=True,
+                            help="The name of the original cell fraction "
+                                 "column.")
+        parser.add_argument("-ocf",
+                            "--optimized_cell_fractions",
+                            type=str,
+                            required=True,
+                            help="The path to the optimized cell_fractions "
+                                 "matrix")
+        parser.add_argument("-ocfn",
+                            "--optimized_cf_colname",
+                            type=str,
+                            required=True,
+                            help="The name of the optimized cell fraction "
+                                 "column.")
         parser.add_argument("-d",
                             "--decon",
                             type=str,
@@ -191,9 +215,15 @@ class main():
 
     def start(self):
         self.print_arguments()
-        eqtl_df, geno_df, alleles_df, expr_df, cc_df, decon_df = self.load()
+        eqtl_df, geno_df, alleles_df, expr_df, cf_df, ocf_df, decon_df = self.load()
         _, decon_fdr_df = self.bh_correct(decon_df)
-        self.plot_eqtls(eqtl_df, geno_df, alleles_df, expr_df, cc_df, decon_fdr_df)
+
+        # Get the correct cell types.
+        cf_df = cf_df[[self.cfn]]
+        ocf_df = ocf_df[[self.ocfn]]
+        ocf_df.columns = [self.cfn]
+
+        self.plot_eqtls(eqtl_df, geno_df, alleles_df, expr_df, cf_df, ocf_df, decon_fdr_df)
 
     def load(self):
         print("Loading input files.")
@@ -201,10 +231,12 @@ class main():
         geno_df = self.load_file(self.geno_path, nrows=self.nrows)
         alleles_df = self.load_file(self.alleles_path, nrows=self.nrows)
         expr_df = self.load_file(self.expr_path, nrows=self.nrows)
-        cc_df = self.load_file(self.cc_path)
+        cf_df = self.load_file(self.cf_path)
+        ocf_df = self.load_file(self.ocf_path)
+
         decon_df = self.load_file(self.decon_path)
 
-        return eqtl_df, geno_df, alleles_df, expr_df, cc_df, decon_df
+        return eqtl_df, geno_df, alleles_df, expr_df, cf_df, ocf_df, decon_df
 
     @staticmethod
     def bh_correct(pvalue_df):
@@ -231,7 +263,8 @@ class main():
                                       df.shape))
         return df
 
-    def plot_eqtls(self, eqtl_df, geno_df, alleles_df, expr_df, cc_df, decon_df):
+    def plot_eqtls(self, eqtl_df, geno_df, alleles_df, expr_df, cf_df, ocf_df,
+                   decon_df):
         print("Plotting interaction eQTL plots.")
 
         print("Iterating over eQTLs.")
@@ -243,7 +276,20 @@ class main():
             hgnc_name = row["HGNCName"]
             eqtl_type = row["CisTrans"]
 
-            if self.interest is not None and hgnc_name not in self.interest:
+            # Check if the SNP has an interaction effect.
+            interaction_effect = decon_df.loc["{}_{}".format(probe_name, snp_name), :]
+            if not interaction_effect.name.startswith(probe_name) or not interaction_effect.name.endswith(snp_name):
+                print("\t\tCannot find probe-snp combination in decon results.")
+                exit()
+            interaction_effect = interaction_effect.to_frame()
+            interaction_effect.columns = ["FDR"]
+            interaction_effect = interaction_effect.loc[
+                                 interaction_effect["FDR"] < self.alpha, :]
+            interaction_effect = interaction_effect.reindex(
+                interaction_effect["FDR"].abs().sort_values(
+                    ascending=True).index)
+
+            if (self.interest is not None and hgnc_name not in self.interest) or (interaction_effect.shape[0] == 0):
                 continue
 
             print("\tWorking on: {}\t{}\t{} [{}/{} "
@@ -307,19 +353,6 @@ class main():
             data["value_hue"] = data["round_geno"].map(self.value_color_map)
             data["group_hue"] = data["group"].map(self.group_color_map)
 
-            # Check if the SNP has an interaction effect.
-            interaction_effect = decon_df.loc["{}_{}".format(probe_name, snp_name), :]
-            if not interaction_effect.name.startswith(probe_name) or not interaction_effect.name.endswith(snp_name):
-                print("\t\tCannot find probe-snp combination in decon results.")
-                exit()
-            interaction_effect = interaction_effect.to_frame()
-            interaction_effect.columns = ["FDR"]
-            interaction_effect = interaction_effect.loc[
-                                 interaction_effect["FDR"] < self.alpha, :]
-            interaction_effect = interaction_effect.reindex(
-                interaction_effect["FDR"].abs().sort_values(
-                    ascending=True).index)
-
             # Prepare output directory.
             if len(interaction_effect.index) > 0:
                 eqtl_interaction_outdir = os.path.join(self.outdir,
@@ -330,118 +363,123 @@ class main():
                 if not os.path.exists(eqtl_interaction_outdir):
                     os.makedirs(eqtl_interaction_outdir)
 
-                self.plot_simple_eqtl(i, fdr_value, snp_name, probe_name,
-                                      hgnc_name, eqtl_type, data,
-                                      minor_allele, minor_allele_frequency,
-                                      allele_map, self.group_color_map,
-                                      eqtl_interaction_outdir,
-                                      self.extensions)
+                for cov_name, (fdr,) in interaction_effect.iterrows():
+                    print("\t\t{}: FDR = {}".format(cov_name, fdr))
 
-                for index2, (fdr,) in interaction_effect.iterrows():
-                    print("\t\t{}: FDR = {}".format(index2, fdr))
+                    # Initialize the plot.
+                    sns.set(rc={'figure.figsize': (24, 9)})
+                    sns.set_style("ticks")
+                    fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3)
+                    for ax in [ax1, ax2, ax3]:
+                        sns.despine(fig=fig, ax=ax)
+
+                    # Plot original cell fractions interaction eQTL.
                     eqtl_data = data.copy()
-                    cov_data = cc_df.loc[:, index2].to_frame()
+                    cov_data = cf_df.loc[:, cov_name].to_frame()
                     eqtl_data = eqtl_data.merge(cov_data, left_index=True,
                                                 right_index=True)
 
-                    self.plot_inter_eqtl(i, snp_name, probe_name, hgnc_name,
-                                         eqtl_type, eqtl_data, index2, fdr,
-                                         allele_map, self.group_color_map,
-                                         eqtl_interaction_outdir,
-                                         self.extensions)
+                    self.plot_inter_eqtl(df=eqtl_data,
+                                         ax=ax1,
+                                         group_color_map=self.group_color_map,
+                                         allele_map=allele_map,
+                                         x=cov_name,
+                                         y="expression",
+                                         xlabel="original {}".format(cov_name),
+                                         ylabel="{} ({}) expression".format(probe_name, hgnc_name),
+                                         title="original"
+                                         )
+
+                    del eqtl_data, cov_data
+
+                    # # Plot normalized cell fractions interaction eQTL.
+                    # eqtl_data = data.copy()
+                    # cov_data = self.force_normal_series(cf_df.loc[:, cov_name], as_series=True).to_frame()
+                    # cov_data.columns = [cov_name]
+                    # eqtl_data = eqtl_data.merge(cov_data, left_index=True,
+                    #                             right_index=True)
+                    #
+                    # self.plot_inter_eqtl(df=eqtl_data,
+                    #                      ax=ax2,
+                    #                      group_color_map=self.group_color_map,
+                    #                      allele_map=allele_map,
+                    #                      x=cov_name,
+                    #                      y="expression",
+                    #                      xlabel="normalized {}".format(cov_name),
+                    #                      ylabel="{} ({}) expression".format(probe_name, hgnc_name),
+                    #                      title="normalized"
+                    #                      )
+                    #
+                    # del eqtl_data, cov_data
+
+                    # Plot optimized cell fractions interaction eQTL.
+                    eqtl_data = data.copy()
+                    cov_data = ocf_df.loc[:, cov_name].to_frame()
+                    eqtl_data = eqtl_data.merge(cov_data, left_index=True,
+                                                right_index=True)
+
+                    self.plot_inter_eqtl(df=eqtl_data,
+                                         ax=ax3,
+                                         group_color_map=self.group_color_map,
+                                         allele_map=allele_map,
+                                         x=cov_name,
+                                         y="expression",
+                                         xlabel="optimized {}".format(cov_name),
+                                         ylabel="{} ({}) expression".format(probe_name, hgnc_name),
+                                         title="optimized"
+                                         )
+
+                    del eqtl_data, cov_data
+
+                    # Safe the plot.
+                    plt.tight_layout()
+                    for extension in self.extensions:
+                        filename = "{}_inter_eqtl_{}_{}_{}_{}.{}".format(
+                            i,
+                            snp_name,
+                            probe_name,
+                            hgnc_name,
+                            cov_name,
+                            extension)
+                        print("\t\tSaving plot: {}".format(filename))
+                        fig.savefig(os.path.join(eqtl_interaction_outdir, filename), dpi=300)
+                    plt.close()
             else:
                 print("\t\tNo significant interactions.")
 
     @staticmethod
-    def plot_simple_eqtl(count, fdr_value, snp_name, probe_name, hgnc_name,
-                         eqtl_type, df, minor_allele, minor_allele_frequency,
-                         allele_map, group_color_map, outdir, extensions):
-        # Calculate the correlation.
-        coef, p = stats.spearmanr(df["genotype"],
-                                  df["expression"])
-
-        # Prepare the figure.
-        sns.set(rc={'figure.figsize': (12, 9)})
-        sns.set_style("ticks")
-        fig, ax = plt.subplots()
-        sns.despine(fig=fig, ax=ax)
-
-        # Plot the scatter / box plot.
-        sns.regplot(x="genotype", y="expression", data=df,
-                    scatter=False,
-                    # scatter_kws={'facecolors': df['value_hue'],
-                    #              'edgecolors': "#808080"},
-                    line_kws={"color": "#000000"},
-                    ax=ax
-                    )
-        sns.boxplot(x="group", y="expression", data=df,
-                    palette=group_color_map,
-                    showfliers=False,
-                    zorder=1,
-                    # boxprops=dict(alpha=.3),
-                    ax=ax)
-        # plt.setp(ax.artists, edgecolor='k', facecolor='w')
-        # plt.setp(ax.lines, color='k')
-
-        # Set the other aesthetics.
-        ax.set_xticks(range(3))
-        ax.set_xticklabels([allele_map[0.0], allele_map[1.0], allele_map[2.0]])
-        ax.text(0.5, 1.06,
-                # '{} {}-eQTL [{}]'.format(hgnc_name, eqtl_type,
-                #                          p_value_to_symbol(p_value)),
-                '{} {}-eQTL [FDR = {:.2e}]'.format(hgnc_name, eqtl_type, fdr_value),
-                fontsize=22, weight='bold', ha='center', va='bottom',
-                transform=ax.transAxes)
-        ax.text(0.5, 1.02,
-                # 'r = {:.2f} [{}]    minor allele frequency '
-                # '{} = {:.2f}'.format(coef,
-                #                      p_value_to_symbol(p),
-                #                      minor_allele,
-                #                      minor_allele_frequency),
-                'r = {:.2f} [p = {:.2e}]    minor allele frequency '
-                '{} = {:.2f}'.format(coef,
-                                     p,
-                                     minor_allele,
-                                     minor_allele_frequency),
-                fontsize=14, alpha=0.75, ha='center', va='bottom',
-                transform=ax.transAxes)
-        ax.set_ylabel('{} ({}) expression'.format(probe_name, hgnc_name),
-                      fontsize=14,
-                      fontweight='bold')
-        ax.set_xlabel('SNP {}'.format(snp_name),
-                      fontsize=14,
-                      fontweight='bold')
-
-        # Safe the plot.
-        for extension in extensions:
-            filename = "{}_simple_eqtl_{}_{}_{}.{}".format(count,
-                                                           snp_name,
-                                                           probe_name,
-                                                           hgnc_name,
-                                                           extension)
-            print("\t\tSaving plot: {}".format(filename))
-            fig.savefig(os.path.join(outdir, filename), dpi=300)
-        plt.close()
+    def force_normal_series(s, as_series=False):
+        normal_s = stats.norm.ppf((s.rank(ascending=True) - 0.5) / s.size)
+        if as_series:
+            return pd.Series(normal_s, index=s.index)
+        else:
+            return normal_s
 
     @staticmethod
-    def plot_inter_eqtl(count, snp_name, probe_name, hgnc_name, eqtl_type, df,
-                        cov_name, fdr, allele_map, group_color_map, outdir,
-                        extensions):
+    def plot_inter_eqtl(df, ax, group_color_map, allele_map, x="x", y="y", xlabel="", ylabel="", title=""):
+        print(df)
+
+        # Calculate R2.
+        tmp_X = df[["genotype", x]].copy()
+        tmp_X["genotype_x_{}".format(x)] = tmp_X["genotype"] * tmp_X[x]
+        tmp_X["intercept"] = 1
+        tmp_y = df[y].copy()
+        print(tmp_X)
+        print(tmp_y)
+
+        reg = LinearRegression().fit(tmp_X, tmp_y)
+        r2_score = reg.score(tmp_X, tmp_y)
+
         # calculate axis limits.
-        ymin_value = df["expression"].min()
+        ymin_value = df[y].min()
         ymin = ymin_value - abs(ymin_value * 0.2)
-        ymax_value = df["expression"].max()
+        ymax_value = df[y].max()
         ymax = ymax_value + abs(ymax_value * 0.6)
 
-        xmin_value = df[cov_name].min()
+        xmin_value = df[x].min()
         xmin = xmin_value - max(abs(xmin_value * 0.1), 0.05)
-        xmax_value = df[cov_name].max()
+        xmax_value = df[x].max()
         xmax = xmax_value + max(abs(xmax_value * 0.1), 0.05)
-
-        sns.set(rc={'figure.figsize': (12, 9)})
-        sns.set_style("ticks")
-        fig, ax = plt.subplots()
-        sns.despine(fig=fig, ax=ax)
 
         label_pos = {0.0: 0.94, 1.0: 0.90, 2.0: 0.86}
         for i, genotype in enumerate([1.0, 0.0, 2.0]):
@@ -453,14 +491,12 @@ class main():
             p_str = "NA"
             if len(subset.index) > 1:
                 # Regression.
-                coef, p = stats.spearmanr(subset["expression"],
-                                          subset[cov_name])
+                coef, p = stats.spearmanr(subset[y], subset[x])
                 coef_str = "{:.2f}".format(coef)
-                # p_str = p_value_to_symbol(p)
                 p_str = "p = {:.2e}".format(p)
 
                 # Plot.
-                sns.regplot(x=cov_name, y="expression", data=subset,
+                sns.regplot(x=x, y=y, data=subset,
                             scatter_kws={'facecolors': subset['value_hue'],
 #                                         'edgecolors': subset['group_hue'],
                                          'linewidth': 0,
@@ -482,40 +518,20 @@ class main():
                 fontweight='bold')
 
         ax.text(0.5, 1.06,
-                '{} {}-eQTL Interaction with {} '.format(hgnc_name,
-                                                         eqtl_type,
-                                                         cov_name),
+                title,
                 fontsize=18, weight='bold', ha='center', va='bottom',
                 transform=ax.transAxes)
         ax.text(0.5, 1.02,
-                'SNPName: {}  ProbeName: {}  '
-                'FDR: {:.2e}'.format(snp_name, probe_name, fdr),
+                "R2: {:.2f}".format(r2_score),
                 fontsize=12, alpha=0.75, ha='center', va='bottom',
                 transform=ax.transAxes)
 
-        ax.set_ylabel('{} ({}) expression'.format(probe_name, hgnc_name),
+        ax.set_ylabel(ylabel,
                       fontsize=14,
                       fontweight='bold')
-        ax.set_xlabel(cov_name,
+        ax.set_xlabel(xlabel,
                       fontsize=14,
                       fontweight='bold')
-
-        # ax.axvline(0, ls='--', color="#000000", alpha=0.15, zorder=-1)
-        # ax.axhline(0, ls='--', color="#000000", alpha=0.15, zorder=-1)
-
-        # Safe the plot.
-        plt.tight_layout()
-        for extension in extensions:
-            filename = "{}_inter_eqtl_{}_{}_{}_{}.{}".format(
-                count,
-                snp_name,
-                probe_name,
-                hgnc_name,
-                cov_name,
-                extension)
-            print("\t\tSaving plot: {}".format(filename))
-            fig.savefig(os.path.join(outdir, filename), dpi=300)
-        plt.close()
 
     def print_arguments(self):
         print("Arguments:")
@@ -523,7 +539,10 @@ class main():
         print("  > Genotype path: {}".format(self.geno_path))
         print("  > Alleles path: {}".format(self.alleles_path))
         print("  > Expression path: {}".format(self.expr_path))
-        print("  > Cell count % path: {}".format(self.cc_path))
+        print("  > Cell fractions path: {}".format(self.cf_path))
+        print("  > Cell fractions colname: {}".format(self.cfn))
+        print("  > Optimized cell fractions path: {}".format(self.ocf_path))
+        print("  > Optimized cell fractions colname: {}".format(self.ocfn))
         print("  > Deconvolution path: {}".format(self.decon_path))
         print("  > Alpha: {}".format(self.alpha))
         print("  > Interest: {}".format(self.interest))
