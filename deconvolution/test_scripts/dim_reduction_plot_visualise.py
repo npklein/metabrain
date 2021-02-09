@@ -72,7 +72,7 @@ class main():
         self.meta_path = getattr(arguments, 'meta_table')
         self.meta_id = getattr(arguments, 'meta_id')
         self.color_id = getattr(arguments, 'color_id')
-        self.extensions = getattr(arguments, 'extension')
+        self.extensions = getattr(arguments, 'extensions')
 
         # Set variables.
         self.outdir = os.path.join(str(Path(__file__).parent), 'dim_reduction_plot')
@@ -149,12 +149,12 @@ class main():
                             help="The ID column in the -m / --meta_table matrix"
                                  "on which to color. Default: None.")
         parser.add_argument("-e",
-                            "--extension",
+                            "--extensions",
                             type=str,
-                            choices=["png", "pdf"],
+                            nargs="+",
                             default=["png"],
-                            help="The figure file extension. "
-                                 "Default: 'png'.")
+                            choices=["eps", "pdf", "pgf", "png", "ps", "raw", "rgba", "svg", "svgz"],
+                            help="The output file format(s), default: ['png']")
 
         return parser.parse_args()
 

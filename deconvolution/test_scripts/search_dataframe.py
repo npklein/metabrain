@@ -49,15 +49,11 @@ __description__ = "{} is a program developed and maintained by {}. " \
 class main():
     def __init__(self):
         arguments = self.create_argument_parser()
-        self.snps = getattr(arguments, 'snps')
-        self.genes = getattr(arguments, 'genes')
         self.data_path = getattr(arguments, 'data')
-        self.eqtl_path = getattr(arguments, 'eqtls')
-        self.filter = getattr(arguments, 'filter')
+        self.search = getattr(arguments, 'search')
         self.header = getattr(arguments, 'header')
         self.index_col = getattr(arguments, 'index_col')
         self.sep = getattr(arguments, 'sep')
-        self.alpha = getattr(arguments, 'alpha')
 
     def create_argument_parser(self):
         parser = argparse.ArgumentParser(prog=__program__,
@@ -70,49 +66,28 @@ class main():
                             version="{} {}".format(__program__,
                                                    __version__),
                             help="show program's version number and exit")
-        parser.add_argument("-s",
-                            "--snps",
-                            nargs="+",
-                            type=str,
-                            default=[],
-                            help="The SNPs of interest. Default: [].")
-        parser.add_argument("-g",
-                            "--genes",
-                            nargs="+",
-                            type=str,
-                            default=[],
-                            help="The genes of interest. Default: [].")
-        parser.add_argument("-f",
-                            "--filter",
-                            nargs="+",
-                            type=str,
-                            default=None,
-                            help="The indices to filter on. Default: None.")
         parser.add_argument("-d",
                             "--data",
                             type=str,
                             help="The data to look in.")
-        parser.add_argument("-e",
-                            "--eqtls",
+        parser.add_argument("-s",
+                            "--search",
+                            nargs="+",
                             type=str,
-                            help="The eqtls corresponding to the data.")
+                            default=[],
+                            help="The term to search. Default: [].")
         parser.add_argument("--header",
                             type=int,
-                            default=0,
-                            help="The data header row. Default: 0.")
+                            default=None,
+                            help="The data header row. Default: None.")
         parser.add_argument("--index_col",
                             type=int,
-                            default=0,
-                            help="The data index column. Default: 0.")
+                            default=None,
+                            help="The data index column. Default: None.")
         parser.add_argument("--sep",
                             type=str,
                             default="\t",
                             help="The data column separator. Default: '\\t'.")
-        parser.add_argument("-a",
-                            "--alpha",
-                            type=float,
-                            default=0.05,
-                            help="The significance cut-off. Default: 0.05.")
 
         return parser.parse_args()
 
@@ -123,52 +98,28 @@ class main():
                               index_col=self.index_col,
                               sep=self.sep)
 
-        eqtl_df = pd.read_csv(self.eqtl_path,
-                              header=self.header,
-                              index_col=self.index_col,
-                              sep=self.sep)
-
-        print("Searching rows.")
+        print("Searching.")
         for i, (index, row) in enumerate(data_df.iterrows()):
-            if self.is_hit(index):
-                self.print_info(i, index, row, eqtl_df.iloc[i, :])
+            if self.is_hit(index, row):
+                self.print_info(i, index, row)
 
-        print("Searching columns.")
-        for i, (index, row) in enumerate(data_df.T.iterrows()):
-            if self.is_hit(index):
-                self.print_info(i, index, row, eqtl_df.iloc[i, :])
+    def is_hit(self, index, row):
+        for x in self.search:
+            if x in str(index):
+                return True
+            for name, value in row.iteritems():
+                if x in str(name):
+                    return True
+                if x in str(value):
+                    return True
 
-    def is_hit(self, index):
-        for snp in self.snps:
-            if snp in index:
-                return True
-        for gene in self.genes:
-            if gene in index:
-                return True
         return False
 
-    def print_info(self, i, name, row, eqtl):
-        probe_name = ""
-        hgnc_name = ""
-        if name.startswith(eqtl["SNPName"]):
-            probe_name = eqtl["ProbeName"]
-            hgnc_name = eqtl["HGNCName"]
-        buffer = ["Index:\t{} - {} [{}]".format(name, probe_name, hgnc_name)]
-        for index, item in row.iteritems():
-            if self.filter is None:
-                if item < self.alpha:
-                    buffer.append("\t[{}]:{}\t{:.4f}".format(i, index, item))
-            else:
-                for value in self.filter:
-                    if value in index:
-                        if item < self.alpha:
-                            buffer.append("\t[{}]:{}\t{:.4f}".format(i, index, item))
-                            break
-        buffer.append("")
-
-        if len(buffer) > 2:
-            for line in buffer:
-                print(line)
+    @staticmethod
+    def print_info(i, index, row):
+        print("[{}] - {}".format(i, index))
+        for name, value in row.iteritems():
+            print("\t{}\t{}".format(name, value))
 
 
 if __name__ == '__main__':
