@@ -62,6 +62,8 @@ class main():
         self.bulk_decon_infile = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/{}/cortex/decon_out/deconvolutionResults.csv".format(self.eqtl_type)
         self.sn_eqtl_infolder = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/{}_100Perm/".format(self.eqtl_type)
         self.sn_eqtl_filename = "eQTLsFDR-ProbeLevel.txt.gz"
+        self.eqtl_ea_col = "AlleleAssessed"
+
         self.cell_types = [("AST", "Astrocyte"),
                            ("END", "EndothelialCell"),
                            ("MIC", "Microglia"),
@@ -119,12 +121,20 @@ class main():
         print(bulk_decon_df)
 
         print("### Pre-processing bulk decon data ###")
-        buk_decon_fdr_df = self.preprocess_decon_df(bulk_decon_df)
-        print(buk_decon_fdr_df)
+        buk_decon_fdr_beta_df = self.preprocess_decon_df(bulk_decon_df)
+        print(buk_decon_fdr_beta_df)
 
         print("### Merging bulk data ###")
-        bulk_df = bulk_eqtl_df.merge(buk_decon_fdr_df, on=["ProbeName", "SNPName"])
+        bulk_df = bulk_eqtl_df.merge(buk_decon_fdr_beta_df, on=["ProbeName", "SNPName"])
+        bulk_df["DeconQTLAlleleAssessed"] = bulk_df["SNPType"].str.split("/", n=1, expand=True)[1]
         print(bulk_df)
+
+        print("### Flipping beta's ###")
+        bulk_df["deconQTLFlip"] = bulk_df[self.eqtl_ea_col] != bulk_df["DeconQTLAlleleAssessed"]
+        for col in bulk_df:
+            if col.endswith("_beta"):
+                bulk_df.loc[:, col] = bulk_df.loc[:, col] * bulk_df["deconQTLFlip"].map({True: -1, False: 1})
+        bulk_df.drop(["deconQTLFlip", "DeconQTLAlleleAssessed"], axis=1, inplace=True)
 
         print("### Drop column with one distinct value ###")
         for col in bulk_df.columns:
@@ -144,13 +154,27 @@ class main():
             print("\tSingle-nucleus {} eQTL data frame: {}".format(full_name, sn_df.shape))
 
             # Select the columns of interest
-            sn_subset = sn_df[["ProbeName", "SNPName", "FDR"]]
-            sn_subset.columns = ["ProbeName", "SNPName", "sn_{}_eQTL_FDR".format(full_name)]
+            sn_subset = sn_df[["ProbeName", "SNPName", self.eqtl_ea_col, "OverallZScore", "FDR"]]
+            sn_subset.columns = ["ProbeName", "SNPName", "sn_{}_ea_col".format(full_name), "sn_{}_eqtl_OverallZscore".format(full_name), "sn_{}_eQTL_FDR".format(full_name)]
 
             # Merge.
             bulk_df = bulk_df.merge(sn_subset, on=["ProbeName", "SNPName"], how="left")
 
         print(bulk_df)
+        print("### Flipping z-score's ###")
+        for _, full_name in self.cell_types:
+            bulk_df["sn_{}_flip".format(full_name)] = bulk_df[self.eqtl_ea_col] != bulk_df["sn_{}_ea_col".format(full_name)]
+
+            bulk_df.loc[:, "sn_{}_eqtl_OverallZscore".format(full_name)] = bulk_df.loc[:, "sn_{}_eqtl_OverallZscore".format(full_name)] * bulk_df["sn_{}_flip".format(full_name)].map({True: -1, False: 1})
+
+            bulk_df.drop(["sn_{}_ea_col".format(full_name), "sn_{}_flip".format(full_name)], axis=1, inplace=True)
+        print(bulk_df.columns)
+
+        if bulk_df["PValue"].min() < 2.2250738585072014e-308:
+            bulk_df["PValue"] = bulk_df["PValue"].astype(str)
+        print(bulk_df.dtypes)
+
+        bulk_df.columns = [x.replace("_", " ") for x in bulk_df.columns]
 
         print("### Saving data frame ###")
         bulk_df.to_excel(self.outpath, sheet_name="Bulk ieQTLs replication in SN", na_rep="NA", index=False)
@@ -167,20 +191,24 @@ class main():
             if col.endswith("_pvalue"):
                 data.append(multitest.multipletests(tmp.loc[:, col], method='fdr_bh')[1])
                 indices.append("bulk_" + col.replace("CellMapNNLS_", "").replace("_pvalue", "") + "_interaction_FDR")
-        fdr_df = pd.DataFrame(data, index=indices, columns=tmp.index).T
+            elif col.endswith(":GT"):
+                data.append(tmp.loc[:, col])
+                indices.append("bulk_" + col.split("_")[2].split(":")[0] + "_interaction_beta")
+        fdr_beta_df = pd.DataFrame(data, index=indices, columns=tmp.index).T
+        fdr_beta_df = fdr_beta_df.reindex(sorted(fdr_beta_df.columns), axis=1)
 
         del tmp
 
         # Split the index.
         probe_names = []
         snp_names = []
-        for index in fdr_df.index:
+        for index in fdr_beta_df.index:
             probe_names.append(index.split("_")[0])
             snp_names.append("_".join(index.split("_")[1:]))
-        fdr_df.insert(0, "ProbeName", probe_names)
-        fdr_df.insert(1, "SNPName", snp_names)
+        fdr_beta_df.insert(0, "ProbeName", probe_names)
+        fdr_beta_df.insert(1, "SNPName", snp_names)
 
-        return fdr_df
+        return fdr_beta_df
 
 
 if __name__ == '__main__':

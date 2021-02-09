@@ -26,13 +26,14 @@ from __future__ import print_function
 from pathlib import Path
 from colour import Color
 import argparse
+import math
 import os
 
 # Third party imports.
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib
-from statsmodels.stats import multitest
 
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -56,7 +57,7 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./visualise_sn_eqtl.py -eq /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/cis_100Perm/MASK/eQTLsFDR-ProbeLevel.txt.gz -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/genotypedump/GenotypeData.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/MASK_expression.txt -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/ROSMAP-scRNAseq-genometoexpressioncoupling.txt -i STMN4 NKAIN1 FAM221A AMPD3 CD82 -e pdf
+./visualise_sn_eqtl.py -eq /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/cis_100Perm/MASK/eQTLsFDR-ProbeLevel.txt.gz -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/genotypedump/GenotypeData.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/MASK_expression.txt -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/ROSMAP-scRNAseq-genometoexpressioncoupling.txt -i STMN4 NKAIN1 FAM221A SLC25A27 -e pdf
 """
 
 
@@ -76,7 +77,7 @@ class main():
 
         # Replace default cell types.
         if self.cell_types == "all":
-            self.cell_types = ["EX", "IN", "OLI", "OPC", "END", "MIC", "AST"]
+            self.cell_types = ["EX", "OLI", "IN", "AST", "OPC", "MIC", "PER", "END"]
 
         # Set variables.
         self.outdir = os.path.join(str(Path(__file__).parent.parent),
@@ -92,7 +93,8 @@ class main():
             "OPC": "#009E73",
             "END": "#CC79A7",
             "MIC": "#E69F00",
-            "AST": "#D55E00"
+            "AST": "#D55E00",
+            "PER": "#F0E442"
         }
 
         if not os.path.exists(self.outdir):
@@ -232,6 +234,7 @@ class main():
             gte_dict = dict(zip(gte_df.iloc[:, 1], gte_df.iloc[:, 0]))
 
         print("### Iterating through cell types ###")
+        interest_corr = {x: [] for x in self.interest}
         for ct in self.cell_types:
             ct_outdir = os.path.join(self.outdir, ct)
 
@@ -263,7 +266,7 @@ class main():
                 hgnc_name = row["HGNCName"]
                 eqtl_type = row["CisTrans"]
 
-                if hgnc_name not in self.interest or fdr_value >= self.alpha:
+                if hgnc_name not in self.interest:
                     continue
 
                 print("\tWorking on: {}\t{}\t{} [{}/{} "
@@ -349,11 +352,39 @@ class main():
                 data["value_hue"] = data["round_geno"].map(self.value_color_map)
                 data["group_hue"] = data["group"].map(self.group_color_map)
 
-                self.plot_simple_eqtl(i, ct, fdr_value, snp_name, probe_name,
-                                      hgnc_name, eqtl_type, data,
-                                      minor_allele, minor_allele_frequency,
-                                      allele_map, self.group_color_map,
-                                      ct_outdir, self.extensions)
+                if fdr_value < self.alpha:
+                    print("\t\tPlotting: {}\t{}\t{}".format(snp_name, probe_name, hgnc_name))
+                    # self.plot_simple_eqtl(i, ct, fdr_value, snp_name, probe_name,
+                    #                       hgnc_name, eqtl_type, data,
+                    #                       minor_allele, minor_allele_frequency,
+                    #                       allele_map, ct_outdir)
+
+                # Calculate correlation
+                coef, p = stats.spearmanr(data["genotype"], data["expression"])
+                lower, upper = self.calc_pearson_ci(coef, data.shape[0])
+
+                # Saving data.
+                data_list = interest_corr[hgnc_name]
+                data_list.append([ct, coef, lower, upper])
+                interest_corr[hgnc_name] = data_list
+
+        # # Combine data.
+        # print("Plotting combined eQTL")
+        # for name, info in interest_data.items():
+        #     print("\t\tPlotting: {}".format(name))
+        #     self.plot_combined_eqtl(name, info)
+
+        print("Plotting forest plot")
+        for name, info in interest_corr.items():
+            print("\t\tPlotting: {}".format(name))
+            df = pd.DataFrame(info, columns=["cell type", "mean", "lower", "upper"])
+            df.set_index("cell type", inplace=True)
+            for ct in self.cell_types:
+                if ct not in df.index:
+                    df.loc[ct, :] = [np.nan, np.nan, np.nan]
+            df = df.loc[self.cell_types, :]
+            df.reset_index(inplace=True, drop=False)
+            self.plot_stripplot(df, name)
 
     @staticmethod
     def load_file(path, sep="\t", header=0, index_col=None, nrows=None):
@@ -364,20 +395,104 @@ class main():
                                       df.shape))
         return df
 
-    @staticmethod
-    def plot_simple_eqtl(count, cell_type, fdr_value, snp_name, probe_name, hgnc_name,
+    def plot_simple_eqtl(self, count, cell_type, fdr_value, snp_name, probe_name, hgnc_name,
                          eqtl_type, df, minor_allele, minor_allele_frequency,
-                         allele_map, group_color_map, outdir, extensions):
-
-        # Calculate the correlation.
-        coef, p = stats.spearmanr(df["genotype"],
-                                  df["expression"])
+                         allele_map, outdir=None):
+        if outdir is None:
+            outdir = self.outdir
 
         # Prepare the figure.
         sns.set(rc={'figure.figsize': (12, 9)})
         sns.set_style("ticks")
         fig, ax = plt.subplots()
         sns.despine(fig=fig, ax=ax)
+
+        title = '{}-SN {} {}-eQTL [FDR = {:.2e}]'.format(cell_type, hgnc_name, eqtl_type, fdr_value)
+        subtitle_appendix = 'minor allele frequency {} = {:.2f}'.format(minor_allele, minor_allele_frequency)
+        ylabel = '{} ({}) expression'.format(probe_name, hgnc_name)
+        xlabel = 'SNP {}'.format(snp_name)
+
+        self.plot_eqtl(df, allele_map, self.group_color_map, ax,
+                       title=title, subtitle_appendix=subtitle_appendix,
+                       xlabel=xlabel, ylabel=ylabel)
+
+        # Safe the plot.
+        for extension in self.extensions:
+            filename = "{}_{}_simple_eqtl_{}_{}_{}.{}".format(cell_type,
+                                                              count,
+                                                              snp_name,
+                                                              probe_name,
+                                                              hgnc_name,
+                                                              extension)
+            print("\t\tSaving plot: {}".format(filename))
+            fig.savefig(os.path.join(outdir, filename), dpi=300)
+        plt.close()
+
+    def plot_combined_eqtl(self, name, info, outdir=None):
+        if outdir is None:
+            outdir = self.outdir
+
+        # Define the dimensions of the grid.
+        ncols = 2
+        nrows = math.ceil(len(info) / ncols)
+
+        # Initialize plot.
+        sns.set(rc={'figure.figsize': (12*ncols, 9*nrows)})
+        sns.set_style("ticks")
+        fig, axes = plt.subplots(ncols=ncols,
+                                 nrows=nrows)
+
+        row_index = 0
+        col_index = 0
+        for ct, value in info.items():
+            # Prep axes.
+            ax = axes[row_index, col_index]
+            sns.despine(fig=fig, ax=ax)
+
+            title_prefix = '{}-SN'.format(ct)
+            xlabel = 'SNP {}'.format(value["snp_name"])
+            ylabel = '{} expression'.format(value["hgnc_name"])
+            if value is not None:
+                # Plot.
+                self.plot_eqtl(value["data"],
+                               value["allele_map"],
+                               self.group_color_map,
+                               ax,
+                               title=title_prefix + '    FDR = {:.2e} ({})'.format(value["fdr_value"], self.p_value_to_symbol(value["fdr_value"])),
+                               xlabel=xlabel,
+                               ylabel=ylabel)
+            else:
+                ax.set_title('{}    FDR = NA    r = NA'.format(title_prefix),
+                             fontsize=22, weight='bold', ha='center',
+                             va='bottom',
+                             transform=ax.transAxes)
+                ax.set_xlabel(xlabel,
+                              fontsize=14,
+                              fontweight='bold')
+                ax.set_ylabel(ylabel,
+                              fontsize=14,
+                              fontweight='bold')
+
+            # Increment indices.
+            col_index += 1
+            if col_index == ncols:
+                col_index = 0
+                row_index += 1
+
+        # Safe the plot.
+        for extension in self.extensions:
+            filename = "{}_combined_eqtl.{}".format(name, extension)
+            print("\t\tSaving plot: {}".format(filename))
+            fig.savefig(os.path.join(outdir, filename), dpi=300)
+        plt.close()
+
+    @staticmethod
+    def plot_eqtl(df, allele_map, group_color_map, ax, title="",
+                  subtitle_appendix="", xlabel="", ylabel=""):
+
+        # Calculate the correlation.
+        coef, p = stats.spearmanr(df["genotype"],
+                                  df["expression"])
 
         # Plot the scatter / box plot.
         sns.regplot(x="genotype", y="expression", data=df,
@@ -394,36 +509,100 @@ class main():
         # Set the other aesthetics.
         ax.set_xticks(range(3))
         ax.set_xticklabels([allele_map[0.0], allele_map[1.0], allele_map[2.0]])
-        ax.text(0.5, 1.06,
-                '{}-SN {} {}-eQTL [FDR = {:.2e}]'.format(cell_type, hgnc_name, eqtl_type, fdr_value),
-                fontsize=22, weight='bold', ha='center', va='bottom',
-                transform=ax.transAxes)
-        ax.text(0.5, 1.02,
-                'r = {:.2f} [p = {:.2e}]    minor allele frequency '
-                '{} = {:.2f}'.format(coef,
-                                     p,
-                                     minor_allele,
-                                     minor_allele_frequency),
-                fontsize=14, alpha=0.75, ha='center', va='bottom',
-                transform=ax.transAxes)
-        ax.set_ylabel('{} ({}) expression'.format(probe_name, hgnc_name),
+
+        if subtitle_appendix == "":
+            ax.set_title('{}    r = {:.2f}'.format(title, coef),
+                         fontsize=22, weight='bold', ha='center', va='bottom',
+                         transform=ax.transAxes)
+        else:
+            ax.text(0.5, 1.06,
+                    title,
+                    fontsize=22, weight='bold', ha='center', va='bottom',
+                    transform=ax.transAxes)
+            ax.text(0.5, 1.02,
+                    'r = {:.2f}    {}'.format(coef, subtitle_appendix),
+                    fontsize=14, alpha=0.75, ha='center', va='bottom',
+                    transform=ax.transAxes)
+        ax.set_ylabel(ylabel,
                       fontsize=14,
                       fontweight='bold')
-        ax.set_xlabel('SNP {}'.format(snp_name),
+        ax.set_xlabel(xlabel,
                       fontsize=14,
                       fontweight='bold')
 
-        # Safe the plot.
-        for extension in extensions:
-            filename = "{}_{}_simple_eqtl_{}_{}_{}.{}".format(cell_type,
-                                                              count,
-                                                              snp_name,
-                                                              probe_name,
-                                                              hgnc_name,
-                                                              extension)
+    @staticmethod
+    def p_value_to_symbol(p_value):
+        output = ""
+        try:
+            if p_value > 0.05:
+                output = "NS"
+            elif 0.05 >= p_value > 0.01:
+                output = "*"
+            elif 0.01 >= p_value > 0.001:
+                output = "**"
+            elif 0.001 >= p_value > 0.0001:
+                output = "***"
+            elif p_value <= 0.0001:
+                output = "****"
+        except TypeError:
+            pass
+
+        return output
+
+    @staticmethod
+    def calc_pearson_ci(coef, n):
+        stderr = 1.0 / math.sqrt(n - 3)
+        delta = 1.96 * stderr
+        lower = math.tanh(math.atanh(coef) - delta)
+        upper = math.tanh(math.atanh(coef) + delta)
+        return lower, upper
+
+    def plot_stripplot(self, df, name):
+        sns.set(rc={'figure.figsize': (12, 9)})
+        sns.set_style("ticks")
+        fig, ax = plt.subplots()
+        sns.despine(fig=fig, ax=ax)
+
+        df_m = df.melt(id_vars=["cell type"], value_vars=["lower", "upper"])
+        sns.pointplot(x="value",
+                      y="cell type",
+                      data=df_m,
+                      join=False,
+                      palette=self.colormap,
+                      ax=ax)
+
+        sns.stripplot(x="mean",
+                      y="cell type",
+                      data=df,
+                      size=25,
+                      dodge=False,
+                      orient="h",
+                      palette=self.colormap,
+                      linewidth=1,
+                      edgecolor="w",
+                      jitter=0,
+                      ax=ax)
+
+        ax.set_ylabel('',
+                      fontsize=12,
+                      fontweight='bold')
+        ax.set_xlabel('Spearman r',
+                      fontsize=12,
+                      fontweight='bold')
+        ax.tick_params(axis='x', labelsize=8)
+        ax.tick_params(axis='y', labelsize=10)
+
+        ax.xaxis.grid(False)
+        ax.yaxis.grid(True)
+
+        ax.set_xlim([-1, 1])
+
+        for extension in self.extensions:
+            filename = "{}_stripplot.{}".format(name, extension)
             print("\t\tSaving plot: {}".format(filename))
-            fig.savefig(os.path.join(outdir, filename), dpi=300)
+            fig.savefig(os.path.join(self.outdir, filename), dpi=300)
         plt.close()
+
 
     def print_arguments(self):
         print("Arguments:")

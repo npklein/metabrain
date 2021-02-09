@@ -123,6 +123,7 @@ class main():
         data = self.parse_df(decon_fdr_df, self.alpha)
         counts = self.count(data)
         counts = counts[counts > 0]
+        print(counts)
 
         print("Creating plot.")
         up.plot(counts, sort_by='cardinality', show_counts=True)
@@ -161,6 +162,13 @@ class main():
         tmp_df.reset_index(drop=False, inplace=True)
         tmp_df = tmp_df.melt(id_vars="index", var_name="CellType", value_name="FDR")
         tmp_df = tmp_df.loc[tmp_df["FDR"] < alpha, :]
+        # print(tmp_df)
+        # genes = set()
+        # for index in tmp_df["index"]:
+        #     genes.add(index.split("_")[0])
+        # print(genes)
+        # print(len(genes))
+        # exit()
 
         data = {}
         for ct in list(tmp_df["CellType"].unique()):
