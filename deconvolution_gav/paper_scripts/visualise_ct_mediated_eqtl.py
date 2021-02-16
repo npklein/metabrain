@@ -55,7 +55,7 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./visualise_ct_mediated_eqtl.py -eq ../matrix_preparation/cortex_eur_cis/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ge ../matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -al ../matrix_preparation/cortex_eur_cis/create_matrices/genotype_alleles.txt.gz -ex ../matrix_preparation/cortex_eur_cis/create_matrices/expression_table.txt.gz -cc ../matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt.gz -d ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -i ADAMTS18 CYP24A1 CLECL1 -n 600 -e pdf
+./visualise_ct_mediated_eqtl.py -eq ../matrix_preparation/cortex_eur_cis/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ge ../matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -al ../matrix_preparation/cortex_eur_cis/create_matrices/genotype_alleles.txt.gz -ex ../matrix_preparation/cortex_eur_cis/create_matrices/expression_table.txt.gz -cc ../matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt.gz -d ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -i STMN4 NKAIN1 FAM221A AMPD3 CD82 -e pdf
 """
 
 
@@ -438,7 +438,7 @@ class main():
         xmax_value = df[cov_name].max()
         xmax = xmax_value + max(abs(xmax_value * 0.1), 0.05)
 
-        sns.set(rc={'figure.figsize': (12, 9)})
+        sns.set(rc={'figure.figsize': (12, 12)})
         sns.set_style("ticks")
         fig, ax = plt.subplots()
         sns.despine(fig=fig, ax=ax)
