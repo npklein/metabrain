@@ -154,8 +154,8 @@ class main():
             print("\tSingle-nucleus {} eQTL data frame: {}".format(full_name, sn_df.shape))
 
             # Select the columns of interest
-            sn_subset = sn_df[["ProbeName", "SNPName", self.eqtl_ea_col, "OverallZScore", "FDR"]]
-            sn_subset.columns = ["ProbeName", "SNPName", "sn_{}_ea_col".format(full_name), "sn_{}_eqtl_OverallZscore".format(full_name), "sn_{}_eQTL_FDR".format(full_name)]
+            sn_subset = sn_df[["ProbeName", "SNPName", self.eqtl_ea_col, "FDR", "OverallZScore"]]
+            sn_subset.columns = ["ProbeName", "SNPName", "sn_{}_ea_col".format(full_name), "sn_{}_eQTL_FDR".format(full_name), "sn_{}_eqtl_OverallZscore".format(full_name)]
 
             # Merge.
             bulk_df = bulk_df.merge(sn_subset, on=["ProbeName", "SNPName"], how="left")
