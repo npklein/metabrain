@@ -11,15 +11,15 @@ library(Seurat)
 library(Matrix)
 library(ggplot2)
 
-work_dir <- '/groups/umcg-biogen/tmp03/input/ROSMAP-scRNAseq/2020-10-22-MVochteloo-Copy/'
+work_dir <- '/groups/umcg-biogen/tmp01/input/ROSMAP-scRNAseq/2020-10-22-MVochteloo-Copy/'
 list.files(work_dir) # Should show barcodes.tsv, genes.tsv, and matrix.mtx
 expression_matrix <- Read10X(data.dir = work_dir)
 
-projid_table <- read.table('/groups/umcg-biogen/tmp03/input/ROSMAP-scRNAseq/filtered_column_metadata.txt.gz', header = T, stringsAsFactors = F)
+projid_table <- read.table('/groups/umcg-biogen/tmp01/input/ROSMAP-scRNAseq/filtered_column_metadata.txt.gz', header = T, stringsAsFactors = F)
 projid_table$TAG <- gsub('\\.', '-', projid_table$TAG)
 
-# projid_rosmapid_translate_table <- read.csv("/groups/umcg-biogen/tmp03/input/ROSMAP-scRNAseq/meta/ROSMAP_IDkey.csv", sep = ",")
-# phenotype_table <- read.csv("/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-02-03-phenotype-table/2020-09-04.brain.phenotypes.withReannotatedDiagnosis.txt", sep="\t")
+# projid_rosmapid_translate_table <- read.csv("/groups/umcg-biogen/tmp01/input/ROSMAP-scRNAseq/meta/ROSMAP_IDkey.csv", sep = ",")
+# phenotype_table <- read.csv("/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-02-03-phenotype-table/2020-09-04.brain.phenotypes.withReannotatedDiagnosis.txt", sep="\t")
 # meta_table <- merge(projid_table, merge(projid_rosmapid_translate_table, phenotype_table, by.x="rnaseq_id", by.y="rnaseq_id"), by.x="projid", by.y="projid", all.x = TRUE)
 meta_table <- projid_table
 
@@ -32,7 +32,7 @@ seurat_object <- Seurat::CreateSeuratObject(counts = expression_matrix,
                                             project = "scRNAseq",
                                             meta.data = meta_table)
 
-filtered_gene_row_file <- read.csv("/groups/umcg-biogen/tmp03/input/ROSMAP-scRNAseq/filtered_gene_row_names.txt.gz", sep = "\t")
+filtered_gene_row_file <- read.csv("/groups/umcg-biogen/tmp01/input/ROSMAP-scRNAseq/filtered_gene_row_names.txt.gz", sep = "\t")
 filtered_gene_row_tags <- filtered_gene_row_file[, 1]
 length(filtered_gene_row_tags)
 # [1] 17925
@@ -68,8 +68,8 @@ write.table(visualisation_table,
 
 #################################################################################
 
-ds_genes <- scan('/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/multiple_sclerosis_patsopoulos_harm_jan_enrichtments_exHla.txt', character(), quote = "")
-gene_trans_df <- read.csv("/groups/umcg-biogen/tmp03/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz", sep = "\t")[, c("ArrayAddress", "Symbol")]
+ds_genes <- scan('/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/multiple_sclerosis_patsopoulos_harm_jan_enrichtments_exHla.txt', character(), quote = "")
+gene_trans_df <- read.csv("/groups/umcg-biogen/tmp01/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz", sep = "\t")[, c("ArrayAddress", "Symbol")]
 gene_trans_df <- gene_trans_df[complete.cases(gene_trans_df),]
 gene_trans_df <- within(gene_trans_df, gene <- data.frame(do.call('rbind', strsplit(as.character(gene_trans_df$ArrayAddress),'.',fixed=TRUE))))
 ds_genes_hgnc_smybols <- gene_trans_df[gene_trans_df$gene$X1 %in% ds_genes, "Symbol"]
