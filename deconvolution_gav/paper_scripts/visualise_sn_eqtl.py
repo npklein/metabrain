@@ -3,7 +3,7 @@
 """
 File:         visualise_sn_eqtl.py
 Created:      2021/01/28
-Last Changed:
+Last Changed: 2021/02/22
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -354,10 +354,10 @@ class main():
 
                 if fdr_value < self.alpha:
                     print("\t\tPlotting: {}\t{}\t{}".format(snp_name, probe_name, hgnc_name))
-                    # self.plot_simple_eqtl(i, ct, fdr_value, snp_name, probe_name,
-                    #                       hgnc_name, eqtl_type, data,
-                    #                       minor_allele, minor_allele_frequency,
-                    #                       allele_map, ct_outdir)
+                    self.plot_simple_eqtl(i, ct, fdr_value, snp_name, probe_name,
+                                          hgnc_name, eqtl_type, data,
+                                          minor_allele, minor_allele_frequency,
+                                          allele_map, ct_outdir)
 
                 # Calculate correlation
                 coef, p = stats.spearmanr(data["genotype"], data["expression"])
@@ -365,7 +365,7 @@ class main():
 
                 # Saving data.
                 data_list = interest_corr[hgnc_name]
-                data_list.append([ct, coef, lower, upper])
+                data_list.append([minor_allele, ct, coef, lower, upper])
                 interest_corr[hgnc_name] = data_list
 
         # # Combine data.
@@ -377,11 +377,23 @@ class main():
         print("Plotting forest plot")
         for name, info in interest_corr.items():
             print("\t\tPlotting: {}".format(name))
-            df = pd.DataFrame(info, columns=["cell type", "mean", "lower", "upper"])
+            df = pd.DataFrame(info, columns=["affect allele", "cell type", "mean", "lower", "upper"])
+            counts = df["affect allele"].value_counts()
+            counts.sort_values(inplace=True)
+            majority_allele = counts.index[0]
+            if len(counts.index) > 1:
+                tmp = df.copy()
+                for index, row in tmp.iterrows():
+                    if row["affect allele"] != majority_allele:
+                        df.at[index, "affect allele"] = majority_allele
+                        df.at[index, "mean"] = df.at[index, "mean"] * -1
+                        df.at[index, "lower"] = df.at[index, "lower"] * -1
+                        df.at[index, "upper"] = df.at[index, "upper"] * -1
+                del tmp
             df.set_index("cell type", inplace=True)
             for ct in self.cell_types:
                 if ct not in df.index:
-                    df.loc[ct, :] = [np.nan, np.nan, np.nan]
+                    df.loc[ct, :] = [np.nan, np.nan, np.nan, np.nan]
             df = df.loc[self.cell_types, :]
             df.reset_index(inplace=True, drop=False)
             self.plot_stripplot(df, name)

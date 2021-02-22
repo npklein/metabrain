@@ -3,7 +3,7 @@
 """
 File:         fill_gaps_mr_and_decon_table.py
 Created:      2021/02/03
-Last Changed:
+Last Changed: 2021/02/22
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -134,12 +134,16 @@ class main():
                             best_match = None
                             r2_options = []
                             max_r2 = 0
+                            matching = None
                             for _, decon_row in ensg_decon_df.iterrows():
-                                r2 = self.calculate_ld(instrument_snp, decon_row["SNP"])
-                                r2_options.append(decon_row["SNP"] + " = " + str(r2))
-                                if r2 != np.nan and r2 > max_r2:
+                                info = self.get_ldpair_info(instrument_snp, decon_row["SNP"])
+                                if info["WARNING"] is not np.nan:
+                                    print(info)
+                                r2_options.append(decon_row["SNP"] + " = " + str(info["R2"]))
+                                if info["WARNING"] is np.nan and info["R2"] != np.nan and info["R2"] > max_r2:
                                     best_match = decon_row.copy()
-                                    max_r2 = r2
+                                    max_r2 = info["R2"]
+                                    matching = info["matching"]
 
                             print("\t\tLD R^2 options: {}".format(", ".join(r2_options)))
                             if max_r2 < self.minimal_ld:
@@ -148,21 +152,23 @@ class main():
                                 ld_r2_data.append(np.nan)
                                 flip_data.append(np.nan)
                             else:
-                                print("\t\tBest SNP match: {} - {} with LD R^2: {}".format(best_match["SNP"], best_match["ENSG"], max_r2))
+                                print("\t\tBest SNP match: {} - {} with LD R^2: {}\tMatching: {}-{}".format(best_match["SNP"], best_match["ENSG"], max_r2, row[self.table_ea], best_match[self.decon_ea]))
                                 n_filled += 1
 
-                                # Safe best match.
-                                eqtl_snp_data.append(best_match["SNP"])
-                                ld_r2_data.append(max_r2)
+                                mr_ea_decon_aa = [row[self.table_ea], best_match[self.decon_ea]]
 
                                 # Flip.
                                 flip = False
-                                if row[self.table_ea] != best_match[self.decon_ea]:
+                                if mr_ea_decon_aa not in matching:
                                     tmp_best_match = best_match.copy()
                                     for name, value in tmp_best_match.iteritems():
                                         if name.endswith("_Beta"):
                                             best_match[name] = value * -1
                                     flip = True
+
+                                # Safe best match.
+                                eqtl_snp_data.append(best_match["SNP"])
+                                ld_r2_data.append(max_r2)
 
                                 # Insert decon values into excel sheet.
                                 sheet.iloc[i, 26:36] = best_match[3:13]
@@ -192,18 +198,53 @@ class main():
                              nrows=nrows, skiprows=skiprows)
         return df
 
-    def calculate_ld(self, rs1, rs2):
+    def get_ldpair_info(self, rs1, rs2):
         url = 'https://ldlink.nci.nih.gov/LDlinkRest/ldpair?var1={}&var2={}&pop=EUR&token={}'.format(rs1, rs2, self.token)
         r = requests.get(url)
-        r2_text = re.search("R2: ([0-9]{1}.[0-9]{4})", r.text)
-        r2 = np.nan
-        try:
-            r2 = float(r2_text.group(1))
-        except AttributeError:
-            pass
 
-        return r2
-        # return random.random()
+        interest = ["D'", "R2", "Chi-sq", "p-value", "WARNING"]
+        info = {x: np.nan for x in interest}
+        snp_alleles = []
+        haplo_count = 0
+        matching = []
+        for line in r.text.split("\n"):
+            line = line.strip()
+            if re.match("[ATCG]_[ATCG]:", line):
+                alleles = line.split(":")[0].split("_")
+
+                if haplo_count == 0 or haplo_count == 1:
+                    snp_alleles.append(alleles[1])
+                elif haplo_count == 2 or haplo_count == 3:
+                    snp_alleles.append(alleles[0])
+
+                haplo_count += 1
+
+            for variable in interest:
+                if line.startswith("{}: ".format(variable)):
+                    value_str = line.replace("{}: ".format(variable), "").replace("<", "").replace(">", "")
+
+                    if variable != "WARNING":
+                        value = np.nan
+                        try:
+                            value = float(value_str)
+                        except AttributeError:
+                            pass
+                    else:
+                        value = value_str
+                    info[variable] = value
+
+            if re.match("{}\([ATCG]\) allele is correlated with {}\([ATCG]\) allele".format(rs1, rs2), line):
+                part1 = re.search("{}(\([ATCG]\))".format(rs1), line).group(1)[1]
+                part2 = re.search("{}(\([ATCG]\))".format(rs2), line).group(1)[1]
+                matching.append([part1, part2])
+            elif re.match("{} and {} are in linkage equilibrium".format(rs1, rs2), line):
+                matching = None
+
+        info[rs1] = snp_alleles[2:4]
+        info[rs2] = snp_alleles[0:2]
+        info["matching"] = matching
+
+        return info
 
     def print_arguments(self):
         print("Arguments:")
