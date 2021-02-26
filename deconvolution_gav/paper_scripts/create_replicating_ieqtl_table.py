@@ -59,6 +59,7 @@ class main():
             self.bulk_eqtl_infile = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR/Iteration1/eQTLProbesFDR0.05-ProbeLevel.txt.gz"
         elif self.eqtl_type == "trans":
             self.bulk_eqtl_infile = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/trans/2020-05-26-Cortex-EUR-AFR-noENA-noPCA/Iteration1/eQTLs-crossMappingEQTLsRemoved-FDR0.05.txt.gz"
+        self.bulk_alleles_infile = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_{}/create_matrices/genotype_alleles.txt.gz".format(self.eqtl_type)
         self.bulk_decon_infile = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/{}/cortex/decon_out/deconvolutionResults.csv".format(self.eqtl_type)
         self.sn_eqtl_infolder = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/{}_100Perm/".format(self.eqtl_type)
         self.sn_eqtl_filename = "eQTLsFDR-ProbeLevel.txt.gz"
@@ -126,8 +127,15 @@ class main():
 
         print("### Merging bulk data ###")
         bulk_df = bulk_eqtl_df.merge(buk_decon_fdr_beta_df, on=["ProbeName", "SNPName"])
-        bulk_df["DeconQTLAlleleAssessed"] = bulk_df["SNPType"].str.split("/", n=1, expand=True)[1]
         print(bulk_df)
+
+        # Add alleles.
+        alleles_data = pd.read_csv(self.bulk_alleles_infile, sep="\t", header=0)
+        alleles_data.columns = ["SNP", "Alleles", "MinorAllele"]
+        snp_to_alles_dict = dict(zip(alleles_data["SNP"], alleles_data["Alleles"]))
+        bulk_df["DeconAlleles"] = bulk_df["SNPName"].map(snp_to_alles_dict)
+        bulk_df["DeconQTLAlleleAssessed"] = bulk_df["DeconAlleles"].str.split("/", n=1, expand=True)[1]
+        bulk_df.drop(["DeconAlleles"], axis=1, inplace=True)
 
         print("### Flipping beta's ###")
         bulk_df["deconQTLFlip"] = bulk_df[self.eqtl_ea_col] != bulk_df["DeconQTLAlleleAssessed"]
