@@ -3,7 +3,7 @@
 """
 File:         partial_deconvolution.py
 Created:      2020/06/29
-Last Changed: 2020/06/30
+Last Changed: 2020/12/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -44,6 +44,13 @@ __description__ = "{} is a program developed and maintained by {}. " \
                   "of any kind.".format(__program__,
                                         __author__,
                                         __license__)
+
+"""
+Syntax:
+./partial_deconvolution.py -d /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.txt.gz -s /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/CellMap_brain_celltype_avgCPM.txt -t /groups/umcg-biogen/tmp03/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz -g /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/test_scripts/AMP-AD/IHC_counts.txt.gz -o ALL_TMM_LOG2 -sa /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-02-03-phenotype-table/2020-09-04.brain.phenotypes.withReannotatedDiagnosis.txt -sid rnaseq_id -cid cohort -os IHC_0CPM_LOG2_FILTERED_CC_TEST -cohort_corr -log2 -sum_to_one -visualise -e pdf
+"""
+
+
 if __name__ == '__main__':
     # Get the command line arguments.
     CLA = CommandLineArguments(program=__program__,
@@ -52,10 +59,16 @@ if __name__ == '__main__':
     SETTINGS = Settings(data_path=CLA.get_argument("data"),
                         signature_path=CLA.get_argument("signature"),
                         translate_path=CLA.get_argument("translate"),
-                        sample_path=CLA.get_argument("sample"),
-                        cohort=CLA.get_argument("cohort"),
                         ground_truth_path=CLA.get_argument("ground_truth"),
+                        sample_annotation_path=CLA.get_argument("sample_annotation"),
+                        sample_id=CLA.get_argument("sample_id"),
+                        sample_filter_path=CLA.get_argument("sample_filter"),
+                        cohort_id=CLA.get_argument("cohort_id"),
+                        cohort_filter=CLA.get_argument("cohort_filter"),
+                        annotation_id=CLA.get_argument("annotation_id"),
+                        annotation_filter=CLA.get_argument("annotation_filter"),
                         min_expr=CLA.get_argument("min_expr"),
+                        cohort_corr=CLA.get_argument("cohort_corr"),
                         normalize=CLA.get_argument("normalize"),
                         zscore=CLA.get_argument("zscore"),
                         log2=CLA.get_argument("log2"),
@@ -67,5 +80,7 @@ if __name__ == '__main__':
     # Start the program.
     PROGRAM = Main(settings=SETTINGS,
                    outdir=CLA.get_argument("outdir"),
-                   visualise=CLA.get_argument("visualise"))
+                   outsubdir=CLA.get_argument("outsubdir"),
+                   visualise=CLA.get_argument("visualise"),
+                   plot_ids=CLA.get_argument("plot_id"),)
     PROGRAM.start()

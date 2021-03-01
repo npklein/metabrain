@@ -57,7 +57,7 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 class main():
     def __init__(self):
-        self.input_dir = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-04-13-eqtls-rsidfix/cortex-cis-EURandAFR/"
+        self.input_dir = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR/"
         self.subdir_regex = "Iteration*"
         self.filename = "eQTLProbesFDR0.05-ProbeLevel.txt.gz"
         self.outdir = str(Path(__file__).parent.parent)
@@ -121,7 +121,7 @@ class main():
         ax.set_xticks(range(len(df.index)))
         ax.set_xticklabels(df["iteration"])
         plt.tight_layout()
-        fig.savefig(os.path.join(self.outdir, "ciseqtls_per_iteration.png"))
+        fig.savefig(os.path.join(self.outdir, "ciseqtls_per_iteration_new.png"))
         plt.close()
 
 

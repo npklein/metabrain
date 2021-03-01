@@ -1,7 +1,7 @@
 """
 File:         perform_celltype_factorization.py
 Created:      2020/04/07
-Last Changed: 2020/04/28
+Last Changed: 2020/07/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -117,7 +117,8 @@ class PerformCelltypeFactorization:
 
         # Shift the expression to be all positive.
         shifted_ct_expr = ct_expr_df.copy()
-        shifted_ct_expr = shifted_ct_expr + abs(shifted_ct_expr.values.min())
+        if ct_expr_df.values.min() < 0:
+            shifted_ct_expr = self.perform_shift(ct_expr_df)
 
         # Construct a dataframe of the first component of each celltype
         # subset expression profile.
@@ -164,6 +165,10 @@ class PerformCelltypeFactorization:
         print("\t\tExplained variance ratio: {:.2f}".format(pca.explained_variance_ratio_[0]))
         print("\t\tSingular values: {:.2f}".format(pca.singular_values_[0]))
         return pca.transform(corr_matrix)
+
+    @staticmethod
+    def perform_shift(df):
+        return df + abs(df.values.min())
 
     @staticmethod
     def get_first_nmf_component(X):
