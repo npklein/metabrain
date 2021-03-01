@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/06/29
-Last Changed:
+Last Changed: 2020/09/04
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -55,27 +55,18 @@ class CommandLineArguments:
                             "--data",
                             type=str,
                             required=True,
-                            help="The bulk expression matrix.")
-        parser.add_argument("-si",
+                            help="The path to the bulk expression input file.")
+        parser.add_argument("-s",
                             "--signature",
                             type=str,
                             required=True,
-                            help="The signature matrix.")
+                            help="The path to the signature matrix file.")
         parser.add_argument("-t",
                             "--translate",
                             type=str,
                             required=True,
-                            help="The gene to ensembl ID translate matrix.")
-        parser.add_argument("-sa",
-                            "--sample",
-                            type=str,
-                            required=True,
-                            help="The sample to cohort translate matrix.")
-        parser.add_argument("-c",
-                            "--cohort",
-                            type=str,
-                            default='All',
-                            help="The cohort. Default: 'All'.")
+                            help="The path to the gene to ensembl ID translate "
+                                 "file.")
         parser.add_argument("-g",
                             "--ground_truth",
                             type=str,
@@ -89,12 +80,68 @@ class CommandLineArguments:
                             default="output",
                             help="The name of the output directory. " \
                                  "Default: 'output'.")
+        parser.add_argument("-sa",
+                            "--sample_annotation",
+                            type=str,
+                            required=True,
+                            help="The path to the sample annotation file.")
+        parser.add_argument("-sid",
+                            "--sample_id",
+                            type=str,
+                            required=True,
+                            help="The sample column name in the -sa / "
+                                 "--sample_annotation file.")
+        parser.add_argument("-sf",
+                            "--sample_filter",
+                            type=str,
+                            default=None,
+                            help="A path to a file containing which first line "
+                                 "(tab seperated) contains the sample "
+                                 "identifiers to include.")
+        parser.add_argument("-cid",
+                            "--cohort_id",
+                            type=str,
+                            required=True,
+                            help="The cohort column name in the -sa / "
+                                 "--sample_annotation file.")
+        parser.add_argument("-cf",
+                            "--cohort_filter",
+                            type=str,
+                            nargs="+",
+                            required=False,
+                            default=None,
+                            help="The name of the cohort(s) to include, "
+                                 "default: include all. (space = _)")
+        parser.add_argument("-aid",
+                            "--annotation_id",
+                            type=str,
+                            required=False,
+                            help="The annotation column name in the -sa / "
+                                 "--sample_annotation file.")
+        parser.add_argument("-af",
+                            "--annotation_filter",
+                            type=str,
+                            nargs="+",
+                            required=False,
+                            default=None,
+                            help="The annotation labels to include, "
+                                 "default: include all. (space = _)")
+        parser.add_argument("-os",
+                            "--outsubdir",
+                            type=str,
+                            default=None,
+                            help="The name of the output subdirectory. " \
+                                 "Default: None.")
         parser.add_argument("-m",
                             "--min_expr",
                             type=int,
                             default=0,
                             help="The minimal expression value per gene."
                                  " Default: 0.")
+        parser.add_argument("-cohort_corr",
+                            action='store_true',
+                            help="Correct for cohort biases in the expression."
+                                 " Default: False.")
         parser.add_argument("-n",
                             "--normalize",
                             type=str,
@@ -125,10 +172,17 @@ class CommandLineArguments:
                             action='store_true',
                             help="Whether or not to visualise the data."
                                  " Default: False.")
+        parser.add_argument("-pid",
+                            "--plot_id",
+                            type=str,
+                            nargs="+",
+                            required=False,
+                            help="The column names to plot in the -sa / "
+                                 "--sample file.")
         parser.add_argument("-e",
                             "--extension",
                             type=str,
-                            choices=["png", "pdf"],
+                            choices=["png", "pdf", "eps"],
                             default="png",
                             help="The figure file extension. "
                                  "Default: 'png'.")

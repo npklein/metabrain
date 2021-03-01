@@ -1,7 +1,7 @@
 """
 File:         data_loader.py
 Created:      2020/06/29
-Last Changed: 2020/06/30
+Last Changed: 2020/09/04
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -38,14 +38,13 @@ class DataLoader:
         self.data_path = settings.get_data_path()
         self.signature_path = settings.get_signature_path()
         self.translate_path = settings.get_translate_path()
-        self.sample_path = settings.get_sample_path()
-        self.cohort = settings.get_cohort()
         self.ground_truth_path = settings.get_ground_truth_path()
 
-        outdir = settings.get_output_path()
-        self.expression_file = os.path.join(outdir, 'expression_{}.txt.gz'.format(self.cohort))
+        outdir = settings.get_outdir_path()
+
+        self.expression_file = os.path.join(outdir, 'expression.txt.gz')
         self.signature_file = os.path.join(outdir, 'signature.txt.gz')
-        self.settings_file = os.path.join(outdir, 'settings.json')
+        self.settings_file = os.path.join(outdir, 'data_settings.json')
 
         self.expression = None
         self.signature = None
@@ -53,14 +52,16 @@ class DataLoader:
 
     def work(self):
         # Check if the filtered data files exist.
-        if (not os.path.exists(self.signature_file) and not os.path.exists(self.expression_file))\
-                or not os.path.exists(self.settings_file) or not self.settings_match():
+        if os.path.exists(self.signature_file) and \
+            os.path.exists(self.expression_file) and \
+            os.path.exists(self.settings_file) and \
+                self.settings_match():
+            print("Loading saved files")
+            self.load_saved_files()
+        else:
             print("Loading files")
             self.load()
             self.save()
-        else:
-            print("Loading saved files")
-            self.load_saved_files()
 
         # Check if ground truth file exists and if so, load it.
         if self.ground_truth_path is not None and os.path.exists(self.ground_truth_path):
@@ -72,12 +73,9 @@ class DataLoader:
 
         # Load the expression of the signature genes.
         translate_dict = self.load_translate(self.translate_path)
-        sample_dict = self.load_samples(self.sample_path,
-                                        self.cohort)
-        self.expression = self.load_data(self.data_path,
-                                         self.signature.index,
-                                         translate_dict,
-                                         sample_dict)
+        self.expression = self.load_expression(self.data_path,
+                                               self.signature.index,
+                                               translate_dict)
 
     @staticmethod
     def load_signature(filepath):
@@ -93,43 +91,30 @@ class DataLoader:
         return dict(zip(df.loc[:, key], df.loc[:, value]))
 
     @staticmethod
-    def load_samples(filepath, cohort, key="RnaID", value="GenotypeID"):
-        print("\tLoading samples dict")
-        df = pd.read_csv(filepath, sep="\t")
-        if cohort.lower() != 'All':
-            df = df.loc[df["MetaCohort"] == cohort, :]
-        return dict(zip(df.loc[:, key], df.loc[:, value]))
-
-    @staticmethod
-    def load_data(filepath, profile_genes, trans_dict, sample_dict):
-        selection = []
-        data = []
+    def load_expression(filepath, profile_genes, trans_dict):
         columns = []
         indices = []
+        data_collection = []
 
         print("\tLoading expression matrix")
         with gzip.open(filepath, 'rb') as f:
             for i, line in enumerate(f):
                 if (i == 0) or (i % 1000 == 0):
-                    print("\t\tfound {}/{} genes".format(len(data),
+                    print("\t\tfound {}/{} genes".format(len(data_collection),
                                                          len(profile_genes)))
 
-                splitted_line = np.array(line.decode().split('\t'))
+                splitted_line = np.array(line.decode().strip('\n').split('\t'))
+                index = splitted_line[0]
+                data = splitted_line[1:]
                 if i == 0:
-                    for j, col in enumerate(splitted_line):
-                        if col in sample_dict.keys():
-                            selection.append(j)
-                            columns.append(col)
-                    if len(selection) <= 0:
-                        break
+                    columns = data
 
-                gene = splitted_line[0]
-                if gene in trans_dict.keys() and trans_dict[gene] in profile_genes and trans_dict[gene] not in indices:
-                    indices.append(trans_dict[gene])
-                    data.append([float(x) for x in splitted_line[selection]])
+                if index in trans_dict.keys() and trans_dict[index] in profile_genes and trans_dict[index] not in indices:
+                    indices.append(trans_dict[index])
+                    data_collection.append([float(x) for x in data])
         f.close()
 
-        return pd.DataFrame(data, index=indices, columns=columns)
+        return pd.DataFrame(data_collection, index=indices, columns=columns)
 
     def save(self):
         print("Saving files")
@@ -143,7 +128,7 @@ class DataLoader:
             self.expression.to_csv(self.expression_file, compression="gzip", sep="\t", header=True, index=True)
             print("\tsaved dataframe: {} "
                   "with shape: {}".format(os.path.basename(self.expression_file),
-                                          self.signature.shape))
+                                          self.expression.shape))
 
     def settings_match(self):
         with open(self.settings_file) as f:
@@ -154,9 +139,7 @@ class DataLoader:
         f.close()
         if (prev_settings["data_path"] == self.data_path) and \
             (prev_settings["signature_path"] == self.signature_path) and \
-            (prev_settings["translate_path"] == self.translate_path) and \
-            (prev_settings["sample_path"] == self.sample_path) and \
-            (prev_settings["cohort"] == self.cohort):
+            (prev_settings["translate_path"] == self.translate_path):
             return True
 
         return False
@@ -167,7 +150,7 @@ class DataLoader:
                                      sep="\t",
                                      header=0,
                                      index_col=0)
-        print("\tloaded dataframe: {} "
+        print("\t\tloaded dataframe: {} "
               "with shape: {}".format(os.path.basename(self.signature_file),
                                       self.signature.shape))
 
@@ -176,7 +159,7 @@ class DataLoader:
                                      sep="\t",
                                      header=0,
                                      index_col=0)
-        print("\tloaded dataframe: {} "
+        print("\t\tloaded dataframe: {} "
               "with shape: {}".format(os.path.basename(self.expression_file),
                                       self.expression.shape))
 
@@ -186,7 +169,7 @@ class DataLoader:
                                         sep="\t",
                                         header=0,
                                         index_col=0)
-        print("\tloaded dataframe: {} "
+        print("\t\tloaded dataframe: {} "
               "with shape: {}".format(os.path.basename(self.ground_truth_path),
                                       self.ground_truth.shape))
 

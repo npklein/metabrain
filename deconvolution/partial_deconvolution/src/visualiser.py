@@ -1,7 +1,7 @@
 """
 File:         visualiser.py
 Created:      2020/06/29
-Last Changed: 2020/06/30
+Last Changed: 2020/12/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -40,7 +40,7 @@ import matplotlib.patches as mpatches
 class Visualiser:
     def __init__(self, settings, signature, expression, deconvolution,
                  ground_truth, comparison):
-        self.outdir = settings.get_output_path()
+        self.outdir = settings.get_outsubdir_path()
         self.extension = settings.get_extension()
         self.title = settings.get_title()
         self.subtitle = settings.get_subtitle()
@@ -60,6 +60,10 @@ class Visualiser:
             "Astrocyte": "#D55E00",
             "Pericytes": "#808080"
         }
+
+        # Set the right pdf font for exporting.
+        matplotlib.rcParams['pdf.fonttype'] = 42
+        matplotlib.rcParams['ps.fonttype'] = 42
 
     def set_order(self):
         linkage = sch.linkage(self.signature)
@@ -272,7 +276,16 @@ class Visualiser:
             return
 
         df = self.comparison.copy()
-        self.create_regression(df, "NNLS predictions", "{} counts".format(self.ground_truth_type), 'comparison')
+        self.create_regression(df,
+                               "NNLS predictions",
+                               "{} counts".format(self.ground_truth_type),
+                               '{}_comparison'.format(self.ground_truth_type))
+
+    def plot_violin_comparison(self, label, trans_dict):
+        df = self.deconvolution.copy()
+        df = df.reset_index().melt(id_vars=["index"])
+        df[label] = df["index"].map(trans_dict).astype(str)
+        self.create_catplot(df, label)
 
     def create_clustermap(self, df, name):
         sns.set(color_codes=True)
@@ -286,6 +299,19 @@ class Visualiser:
         g.fig.subplots_adjust(bottom=0.05, top=0.7)
         plt.tight_layout()
         g.savefig(os.path.join(self.outdir, "{}_clustermap.{}".format(name, self.extension)))
+        plt.close()
+
+    def create_catplot(self, df, name):
+        sns.set(style="ticks")
+        order = list(df[name].unique())
+        order.sort()
+        g = sns.catplot(x=name, y="value", col="variable", col_wrap=3,
+                        data=df, kind="violin", order=order)
+        for axes in g.axes.flat:
+            axes.set_xticklabels(axes.get_xticklabels(),
+                                 rotation=65,
+                                 horizontalalignment='right')
+        g.savefig(os.path.join(self.outdir, "{}_catplot.{}".format(name, self.extension)))
         plt.close()
 
     def create_boxplot(self, df, xlabel="", ylabel="", name=""):
@@ -321,6 +347,9 @@ class Visualiser:
     def create_regression(self, df, xlabel="", ylabel="", name=""):
         df['color'] = df['hue'].map(self.palette)
 
+        total_coef, total_p = stats.pearsonr(df["x"], df["y"])
+        total_coef_str = "r = {:.2f}".format(total_coef)
+
         sns.set(rc={'figure.figsize': (12, 9)})
         sns.set_style("ticks")
         fig, ax = plt.subplots()
@@ -333,7 +362,8 @@ class Visualiser:
             subset = df.loc[df['hue'] == group, :].copy()
             color = self.palette[group]
 
-            coef, p = stats.spearmanr(subset["x"], subset["y"])
+            #coef, p = stats.spearmanr(subset["x"], subset["y"])
+            coef, p = stats.pearsonr(subset["x"], subset["y"])
             coefs[group] = "r = {:.2f}".format(coef)
 
             sns.regplot(x="x", y="y", data=subset,
@@ -350,7 +380,7 @@ class Visualiser:
         ax.text(0.5, 1.1, self.title,
                 fontsize=18, weight='bold', ha='center', va='bottom',
                 transform=ax.transAxes)
-        ax.text(0.5, 1.02, self.subtitle,
+        ax.text(0.5, 1.02, self.subtitle + ", r = {:.2f}".format(total_coef),
                 fontsize=14, alpha=0.75, ha='center', va='bottom',
                 transform=ax.transAxes)
 

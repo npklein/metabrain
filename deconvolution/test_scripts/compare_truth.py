@@ -56,8 +56,10 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 class main():
     def __init__(self):
-       self.sc_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/test_scripts/AMP-AD/single_cell_counts.txt.gz"
-       self.ihc_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/test_scripts/AMP-AD/IHC_counts.txt.gz"
+       self.path_a = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/2020-07-14-CellMapPredictions/nolog2/CellMap_noLog2_counts.txt.gz"
+       #self.path_a = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/2020-07-14-CellMapPredictions/log2/CellMap_log2_counts.txt.gz"
+       self.path_b = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/test_scripts/AMP-AD/single_cell_counts.txt.gz"
+       #self.path_b = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/test_scripts/AMP-AD/IHC_counts.txt.gz"
        self.outdir = str(Path(__file__).parent.parent)
        self.palette = {
            "Neuron": "#0072B2",
@@ -70,37 +72,39 @@ class main():
        }
 
     def start(self):
-        print("Load the single-cell file.")
-        sc_df = pd.read_csv(self.sc_path, sep="\t", header=0, index_col=0)
+        print("Load the A file.")
+        df_a = pd.read_csv(self.path_a, sep="\t", header=0, index_col=0)
         print("\tLoaded dataframe: {} "
-              "with shape: {}".format(os.path.basename(self.sc_path),
-                                      sc_df.shape))
+              "with shape: {}".format(os.path.basename(self.path_a),
+                                      df_a.shape))
+        print(df_a)
 
-        print("Load the IHC file.")
-        ihc_df = pd.read_csv(self.ihc_path, sep="\t", header=0, index_col=0)
+        print("Load the B file.")
+        df_b = pd.read_csv(self.path_b, sep="\t", header=0, index_col=0)
         print("\tLoaded dataframe: {} "
-              "with shape: {}".format(os.path.basename(self.ihc_path),
-                                      ihc_df.shape))
+              "with shape: {}".format(os.path.basename(self.path_b),
+                                      df_b.shape))
+        print(df_b)
 
-        overlap = np.intersect1d(sc_df.index, ihc_df.index)
-        sc_df = sc_df.loc[overlap, :]
-        ihc_df = ihc_df.loc[overlap, :]
+        overlap = np.intersect1d(df_a.index, df_b.index)
+        df_a = df_a.loc[overlap, :]
+        df_b = df_b.loc[overlap, :]
 
-        sc_df.index.name = "-"
-        ihc_df.index.name = "-"
+        df_a.index.name = "-"
+        df_b.index.name = "-"
 
-        if not sc_df.index.equals(ihc_df.index):
+        if not df_a.index.equals(df_b.index):
             print("Invalid order")
             exit()
 
         # Create the comparison dataframe.
-        cell_types = np.intersect1d(sc_df.columns, ihc_df.columns)
+        cell_types = np.intersect1d(df_a.columns, df_b.columns)
         data = []
         for i, sample in enumerate(overlap):
-            sc = sc_df.iloc[i, :]
-            ihc = ihc_df.iloc[i, :]
+            a = df_a.iloc[i, :]
+            b = df_b.iloc[i, :]
             for cell in cell_types:
-                data.append([sample, sc[cell], ihc[cell], cell])
+                data.append([sample, a[cell], b[cell], cell])
         df = pd.DataFrame(data, columns=['-', 'x', 'y', 'hue'])
         df.set_index('-', inplace=True)
 
@@ -119,7 +123,7 @@ class main():
             subset = df.loc[df['hue'] == group, :].copy()
             color = self.palette[group]
 
-            coef, p = stats.spearmanr(subset["x"], subset["y"])
+            coef, p = stats.pearsonr(subset["x"], subset["y"])
             coefs[group] = "r = {:.2f}".format(coef)
 
             sns.regplot(x="x", y="y", data=subset,
@@ -133,17 +137,17 @@ class main():
         ax.set_ylim(-0.1, 1.1)
         ax.plot([-0.1, 1.1], [-0.1, 1.1], ls="--", c=".3")
 
-        ax.text(0.5, 1.1, "single-cell versus IHC",
+        ax.text(0.5, 1.1, "CellMap noLog2 versus Single-Cell",
                 fontsize=18, weight='bold', ha='center', va='bottom',
                 transform=ax.transAxes)
         ax.text(0.5, 1.02, "N = {}".format(len(overlap)),
                 fontsize=14, alpha=0.75, ha='center', va='bottom',
                 transform=ax.transAxes)
 
-        ax.set_ylabel("IHC counts",
+        ax.set_ylabel("Single-cell counts",
                       fontsize=14,
                       fontweight='bold')
-        ax.set_xlabel("single-cell counts",
+        ax.set_xlabel("CellMap predictions",
                       fontsize=14,
                       fontweight='bold')
 

@@ -1,7 +1,7 @@
 """
 File:         create_deconvolution_matrices.py
 Created:      2020/04/07
-Last Changed: 2020/04/14
+Last Changed: 2020/07/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -45,6 +45,7 @@ class CreateDeconvolutionMatrices:
         :param force: boolean, whether or not to force the step to redo.
         :param outdir: string, the output directory.
         """
+        self.decon_expr_file = settings["decon_expression_datafile"]
         self.celltype_profile_file = settings["celltype_profile_datafile"]
         self.translate_file = settings["translate_datafile"]
         self.marker_genes_suffix = settings["marker_genes_suffix"]
@@ -60,6 +61,7 @@ class CreateDeconvolutionMatrices:
         prepare_output_dir(self.outdir)
 
         # Construct the output paths.
+        self.decon_expr_outpath = os.path.join(self.outdir, "decon_expr_table.txt.gz")
         self.ct_profile_expr_outpath = os.path.join(self.outdir, "ct_profile_expr_table.txt.gz")
         self.markers_outpath = os.path.join(self.outdir, "marker_genes.txt.gz")
 
@@ -77,29 +79,35 @@ class CreateDeconvolutionMatrices:
             print("Skipping step.")
             return
 
+        # Check which expression file we will use.
+        expr_file = self.expr_file
+        expr_df = self.expr_df
+        if self.decon_expr_file:
+            print("Warning: using a different expression file for "
+                  "deconvolution than for gene expression. This might take "
+                  "longer to load.")
+            expr_file = self.decon_expr_file
+            expr_df = None
+
         # Load the complete expression file.
-        if self.expr_df is None:
+        if expr_df is None:
             # Load the expression matrix file.
             print("Loading expression matrix.")
-            expr_df = load_dataframe(self.expr_file, header=0, index_col=0)
+            expr_df = load_dataframe(expr_file, header=0, index_col=0)
             expr_df = expr_df.rename(columns=self.sample_dict)
-            self.expr_df = expr_df[self.sample_order]
+            expr_df = expr_df[self.sample_order]
 
         # Load the translate file.
         print("Loading translate matrix.")
         trans_df = load_dataframe(self.translate_file, header=0, index_col=None)
-        trans_df = trans_df.loc[:, ["ArrayAddress", "Symbol"]]
-        trans_df = trans_df.set_index("ArrayAddress")
-        trans_df.index.name = "-"
+        trans_dict = dict(zip(trans_df.loc[:, "ArrayAddress"], trans_df.loc[:, "Symbol"]))
 
-        # Merge the two dataframes.
-        complete_expr_df = self.expr_df.merge(trans_df, left_index=True, right_index=True)
-        complete_expr_df = complete_expr_df.set_index("Symbol")
-        complete_expr_df.index.name = "-"
+        # Translate the ENSEBL ID's to HGNC symbols.
+        expr_df.index = expr_df.index.map(trans_dict)
+        expr_df.index.name = "-"
 
         # Remove unneeded variables.
-        self.expr_df = None
-        del trans_df
+        del trans_df, trans_dict
 
         # Create the marker gene file.
         if not check_file_exists(self.markers_outpath) or self.force:
@@ -111,8 +119,8 @@ class CreateDeconvolutionMatrices:
             marker_str_buffer = ["-" + "\t" + "\t".join(self.sample_order) + "\n"]
             for celltype, marker_genes in self.marker_dict.items():
                 for marker_gene in marker_genes:
-                    if marker_gene in complete_expr_df.index:
-                        expression = complete_expr_df.loc[[marker_gene], :]
+                    if marker_gene in expr_df.index:
+                        expression = expr_df.loc[[marker_gene], :]
                         if (len(expression.index)) != 1:
                             print("\tMarker gene: {} gives 0 or >1 expression "
                                   "profiles.".format(marker_gene))
@@ -140,8 +148,8 @@ class CreateDeconvolutionMatrices:
             print("Creating cell type profile expression table.")
             profile_str_buffer = ["-" + "\t" + "\t".join(self.sample_order) + "\n"]
             for marker_gene in self.celltype_profile.index:
-                if marker_gene in complete_expr_df.index:
-                    expression = complete_expr_df.loc[[marker_gene], :]
+                if marker_gene in expr_df.index:
+                    expression = expr_df.loc[[marker_gene], :]
                     if (len(expression.index)) != 1:
                         print("\tMarker gene: {} gives 0 or >1 expression "
                               "profiles.".format(marker_gene))
@@ -193,10 +201,13 @@ class CreateDeconvolutionMatrices:
 
     def print_arguments(self):
         print("Arguments:")
-        if self.expr_df is not None:
-            print("  > Expression matrix: {}".format(self.expr_df.shape))
+        if self.decon_expr_file:
+            print("  > Deconvolution expression input file: {}".format(self.decon_expr_file))
         else:
-            print("  > Expression input file: {}".format(self.expr_file))
+            if self.expr_df is not None:
+                print("  > Expression matrix: {}".format(self.expr_df.shape))
+            else:
+                print("  > Expression input file: {}".format(self.expr_file))
         print("  > Cell type profile input file: {}".format(self.celltype_profile_file))
         print("  > Translate input file: {}".format(self.translate_file))
         print("  > Marker genes suffix: {}".format(self.marker_genes_suffix))

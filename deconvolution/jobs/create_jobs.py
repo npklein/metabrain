@@ -146,8 +146,8 @@ class main():
             disease_str = " -d {} ".format(self.disease)
             settings_str = "disease_{}".format(self.settings)
 
-        header = self.create_header(job_name, cpus="2", mem="16")
-        content = ['python3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation.py -n {} -s {}{}\n'.format(self.name, settings_str, disease_str)]
+        header = self.create_header(job_name, cpus="2", mem="64")
+        content = ['python3 /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/matrix_preparation.py -n {} -s cis_{}{}\n'.format(self.name, settings_str, disease_str)]
         footer = self.create_footer()
 
         fpath = os.path.join(self.outdir, job_name + ".sh")

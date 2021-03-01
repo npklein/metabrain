@@ -226,7 +226,7 @@ class DeconvolutionCovariateComparison:
         g = sns.clustermap(data_subset, cmap=cmap,
                            row_cluster=False, col_cluster=False,
                            yticklabels=True, xticklabels=True, square=True,
-                           vmin=-1, vmax=1, annot=annot_subset, fmt='',
+                           vmin=-1, vmax=1, annot=data_subset.round(2), fmt='',
                            annot_kws={"size": 16, "color": "#000000"},
                            figsize=(12, 12))
         plt.setp(
