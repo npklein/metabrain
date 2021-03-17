@@ -1,0 +1,12 @@
+Various scripts to process RNAseq data for brain eQTL analysis.
+
+
+
+
+Metabrain Network
+=============
+To create the gene network [GeneNetwork/](GeneNetwork/)
+
+Prediction of cell count proportions and deconvolution
+=============
+[deconvolution/](deconvolution/)
