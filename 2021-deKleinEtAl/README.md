@@ -7,14 +7,14 @@ Contents
 --------
 
 
-**1-sample-collection/** Code to download RNA-seq data from synapse and ENA
-**2-expression/** Code to align, QC, quantify and analyse RNA-seq data
-**3-genotypes/** Code to process and QC genotype data
-**4-eQTLs/** Code to calculate and analyse eQTLs
-**5-GeneNetwork/** Code to create the MetaBrain Network
-**6-deconvolution/** Code to predict cell count proportions and calculate interaction eQTLs
-**7-colocalization/** Code for colocalization
-**EasyBuild/** We used EasyBuild ([https://github.com/easybuilders/easybuild](https://github.com/easybuilders/easybuild)) to install software. This directory contains EasyConfig files necesarry to install software used in this project.
+**1-sample-collection/** Code to download RNA-seq data from synapse and ENA  
+**2-expression/** Code to align, QC, quantify and analyse RNA-seq data  
+**3-genotypes/** Code to process and QC genotype data  
+**4-eQTLs/** Code to calculate and analyse eQTLs  
+**5-GeneNetwork/** Code to create the MetaBrain Network  
+**6-deconvolution/** Code to predict cell count proportions and calculate interaction eQTLs  
+**7-colocalization/** Code for colocalization  
+**EasyBuild/** We used EasyBuild ([https://github.com/easybuilders/easybuild](https://github.com/easybuilders/easybuild)) to install software. This directory contains EasyConfig files necesarry to install software used in this project.  
 
 
 **NOTE:** Many scripts point to paths on our cluster, if you want to replicate any of the scripts and need input files, please contact the corresponding author of de Klein _et al._ 2021.
