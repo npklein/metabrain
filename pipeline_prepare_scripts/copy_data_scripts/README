@@ -1,2 +1,0 @@
-Scripts to copy the data from boxy to peregrine that are necesarry for running the pipelines, e.g. reference genome.
-Because this is cluster dependent hard-coded paths are used.

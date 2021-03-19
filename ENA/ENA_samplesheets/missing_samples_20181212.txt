@@ -1,7 +1,0 @@
-# These samples are in the sample list, but not in the ENA samplesheet. Possibly removed
-SRR1777906
-SRR1777898
-SRR1777889
-SRR1777902
-SRR1777899
-SRR1777905
