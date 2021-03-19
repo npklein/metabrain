@@ -7,8 +7,9 @@ Contents
 --------
 
 
-**artificial_bulk_deconvolution/** code to simulate an artifical bulk rna-seq sample and use that so test deconvolution performance (only used for development).  
-**deconvolution/** code related to the deconvolution of the MetaBrain bulk RNA-seq dataset.
-**deprecated/** code that is no longer used.
+ * **artificial_bulk_deconvolution/** code to simulate an artifical bulk RNA-seq sample and use that so test deconvolution performance (only used for development).    
+ * **deconvolution/** code related to the deconvolution of the MetaBrain bulk RNA-seq dataset.  
+ * **deprecated/** code that is no longer used.  
+  
 
 

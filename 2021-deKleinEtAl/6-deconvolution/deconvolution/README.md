@@ -32,16 +32,15 @@ pip install -r requirements.txt
 ```  
 
 ## Contents
-
-**custom_interaction_analyser/** code used to test for interacting eQTLs using an f-test.  
-**matrix_preparation/** code used to pre-process the MetaBrain data. Conists of several steps including reordering correcting for cohort effects, filtering and reorder of the input data, predict cell type proportions, etc.  
-**paper_scripts/** code used in the process of writing the manuscript.  
-**partial_deconvolution/** code to perform partial deconvolution om the MetaBrain bulk RNA-seq dataset. Allows the dynamically change a lot of settings/inputs/comparisons in order to evaluate performance.     
-**presentation_scripts/**  code for creating a plot for presentation purposes.  
-**r_scripts/** code written in R.   
-**sn_scripts/** code related to the single-nucleus data analysis.   
-**test_scripts/** divers code made to perform a single task (e.g. test/plot something).  
- 
+  
+ * **custom_interaction_analyser/** code used to test for interacting eQTLs using an f-test.  
+ * **matrix_preparation/** code used to pre-process the MetaBrain data. Conists of several steps including reordering correcting for cohort effects, filtering and reorder of the input data, predict cell type proportions, etc.  
+ * **paper_scripts/** code used in the process of writing the manuscript.  
+ * **partial_deconvolution/** code to perform partial deconvolution om the MetaBrain bulk RNA-seq dataset. Allows the dynamically change a lot of settings/inputs/comparisons in order to evaluate performance.     
+ * **presentation_scripts/**  code for creating a plot for presentation purposes.  
+ * **r_scripts/** code written in R.   
+ * **sn_scripts/** code related to the single-nucleus data analysis.   
+ * **test_scripts/** divers code made to perform a single task (e.g. test/plot something).  
   
 ## Author  
 
