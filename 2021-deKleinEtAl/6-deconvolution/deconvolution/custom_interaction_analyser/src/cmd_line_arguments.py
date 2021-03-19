@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
-Created:      2020/03/23
-Last Changed: 2020/06/10
+Created:      2020/10/15
+Last Changed: 2020/10/27
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -29,18 +29,7 @@ import argparse
 
 
 class CommandLineArguments:
-    """
-    CommandLineArguments: class that processing command line arguments.
-    """
-
     def __init__(self, program, version, description):
-        """
-        Initializer method.
-
-        :param program: string, name of the program.
-        :param version: float, the version of the program.
-        :param description: string, description of the program.
-        """
         # Safe variables.
         self.program = program
         self.version = version
@@ -49,14 +38,9 @@ class CommandLineArguments:
         # Get the arguments.
         parser = self.create_argument_parser()
         self.arguments = parser.parse_args()
-        self.print()
+        self.print_arguments()
 
     def create_argument_parser(self):
-        """
-        Function to create the command line flags.
-
-        :return: parser object,
-        """
         parser = argparse.ArgumentParser(prog=self.program,
                                          description=self.description)
 
@@ -67,11 +51,18 @@ class CommandLineArguments:
                             version="{} {}".format(self.program,
                                                    self.version),
                             help="show program's version number and exit")
-        parser.add_argument("-n",
-                            "--name",
+        parser.add_argument("-i",
+                            "--input",
                             type=str,
-                            required=True,
-                            help="The name of the input/output directory.")
+                            default=None,
+                            help="The name of the input directory. "
+                                 "Default: 'output'.")
+        parser.add_argument("-o",
+                            "--output",
+                            type=str,
+                            default=None,
+                            help="The name of the output directory. "
+                                 " Default: same as -i / --input.")
         parser.add_argument("-s",
                             "--settings",
                             type=str,
@@ -96,6 +87,11 @@ class CommandLineArguments:
                             default=None,
                             help="The number of samples in the input files, "
                                  "default: None (determine automatically).")
+        parser.add_argument("-a",
+                            "--alpha",
+                            type=float,
+                            default=0.05,
+                            help="The signifiance cut-off. default: 0.05.")
         parser.add_argument("-verbose",
                             action='store_true',
                             help="Include steps and command prints, "
@@ -104,27 +100,19 @@ class CommandLineArguments:
                             action='store_true',
                             help="Combine the created files, alternative "
                                  "functionality. Default: False.")
+        parser.add_argument("-force",
+                            action='store_true',
+                            help="Combine the created files with force."
+                                 " Default: False.")
 
         return parser
 
-    def print(self):
-        """
-        Method that prints the input settings.
-
-        :return:
-        """
+    def print_arguments(self):
         for arg in vars(self.arguments):
             print("Input argument '{}' "
                   "has value '{}'.".format(arg, getattr(self.arguments, arg)))
 
     def get_argument(self, arg_key):
-        """
-        Method to return the value of a command line key.
-
-        :param arg_key: str, key in parse command line
-        :return: int/str/dict, value of arg_key. If the key did not
-                 exist, return None.
-        """
         if self.arguments is not None and arg_key in self.arguments:
             value = getattr(self.arguments, arg_key)
         else:
@@ -133,10 +121,4 @@ class CommandLineArguments:
         return value
 
     def get_all_arguments(self):
-        """
-        Method to return all command line arguments.
-
-        :return self.arguments: dict, dictionary containing all command
-                line arguments.
-        """
         return self.arguments
