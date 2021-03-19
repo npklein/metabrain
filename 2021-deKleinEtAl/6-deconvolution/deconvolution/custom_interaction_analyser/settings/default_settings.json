@@ -3,18 +3,18 @@
   "filenames": {
     "genotype":  "",
     "expression": "",
+    "technical_covariates": "",
     "covariates": ""
   },
-  "drop_covariates": [],
-  "technical_covariates": [],
+  "correct_for_snp_tech_cov_interaction": true,
   "covariates_folder": "covariates",
-  "technical_covariates_folder": "technical_covariates",
+  "real_pvalues_pickle_filename": "pvalue_data",
+  "coef_pickle_filename": "coef_data",
+  "std_err_pickle_filename": "std_err_data",
+  "tvalue_pickle_filename": "tvalue_data",
   "permutations_order_pickle_filename": "permutation_order",
-  "actual_pvalues_pickle_filename": "pvalue_data",
-  "snp_tvalues_pickle_filename": "snp_tvalue_data",
-  "inter_tvalues_pickle_filename": "inter_tvalue_data",
   "permuted_pvalues_pickle_filename": "perm_pvalues",
-  "n_permutations": 10,
+  "n_permutations": 0,
   "max_runtime_in_hours": 6,
   "panic_time_in_min": 10
 }

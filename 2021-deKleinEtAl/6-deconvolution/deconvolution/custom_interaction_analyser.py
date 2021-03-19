@@ -2,8 +2,8 @@
 
 """
 File:         custom_interaction_analyser.py
-Created:      2020/03/23
-Last Changed: 2020/06/08
+Created:      2020/10/15
+Last Changed: 2020/10/27
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -28,7 +28,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 
 # Local application imports.
 from custom_interaction_analyser.src.main import Main
-from custom_interaction_analyser.src.combine_and_plot import CombineAndPlot
+from custom_interaction_analyser.src.combiner import Combine
 from custom_interaction_analyser.src.cmd_line_arguments import \
     CommandLineArguments
 
@@ -36,7 +36,7 @@ from custom_interaction_analyser.src.cmd_line_arguments import \
 __program__ = "Custom Interaction Analyser"
 __author__ = "Martijn Vochteloo"
 __maintainer__ = "Martijn Vochteloo"
-__email__ = "m.vochteloo@st.hanze.nl"
+__email__ = "m.vochteloo@rug.nl"
 __license__ = "GPLv3"
 __version__ = 1.0
 __description__ = "{} is a program developed and maintained by {}. " \
@@ -50,13 +50,23 @@ if __name__ == '__main__':
     CLA = CommandLineArguments(program=__program__,
                                version=__version__,
                                description=__description__)
-    NAME = CLA.get_argument("name")
+    INPUT = CLA.get_argument("input")
+    OUTPUT = CLA.get_argument("output")
     SETTINGS_FILE = CLA.get_argument("settings")
     COMBINE = CLA.get_argument("combine")
 
+    if OUTPUT is None:
+        OUTPUT = INPUT
+
     if COMBINE:
-        PROGRAM = CombineAndPlot(name=NAME,
-                                 settings_file=SETTINGS_FILE)
+        ALPHA = CLA.get_argument("alpha")
+        FORCE = CLA.get_argument("force")
+
+        # Start the program.
+        PROGRAM = Combine(input_folder=OUTPUT,
+                          settings_file=SETTINGS_FILE,
+                          alpha=ALPHA,
+                          force=FORCE)
         PROGRAM.start()
     else:
         SKIP_ROWS = CLA.get_argument("skip_rows")
@@ -65,7 +75,8 @@ if __name__ == '__main__':
         VERBOSE = CLA.get_argument("verbose")
 
         # Start the program.
-        PROGRAM = Main(name=NAME,
+        PROGRAM = Main(input_folder=INPUT,
+                       output_folder=OUTPUT,
                        settings_file=SETTINGS_FILE,
                        skip_rows=SKIP_ROWS,
                        n_eqtls=N_EQTLS,
