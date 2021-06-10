@@ -2,7 +2,7 @@
 
 """
 File:         create_decon_eqtl_permutation_jobs.py
-Created:      2021/02/16
+Created:      2021/06/04
 Last Changed:
 Author:       M.Vochteloo
 
@@ -37,7 +37,7 @@ from statsmodels.stats import multitest
 
 """
 Syntax:
-./create_decon_eqtl_permutation_jobs.py -de /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -eq /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2020-11-20-decon-QTL/cis/cortex/expression_table/2020-07-16-MetaBrainDeconQtlGenes.TMM.SampSelect.ZeroVarRemov.covRemoved.expAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt.gz
+./create_decon_eqtl_permutation_jobs.py -de /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -eq /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2020-11-20-decon-QTL/cis/cortex/expression_table/2020-07-16-MetaBrainDeconQtlGenes.TMM.SampSelect.ZeroVarRemov.covRemoved.expAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt.gz -co /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_cohort_matrix/cohort_matrix.txt.gz
 """
 
 # Metadata
@@ -64,11 +64,12 @@ class main():
         self.geno_path = getattr(arguments, 'genotype')
         self.expr_path = getattr(arguments, 'expression')
         self.cc_path = getattr(arguments, 'cell_counts')
+        self.cohort_path = getattr(arguments, 'cohort')
         self.alpha = getattr(arguments, 'alpha')
         self.n_permutations = getattr(arguments, 'permutations')
 
         # Set variables.
-        self.outdir = os.path.join(str(Path(__file__).parent.parent.absolute()), "decon_eqtl_permutation")
+        self.outdir = os.path.join(str(Path(__file__).parent.parent.absolute()), "decon_eqtl_permutation_per_cohort")
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
 
@@ -111,6 +112,11 @@ class main():
                             required=True,
                             help="The path to the cell counts "
                                  "matrix")
+        parser.add_argument("-co",
+                            "--cohort",
+                            type=str,
+                            required=True,
+                            help="The path to the cohort matrix.")
         parser.add_argument("-a",
                             "--alpha",
                             type=float,
@@ -120,7 +126,7 @@ class main():
         parser.add_argument("-p",
                             "--permutations",
                             type=int,
-                            default=100,
+                            default=1000,
                             help="The number of permutations to run.")
 
         return parser.parse_args()
@@ -165,6 +171,12 @@ class main():
         geno_df = self.load_file(self.geno_path, header=0, index_col=0, skiprows=skiprows, nrows=np.size(mask) + 1)
         expr_df = self.load_file(self.expr_path, header=0, index_col=0, skiprows=skiprows, nrows=np.size(mask) + 1)
         cc_df = self.load_file(self.cc_path, header=0, index_col=0)
+        cohort_df = self.load_file(self.cohort_path, header=0, index_col=0)
+        cohort_df = cohort_df.loc[cohort_df.sum(axis=1) > 0, :]
+
+        print("\tCohorts:")
+        for index, row in cohort_df.iterrows():
+            print("\t{}: n-samples: {}".format(index, cohort_df.loc[index, :].sum()))
 
         # select samples from expr matrix.
         # this is done manually cause the ZeroVarRemov.covRemoved.expAdded.txt
@@ -175,7 +187,8 @@ class main():
         self.validate_data(eqtl_df=eqtl_df,
                            geno_df=geno_df,
                            expr_df=expr_df,
-                           cc_df=cc_df
+                           cc_df=cc_df,
+                           cohort_df=cohort_df
                            )
 
         print("Saving uncompressed data")
@@ -207,7 +220,8 @@ class main():
 
         print("Create permutations")
         perm_order_m = self.create_perm_orders(n_permutations=self.n_permutations,
-                                               n_samples=geno_df.shape[1])
+                                               cohort_df=cohort_df)
+        print(pd.DataFrame(perm_order_m))
         self.save_file(pd.DataFrame(perm_order_m),
                        outpath=os.path.join(self.outdir, "perm_order.txt.gz"),
                        index=False, header=False)
@@ -285,7 +299,7 @@ class main():
                                       df.shape))
 
     @staticmethod
-    def validate_data(eqtl_df, geno_df, expr_df, cc_df):
+    def validate_data(eqtl_df, geno_df, expr_df, cc_df, cohort_df):
         snp_reference = eqtl_df["SNPName"].values.tolist()
         probe_reference = eqtl_df["ProbeName"].values.tolist()
 
@@ -309,9 +323,18 @@ class main():
                   "cell count file index.")
             exit()
 
+        if not geno_df.columns.tolist() == cohort_df.columns.tolist():
+            print("The genotype file header does not match the "
+                  "cohort file header.")
+            exit()
+
         if not cc_df.columns.tolist() == eqtl_df.columns[-cc_df.shape[1]:].tolist():
             print("The cell count file header does not match the "
                   "deconvolution file header.")
+            exit()
+
+        if not cohort_df.sum(axis=0).sum() == cohort_df.shape[1]:
+            print("The cohort file is invalid.")
             exit()
 
     @staticmethod
@@ -353,11 +376,24 @@ class main():
         print("\tSaved jobfile: {}".format(os.path.basename(jobfile_path)))
 
     @staticmethod
-    def create_perm_orders(n_permutations, n_samples):
-        perm_order_m = np.empty((n_permutations, n_samples))
+    def create_perm_orders(n_permutations, cohort_df):
+        n_samples = cohort_df.shape[1]
+        valid_order = set([x for x in range(n_samples)])
+        perm_order_m = np.empty((n_permutations, n_samples), dtype=np.uint8)
         for i in range(perm_order_m.shape[0]):
-            sample_indices = [x for x in range(n_samples)]
-            random.shuffle(sample_indices)
+            sample_indices = np.array([x for x in range(n_samples)])
+            for j in range(cohort_df.shape[0]):
+                mask = cohort_df.iloc[j, :] == 1
+                if np.sum(mask) <= 1:
+                    continue
+                copy = sample_indices[mask]
+                random.shuffle(copy)
+                sample_indices[mask] = copy
+
+            if len(set(sample_indices).symmetric_difference(valid_order)) != 0:
+                print("Unvalid permutation order.")
+                exit()
+
             perm_order_m[i, :] = sample_indices
         return perm_order_m
 
@@ -367,6 +403,7 @@ class main():
         print("  > Genotype path: {}".format(self.geno_path))
         print("  > Expression path: {}".format(self.expr_path))
         print("  > Cell counts path: {}".format(self.cc_path))
+        print("  > Cohort path: {}".format(self.cohort_path))
         print("  > Alpha: {}".format(self.alpha))
         print("  > N permutations: {}".format(self.n_permutations))
         print("")
