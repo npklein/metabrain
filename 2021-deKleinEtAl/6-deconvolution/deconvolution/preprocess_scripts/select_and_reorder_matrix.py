@@ -1,0 +1,188 @@
+#!/usr/bin/env python3
+
+"""
+File:         select_and_reorder_matrix.py
+Created:      2021/06/23
+Last Changed: 2021/06/24
+Author:       M.Vochteloo
+
+Copyright (C) 2020 M.Vochteloo
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+A copy of the GNU General Public License can be found in the LICENSE file in the
+root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
+"""
+
+# Standard imports.
+from __future__ import print_function
+from pathlib import Path
+import argparse
+import gzip
+import os
+
+# Third party imports.
+import pandas as pd
+import numpy as np
+
+# Local application imports.
+
+# Metadata
+__program__ = "Select and Reorder Matrix"
+__author__ = "Martijn Vochteloo"
+__maintainer__ = "Martijn Vochteloo"
+__email__ = "m.vochteloo@rug.nl"
+__license__ = "GPLv3"
+__version__ = 1.0
+__description__ = "{} is a program developed and maintained by {}. " \
+                  "This program is licensed under the {} license and is " \
+                  "provided 'as-is' without any warranty or indemnification " \
+                  "of any kind.".format(__program__,
+                                        __author__,
+                                        __license__)
+
+"""
+Syntax:
+./select_and_reorder_matrix.py -eq /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis_NoENA_NoGVEX_NoCorrection/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ex /groups/umcg-biogen/tmp01/output/2020-11-10-DeconOptimizer/2020-11-10-decon-optimizer/preprocess_scripts/CortexEUR_noENA_noGVEX/data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.CovariatesRemovedOLS.ProbesCentered.SamplesZTransformed.ExpAdded.txt.gz -n cortex_eur_cis_NoENA_NoGVEX
+"""
+
+
+class main():
+    def __init__(self):
+        # Get the command line arguments.
+        arguments = self.create_argument_parser()
+        self.eqtl_path = getattr(arguments, 'eqtl')
+        self.expr_path = getattr(arguments, 'expression')
+        self.name = getattr(arguments, 'name')
+
+        # Set variables.
+        self.outdir = os.path.join(str(Path(__file__).parent.parent), 'select_and_reorder_matrix', self.name)
+        if not os.path.exists(self.outdir):
+            os.makedirs(self.outdir)
+
+    @staticmethod
+    def create_argument_parser():
+        parser = argparse.ArgumentParser(prog=__program__,
+                                         description=__description__)
+
+        # Add optional arguments.
+        parser.add_argument("-v",
+                            "--version",
+                            action="version",
+                            version="{} {}".format(__program__,
+                                                   __version__),
+                            help="show program's version number and exit.")
+        parser.add_argument("-eq",
+                            "--eqtl",
+                            type=str,
+                            required=True,
+                            help="The path to the replicating eQTLs")
+        parser.add_argument("-ex",
+                            "--expression",
+                            type=str,
+                            required=True,
+                            help="The path to the expression matrix")
+        parser.add_argument("-n",
+                            "--name",
+                            type=str,
+                            required=True,
+                            help="The name of the output directory")
+
+        return parser.parse_args()
+
+    def start(self):
+        self.print_arguments()
+
+        print("Loading eQTL data.")
+        eqtl_df = self.load_file(self.eqtl_path, header=0, index_col=None)
+        genes_of_interest = eqtl_df["ProbeName"]
+
+        print("Processing expression file.")
+        expr_df = self.process_file(inpath=self.expr_path,
+                                    filter_set=set(genes_of_interest))
+
+        print("Reordering matrix.")
+        expr_df = expr_df.loc[genes_of_interest, :]
+        expr_df.index.name = None
+
+        print("Saving output file.")
+        self.save_file(df=expr_df,
+                       outpath=os.path.join(self.outdir, os.path.basename(self.expr_path).replace(".gz", "")))
+
+    @staticmethod
+    def load_file(inpath, header, index_col, sep="\t", low_memory=True,
+                  nrows=None, skiprows=None):
+        df = pd.read_csv(inpath, sep=sep, header=header, index_col=index_col,
+                         low_memory=low_memory, nrows=nrows, skiprows=skiprows)
+        print("\tLoaded dataframe: {} "
+              "with shape: {}".format(os.path.basename(inpath),
+                                      df.shape))
+        return df
+
+    @staticmethod
+    def process_file(inpath, filter_set, flip_dict=None, sep="\t",
+                     header=0, index_col=0):
+        found_indices = set()
+        info = []
+        with gzip.open(inpath, 'rb') as f:
+            for i, line in enumerate(f):
+                if (i == 0) or (i % 1000 == 0):
+                    print("{} lines processed, {}/{} rows found".format(i, len(info) - 1, (100 / len(filter_set)) * (len(info) - 1)))
+
+                splitted_line = line.decode().strip('\n').split(sep)
+                if i == 0:
+                    info.append(splitted_line)
+                else:
+                    index = splitted_line[0]
+                    if index not in filter_set or index in found_indices:
+                        continue
+
+                    if flip_dict is not None and flip_dict[index]:
+                        values = [float(x) if x != '' else np.nan for x in splitted_line[1:]]
+                        data = np.array(values)
+                        data = 2 - data
+                        info.append([index] + data.tolist())
+                    else:
+                        info.append(splitted_line)
+
+                    found_indices.add(index)
+        f.close()
+
+        df = pd.DataFrame(info)
+        df.index = df.iloc[:, index_col]
+        df.index.name = "-"
+        df = df.drop(df.columns[index_col], axis=1)
+        df.columns = df.iloc[header, :]
+        df = df.drop(df.index[header], axis=0)
+        return df
+
+    @staticmethod
+    def save_file(df, outpath, header=True, index=True, sep="\t"):
+        compression = 'infer'
+        if outpath.endswith('.gz'):
+            compression = 'gzip'
+
+        df.to_csv(outpath, sep=sep, index=index, header=header,
+                  compression=compression)
+        print("\tSaved dataframe: {} "
+              "with shape: {}".format(os.path.basename(outpath),
+                                      df.shape))
+
+    def print_arguments(self):
+        print("Arguments:")
+        print("  > eQTL path: {}".format(self.eqtl_path))
+        print("  > Expression path: {}".format(self.expr_path))
+        print("  > Output directory: {}".format(self.outdir))
+        print("")
+
+
+if __name__ == '__main__':
+    m = main()
+    m.start()
