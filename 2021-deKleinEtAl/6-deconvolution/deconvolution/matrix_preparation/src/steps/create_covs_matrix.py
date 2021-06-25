@@ -95,6 +95,8 @@ class CreateCovsMatrix:
     def save(self):
         save_dataframe(df=self.covs_df, outpath=self.outpath,
                        index=True, header=True, logger=self.log)
+        save_dataframe(df=self.covs_df.iloc[:25, :], outpath=os.path.join(self.outdir, "first25PCComponents.txt.gz"),
+                       index=True, header=True, logger=self.log)
 
     def clear_variables(self):
         self.eig_file = None

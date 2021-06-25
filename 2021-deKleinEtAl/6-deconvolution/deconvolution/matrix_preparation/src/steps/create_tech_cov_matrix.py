@@ -44,11 +44,11 @@ class CreateTechCovsMatrix:
         self.force = force
 
         # Prepare an output directories.
-        outdir = os.path.join(outdir, 'create_tech_covs_matrix')
-        prepare_output_dir(outdir)
+        self.outdir = os.path.join(outdir, 'create_tech_covs_matrix')
+        prepare_output_dir(self.outdir)
 
         # Construct the output paths.
-        self.outpath = os.path.join(outdir, "technical_covariates_table.txt.gz")
+        self.outpath = os.path.join(self.outdir, "technical_covariates_table.txt.gz")
 
         # Create empty variable.
         self.tech_covs_df = None
@@ -117,6 +117,8 @@ class CreateTechCovsMatrix:
 
     def save(self):
         save_dataframe(df=self.tech_covs_df, outpath=self.outpath,
+                       index=True, header=True, logger=self.log)
+        save_dataframe(df=self.tech_covs_df.iloc[:23, :], outpath=os.path.join(self.outdir, "technical_covariates_table_WO_cohorts.txt.gz"),
                        index=True, header=True, logger=self.log)
 
     def clear_variables(self):

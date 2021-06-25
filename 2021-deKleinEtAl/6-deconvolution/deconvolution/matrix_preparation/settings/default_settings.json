@@ -1,7 +1,8 @@
 {
   "combine_gte_files": {
     "input_directory": "",
-    "filename_regex": ""
+    "filename_regex": "",
+    "exclude": []
   },
   "combine_eqtlprobes": {
     "input_directory": "",

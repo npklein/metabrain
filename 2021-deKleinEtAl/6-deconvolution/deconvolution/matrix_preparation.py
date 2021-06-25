@@ -22,6 +22,11 @@ A copy of the GNU General Public License can be found in the LICENSE file in the
 root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
+"""
+Syntax:
+./matrix_preparation.py -s cortex_eur_cis_NoENA_NoGVEX_NoCorrection -n cortex_eur_cis_NoENA_NoGVEX_NoCorrection -ecm /groups/umcg-biogen/tmp01/output/2020-11-10-DeconOptimizer/2020-11-10-decon-optimizer/preprocess_scripts/CortexEUR_noENA_noGVEX/data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.PCAOverSamplesEigenvectors.txt.gz
+"""
+
 # Standard imports.
 
 # Third party imports.

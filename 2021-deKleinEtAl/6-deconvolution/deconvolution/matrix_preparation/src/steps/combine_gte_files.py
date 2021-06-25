@@ -34,6 +34,7 @@ class CombineGTEFiles:
     def __init__(self, settings, log, force, outdir):
         self.inpath = os.path.join(settings["input_directory"],
                                    settings["filename_regex"])
+        self.exclude = settings["exclude"]
         self.log = log
         self.force = force
 
@@ -71,6 +72,8 @@ class CombineGTEFiles:
     def combine_files(self):
         combined = None
         for i, infile in enumerate(glob.glob(self.inpath)):
+            if os.path.basename(infile) in self.exclude:
+                continue
             df = load_dataframe(inpath=infile, header=None, index_col=None,
                                 logger=self.log)
             if combined is None:
@@ -129,6 +132,7 @@ class CombineGTEFiles:
     def print_arguments(self):
         self.log.info("Arguments:")
         self.log.info("  > Input files: {}".format(self.inpath))
+        self.log.info("  > Exclude: {}".format(", ".join(self.exclude)))
         self.log.info("  > Output path: {}".format(self.outpath))
         self.log.info("  > Force: {}".format(self.force))
         self.log.info("")

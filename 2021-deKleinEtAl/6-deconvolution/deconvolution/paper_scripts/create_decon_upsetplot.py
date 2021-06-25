@@ -41,6 +41,17 @@ import matplotlib.pyplot as plt
 """
 Syntax:
 ./create_decon_upsetplot.py -d ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -e pdf
+
+./create_decon_upsetplot.py -d ../2020-11-20-decon-QTL/trans/cortex/decon_out/deconvolutionResults.csv -e pdf
+
+
+./create_decon_upsetplot.py -d decon_eqtl_permutation_per_cohort/deconvolutionResults_1000perm_perIeQTLFDR.txt.gz -e png
+
+./create_decon_upsetplot.py -d decon_eqtl_permutation_per_cohort/deconvolutionResults_1000perm_CombinedPermFDR.txt.gz -e png
+
+./create_decon_upsetplot.py -d decon_eqtl_permutation/decon_output/real/deconvolutionResults.csv -e png
+
+./create_decon_upsetplot.py -d ../2021-06-24-decon-QTL/cortex_eur_cis_NoENA_NoGVEX/decon_cis_cortex_eur_noENA_noGVEX_out/deconvolutionResults.csv -calc_fdr -e png
 """
 
 
@@ -65,6 +76,7 @@ class main():
         arguments = self.create_argument_parser()
         self.decon_path = getattr(arguments, 'decon')
         self.alpha = getattr(arguments, 'alpha')
+        self.calc_fdr = getattr(arguments, 'calc_fdr')
         self.extensions = getattr(arguments, 'extension')
 
         # Set variables.
@@ -94,6 +106,11 @@ class main():
                             type=str,
                             required=True,
                             help="The path to the deconvolution matrix")
+        parser.add_argument("-calc_fdr",
+                            action='store_true',
+                            help="Treat input as p-values and convert them to "
+                                 "FDR using BH multiple testing. "
+                                 " default: False.")
         parser.add_argument("-a",
                             "--alpha",
                             type=float,
@@ -116,11 +133,17 @@ class main():
         print("Loading data.")
         decon_df = self.load_file(self.decon_path, nrows=None)
 
-        print("Calculating FDR.")
-        _, decon_fdr_df = self.bh_correct(decon_df)
+        columns = [x for x in decon_df.columns if "pvalue" in x]
+        decon_df = decon_df[columns]
+        # decon_df.columns = [x.split("_")[1] for x in decon_df.columns]
+        # print(decon_df)
+
+        if self.calc_fdr:
+            print("Calculating FDR.")
+            _, decon_df = self.bh_correct(decon_df)
 
         print("Preprocessing data.")
-        data = self.parse_df(decon_fdr_df, self.alpha)
+        data = self.parse_df(decon_df, self.alpha)
         counts = self.count(data)
         counts = counts[counts > 0]
         print(counts)
@@ -233,6 +256,7 @@ class main():
         print("Arguments:")
         print("  > Deconvolution path: {}".format(self.decon_path))
         print("  > Alpha: {}".format(self.alpha))
+        print("  > Calc FDR: {}".format(self.calc_fdr))
         print("  > Extension: {}".format(self.extensions))
         print("  > Output directory: {}".format(self.outdir))
         print("")

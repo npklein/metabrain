@@ -246,19 +246,19 @@ class Main:
             cecm.clear_variables()
             self.log.info("")
 
-            # Step10. Normal transform extra cov matrix.
-            self.log.info("### STEP10 ###")
-            self.log.info("")
-            cecm = NormalTransformMatrix(
-                settings=self.settings.get_setting('normal_transform_matrix'),
-                log=self.log,
-                df=cecm.get_df(),
-                inpath=cecm.get_outpath(),
-                force=self.force_dict['normal_transform_matrix'],
-                outdir=self.outdir)
-            cecm.start()
-            cecm.clear_variables()
-            self.log.info("")
+            # # Step10. Normal transform extra cov matrix.
+            # self.log.info("### STEP10 ###")
+            # self.log.info("")
+            # cecm = NormalTransformMatrix(
+            #     settings=self.settings.get_setting('normal_transform_matrix'),
+            #     log=self.log,
+            #     df=cecm.get_df(),
+            #     inpath=cecm.get_outpath(),
+            #     force=self.force_dict['normal_transform_matrix'],
+            #     outdir=self.outdir)
+            # cecm.start()
+            # cecm.clear_variables()
+            # self.log.info("")
 
         # End.
         self.log.info("")
