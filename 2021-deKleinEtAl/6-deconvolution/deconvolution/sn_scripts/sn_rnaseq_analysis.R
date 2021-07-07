@@ -5,6 +5,7 @@
 
 # https://satijalab.org/seurat/v3.0/pbmc3k_tutorial.html
 # https://satijalab.org/seurat/v3.2/sctransform_vignette.html
+# https://www.nature.com/articles/s41586-019-1195-2.pdf
 
 # install.packages('Seurat')
 library(Seurat)

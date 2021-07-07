@@ -50,7 +50,9 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./select_and_reorder_matrix.py -eq /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis_NoENA_NoGVEX_NoCorrection/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ex /groups/umcg-biogen/tmp01/output/2020-11-10-DeconOptimizer/2020-11-10-decon-optimizer/preprocess_scripts/CortexEUR_noENA_noGVEX/data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.CovariatesRemovedOLS.ProbesCentered.SamplesZTransformed.ExpAdded.txt.gz -n cortex_eur_cis_NoENA_NoGVEX
+./select_and_reorder_matrix.py -eq /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis_NoENA_NoGVEX_NoCorrection/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ex /groups/umcg-biogen/tmp01/output/2020-11-10-DeconOptimizer/2020-11-10-decon-optimizer/preprocess_scripts/CortexEUR_noENA_noGVEX_tmp/decon_data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ProbesCentered.SamplesZTransformed.ExpAdded.txt.gz -n cortex_eur_cis_NoENA_NoGVEX
+
+./select_and_reorder_matrix.py -eq /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/combine_eqtlprobes/eQTLprobes_combined.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR/data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt.gz -so /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt -n cortex_eur_cis
 """
 
 
@@ -60,6 +62,7 @@ class main():
         arguments = self.create_argument_parser()
         self.eqtl_path = getattr(arguments, 'eqtl')
         self.expr_path = getattr(arguments, 'expression')
+        self.sample_order_path = getattr(arguments, 'sample_order')
         self.name = getattr(arguments, 'name')
 
         # Set variables.
@@ -89,6 +92,13 @@ class main():
                             type=str,
                             required=True,
                             help="The path to the expression matrix")
+        parser.add_argument("-so",
+                            "--sample_order",
+                            type=str,
+                            required=False,
+                            default=None,
+                            help="The path to a matrix of which we take the"
+                                 "sample order. Default: None.")
         parser.add_argument("-n",
                             "--name",
                             type=str,
@@ -110,7 +120,18 @@ class main():
 
         print("Reordering matrix.")
         expr_df = expr_df.loc[genes_of_interest, :]
+        expr_df.columns.name = None
         expr_df.index.name = None
+
+        if self.sample_order_path is not None:
+            print("Loading sample order data.")
+            sample_order_df = self.load_file(self.sample_order_path, header=0, index_col=0, nrows=1)
+            sample_order = sample_order_df.columns.tolist()
+
+            if len(set(sample_order).symmetric_difference(set(expr_df.columns.tolist()))) != 0:
+                print("Sample order is not valid. Skipped step.")
+            else:
+                expr_df = expr_df.loc[:, sample_order]
 
         print("Saving output file.")
         self.save_file(df=expr_df,
@@ -134,7 +155,7 @@ class main():
         with gzip.open(inpath, 'rb') as f:
             for i, line in enumerate(f):
                 if (i == 0) or (i % 1000 == 0):
-                    print("{} lines processed, {}/{} rows found".format(i, len(info) - 1, (100 / len(filter_set)) * (len(info) - 1)))
+                    print("\t{} lines processed, {}/{} rows found [{:.2f}%]".format(i, len(info), len(filter_set), (100 / len(filter_set)) * len(info)))
 
                 splitted_line = line.decode().strip('\n').split(sep)
                 if i == 0:
@@ -179,6 +200,7 @@ class main():
         print("Arguments:")
         print("  > eQTL path: {}".format(self.eqtl_path))
         print("  > Expression path: {}".format(self.expr_path))
+        print("  > Sample order  path: {}".format(self.sample_order_path))
         print("  > Output directory: {}".format(self.outdir))
         print("")
 

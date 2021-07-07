@@ -52,6 +52,8 @@ class Visualiser:
         self.comparison = comparison
         self.order = self.set_order()
         self.palette = {
+            "Excitatory": "#56B4E9",
+            "Inhibitory": "#0072B2",
             "Neuron": "#0072B2",
             "Oligodendrocyte": "#009E73",
             "EndothelialCell": "#CC79A7",

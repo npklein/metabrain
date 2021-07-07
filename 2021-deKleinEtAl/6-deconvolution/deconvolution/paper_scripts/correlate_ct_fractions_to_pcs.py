@@ -54,6 +54,8 @@ __description__ = "{} is a program developed and maintained by {}. " \
 """
 Syntax:
 ./correlate_ct_fractions_to_pcs.py -cf ../../2020-03-12-deconvolution/partial_deconvolution/ALL_TMM_LOG2/IHC_0CPM_LOG2_FILTERED_CC/deconvolution.txt.gz -pc ../data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.CovariatesRemovedOLS.100PrincipalComponents.pkl -e pdf
+
+./correlate_ct_fractions_to_pcs.py -cf ../../2020-11-10-decon-optimizer/ftestAsPvalue/cycle0/optimized_cell_fractions.txt.gz -pc ../data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.CovariatesRemovedOLS.100PrincipalComponents.pkl -e pdf
 """
 
 
@@ -141,11 +143,18 @@ class main():
         pc_df = self.load_file(self.pc_path)
         print(pc_df)
 
+        print("Plot PCA")
+        self.plot_pca(df=pc_df)
+        self.plot_cf(df=cf_df)
+
         print("Preprocessing data.")
         overlap_samples = set(cf_df.index).intersection(set(pc_df.index))
         print("\tOverlap: N = {}".format(len(overlap_samples)))
         cc_df = cf_df.loc[overlap_samples, :]
         pc_df = pc_df.loc[overlap_samples, :]
+
+        print("Plotting correlation scatterplot.")
+        self.plot_corr_scatterplots(df_row=cc_df, df_col=pc_df)
 
         if self.n_pc > pc_df.shape[1]:
             self.n_pc = pc_df.shape[1]
@@ -178,6 +187,7 @@ class main():
         print("Plotting data.")
         self.create_clustermap(corr_coef_df)
 
+
     @staticmethod
     def load_file(path, sep="\t", header=0, index_col=0, nrows=None, low_memory=True):
         if path.endswith(".pkl"):
@@ -204,6 +214,132 @@ class main():
         plt.tight_layout()
         for extension in self.extensions:
             g.savefig(os.path.join(self.outdir, "cf_vs_pcs_clustermap.{}".format(extension)))
+        plt.close()
+
+    def plot_corr_scatterplots(self, df_row, df_col):
+        max_cols = 5
+
+        # Create combinations.
+        nrows = df_row.shape[1]
+        ncols = min(df_col.shape[1], max_cols)
+
+        sns.set_style("ticks")
+        fig, axes = plt.subplots(nrows=nrows,
+                                 ncols=ncols,
+                                 figsize=(12 * ncols, 9 * nrows),
+                                 sharex='col',
+                                 sharey='row')
+
+        for i, (y_col, y_data) in enumerate(df_row.T.iterrows()):
+            for j, (x_col, x_data) in enumerate(df_col.T.iterrows()):
+                if j >= max_cols:
+                    break
+
+                ax = axes[i, j]
+
+                sns.despine(fig=fig, ax=ax)
+
+                plot_df = pd.concat([x_data, y_data], axis=1)
+
+                coef, _ = stats.spearmanr(plot_df[y_col], plot_df[x_col])
+
+                sns.regplot(x=x_col, y=y_col, data=plot_df, ci=95,
+                            scatter_kws={'facecolors': "#000000",
+                                         'linewidth': 0,
+                                         'alpha': 0.75},
+                            line_kws={"color": "#b22222",
+                                      'linewidth': 5},
+                            ax=ax)
+
+                ax.annotate(
+                    'r = {:.2f}'.format(coef),
+                    xy=(0.03, 0.94),
+                    xycoords=ax.transAxes,
+                    color="#000000",
+                    alpha=1,
+                    fontsize=30,
+                    fontweight='bold')
+
+                xlabel = ""
+                if i == (nrows - 1):
+                    xlabel = x_col
+                ax.set_xlabel(xlabel,
+                              fontsize=30,
+                              fontweight='bold')
+
+                ylabel = ""
+                if j == 0:
+                    ylabel = y_col
+                ax.set_ylabel(ylabel,
+                              fontsize=30,
+                              fontweight='bold')
+
+        for extension in self.extensions:
+            fig.savefig(os.path.join(self.outdir, "cf_vs_pcs_regression_plot.{}".format(extension)))
+        plt.close()
+
+    def plot_pca(self, df):
+        sns.set(rc={'figure.figsize': (12, 9)})
+        sns.set_style("ticks")
+        fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, gridspec_kw={"width_ratios": [0.9, 0.1]})
+        sns.despine(fig=fig, ax=ax1)
+        ax2.axis('off')
+
+        x = "PC1"
+        y = "PC2"
+
+        sns.scatterplot(x=x,
+                        y=y,
+                        data=df,
+                        legend=False,
+                        ax=ax1)
+
+        ax1.set_xlabel(x,
+                       fontsize=30,
+                       fontweight='bold')
+        ax1.set_ylabel(y,
+                       fontsize=30,
+                       fontweight='bold')
+
+        for extension in self.extensions:
+            fig.savefig(os.path.join(self.outdir, "pca_plot.{}".format(extension)))
+        plt.close()
+
+    def plot_cf(self, df):
+        sns.set(rc={'figure.figsize': (12, 9)})
+        sns.set_style("ticks")
+        fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, gridspec_kw={"width_ratios": [0.9, 0.1]})
+        sns.despine(fig=fig, ax=ax1)
+        ax2.axis('off')
+
+        x = "CellMapNNLS_Neuron"
+        y = "CellMapNNLS_Astrocyte"
+
+        coef, _ = stats.spearmanr(df[y], df[x])
+
+        sns.regplot(x=x,
+                    y=y,
+                    data=df,
+                    ax=ax1)
+
+        ax1.set_xlabel(x,
+                       fontsize=30,
+                       fontweight='bold')
+        ax1.set_ylabel(y,
+                       fontsize=30,
+                       fontweight='bold')
+
+        ax1.annotate(
+             'r = {:.2f}'.format(coef),
+             xy=(0.03, 0.94),
+             xycoords=ax1.transAxes,
+             color="#000000",
+             alpha=1,
+             fontsize=30,
+             fontweight='bold')
+
+        for extension in self.extensions:
+            fig.savefig(os.path.join(self.outdir, "neuron_vs_astro.{}".format(extension)))
         plt.close()
 
     def print_arguments(self):
