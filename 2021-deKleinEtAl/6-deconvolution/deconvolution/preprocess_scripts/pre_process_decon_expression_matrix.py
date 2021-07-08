@@ -32,7 +32,7 @@ import os
 # Third party imports.
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
+from statsmodels.regression.linear_model import OLS
 from sklearn.decomposition import PCA
 import seaborn as sns
 import matplotlib
@@ -64,9 +64,6 @@ Syntax:
 
 ./pre_process_decon_expression_matrix.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz -t /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-05-26-step5-remove-covariates-per-dataset/2020-05-25-covariatefiles/2020-02-17-freeze2dot1.TMM.Covariates.withBrainRegion-noncategorical-variable.top20correlated-cortex-withMDS.txt.gz -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-AFR -p GTE-AFR- -e ENA -o CortexAFR_noENA
 """
-
-# /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.txt.gz
-# /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz
 
 
 class main():
@@ -225,31 +222,42 @@ class main():
         df = df.loc[mask, :]
 
         print("Step 3: log2 transform.")
-        df = np.log2(df + 1)
+        min_value = df.min(axis=1).min()
+        if min_value <= 0:
+            df = np.log2(df - min_value + 1)
+        else:
+            df = np.log2(df + 1)
 
         print("Step 4: PCA analysis.")
         self.pca(df=df,
                  sample_to_cohort=sample_to_cohort,
-                 plot_appendix="_DeconQTL")
+                 plot_appendix="CovariatesRemovedOLS")
 
-        # print("Step 5: save mean and std per gene.")
-        # mean = df.mean(axis=1)
-        # std = df.std(axis=1)
-
-        print("Step 6: remove covariates OLS.")
+        print("Step 4: Construct technical covariate matrix.")
         tcov_df = self.load_file(self.tcov_path, header=0, index_col=0)
         tcov_df = tcov_df.loc[samples, :]
         tcov_df = tcov_df.loc[:, tcov_df.std(axis=0) != 0]
-        # remove cohort variables.
+
+        # replace cohort variables.
         drop_cols = []
         for col in tcov_df.columns:
             if set(tcov_df[col].unique()) == {0, 1}:
                 drop_cols.append(col)
         tcov_df.drop(drop_cols, axis=1, inplace=True)
         tcov_df = tcov_df.merge(cohort_df.iloc[:, 1:], left_index=True, right_index=True)
+
+        # filter on VIF.
+        pre_columns = tcov_df.columns.tolist()
+        tcov_df = self.remove_multicollinearity(tcov_df)
+        print("Dropped:\t{}".format(", ".join([x for x in pre_columns if x not in tcov_df.columns])))
+        #tcov_df = tcov_df.drop(['PCT_CODING_BASES', 'PCT_MRNA_BASES', 'PF_HQ_ALIGNED_READS'], axis=1)
+
+        # add intercept.
+        tcov_df.insert(0, "INTERCEPT", 1)
         print(tcov_df)
         print(tcov_df.columns)
 
+        print("Step 5: remove covariates OLS.")
         corrected_m = np.empty_like(df, dtype=np.float64)
         last_print_time = None
         n_tests = df.shape[0]
@@ -259,39 +267,28 @@ class main():
                 last_print_time = now_time
                 print("\t{}/{} ieQTLs analysed [{:.2f}%]".format((i + 1), n_tests, (100 / n_tests) * (i + 1)))
 
-            ols = sm.OLS(df.iloc[i, :], tcov_df)
+            ols = OLS(df.iloc[i, :], tcov_df)
             results = ols.fit()
             # print(results.summary())
             corrected_m[i, :] = results.resid
 
-        print("\tSaving file.")
         corrected_df = pd.DataFrame(corrected_m, index=df.index, columns=df.columns)
         del df
 
-        print("Step 7: PCA analysis.")
+        print("Step 6: PCA analysis.")
         self.pca(df=corrected_df,
                  sample_to_cohort=sample_to_cohort,
-                 plot_appendix="_DeconQTL_CovariatesRemovedOLS")
+                 plot_appendix="Log2Transformed_CovariatesRemovedOLS")
 
-        # Eventueel een force normal per gen? Even testen
-
-        # print("Step 8: return distribution shape and location.")
-        # corrected_df = corrected_df.subtract(corrected_df.mean(axis=1), axis=0).mul(std / corrected_df.std(axis=1), axis=0).add(mean, axis=0)
-        #
-        # print("Step 9: PCA analysis.")
-        # self.pca(df=corrected_df,
-        #          sample_to_cohort=sample_to_cohort,
-        #          plot_appendix="_DeconQTL_CovariatesRemovedOLS_ReturnLocAndScale")
-
-        print("Step 10: exp added.")
+        print("Step 7: exp added.")
         corrected_df = np.power(2, corrected_df)
         print("\tSaving file.")
         self.save_file(df=corrected_df, outpath=os.path.join(self.file_outdir, "{}.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt.gz".format(filename)))
 
-        print("Step 11: PCA analysis.")
+        print("Step 8: PCA analysis.")
         self.pca(df=corrected_df,
                  sample_to_cohort=sample_to_cohort,
-                 plot_appendix="_DeconQTL_ExpressionMatrix")
+                 plot_appendix="Log2Transformed_CovariatesRemovedOLS_ExpAdded")
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
@@ -333,6 +330,23 @@ class main():
 
         return out_dict
 
+    def remove_multicollinearity(self, df, threshold=0.9999):
+        indices = np.arange(df.shape[1])
+        max_vif = np.inf
+        while len(indices) > 1 and max_vif > threshold:
+            vif = np.array([self.calc_ols_rsquared(df.iloc[:, indices], ix) for ix in range(len(indices))])
+            max_vif = max(vif)
+
+            if max_vif > threshold:
+                max_index = np.where(vif == max_vif)[0][0]
+                indices = np.delete(indices, max_index)
+
+        return df.iloc[:, indices]
+
+    @staticmethod
+    def calc_ols_rsquared(df, idx):
+        return OLS(df.iloc[:, idx], df.loc[:, np.arange(df.shape[1]) != idx]).fit().rsquared
+
     def pca(self, df, sample_to_cohort, plot_appendix=""):
         # samples should be on the columns and genes on the rows.
         zscores = (df - df.mean(axis=0)) / df.std(axis=0)
@@ -342,7 +356,6 @@ class main():
         components_df = pd.DataFrame(pca.components_)
         components_df.index = ["Comp{}".format(i + 1) for i, _ in enumerate(components_df.index)]
         components_df.columns = df.columns
-        print(components_df)
 
         print("Plotting PCA")
         plot_df = components_df.T
