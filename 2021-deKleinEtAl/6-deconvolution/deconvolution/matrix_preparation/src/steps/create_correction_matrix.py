@@ -1,7 +1,7 @@
 """
-File:         create_tech_cov_matrix.py
+File:         create_correction_matrix.py
 Created:      2020/10/15
-Last Changed:
+Last Changed: 2021/07/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -31,11 +31,12 @@ from utilities import prepare_output_dir, check_file_exists, load_dataframe, \
     save_dataframe
 
 
-class CreateTechCovsMatrix:
+class CreateCorrectionMatrix:
     def __init__(self, settings, log, cohort_file, cohort_df, sample_dict,
                  sample_order, force, outdir):
         self.cov_file = settings["covariates_datafile"]
         self.tech_covs = settings["technical_covariates"]
+        self.mds_covs = settings["MDS_covariates"]
         self.log = log
         self.cohort_file = cohort_file
         self.cohort_df = cohort_df
@@ -44,14 +45,14 @@ class CreateTechCovsMatrix:
         self.force = force
 
         # Prepare an output directories.
-        self.outdir = os.path.join(outdir, 'create_tech_covs_matrix')
+        self.outdir = os.path.join(outdir, 'create_correction_matrix')
         prepare_output_dir(self.outdir)
 
         # Construct the output paths.
-        self.outpath = os.path.join(self.outdir, "technical_covariates_table.txt.gz")
+        self.outpath = os.path.join(self.outdir, "correction_table.txt.gz")
 
         # Create empty variable.
-        self.tech_covs_df = None
+        self.correction_df = None
 
     def start(self):
         self.log.info("Starting creating technical covariate file.")
@@ -59,7 +60,7 @@ class CreateTechCovsMatrix:
 
         # Check if output file exist.
         if not check_file_exists(self.outpath) or self.force:
-            self.tech_covs_df = self.create_tech_covs_file()
+            self.correction_df = self.create_tech_covs_file()
             self.save()
         else:
             self.log.info("Skipping step.")
@@ -76,14 +77,9 @@ class CreateTechCovsMatrix:
         self.log.info("Filtering on samples and technical covariates.")
         cov_df.index = [self.sample_dict[x] if x in self.sample_dict else x for
                         x in cov_df.index]
-        subset_tech_covs_df = cov_df.loc[self.sample_order, self.tech_covs].copy()
+        correction_df = cov_df.loc[self.sample_order, :].copy()
         del cov_df
-        self.log.info("\tNew shape: {}".format(subset_tech_covs_df.shape))
-
-        # Remove technical covariates that are linearly dependent.
-        self.log.info("Removing linearly dependent column(s).")
-        subset_tech_covs_df = self.filter_linear_dependent_covs(subset_tech_covs_df)
-        self.log.info("\tNew shape: {}".format(subset_tech_covs_df.shape))
+        self.log.info("\tNew shape: {}".format(correction_df.shape))
 
         # loading cohort matrix.
         self.log.info("Loading cohort matrix.")
@@ -95,30 +91,24 @@ class CreateTechCovsMatrix:
 
         # merge.
         self.log.info("Merging matrices.")
-        tech_covs_df = pd.merge(subset_tech_covs_df, self.cohort_df.T,
-                                left_index=True, right_index=True)
-        tech_covs_df = tech_covs_df.T
-        tech_covs_df.index.name = "-"
+        correction_df = pd.merge(correction_df, self.cohort_df.T, left_index=True, right_index=True)
+        correction_df = correction_df.T
+        correction_df.index.name = "-"
 
         # Validate sample order.
-        if not tech_covs_df.columns.equals(self.sample_order):
-            tech_covs_df = tech_covs_df[self.sample_order]
+        if not correction_df.columns.equals(self.sample_order):
+            correction_df = correction_df[self.sample_order]
 
-        return tech_covs_df
-
-    def filter_linear_dependent_covs(self, df):
-        _, inds = sympy.Matrix(df.values).rref()
-
-        lin_dep_columns = [x for x in range(len(df.columns)) if x not in inds]
-        self.log.warning("\tRemoving technical covariate(s): {}".format(
-            ', '.join(df.columns[lin_dep_columns])))
-
-        return df.iloc[:, list(inds)]
+        return correction_df
 
     def save(self):
-        save_dataframe(df=self.tech_covs_df, outpath=self.outpath,
+        save_dataframe(df=self.correction_df, outpath=self.outpath,
                        index=True, header=True, logger=self.log)
-        save_dataframe(df=self.tech_covs_df.iloc[:23, :], outpath=os.path.join(self.outdir, "technical_covariates_table_WO_cohorts.txt.gz"),
+        save_dataframe(df=self.correction_df.loc[self.tech_covs, :], outpath=os.path.join(self.outdir, "technical_covariates_table.txt.gz"),
+                       index=True, header=True, logger=self.log)
+        save_dataframe(df=self.correction_df.loc[self.mds_covs, :], outpath=os.path.join(self.outdir, "mds_covariates_table.txt.gz"),
+                       index=True, header=True, logger=self.log)
+        save_dataframe(df=self.correction_df.loc[self.tech_covs + self.mds_covs, :], outpath=os.path.join(self.outdir, "technical_and_mds_covariates_table.txt.gz"),
                        index=True, header=True, logger=self.log)
 
     def clear_variables(self):
@@ -126,18 +116,20 @@ class CreateTechCovsMatrix:
         self.cohort_df = None
         self.cov_file = None
         self.tech_covs = None
+        self.mds_covs = None
         self.force = None
 
-    def get_tech_covs_file(self):
+    def get_correction_file(self):
         return self.outpath
 
-    def get_tech_covs_df(self):
-        return self.tech_covs_df
+    def get_correction_df(self):
+        return self.correction_df
 
     def print_arguments(self):
         self.log.info("Arguments:")
         self.log.info("  > Covariates input file: {}".format(self.cov_file))
         self.log.info("  > Technical Covarates: {}".format(self.tech_covs))
+        self.log.info("  > MDS Covarates: {}".format(self.mds_covs))
         if self.cohort_df is not None:
             self.log.info("  > Cohort input shape: {}".format(self.cohort_df.shape))
         else:

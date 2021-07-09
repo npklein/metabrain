@@ -1,7 +1,7 @@
 """
 File:         create_matrices.py
 Created:      2020/10/08
-Last Changed: 2020/10/13
+Last Changed: 2021/07/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -109,28 +109,20 @@ class CreateMatrices:
                                                logger=self.log)
             gene_trans_dict = construct_dict_from_df(self.gene_info_df, self.ensg_id, self.hgnc_id)
 
-            # check if we are using the default expression or not for the
-            # signature_expr_df file.
-            include_decon = False
-            if self.decon_expr_file is None or not check_file_exists(self.decon_expr_file):
-                include_decon = True
-
-            if not check_file_exists(self.expr_outpath) or (include_decon and not check_file_exists(self.sign_expr_outpath)) or self.force:
+            if not check_file_exists(self.expr_outpath) or self.force:
                 self.log.info("Parsing expression data.")
-                self.expr_df, self.sign_expr_df = self.parse_expression_file(self.expr_file, signature_genes, gene_trans_dict, include_decon=include_decon)
+                self.expr_df, self.sign_expr_df = self.parse_expression_file(self.expr_file, signature_genes, gene_trans_dict, include_decon=self.decon_expr_file is None)
+
+            if (not check_file_exists(self.sign_expr_outpath) or self.force) and (check_file_exists(self.decon_expr_file)):
+                self.log.info("Parsing deconvolution expression data.")
+                self.log.warning("Using different expresion file for deconvolution.")
+                _, self.sign_expr_df = self.parse_expression_file(self.decon_expr_file, signature_genes, gene_trans_dict, include_expr=False)
 
             self.log.info("Reorder, Filter, and save.")
             if self.expr_df is not None:
                 self.expr_df = self.expr_df.loc[self.eqtl_df.loc[:, "ProbeName"], self.sample_order]
                 save_dataframe(df=self.expr_df, outpath=self.expr_outpath,
                                index=True, header=True, logger=self.log)
-
-            if not include_decon:
-                self.log.info("Parsing deconvolution expression data.")
-                self.log.warning("Using different expresion file for deconvolution.")
-                _, self.sign_expr_df = self.parse_expression_file(self.decon_expr_file, signature_genes, gene_trans_dict, include_expr=False)
-
-            self.log.info("Reorder, Filter, and save.")
             if self.sign_expr_df is not None:
                 self.sign_expr_df = self.sign_expr_df.loc[:, self.sample_order]
                 save_dataframe(df=self.sign_expr_df, outpath=self.sign_expr_outpath,

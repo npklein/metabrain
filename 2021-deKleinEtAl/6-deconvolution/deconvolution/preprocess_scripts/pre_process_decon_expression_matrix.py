@@ -3,7 +3,7 @@
 """
 File:         pre_process_decon_expression_matrix.py
 Created:      2021/07/06
-Last Changed:
+Last Changed: 2021/07/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -58,11 +58,11 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax: 
-./pre_process_decon_expression_matrix.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz -t /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-05-26-step5-remove-covariates-per-dataset/2020-05-25-covariatefiles/2020-02-17-freeze2dot1.TMM.Covariates.withBrainRegion-noncategorical-variable.top20correlated-cortex-withMDS.txt.gz -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR -p GTE-EUR- -o CortexEUR
+./pre_process_decon_expression_matrix.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz -t /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-05-26-step5-remove-covariates-per-dataset/2020-05-25-covariatefiles/2020-02-17-freeze2dot1.TMM.Covariates.withBrainRegion-noncategorical-variable.top20correlated-cortex-withMDS.txt.gz -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR -p GTE-EUR- -of CortexEUR
 
-./pre_process_decon_expression_matrix.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz -t /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-05-26-step5-remove-covariates-per-dataset/2020-05-25-covariatefiles/2020-02-17-freeze2dot1.TMM.Covariates.withBrainRegion-noncategorical-variable.top20correlated-cortex-withMDS.txt.gz -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR -p GTE-EUR- -e ENA GVEX -o CortexEUR_noENA_noGVEX
+./pre_process_decon_expression_matrix.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz -t /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-05-26-step5-remove-covariates-per-dataset/2020-05-25-covariatefiles/2020-02-17-freeze2dot1.TMM.Covariates.withBrainRegion-noncategorical-variable.top20correlated-cortex-withMDS.txt.gz -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR -p GTE-EUR- -e ENA GVEX -of CortexEUR_noENA_noGVEX
 
-./pre_process_decon_expression_matrix.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz -t /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-05-26-step5-remove-covariates-per-dataset/2020-05-25-covariatefiles/2020-02-17-freeze2dot1.TMM.Covariates.withBrainRegion-noncategorical-variable.top20correlated-cortex-withMDS.txt.gz -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-AFR -p GTE-AFR- -e ENA -o CortexAFR_noENA
+./pre_process_decon_expression_matrix.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz -t /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-05-26-step5-remove-covariates-per-dataset/2020-05-25-covariatefiles/2020-02-17-freeze2dot1.TMM.Covariates.withBrainRegion-noncategorical-variable.top20correlated-cortex-withMDS.txt.gz -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-AFR -p GTE-AFR- -e ENA -of CortexAFR_noENA
 """
 
 
@@ -76,11 +76,13 @@ class main():
         self.gte_prefix = getattr(arguments, 'gte_prefix')
         self.exclude = getattr(arguments, 'exclude')
         outdir = getattr(arguments, 'outdir')
+        outfolder = getattr(arguments, 'outfolder')
 
         # Set variables.
-        base_dir = str(Path(__file__).parent.parent)
-        self.plot_outdir = os.path.join(base_dir, 'pre_process_decon_expression_matrix', outdir, 'plot')
-        self.file_outdir = os.path.join(base_dir, 'pre_process_decon_expression_matrix', outdir, 'data')
+        if outdir is None:
+            outdir = str(Path(__file__).parent.parent)
+        self.plot_outdir = os.path.join(outdir, 'pre_process_decon_expression_matrix', outfolder, 'plot')
+        self.file_outdir = os.path.join(outdir, 'pre_process_decon_expression_matrix', outfolder, 'data')
         for outdir in [self.plot_outdir, self.file_outdir]:
             if not os.path.exists(outdir):
                 os.makedirs(outdir)
@@ -160,8 +162,14 @@ class main():
                             type=str,
                             default=[],
                             help="The gene-expression link files to exclude.")
-        parser.add_argument("-o",
+        parser.add_argument("-od",
                             "--outdir",
+                            type=str,
+                            required=False,
+                            default=None,
+                            help="The name of the output path.")
+        parser.add_argument("-of",
+                            "--outfolder",
                             type=str,
                             required=False,
                             default="output",
@@ -200,12 +208,12 @@ class main():
         cohort_sample_counts = list(zip(*np.unique(gte_combined_df["file"], return_counts=True)))
         cohort_sample_counts.sort(key=lambda x: -x[1])
         cohorts = [csc[0] for csc in cohort_sample_counts]
+        print("\tCohorts: {} [N = {}]".format(", ".join(cohorts), len(cohorts)))
 
         cohort_df = pd.DataFrame(0, index=samples, columns=cohorts)
         for cohort in cohorts:
             cohort_df.loc[cohort_to_sample[cohort], cohort] = 1
         cohort_df.index.name = "-"
-        print(cohort_df)
 
         # Load data.
         print("Loading data.")
@@ -231,7 +239,7 @@ class main():
         print("Step 4: PCA analysis.")
         self.pca(df=df,
                  sample_to_cohort=sample_to_cohort,
-                 plot_appendix="CovariatesRemovedOLS")
+                 plot_appendix="_1_CovariatesRemovedOLS")
 
         print("Step 4: Construct technical covariate matrix.")
         tcov_df = self.load_file(self.tcov_path, header=0, index_col=0)
@@ -278,7 +286,7 @@ class main():
         print("Step 6: PCA analysis.")
         self.pca(df=corrected_df,
                  sample_to_cohort=sample_to_cohort,
-                 plot_appendix="Log2Transformed_CovariatesRemovedOLS")
+                 plot_appendix="_2_Log2Transformed_CovariatesRemovedOLS")
 
         print("Step 7: exp added.")
         corrected_df = np.power(2, corrected_df)
@@ -288,7 +296,7 @@ class main():
         print("Step 8: PCA analysis.")
         self.pca(df=corrected_df,
                  sample_to_cohort=sample_to_cohort,
-                 plot_appendix="Log2Transformed_CovariatesRemovedOLS_ExpAdded")
+                 plot_appendix="_3_Log2Transformed_CovariatesRemovedOLS_ExpAdded")
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,

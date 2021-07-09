@@ -1,7 +1,7 @@
 """
 File:         create_cov_matrices.py
 Created:      2020/10/08
-Last Changed: 2020/11/20
+Last Changed: 2021/07/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -65,6 +65,8 @@ class CreateCovsMatrix:
         self.log.info("Loading eigenvectors matrix.")
         eigen_df = load_dataframe(self.eig_file, header=0, index_col=0,
                                   nrows=self.n_eigen, logger=self.log)
+        if len(set(self.sample_order).intersection(set(eigen_df.columns))) == 0:
+            eigen_df = eigen_df.T
         eigen_df.columns = [self.sample_dict[x] if x in self.sample_dict else x for x in eigen_df.columns]
         eigen_df = eigen_df.loc[:, self.sample_order]
 

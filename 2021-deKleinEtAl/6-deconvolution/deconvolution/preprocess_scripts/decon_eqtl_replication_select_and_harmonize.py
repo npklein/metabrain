@@ -50,7 +50,7 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./decon_eqtl_replication_select_and_harmonize.py -re /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-AFR/replicateCortex-EUR/eQTLProbesFDR0.05-ProbeLevel.txt.gz -da /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis_NoENA_NoGVEX_NoCorrection/create_matrices/genotype_alleles.txt.gz  -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_afr_cis_NoENA_NoCorrection_EURReplication/create_matrices/genotype_table.txt.gz -al /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_afr_cis_NoENA_NoCorrection_EURReplication/create_matrices/genotype_alleles.txt.gz -ex /groups/umcg-biogen/tmp01/output/2020-11-10-DeconOptimizer/2020-11-10-decon-optimizer/preprocess_scripts/CortexAFR/data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.CovariatesRemovedOLS.ProbesCentered.SamplesZTransformed.ExpAdded.txt.gz -n cortex_afr_replication_cortex_eur_cis_NoENA_NoGVEX
+./decon_eqtl_replication_select_and_harmonize.py -re /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-AFR/replicateCortex-EUR/eQTLProbesFDR0.05-ProbeLevel.txt.gz -da /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis-PrimaryeQTLs/create_matrices/genotype_alleles.txt.gz -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/create_matrices/genotype_table.txt.gz -al /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/create_matrices/genotype_alleles.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexAFR-cis/data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt.gz -n CortexAFR-cis-Replication-EUR
 """
 
 
@@ -64,9 +64,13 @@ class main():
         self.alleles_path = getattr(arguments, 'alleles')
         self.expr_path = getattr(arguments, 'expression')
         self.name = getattr(arguments, 'name')
+        outdir = getattr(arguments, 'outdir')
+        outfolder = getattr(arguments, 'outfolder')
 
         # Set variables.
-        self.outdir = os.path.join(str(Path(__file__).parent.parent), 'decon_eqtl_replication_select_and_harmonize', self.name)
+        if outdir is None:
+            outdir = str(Path(__file__).parent.parent)
+        self.outdir = os.path.join(outdir, 'decon_eqtl_replication_select_and_harmonize', outfolder)
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
 
@@ -107,11 +111,18 @@ class main():
                             type=str,
                             required=True,
                             help="The path to the expression matrix")
-        parser.add_argument("-n",
-                            "--name",
+        parser.add_argument("-od",
+                            "--outdir",
                             type=str,
-                            required=True,
-                            help="The name of the output directory")
+                            required=False,
+                            default=None,
+                            help="The name of the output path.")
+        parser.add_argument("-of",
+                            "--outfolder",
+                            type=str,
+                            required=False,
+                            default="output",
+                            help="The name of the output folder.")
 
         return parser.parse_args()
 
