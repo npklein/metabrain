@@ -272,7 +272,7 @@ class main():
                 # Calculate the p-value.
                 # TODO delete this
                 p_value = self.calc_p_value(rss1=rss_null, rss2=rss_alt, df1=df2 - 1, df2=df2, n=full_y.shape[0])
-                #p_value = self.calc_p_value(rss1=rss_null, rss2=rss_alt, df1=df2 - 1, df2=df2, n=n)
+                # p_value = self.calc_p_value(rss1=rss_null, rss2=rss_alt, df1=df2 - 1, df2=df2, n=n)
 
                 if eqtl_indices[row_index] == "ENSG00000013573.17_12:31073901:rs7953706:T_A":
                     print(cell_types_indices[cov_index], rss_null, rss_alt, df2 - 1, df2, n, p_value)
@@ -326,7 +326,6 @@ class main():
                 print(comparison_df)
                 exit()
 
-
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
                   nrows=None, skiprows=None):
@@ -379,7 +378,7 @@ class main():
                     X[:, n_covariates + cov_index] = genotype * X[:, cc_index]
 
             # Calculate the R-squared.
-            betas, rnorm_alt = self.fit(X, expression)
+            betas = self.fit(X, expression)
             # rss_alt = rnorm_alt * rnorm_alt
             rss_alt = self.calc_rss(y=expression, y_hat=self.predict(X=X, betas=betas))
 
@@ -393,20 +392,15 @@ class main():
 
     @staticmethod
     def fit(X, y):
-        return nnls(X, y)
-
-    # @staticmethod
-    # def fit(X, y):
-    #     X_square = X.T.dot(X)
-    #     return np.linalg.inv(X_square).dot(X.T).dot(y)
+        betas, _ = nnls(X, y)
+        return betas
 
     @staticmethod
     def predict(X, betas):
         return np.dot(X, betas)
 
     def fit_and_predict(self, X, y):
-        betas, _ = self.fit(X=X, y=y)
-        return self.predict(X=X, betas=betas)
+        return self.predict(X=X, betas=self.fit(X=X, y=y))
 
     @staticmethod
     def calc_pearsonr(x, y):
@@ -443,7 +437,8 @@ class main():
             p_value = 2.2250738585072014e-308
         return p_value
 
-    def save_file(self, df, outpath, header=True, index=True, sep="\t"):
+    @staticmethod
+    def save_file(df, outpath, header=True, index=True, sep="\t"):
         compression = 'infer'
         if outpath.endswith('.gz'):
             compression = 'gzip'
