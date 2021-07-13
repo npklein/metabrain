@@ -70,7 +70,7 @@ class main():
         self.n_permutations = getattr(arguments, 'permutations')
         outdir = getattr(arguments, 'outdir')
         self.print_interval = 30
-        self.nrows = None
+        self.nrows = 1
 
         # Set variables.
         self.outdir = os.path.join(str(Path(__file__).parent.parent.absolute()), "decon_eqtl_with_permutation_fdr", outdir)
@@ -222,11 +222,18 @@ class main():
                 self.find_best_config(configs=alt_model_configs,
                                       n_samples=n,
                                       n_covariates=n_covariates,
-                                      cc_m=cc_m,
+                                      cc_m=cc_m[:, mask],
                                       genotype=genotype,
-                                      mask=mask,
                                       expression=y
                                       )
+
+            # Calculate the RSS just like Decon-eQTL does. This is not
+            # how it was intended to work!
+            # TODO delete this
+            full_y = expr_m[row_index, :]
+            alt_y_hat = np.zeros_like(full_y)
+            alt_y_hat[mask] = self.predict(X=X_alt, betas=betas_alt)
+            rss_alt = self.calc_rss(y=full_y, y_hat=alt_y_hat)
 
             # Save the alternative model stats.
             config_alt_m[row_index, :] = config_alt
@@ -244,19 +251,28 @@ class main():
                     self.find_best_config(configs=null_model_configs,
                                           n_samples=n,
                                           n_covariates=n_covariates,
-                                          cc_m=cc_m,
+                                          cc_m=cc_m[:, mask],
                                           genotype=genotype,
-                                          mask=mask,
                                           expression=y,
                                           exclude=cov_index
                                           )
+
+                # Calculate the RSS just like Decon-eQTL does. This is not
+                # how it was intended to work!
+                # TODO delete this
+                full_y = expr_m[row_index, :]
+                null_y_hat = np.copy(alt_y_hat)
+                null_y_hat[mask] = self.predict(X=X_null, betas=betas_null)
+                rss_null = self.calc_rss(y=full_y, y_hat=null_y_hat)
 
                 # Save the null model configuration.
                 config_mask = [True if x != cov_index else False for x in range(n_covariates)]
                 config_null_dict[cell_types_indices[cov_index]][row_index, config_mask] = config_null
 
                 # Calculate the p-value.
-                p_value = self.calc_p_value(rss1=rss_null, rss2=rss_alt, df1=df2 - 1, df2=df2, n=n)
+                # TODO delete this
+                p_value = self.calc_p_value(rss1=rss_null, rss2=rss_alt, df1=df2 - 1, df2=df2, n=full_y.shape[0])
+                #p_value = self.calc_p_value(rss1=rss_null, rss2=rss_alt, df1=df2 - 1, df2=df2, n=n)
 
                 if eqtl_indices[row_index] == "ENSG00000013573.17_12:31073901:rs7953706:T_A":
                     print(cell_types_indices[cov_index], rss_null, rss_alt, df2 - 1, df2, n, p_value)
@@ -279,13 +295,10 @@ class main():
         print("### STEP 4 ###")
         print("Saving results.")
         config_alt_df = pd.DataFrame(config_alt_m, index=eqtl_indices, columns=cell_types_indices)
-        print(config_alt_df)
         self.save_file(df=config_alt_df, outpath=os.path.join(self.outdir, "configuration_alt.txt.gz"))
 
         for cell_type, config_null_m in config_null_dict.items():
-            print(cell_type + ":")
             config_null_df = pd.DataFrame(config_null_m, index=eqtl_indices, columns=cell_types_indices)
-            print(config_null_df)
             self.save_file(df=config_null_df, outpath=os.path.join(self.outdir, "configuration_null_{}.txt.gz".format(cell_type)))
 
         output_df = pd.DataFrame(output_m,
@@ -296,6 +309,22 @@ class main():
         print(output_df)
         self.save_file(df=output_df, outpath=os.path.join(self.outdir, "deconvolutionResultsTest.txt.gz"))
         print("")
+
+        ########################################################################
+
+        pd.options.display.float_format = '{:.6f}'.format
+
+        decon_df = self.load_file("../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv", header=0, index_col=0)
+        for index in output_df.index:
+            if index in decon_df.index:
+                decon_result = decon_df.loc[[index], :].T
+                decon_result.index = ["Beta1_CellMapNNLS_Astrocyte" if x == "Beta1_CellMapNNLS_Astrocyt" else x for x in decon_result.index]
+                my_result = output_df.loc[[index], :].T
+                comparison_df = decon_result.merge(my_result, left_index=True, right_index=True)
+                comparison_df.columns = ["Decon-eQTL", "Martijn"]
+                comparison_df["delta"] = (comparison_df["Decon-eQTL"] - comparison_df["Martijn"]).abs()
+                print(comparison_df)
+                exit()
 
 
     @staticmethod
@@ -321,7 +350,7 @@ class main():
             exit()
 
     def find_best_config(self, configs, n_samples, n_covariates, cc_m,
-                         genotype, mask, expression, exclude=None):
+                         genotype, expression, exclude=None):
         n_columns = n_covariates * 2
         if exclude is not None:
             n_columns -= 1
@@ -329,7 +358,7 @@ class main():
         # Create the model matrix. Leave the interaction columns blank.
         X = np.empty((n_samples, n_columns), np.float32)
         for cov_index in range(n_covariates):
-            X[:, cov_index] = cc_m[cov_index, mask]
+            X[:, cov_index] = cc_m[cov_index, :]
 
         # Try different configurations for the genotype encoding.
         top_config = None
