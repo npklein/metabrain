@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/10/08
-Last Changed: 2020/10/27
+Last Changed: 2021/07/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -37,7 +37,7 @@ from .steps.create_cohort_matrix import CreateCohortMatrix
 from .steps.create_matrices import CreateMatrices
 from .steps.correct_cohort_effects import CorrectCohortEffects
 from .steps.perform_deconvolution import PerformDeconvolution
-from .steps.create_tech_cov_matrix import CreateTechCovsMatrix
+from .steps.create_correction_matrix import CreateCorrectionMatrix
 from .steps.create_covs_matrix import CreateCovsMatrix
 from .steps.create_extra_covs_matrix import CreateExtraCovsMatrix
 from .steps.normal_transform_matrix import NormalTransformMatrix
@@ -74,15 +74,15 @@ class Main:
         order = ['combine_gte_files', 'combine_eqtlprobes',
                  'create_cohort_matrix', 'create_matrices',
                  'correct_cohort_effects', 'perform_deconvolution',
-                 'create_tech_covs_matrix', 'create_covs_matrix',
+                 'create_correction_matrix', 'create_covs_matrix',
                  'create_extra_covs_matrix', 'normal_transform_matrix']
-        step_dependencies = {'combine_gte_files': {'create_cohort_matrix', 'create_matrices', 'create_tech_covs_matrix', 'create_covs_matrix', 'create_extra_covs_matrix'},
+        step_dependencies = {'combine_gte_files': {'create_cohort_matrix', 'create_matrices', 'create_correction_matrix', 'create_covs_matrix', 'create_extra_covs_matrix'},
                              'combine_eqtlprobes': {'create_matrices'},
-                             'create_cohort_matrix': {'correct_cohort_effects', 'create_tech_covs_matrix'},
-                             'create_matrices': {'correct_cohort_effects', 'perform_deconvolution', 'create_tech_covs_matrix', 'create_cov_matrix'},
+                             'create_cohort_matrix': {'correct_cohort_effects', 'create_correction_matrix'},
+                             'create_matrices': {'correct_cohort_effects', 'perform_deconvolution', 'create_correction_matrix', 'create_cov_matrix'},
                              'correct_cohort_effects': {'perform_deconvolution'},
                              'perform_deconvolution': {'create_cov_matrix'},
-                             'create_tech_covs_matrix': {},
+                             'create_correction_matrix': {},
                              'create_covs_matrix': {},
                              'create_extra_covs_matrix': {'normal_transform_matrix'},
                              'normal_transform_matrix': {}}
@@ -200,17 +200,17 @@ class Main:
         # Step7. Filter technical covariates.
         self.log.info("### STEP7 ###")
         self.log.info("")
-        ctcm = CreateTechCovsMatrix(
-            settings=self.settings.get_setting('create_tech_covs_matrix'),
+        ccorm = CreateCorrectionMatrix(
+            settings=self.settings.get_setting('create_correction_matrix'),
             log=self.log,
             cohort_file=ccm.get_cohort_file(),
             cohort_df=ccm.get_cohort_df(),
             sample_dict=cgtef.get_sample_dict(),
             sample_order=cgtef.get_sample_order(),
-            force=self.force_dict['create_tech_covs_matrix'],
+            force=self.force_dict['create_correction_matrix'],
             outdir=self.outdir)
-        ctcm.start()
-        ctcm.clear_variables()
+        ccorm.start()
+        ccorm.clear_variables()
         self.log.info("")
 
         # Step8. Create the covariance matrix.

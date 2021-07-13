@@ -399,7 +399,8 @@ class main():
 
     def print_arguments(self):
         print("Arguments:")
-        print("  > Deconvolution path: {}".format(self.geno_path))
+        print("  > Deconvolution path: {}".format(self.decon_path))
+        print("  > eQTL path: {}".format(self.eqtl_path))
         print("  > Genotype path: {}".format(self.geno_path))
         print("  > Expression path: {}".format(self.expr_path))
         print("  > Cell counts path: {}".format(self.cc_path))

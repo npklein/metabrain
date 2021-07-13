@@ -43,7 +43,7 @@ import matplotlib.patches as mpatches
 
 """
 Syntax:
-./decon_eqtl_replication_plot.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2021-06-24-decon-QTL/cortex_eur_cis_NoENA_NoGVEX/decon_cis_cortex_eur_noENA_noGVEX_out/deconvolutionResults.csv -dn EUR -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2021-06-24-decon-QTL/cortex_eur_cis_NoENA_NoGVEX/decon_cis_cortex_afr_replication_cis_cortex_eur_NoENA_NoGVEX_out/deconvolutionResults.csv -rn AFR
+./decon_eqtl_replication_plot.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2021-06-24-decon-QTL/CortexEUR-cis-PrimaryeQTLs/deconvolutionResults.csv -dn EUR -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2021-06-24-decon-QTL/CortexAFR-cis-Replication-EUR/deconvolutionResults.csv -rn AFR
 """
 
 # Metadata
