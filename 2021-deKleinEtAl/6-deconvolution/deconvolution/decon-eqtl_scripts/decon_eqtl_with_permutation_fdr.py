@@ -26,6 +26,7 @@ from __future__ import print_function
 from pathlib import Path
 import argparse
 import itertools
+import time
 import os
 
 # Third party imports.
@@ -39,7 +40,7 @@ from scipy.special import betainc
 
 """
 Syntax:
-./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2020-11-20-decon-QTL/cis/cortex/expression_table/2020-07-16-MetaBrainDeconQtlGenes.TMM.SampSelect.ZeroVarRemov.covRemoved.expAdded.txt -cc /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt.gz
+./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2020-11-20-decon-QTL/cis/cortex/expression_table/2020-07-16-MetaBrainDeconQtlGenes.TMM.SampSelect.ZeroVarRemov.covRemoved.expAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt.gz
 """
 
 # Metadata
@@ -68,7 +69,8 @@ class main():
         self.alpha = getattr(arguments, 'alpha')
         self.n_permutations = getattr(arguments, 'permutations')
         outdir = getattr(arguments, 'outdir')
-        self.nrows = 10
+        self.print_interval = 30
+        self.nrows = None
 
         # Set variables.
         self.outdir = os.path.join(str(Path(__file__).parent.parent.absolute()), "decon_eqtl_with_permutation_fdr", outdir)
@@ -105,11 +107,11 @@ class main():
                                  "matrix")
         parser.add_argument("-m",
                             "--missing_genotype",
-                            type=str,
+                            type=int,
                             required=False,
                             default=-1,
                             help="The genotype value that equals a missing "
-                                 "value. Default: -1.")
+                                 "value. Default: -1. Note: has to be int.")
         parser.add_argument("-a",
                             "--alpha",
                             type=float,
@@ -183,11 +185,9 @@ class main():
         n_samples = geno_m.shape[1]
         n_eqtls = geno_m.shape[0]
         n_covariates = cc_m.shape[0]
-        n_tests = n_eqtls * n_covariates
         print("\tN-samples: {}".format(n_samples))
         print("\tN-eQTLs: {}".format(n_eqtls))
         print("\tN-covariates: {}".format(n_covariates))
-        print("\tN-tests: {}".format(n_tests))
         print("")
 
         ########################################################################
@@ -195,7 +195,16 @@ class main():
         print("### STEP 3 ###")
         print("Analyzing.")
         output_m = np.empty((n_eqtls, n_covariates * 3), dtype=np.float64)
-        config_m = np.empty((n_eqtls, n_covariates), dtype=bool)
+        config_alt_m = np.empty((n_eqtls, n_covariates), dtype=np.dtype('u1'))
+        config_null_dict = {}
+        for cell_type in cell_types_indices:
+            empty_m = np.empty((n_eqtls, n_covariates))
+            empty_m[:] = np.nan
+            config_null_dict[cell_type] = empty_m
+        alt_model_configs = list(itertools.product([True, False], repeat=n_covariates))
+        null_model_configs = list(itertools.product([True, False], repeat=n_covariates - 1))
+        start_time = int(time.time())
+        last_print_time = None
         for row_index in range(n_eqtls):
             # Get the genotype.
             genotype = geno_m[row_index, :]
@@ -208,69 +217,76 @@ class main():
             y = expr_m[row_index, mask]
             genotype = genotype[mask]
 
-            # Create the alternative matrix. Leave the interaction columns
-            # blank.
-            X = np.empty((n, n_covariates * 2), np.float32)
-            for cov_index in range(n_covariates):
-                X[:, cov_index] = cc_m[cov_index, mask]
-
-            # Try different configurations for the genotype encoding.
-            configurations = list(itertools.product([True, False], repeat=n_covariates))
-            top_config = None
-            top_betas = None
-            top_rss = np.inf
-            top_X = None
-            for config in configurations:
-                # Fill in the alternative matrix with the right configuration
-                # of allele encoding.
-                for cov_index, flip in enumerate(config):
-                    if flip:
-                        X[:, n_covariates + cov_index] = (2 - genotype) * X[:, cov_index]
-                    else:
-                        X[:, n_covariates + cov_index] = genotype * X[:, cov_index]
-
-                # Calculate the R-squared.
-                betas, rss = self.fit(X, y)
-
-                if rss < top_rss:
-                    top_config = config
-                    top_betas = betas
-                    top_rss = rss
-                    top_X = np.copy(X)
+            # Model the alternative matrix (with the interaction term).
+            config_alt, X_alt, betas_alt, rss_alt = \
+                self.find_best_config(configs=alt_model_configs,
+                                      n_samples=n,
+                                      n_covariates=n_covariates,
+                                      cc_m=cc_m,
+                                      genotype=genotype,
+                                      mask=mask,
+                                      expression=y
+                                      )
 
             # Save the alternative model stats.
-            config_m[row_index, :] = top_config
-            flip_array = np.vectorize({True: -1, False: 1}.get)(top_config)
-            output_m[row_index, n_covariates:2 * n_covariates] = top_betas[:n_covariates]
-            output_m[row_index, 2 * n_covariates:] = top_betas[n_covariates:] * flip_array
+            config_alt_m[row_index, :] = config_alt
+            flip_array = np.vectorize({True: -1, False: 1}.get)(config_alt)
+            output_m[row_index, n_covariates:2 * n_covariates] = betas_alt[:n_covariates]
+            output_m[row_index, 2 * n_covariates:] = betas_alt[n_covariates:] * flip_array
 
             # Save the degrees of freedom.
-            df1 = X.shape[1]
+            df2 = n_covariates * 2
 
             # Remove interaction column one by one.
             for cov_index in range(n_covariates):
-                selector = [x for x in range(X.shape[1]) if x != (n_covariates + cov_index)]
-
                 # Model the null matrix (without the interaction term).
-                _, rss_null = self.fit(top_X[:, selector], y=y)
+                config_null, X_null, betas_null, rss_null = \
+                    self.find_best_config(configs=null_model_configs,
+                                          n_samples=n,
+                                          n_covariates=n_covariates,
+                                          cc_m=cc_m,
+                                          genotype=genotype,
+                                          mask=mask,
+                                          expression=y,
+                                          exclude=cov_index
+                                          )
+
+                # Save the null model configuration.
+                config_mask = [True if x != cov_index else False for x in range(n_covariates)]
+                config_null_dict[cell_types_indices[cov_index]][row_index, config_mask] = config_null
 
                 # Calculate the p-value.
-                p_value = self.calc_p_value(rss1=rss_null, rss2=top_rss, df1=df1 - 1, df2=df1, n=n)
+                p_value = self.calc_p_value(rss1=rss_null, rss2=rss_alt, df1=df2 - 1, df2=df2, n=n)
 
                 if eqtl_indices[row_index] == "ENSG00000013573.17_12:31073901:rs7953706:T_A":
-                    print(cell_types_indices[cov_index], rss_null, top_rss, df1 - 1, df1, n, p_value)
+                    print(cell_types_indices[cov_index], rss_null, rss_alt, df2 - 1, df2, n, p_value)
 
                 # Save the p-value.
                 output_m[row_index, cov_index] = p_value
+
+            # Print update for user.
+            now_time = int(time.time())
+            if last_print_time is None or (now_time - last_print_time) >= self.print_interval or (row_index + 1) == n_eqtls:
+                print("\t[{}] {}/{} ieQTLs analysed [{:.2f}%]".format(time.strftime('%H:%M:%S', time.gmtime(now_time - start_time)),
+                                                                      (row_index + 1),
+                                                                      n_eqtls,
+                                                                      (100 / n_eqtls) * (row_index + 1)))
+                last_print_time = now_time
         print("")
 
         ########################################################################
 
         print("### STEP 4 ###")
         print("Saving results.")
-        # Constructing output data frames.
-        config_df = pd.DataFrame(config_m, index=eqtl_indices, columns=cell_types_indices)
-        print(config_df)
+        config_alt_df = pd.DataFrame(config_alt_m, index=eqtl_indices, columns=cell_types_indices)
+        print(config_alt_df)
+        self.save_file(df=config_alt_df, outpath=os.path.join(self.outdir, "configuration_alt.txt.gz"))
+
+        for cell_type, config_null_m in config_null_dict.items():
+            print(cell_type + ":")
+            config_null_df = pd.DataFrame(config_null_m, index=eqtl_indices, columns=cell_types_indices)
+            print(config_null_df)
+            self.save_file(df=config_null_df, outpath=os.path.join(self.outdir, "configuration_null_{}.txt.gz".format(cell_type)))
 
         output_df = pd.DataFrame(output_m,
                                  index=eqtl_indices,
@@ -278,20 +294,8 @@ class main():
                                          ["Beta{}_{}".format(i+1, x) for i, x in enumerate(cell_types_indices)] +
                                          ["Beta{}_{}:GT".format(len(cell_types_indices) + i + 1, x) for i, x in enumerate(cell_types_indices)])
         print(output_df)
-
-        # Save data frames.
-        self.save_file(df=config_df, outpath=os.path.join(self.outdir, "configuration.txt.gz"))
-        self.save_file(df=output_df, outpath=os.path.join(self.outdir, "deconvolutionResults.txt.gz"))
+        self.save_file(df=output_df, outpath=os.path.join(self.outdir, "deconvolutionResultsTest.txt.gz"))
         print("")
-
-        ########################################################################
-
-        pd.options.display.float_format = '{:.6f}'.format
-        index = "ENSG00000013573.17_12:31073901:rs7953706:T_A"
-        compare_df = pd.DataFrame([1.0, 2.2661323144368417E-4, 0.04837948901822087, 0.4564815400525688, 0.14451543183456061, 0.0, 0.7834840056139196, 0.15986904661275544, 0.0, .9684104616106644, 0.0, -1.509638050682845, -0.982621462282272, 0.1210466001865929, -1.0721818710231141], columns=["Decon-eQTL"], index=["CellMapNNLS_Astrocyte_pvalue", "CellMapNNLS_EndothelialCell_pvalue", "CellMapNNLS_Macrophage_pvalue", "CellMapNNLS_Neuron_pvalue", "CellMapNNLS_Oligodendrocyte_pvalue", "Beta1_CellMapNNLS_Astrocyte", "Beta2_CellMapNNLS_EndothelialCell", "Beta3_CellMapNNLS_Macrophage", "Beta4_CellMapNNLS_Neuron", "Beta5_CellMapNNLS_Oligodendrocyte", "Beta6_CellMapNNLS_Astrocyte:GT", "Beta7_CellMapNNLS_EndothelialCell:GT", "Beta8_CellMapNNLS_Macrophage:GT", "Beta9_CellMapNNLS_Neuron:GT", "Beta10_CellMapNNLS_Oligodendrocyte:GT"])
-        my_output_df = output_df.loc[[index], :].T
-        my_output_df.columns = ["Martijn"]
-        print(compare_df.merge(my_output_df, left_index=True, right_index=True))
 
 
     @staticmethod
@@ -316,6 +320,48 @@ class main():
                   "cell count file header.")
             exit()
 
+    def find_best_config(self, configs, n_samples, n_covariates, cc_m,
+                         genotype, mask, expression, exclude=None):
+        n_columns = n_covariates * 2
+        if exclude is not None:
+            n_columns -= 1
+
+        # Create the model matrix. Leave the interaction columns blank.
+        X = np.empty((n_samples, n_columns), np.float32)
+        for cov_index in range(n_covariates):
+            X[:, cov_index] = cc_m[cov_index, mask]
+
+        # Try different configurations for the genotype encoding.
+        top_config = None
+        top_X = None
+        top_betas = None
+        top_rss = np.inf
+        for config in configs:
+            # Fill in the alternative matrix with the right configuration
+            # of allele encoding.
+            for cov_index, flip in enumerate(config):
+                cc_index = cov_index
+                if exclude is not None and cc_index >= exclude:
+                    cc_index += 1
+
+                if flip:
+                    X[:, n_covariates + cov_index] = (2 - genotype) * X[:, cc_index]
+                else:
+                    X[:, n_covariates + cov_index] = genotype * X[:, cc_index]
+
+            # Calculate the R-squared.
+            betas, rnorm_alt = self.fit(X, expression)
+            # rss_alt = rnorm_alt * rnorm_alt
+            rss_alt = self.calc_rss(y=expression, y_hat=self.predict(X=X, betas=betas))
+
+            if rss_alt < top_rss:
+                top_config = config
+                top_X = np.copy(X)
+                top_betas = betas
+                top_rss = rss_alt
+
+        return top_config, top_X, top_betas, top_rss
+
     @staticmethod
     def fit(X, y):
         return nnls(X, y)
@@ -330,7 +376,8 @@ class main():
         return np.dot(X, betas)
 
     def fit_and_predict(self, X, y):
-        return self.predict(X=X, betas=self.fit(X=X, y=y))
+        betas, _ = self.fit(X=X, y=y)
+        return self.predict(X=X, betas=betas)
 
     @staticmethod
     def calc_pearsonr(x, y):
@@ -362,7 +409,10 @@ class main():
         dfn = df2 - df1
         dfd = n - df2
         f_value = ((rss1 - rss2) / dfn) / (rss2 / dfd)
-        return betainc(dfd / 2, dfn / 2, 1 - ((dfn * f_value) / ((dfn * f_value) + dfd)))
+        p_value = betainc(dfd / 2, dfn / 2, 1 - ((dfn * f_value) / ((dfn * f_value) + dfd)))
+        if p_value == 0:
+            p_value = 2.2250738585072014e-308
+        return p_value
 
     def save_file(self, df, outpath, header=True, index=True, sep="\t"):
         compression = 'infer'
