@@ -3,7 +3,7 @@
 """
 File:         compare_deconvolution_matrices.py
 Created:      2020/09/03
-Last Changed:
+Last Changed: 2021/07/14
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -57,23 +57,13 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./compare_deconvolution_matrices.py -d1 ../paper_scripts/decon_eqtl_permutation_per_cohort/deconvolutionResults_1000perm_perIeQTLFDR.txt.gz -n1 per_ieqtl -d2 ../paper_scripts/decon_eqtl_permutation_per_cohort/deconvolutionResults_1000perm_CombinedPermFDR.txt.gz -n2 combined
+./compare_deconvolution_matrices.py -d1 ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -n1 Niek -d2 ../2021-06-24-decon-QTL/CortexEUR-cis/deconvolutionResults.csv -n2 Martijn -o Niek_vs_Martijn
 
-./compare_deconvolution_matrices.py -d1 ../paper_scripts/decon_eqtl_permutation_per_cohort/deconvolutionResults_1000perm_perIeQTLFDR.txt.gz -n1 per_ieqtl -d2 ../paper_scripts/decon_eqtl_permutation_per_cohort/deconvolutionResults_1000perm_CombinedPermFDR.txt.gz -n2 combined
+./compare_deconvolution_matrices.py -d1 ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -n1 old_pre_processing -d2 ../2021-06-24-decon-QTL/CortexEUR-cis-OldCellCounts/deconvolutionResults.csv -n2 new_pre_processing -o OldPreProcessing_vs_NewPreProcessing
 
-./compare_deconvolution_matrices.py -d1 ../paper_scripts/decon_eqtl_permutation/decon_output/real/deconvolutionResults.csv -n1 p_value -d2 ../paper_scripts/decon_eqtl_permutation_per_cohort/deconvolutionResults_1000perm_CombinedPermFDR.txt.gz -n2 combined_FDR
+./compare_deconvolution_matrices.py -d1 ../2021-06-24-decon-QTL/CortexEUR-cis-OldCellCounts/deconvolutionResults.csv -n1 old_cell-counts -d2 ../2021-06-24-decon-QTL/CortexEUR-cis/deconvolutionResults.csv -n2 new_cell_counts -o OldCellCounts_vs_NewCellCounts
 
-./compare_deconvolution_matrices.py -d1 ../paper_scripts/decon_eqtl_permutation/decon_output/real/deconvolutionResults.csv -n1 p_value -d2 ../paper_scripts/decon_eqtl_permutation_per_cohort/deconvolutionResults_1000perm_perIeQTLFDR.txt.gz -n2 single_FDR
-
-./compare_deconvolution_matrices.py -d1 ../paper_scripts/decon_eqtl_permutation/decon_output/real/deconvolutionResults.csv -n1 p_value -d2 ../paper_scripts/decon_eqtl_permutation_per_cohort/deconvolutionResults_1000perm_perIeQTLFDR.txt.gz -n2 single_FDR
-
-./compare_deconvolution_matrices.py -d1 ../paper_scripts/decon_eqtl_permutation/decon_output/real/deconvolutionResults.csv -n1 p_value -d2 ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -n2 BH_FDR
-
-./compare_deconvolution_matrices.py -d1 ../paper_scripts/decon_eqtl_permutation_per_cohort/deconvolutionResults_1000perm_perIeQTLFDR.txt.gz -n1 single_FDR -d2 ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -n2 BH_FDR
-
-./compare_deconvolution_matrices.py -d1 ../paper_scripts/decon_eqtl_permutation_per_cohort/deconvolutionResults_1000perm_CombinedPermFDR.txt.gz -n1 combined_FDR -d2 ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -n2 BH_FDR
-
-./compare_deconvolution_matrices.py -d1 ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -n1 Niek -d2 ../2021-06-24-decon-QTL/cortex_eur_cis/decon_cis_cortex_eur_out/deconvolutionResults.csv -n2 Martijn
+./compare_deconvolution_matrices.py -d1 ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -n1 Decon-eQTL -d2 ../decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/output/deconvolutionResults.txt.gz -n2 Martijn -o DeconeQTL_vs_Martijn
 """
 
 
@@ -85,6 +75,7 @@ class main():
         self.decon1_name = getattr(arguments, 'name1')
         self.decon2_path = getattr(arguments, 'decon2')
         self.decon2_name = getattr(arguments, 'name2')
+        self.outfile = getattr(arguments, 'outfile')
         self.nrows = None
 
         # Set variables.
@@ -92,7 +83,7 @@ class main():
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
 
-        self.colormap = {
+        self.accent_colormap = {
             "Neuron": "#0072B2",
             "Oligodendrocyte": "#009E73",
             "EndothelialCell": "#CC79A7",
@@ -100,6 +91,12 @@ class main():
             "Macrophage": "#E69F00",
             "Astrocyte": "#D55E00",
             "Average": "#E8E8E8"
+        }
+        self.point_colormap = {
+            "no signif": "#808080",
+            "x signif": "#0072B2",
+            "y signif": "#D55E00",
+            "both signif": "#009E73"
         }
 
     def create_argument_parser(self):
@@ -135,6 +132,12 @@ class main():
                             required=False,
                             default="y",
                             help="The name for the first deconvolution matrix")
+        parser.add_argument("-o",
+                            "--outfile",
+                            type=str,
+                            required=False,
+                            default="deconvolution",
+                            help="The name of the plot file.")
 
         return parser.parse_args()
 
@@ -145,7 +148,8 @@ class main():
         print("\tLoaded dataframe: {} "
               "with shape: {}".format(os.path.basename(self.decon1_path),
                                       decon1_df.shape))
-        decon1_df, _ = self.bh_correct(decon1_df)
+        decon1_pval_df, decon1_fdr_df = self.bh_correct(decon1_df)
+        # decon2_pval_df, decon2_fdr_df = self.bh_correct2(decon1_df)
 
         print("Loading deconvolution matrix 2.")
         decon2_df = pd.read_csv(self.decon2_path, sep="\t", header=0,
@@ -153,54 +157,73 @@ class main():
         print("\tLoaded dataframe: {} "
               "with shape: {}".format(os.path.basename(self.decon2_path),
                                       decon2_df.shape))
-        decon2_df, _ = self.bh_correct(decon2_df)
+        decon2_pval_df, decon2_fdr_df = self.bh_correct(decon2_df)
 
-        print(decon1_df)
-        print(decon2_df)
+        for decon1_df, decon2_df, appendix in ([decon1_pval_df, decon2_pval_df, "pvalue"], [decon1_fdr_df, decon2_fdr_df, "FDR"]):
+            print("Plotting {}".format(appendix))
 
-        # Change columns.
-        decon1_df.columns = [x.split("_")[1] for x in decon1_df.columns]
-        decon2_df.columns = [x.split("_")[1] for x in decon2_df.columns]
+            # Change columns.
+            decon1_df.columns = [x.split("_")[1] for x in decon1_df.columns]
+            decon2_df.columns = [x.split("_")[1] for x in decon2_df.columns]
 
-        # Filter on overlapping rows and columns.
-        print("Filtering matrices.")
-        row_overlap = set(decon1_df.index).intersection(set(decon2_df.index))
-        col_overlap = set(decon1_df.columns).intersection(set(decon2_df.columns))
+            # Filter on overlapping rows and columns.
+            print("\tFiltering matrices.")
+            row_overlap = set(decon1_df.index).intersection(set(decon2_df.index))
+            col_overlap = set(decon1_df.columns).intersection(set(decon2_df.columns))
 
-        decon1_df = decon1_df.loc[row_overlap, col_overlap]
-        decon2_df = decon2_df.loc[row_overlap, col_overlap]
+            decon1_df = decon1_df.loc[row_overlap, col_overlap]
+            decon2_df = decon2_df.loc[row_overlap, col_overlap]
 
-        print("\tDeconvolution matrix 1: {}".format(decon1_df.shape))
-        print("\tDeconvolution matrix 2: {}".format(decon2_df.shape))
+            print("\t  Deconvolution matrix 1: {}".format(decon1_df.shape))
+            print("\t  Deconvolution matrix 2: {}".format(decon2_df.shape))
 
-        if decon1_df.shape != decon2_df.shape:
-            print("Shape's are not identical.")
-            exit()
+            if decon1_df.shape != decon2_df.shape:
+                print("\t  Shape's are not identical.")
+                exit()
 
-        if decon1_df.shape[0] > decon1_df.shape[1]:
-            decon1_df = decon1_df.T
-            decon2_df = decon2_df.T
+            if decon1_df.shape[0] > decon1_df.shape[1]:
+                decon1_df = decon1_df.T
+                decon2_df = decon2_df.T
 
-        #self.plot_violin_comparison(decon1_df, decon2_df)
-        self.plot_regression_comparison(decon1_df, decon2_df)
+            print("\tPlotting.")
+            #self.plot_violin_comparison(decon1_df, decon2_df, self.outfile + "_" + appendix)
+            self.plot_regression_comparison(decon1_df, decon2_df, self.outfile + "_" + appendix)
 
     @staticmethod
-    def bh_correct(pvalue_df):
-        df = pvalue_df.copy()
-        pval_data = []
+    def bh_correct(input_df):
+        pvalue_cols = []
+        for col in input_df.columns:
+            if col.endswith("_pvalue"):
+                pvalue_cols.append(col)
+        pvalue_df = input_df.loc[:, pvalue_cols]
+
         fdr_data = []
         indices = []
-        for col in df.columns:
+        for col in pvalue_cols:
+            fdr_data.append(multitest.multipletests(input_df.loc[:, col], method='fdr_bh')[1])
+            indices.append(col.replace("_pvalue", ""))
+        fdr_df = pd.DataFrame(fdr_data, index=indices, columns=input_df.index)
+
+        return pvalue_df, fdr_df.T
+
+    @staticmethod
+    def bh_correct2(input_df):
+        pvalue_cols = []
+        for col in input_df.columns:
             if col.endswith("_pvalue"):
-                pval_data.append(df.loc[:, col])
-                fdr_data.append(multitest.multipletests(df.loc[:, col], method='fdr_bh')[1])
-                indices.append(col.replace("_pvalue", ""))
-        pval_df = pd.DataFrame(pval_data, index=indices, columns=df.index)
-        fdr_df = pd.DataFrame(fdr_data, index=indices, columns=df.index)
+                pvalue_cols.append(col)
+        pvalue_df = input_df.loc[:, pvalue_cols]
 
-        return pval_df.T, fdr_df.T
+        pvalue_df_m = pvalue_df.copy()
+        pvalue_df_m.reset_index(drop=False, inplace=True)
+        pvalue_df_m = pvalue_df_m.melt(id_vars=["index"])
+        pvalue_df_m["FDR"] = multitest.multipletests(pvalue_df_m.loc[:, "value"], method='fdr_bh')[1]
+        fdr_df = pvalue_df_m.pivot(index='index', columns='variable', values='value')
+        fdr_df.columns = [x.replace("_pvalue", "") for x in fdr_df.columns]
 
-    def plot_violin_comparison(self, decon1_df, decon2_df):
+        return pvalue_df, fdr_df
+
+    def plot_violin_comparison(self, decon1_df, decon2_df, filename):
         df1 = decon1_df.copy()
         df2 = decon2_df.copy()
 
@@ -226,15 +249,13 @@ class main():
                       fontsize=14,
                       fontweight='bold')
         plt.tight_layout()
-        fig.savefig(os.path.join(self.outdir, "deconvolution_violin_comparison.png"))
+        fig.savefig(os.path.join(self.outdir, "{}_violin_comparison.png".format(filename)))
         plt.close()
 
-    def plot_regression_comparison(self, decon1_df, decon2_df):
-        # Plot.
-        print("Plotting")
-
+    def plot_regression_comparison(self, decon1_df, decon2_df, filename):
         # Calculate number of rows / columns.
         celltypes = list(decon1_df.index)
+        celltypes.sort()
         ncols = 3
         nrows = math.ceil(len(celltypes) / 3)
 
@@ -253,15 +274,20 @@ class main():
             df = pd.DataFrame({x_label: decon1_df.loc[celltype, :],
                                y_label: decon2_df.loc[celltype, :]})
 
-            # remove not signif.
-            #df = df.loc[df.min(axis=1) < 0.05, :]
-            df = np.log10(df + 1)
+            # Add color
+            df["hue"] = self.point_colormap["no signif"]
+            df.loc[(df[x_label] < 0.05) & (df[y_label] >= 0.05), "hue"] = self.point_colormap["x signif"]
+            df.loc[(df[x_label] >= 0.05) & (df[y_label] < 0.05), "hue"] = self.point_colormap["y signif"]
+            df.loc[(df[x_label] < 0.05) & (df[y_label] < 0.05), "hue"] = self.point_colormap["both signif"]
+            counts = df["hue"].value_counts()
+            for value in self.point_colormap.values():
+                if value not in counts.index:
+                    counts[value] = 0
 
-            coef, p_value = stats.spearmanr(df[x_label], df[y_label])
+            coef, _ = stats.spearmanr(df[x_label], df[y_label])
             coef_str = "{:.2f}".format(coef)
-            p_str = "p = {:.2e}".format(p_value)
 
-            color = self.colormap[celltype]
+            accent_color = self.accent_colormap[celltype]
 
             # Creat the subplot.
             ax = fig.add_subplot(grid[row_index, col_index])
@@ -271,26 +297,61 @@ class main():
             g = sns.regplot(x=x_label,
                             y=y_label,
                             data=df,
-                            scatter_kws={'facecolors': '#000000',
+                            scatter_kws={'facecolors': df["hue"],
                                          'linewidth': 0,
                                          'alpha': 0.5},
-                            line_kws={"color": color},
+                            line_kws={"color": accent_color},
                             ax=ax
                             )
 
             # Add the text.
             ax.annotate(
-                'r = {} [{}]'.format(coef_str, p_str),
+                'r = {}'.format(coef_str),
                 xy=(0.03, 0.94),
                 xycoords=ax.transAxes,
-                color=color,
+                color="#404040",
+                fontsize=18,
+                fontweight='bold')
+            ax.annotate(
+                'total N = {}'.format(df.shape[0]),
+                xy=(0.03, 0.9),
+                xycoords=ax.transAxes,
+                color="#404040",
+                fontsize=18,
+                fontweight='bold')
+            ax.annotate(
+                'N = {}'.format(counts[self.point_colormap["both signif"]]),
+                xy=(0.03, 0.86),
+                xycoords=ax.transAxes,
+                color=self.point_colormap["both signif"],
+                fontsize=18,
+                fontweight='bold')
+            ax.annotate(
+                'N = {}'.format(counts[self.point_colormap["x signif"]]),
+                xy=(0.03, 0.82),
+                xycoords=ax.transAxes,
+                color=self.point_colormap["x signif"],
+                fontsize=18,
+                fontweight='bold')
+            ax.annotate(
+                'N = {}'.format(counts[self.point_colormap["y signif"]]),
+                xy=(0.03, 0.78),
+                xycoords=ax.transAxes,
+                color=self.point_colormap["y signif"],
+                fontsize=18,
+                fontweight='bold')
+            ax.annotate(
+                'N = {}'.format(counts[self.point_colormap["no signif"]]),
+                xy=(0.03, 0.74),
+                xycoords=ax.transAxes,
+                color=self.point_colormap["no signif"],
                 fontsize=18,
                 fontweight='bold')
 
             ax.text(0.5, 1.05,
                     celltype,
                     fontsize=26, weight='bold', ha='center', va='bottom',
-                    color=color,
+                    color=accent_color,
                     transform=ax.transAxes)
 
             ax.set_xlabel(" ".join(x_label.split("_")),
@@ -301,12 +362,12 @@ class main():
                           fontsize=18,
                           fontweight='bold')
 
-            # ax.axhline(0, ls='--', color="#D7191C", alpha=0.3, zorder=-1)
-            # ax.axvline(0, ls='--', color="#D7191C", alpha=0.3, zorder=-1)
-            #
-            # ax.set_xlim(-0.1, 1.1)
-            # ax.set_ylim(-0.1, 1.1)
-            # ax.plot([-0.1, 1.1], [-0.1, 1.1], ls="--", c=".3")
+            ax.axhline(0.05, ls='--', color="#000000", zorder=-1)
+            ax.axvline(0.05, ls='--', color="#000000", zorder=-1)
+
+            ax.set_xlim(-0.1, 1.1)
+            ax.set_ylim(-0.1, 1.1)
+            ax.plot([-0.1, 1.1], [-0.1, 1.1], ls="--", c="#000000")
 
             # Increment indices.
             col_index += 1
@@ -316,8 +377,9 @@ class main():
 
         # Safe the plot.
         plt.tight_layout()
-        fig.savefig(os.path.join(self.outdir, "deconvolution_regression_comparison.png"))
+        fig.savefig(os.path.join(self.outdir, "{}_regression_comparison.png".format(filename)))
         plt.close()
+
 
 if __name__ == '__main__':
     m = main()

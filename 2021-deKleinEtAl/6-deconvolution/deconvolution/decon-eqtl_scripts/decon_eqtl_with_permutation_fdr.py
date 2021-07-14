@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_with_permutation_fdr.py
 Created:      2021/07/12
-Last Changed: 2021/07/13
+Last Changed: 2021/07/14
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -26,6 +26,7 @@ from __future__ import print_function
 from pathlib import Path
 import argparse
 import itertools
+import random
 import time
 import os
 
@@ -40,7 +41,7 @@ from scipy.special import betainc
 
 """
 Syntax:
-./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2020-11-20-decon-QTL/cis/cortex/expression_table/2020-07-16-MetaBrainDeconQtlGenes.TMM.SampSelect.ZeroVarRemov.covRemoved.expAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt.gz
+./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2020-11-20-decon-QTL/cis/cortex/expression_table/2020-07-16-MetaBrainDeconQtlGenes.TMM.SampSelect.ZeroVarRemov.covRemoved.expAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt.gz -stc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_cohort_matrix/sample_to_cohort.txt.gz -o CortexEUR-cis
 """
 
 # Metadata
@@ -53,9 +54,12 @@ __version__ = 1.0
 __description__ = "{} is a program developed and maintained by {}. " \
                   "This program is licensed under the {} license and is " \
                   "provided 'as-is' without any warranty or indemnification " \
-                  "of any kind.".format(__program__,
-                                        __author__,
-                                        __license__)
+                  "of any kind. The methodology is based on Decon-eQTL: " \
+                  "https://doi.org/10.1186/s12859-020-03576-5. Novel additions" \
+                  "are the proper handling of missing values as well as " \
+                  "calculating a permutation based FDR.".format(__program__,
+                                                                __author__,
+                                                                __license__)
 
 
 class main():
@@ -65,10 +69,11 @@ class main():
         self.geno_path = getattr(arguments, 'genotype')
         self.expr_path = getattr(arguments, 'expression')
         self.cc_path = getattr(arguments, 'cell_counts')
+        self.stc_path = getattr(arguments, 'sample_to_cohort')
         self.missing_geno = getattr(arguments, 'missing_genotype')
-        self.alpha = getattr(arguments, 'alpha')
         self.n_permutations = getattr(arguments, 'permutations')
         outdir = getattr(arguments, 'outdir')
+        self.alpha = 0.05
         self.print_interval = 30
         self.nrows = None
 
@@ -93,18 +98,22 @@ class main():
                             "--genotype",
                             type=str,
                             required=True,
-                            help="The path to the genotype matrix")
+                            help="The path to the genotype matrix.")
         parser.add_argument("-ex",
                             "--expression",
                             type=str,
                             required=True,
-                            help="The path to the expression matrix")
+                            help="The path to the expression matrix.")
         parser.add_argument("-cc",
                             "--cell_counts",
                             type=str,
                             required=True,
-                            help="The path to the cell counts "
-                                 "matrix")
+                            help="The path to the cell counts matrix.")
+        parser.add_argument("-stc",
+                            "--sample_to_cohort",
+                            type=str,
+                            required=True,
+                            help="The path to the sample-to-cohort matri.x")
         parser.add_argument("-m",
                             "--missing_genotype",
                             type=int,
@@ -112,22 +121,16 @@ class main():
                             default=-1,
                             help="The genotype value that equals a missing "
                                  "value. Default: -1. Note: has to be int.")
-        parser.add_argument("-a",
-                            "--alpha",
-                            type=float,
-                            required=False,
-                            default=0.05,
-                            help="The significance cut-off. Default: 0.05.")
         parser.add_argument("-p",
                             "--permutations",
                             type=int,
-                            default=1000,
+                            default=10,
                             help="The number of permutations to run.")
         parser.add_argument("-o",
                             "--outdir",
                             type=str,
                             default="output",
-                            help="The name of the ouput directory. "
+                            help="The name of the output directory. "
                                  "Default: 'output'")
 
         return parser.parse_args()
@@ -140,27 +143,26 @@ class main():
         geno_df = self.load_file(self.geno_path, header=0, index_col=0, nrows=self.nrows)
         expr_df = self.load_file(self.expr_path, header=0, index_col=0, nrows=self.nrows)
         cc_df = self.load_file(self.cc_path, header=0, index_col=0)
+        stc_df = self.load_file(self.stc_path, header=0, index_col=None)
 
-        # Transpose if need be.
+        # Transpose if need be. We want samples always as columns.
         if cc_df.shape[0] == geno_df.shape[1] or cc_df.shape[0] == expr_df.shape[1]:
             print("\t  Transposing covariate matrix.")
             cc_df = cc_df.T
 
-        # Remove columns with all nan.
+        # Remove columns with all nan. This line is just because
+        # the expression file I used somehow had one column with nan's.
         expr_df.dropna(axis='columns', how='all', inplace=True)
 
         print("\tValidating input.")
         self.validate_data(geno_df=geno_df,
                            expr_df=expr_df,
-                           cc_df=cc_df)
+                           cc_df=cc_df,
+                           stc_df=stc_df)
         print("")
 
         ########################################################################
 
-        # print(geno_df)
-        # print(expr_df)
-        # print(cc_df)
-        
         print("### STEP 2 ###")
         print("Pre-processing data.")
         # Check if the requirements are met.
@@ -170,8 +172,9 @@ class main():
         if cc_df.min(axis=1).min() < 0:
             print("Error: cell count matrix contains negative values.")
             exit()
+        # TODO: check if the column sum is always == 1
 
-        # Convert to numpy.
+        # Convert to numpy for speed.
         geno_m = geno_df.to_numpy(np.float64)
         expr_m = expr_df.to_numpy(np.float64)
         cc_m = cc_df.to_numpy(np.float64)
@@ -181,31 +184,55 @@ class main():
         cell_types_indices = cc_df.index.to_numpy(dtype=object)
         del geno_df, expr_df, cc_df
         
-        # print info
+        # Print info.
         n_samples = geno_m.shape[1]
         n_eqtls = geno_m.shape[0]
         n_covariates = cc_m.shape[0]
+        n_permutation_values = n_eqtls * self.n_permutations
         print("\tN-samples: {}".format(n_samples))
         print("\tN-eQTLs: {}".format(n_eqtls))
         print("\tN-covariates: {}".format(n_covariates))
+        print("\tN-permutation values: {}".format(n_permutation_values))
         print("")
 
         ########################################################################
 
         print("### STEP 3 ###")
+        print("Creating permutation matrix.")
+        perm_order_m = self.create_perm_orders(n_permutations=self.n_permutations,
+                                               stc_df=stc_df)
+        self.save_file(df=pd.DataFrame(perm_order_m, index=["permutation{}".format(i) for i in range(self.n_permutations)]),
+                       outpath=os.path.join(self.outdir, "permutation_order.txt.gz"))
+        print("")
+
+        ########################################################################
+
+        print("### STEP 4 ###")
         print("Analyzing.")
-        output_m = np.empty((n_eqtls, n_covariates * 3), dtype=np.float64)
-        config_alt_m = np.empty((n_eqtls, n_covariates), dtype=np.dtype('u1'))
-        config_null_dict = {}
-        for cell_type in cell_types_indices:
-            empty_m = np.empty((n_eqtls, n_covariates))
-            empty_m[:] = np.nan
-            config_null_dict[cell_type] = empty_m
+
+        # Initializing output matrices / arrays.
+        real_pvalues_m = np.empty((n_eqtls, n_covariates), dtype=np.float64)
+        perm_pvalues_m = np.empty((n_permutation_values, n_covariates), dtype=np.float64)
+        betas_m = np.empty((n_eqtls, n_covariates * 2), dtype=np.float64)
+
+        # Create a list of possible genotype encoding configuration. True means
+        # we change the encoding by 2 - value. False means we do nothing.
         alt_model_configs = list(itertools.product([True, False], repeat=n_covariates))
         null_model_configs = list(itertools.product([True, False], repeat=n_covariates - 1))
+
+        # Start loop.
         start_time = int(time.time())
         last_print_time = None
         for row_index in range(n_eqtls):
+            # Print update for user.
+            now_time = int(time.time())
+            if last_print_time is None or (now_time - last_print_time) >= self.print_interval or row_index == (n_eqtls - 1):
+                print("\t[{}] {}/{} ieQTLs analysed [{:.2f}%]".format(time.strftime('%H:%M:%S', time.gmtime(now_time - start_time)),
+                                                                      row_index,
+                                                                      (n_eqtls - 1),
+                                                                      (100 / (n_eqtls - 1)) * row_index))
+                last_print_time = now_time
+
             # Get the genotype.
             genotype = geno_m[row_index, :]
 
@@ -213,80 +240,136 @@ class main():
             mask = genotype != self.missing_geno
             n = np.sum(mask)
 
-            # Select the values we use from genotype and expression.
-            y = expr_m[row_index, mask]
-            genotype = genotype[mask]
-
             # Model the alternative matrix (with the interaction term).
+            # This is the matrix with expression ~ cc1 + cc2 + cc1 * geno +
+            # cc2 * geno.
             config_alt, betas_alt, rss_alt = \
-                self.find_best_config(configs=alt_model_configs,
-                                      n_samples=n,
-                                      n_covariates=n_covariates,
-                                      cc_m=cc_m[:, mask],
-                                      genotype=genotype,
-                                      expression=y
-                                      )
+                self.model(
+                    genotype=genotype[mask],
+                    expression=expr_m[row_index, mask],
+                    cell_fractions=cc_m[:, mask],
+                    configs=alt_model_configs,
+                    n_samples=n,
+                    n_covariates=n_covariates
+                )
 
             # Save the alternative model stats.
-            config_alt_m[row_index, :] = config_alt
-            flip_array = np.vectorize({True: -1, False: 1}.get)(config_alt)
-            output_m[row_index, n_covariates:2 * n_covariates] = betas_alt[:n_covariates]
-            output_m[row_index, 2 * n_covariates:] = betas_alt[n_covariates:] * flip_array
+            # The beta's of the interaction terms are flipped if we
+            # flipped the allele encoding. This makes it possible that some
+            # betas are negative even though we use NNLS.
+            flip_array = np.hstack((np.ones(n_covariates), np.vectorize({True: -1, False: 1}.get)(config_alt)))
+            betas_m[row_index, :] = betas_alt * flip_array
 
-            # Save the degrees of freedom.
+            # Save the degrees of freedom of the alternative model.
             df2 = n_covariates * 2
 
-            # Remove interaction column one by one.
+            # Remove one interaction column (cc * geno) one by one and
+            # determine the significance of the change in risdual sum of
+            # squares with a f-test.
             for cov_index in range(n_covariates):
-                # Model the null matrix (without the interaction term).
-                config_null, betas_null, rss_null = \
-                    self.find_best_config(configs=null_model_configs,
-                                          n_samples=n,
-                                          n_covariates=n_covariates,
-                                          cc_m=cc_m[:, mask],
-                                          genotype=genotype,
-                                          expression=y,
-                                          exclude=cov_index
-                                          )
 
-                # Save the null model configuration.
-                config_mask = [True if x != cov_index else False for x in range(n_covariates)]
-                config_null_dict[cell_types_indices[cov_index]][row_index, config_mask] = config_null
+                # Model the null matrix (without the interaction term). In
+                # this model 1 (and only 1!) of the cc * geno terms is removed.
+                _, _, rss_null = \
+                    self.model(
+                        genotype=genotype[mask],
+                        expression=expr_m[row_index, mask],
+                        cell_fractions=cc_m[:, mask],
+                        configs=null_model_configs,
+                        n_samples=n,
+                        n_covariates=n_covariates,
+                        exclude=cov_index
+                    )
 
-                # Calculate the p-value.
+                # Calculate and save the p-value.
                 p_value = self.calc_p_value(rss1=rss_null, rss2=rss_alt, df1=df2 - 1, df2=df2, n=n)
+                real_pvalues_m[row_index, cov_index] = p_value
 
-                # Save the p-value.
-                output_m[row_index, cov_index] = p_value
+                # Perform n permutations.
+                for perm_index in range(self.n_permutations):
+                    # Shuffle the genotype.
+                    permutation_order = perm_order_m[perm_index, :]
+                    shuffled_genotype = genotype[permutation_order][mask]
 
-            # Print update for user.
-            now_time = int(time.time())
-            if last_print_time is None or (now_time - last_print_time) >= self.print_interval or (row_index + 1) == n_eqtls:
-                print("\t[{}] {}/{} ieQTLs analysed [{:.2f}%]".format(time.strftime('%H:%M:%S', time.gmtime(now_time - start_time)),
-                                                                      (row_index + 1),
-                                                                      n_eqtls,
-                                                                      (100 / n_eqtls) * (row_index + 1)))
-                last_print_time = now_time
+                    # Model the alternative matrix (with the interaction term)
+                    # and shuffle the genotype of the interaction of interest.
+                    _, _, rss_perm = \
+                        self.model(
+                            genotype=genotype[mask],
+                            expression=expr_m[row_index, mask],
+                            cell_fractions=cc_m[:, mask],
+                            configs=alt_model_configs,
+                            n_samples=n,
+                            n_covariates=n_covariates,
+                            shuffle_index=cov_index,
+                            shuffled_genotype=shuffled_genotype,
+                        )
+
+                    # Calculate and save the permutation p-value.
+                    perm_pvalue = self.calc_p_value(rss1=rss_null, rss2=rss_perm, df1=df2 - 1, df2=df2, n=n)
+                    perm_pvalues_m[row_index * self.n_permutations + perm_index, cov_index] = perm_pvalue
+
+        # Cap the p-values.
+        real_pvalues_m[real_pvalues_m == 0] = 2.2250738585072014e-308
         print("")
 
         ########################################################################
 
-        print("### STEP 4 ###")
+        print("### STEP 5 ###")
+        print("Calculating the permutation FDR.")
+        print("\nN-interaction (FDR < {}):".format(self.alpha))
+        cov_length = np.max([len(x) for x in cell_types_indices])
+        perm_fdr_m = np.empty_like(real_pvalues_m)
+        n_values = real_pvalues_m.shape[0]
+        n_hits_total = 0
+        for cov_index in range(n_covariates):
+            n_hits = 0
+            for pvalue_index in range(n_values):
+                real_pvalue = real_pvalues_m[pvalue_index, cov_index]
+
+                # Get the rank of this p-value in both distributions.
+                rank = np.sum(real_pvalues_m[:, cov_index] <= real_pvalue)
+                perm_rank = np.sum(perm_pvalues_m[:, cov_index] <= real_pvalue)
+
+                # Calculate and safe the fdr.
+                fdr = (perm_rank / self.n_permutations) / rank
+                perm_fdr_m[pvalue_index, cov_index] = fdr
+
+                # Increment the counter.
+                if fdr < self.alpha:
+                    n_hits += 1
+
+            print("\t{:{}s}  {}".format(cell_types_indices[cov_index], cov_length, n_hits))
+            n_hits_total += n_hits
+
+        print("\t{}".format("".join(["-"] * cov_length)))
+        print("\t{:{}s}  {}".format("total", cov_length, n_hits_total))
+
+        # Cap the permutation FDR values.
+        perm_fdr_m[perm_fdr_m > 1] = 1
+        perm_fdr_m[perm_fdr_m == 0] = 2.2250738585072014e-308
+        print("")
+
+        ########################################################################
+
+        print(pd.DataFrame(real_pvalues_m, columns=["{}_pvalue".format(x) for x in cell_types_indices]))
+        print(pd.DataFrame(perm_fdr_m, columns=["{}_FDR".format(x) for x in cell_types_indices]))
+        print(pd.DataFrame(betas_m, columns=["Beta{}_{}".format(i+1, x) for i, x in enumerate(cell_types_indices)] + ["Beta{}_{}:GT".format(len(cell_types_indices) + i + 1, x) for i, x in enumerate(cell_types_indices)]))
+
+        print("### STEP 6 ###")
         print("Saving results.")
-        config_alt_df = pd.DataFrame(config_alt_m, index=eqtl_indices, columns=cell_types_indices)
-        self.save_file(df=config_alt_df, outpath=os.path.join(self.outdir, "configuration_alt.txt.gz"))
 
-        for cell_type, config_null_m in config_null_dict.items():
-            config_null_df = pd.DataFrame(config_null_m, index=eqtl_indices, columns=cell_types_indices)
-            self.save_file(df=config_null_df, outpath=os.path.join(self.outdir, "configuration_null_{}.txt.gz".format(cell_type)))
+        perm_pvalues_df = pd.DataFrame(perm_pvalues_m, columns=cell_types_indices)
+        self.save_file(df=perm_pvalues_df, outpath=os.path.join(self.outdir, "permutation_pvalues.txt.gz"))
 
-        output_df = pd.DataFrame(output_m,
+        output_df = pd.DataFrame(np.hstack((real_pvalues_m, perm_fdr_m, betas_m)),
                                  index=eqtl_indices,
                                  columns=["{}_pvalue".format(x) for x in cell_types_indices] +
+                                         ["{}_FDR".format(x) for x in cell_types_indices] +
                                          ["Beta{}_{}".format(i+1, x) for i, x in enumerate(cell_types_indices)] +
                                          ["Beta{}_{}:GT".format(len(cell_types_indices) + i + 1, x) for i, x in enumerate(cell_types_indices)])
         print(output_df)
-        self.save_file(df=output_df, outpath=os.path.join(self.outdir, "deconvolutionResultsTest.txt.gz"))
+        self.save_file(df=output_df, outpath=os.path.join(self.outdir, "deconvolutionResults.txt.gz"))
         print("")
 
     @staticmethod
@@ -300,27 +383,55 @@ class main():
         return df
 
     @staticmethod
-    def validate_data(geno_df, expr_df, cc_df):
-        if not geno_df.columns.tolist() == expr_df.columns.tolist():
+    def validate_data(geno_df, expr_df, cc_df, stc_df):
+        if geno_df.columns.tolist() != expr_df.columns.tolist():
             print("The genotype file header does not match the "
                   "expression file header.")
             exit()
 
-        if not geno_df.columns.tolist() == cc_df.columns.tolist():
+        if geno_df.columns.tolist() != cc_df.columns.tolist():
             print("The genotype file header does not match the "
                   "cell count file header.")
             exit()
 
-    def find_best_config(self, configs, n_samples, n_covariates, cc_m,
-                         genotype, expression, exclude=None):
+        if geno_df.columns.tolist() != stc_df.iloc[:, 0].tolist():
+            print("The sample-to-cohort file does not match the "
+                  "genotype / expression file header.")
+            exit()
+
+    @staticmethod
+    def create_perm_orders(n_permutations, stc_df):
+        n_samples = stc_df.shape[0]
+        cohorts = stc_df.iloc[:, 1].unique()
+        valid_order = set([x for x in range(n_samples)])
+        perm_order_m = np.empty((n_permutations, n_samples), dtype=np.uint8)
+        for i in range(n_permutations):
+            sample_indices = np.array([x for x in range(n_samples)])
+            for cohort in cohorts:
+                mask = (stc_df.iloc[:, 1] == cohort).to_numpy(dtype=bool)
+                if np.sum(mask) <= 1:
+                    continue
+                copy = sample_indices[mask]
+                random.shuffle(copy)
+                sample_indices[mask] = copy
+
+            if bool(valid_order.symmetric_difference(set(sample_indices))):
+                print("Unvalid permutation order.")
+                exit()
+
+            perm_order_m[i, :] = sample_indices
+        return perm_order_m
+
+    def model(self, genotype, expression, cell_fractions, configs, n_samples,
+              n_covariates, exclude=None, shuffle_index=None, shuffled_genotype=None):
         n_columns = n_covariates * 2
         if exclude is not None:
             n_columns -= 1
 
-        # Create the model matrix. Leave the interaction columns blank.
+        # Create the model matrix. Leave the interaction columns blank for now.
         X = np.empty((n_samples, n_columns), np.float32)
         for cov_index in range(n_covariates):
-            X[:, cov_index] = cc_m[cov_index, :]
+            X[:, cov_index] = cell_fractions[cov_index, :]
 
         # Try different configurations for the genotype encoding.
         top_config = None
@@ -330,19 +441,36 @@ class main():
             # Fill in the alternative matrix with the right configuration
             # of allele encoding.
             for cov_index, flip in enumerate(config):
+                # If we exclude an interaction term we still have that cell
+                # type fraction in the matrix. Therefore, when matching
+                # interacition column position with cell fraction column
+                # (cc_index) position we need to increment with 1 if the
+                # cc_index with 1.
                 cc_index = cov_index
                 if exclude is not None and cc_index >= exclude:
                     cc_index += 1
 
+                # Use a shuffled genotype vector if we are doing a permutation
+                # analysis.
+                genotype_a = genotype
+                if cov_index == shuffle_index:
+                    genotype_a = shuffled_genotype
+
+                # Calculate genotype * cell fraction. If flip is true we
+                # change the allele encoding (0 = 2, 1 = 1, 2 = 0).
                 if flip:
-                    X[:, n_covariates + cov_index] = (2 - genotype) * X[:, cc_index]
+                    X[:, n_covariates + cov_index] = (2 - genotype_a) * X[:, cc_index]
                 else:
-                    X[:, n_covariates + cov_index] = genotype * X[:, cc_index]
+                    X[:, n_covariates + cov_index] = genotype_a * X[:, cc_index]
 
-            # Calculate the R-squared.
-            betas = self.fit(X, expression)
-            rss_alt = self.calc_rss(y=expression, y_hat=self.predict(X=X, betas=betas))
+            # Model the expression vector as non-negative linear combination of
+            # the model matrix. Determine the beta's as well as the squared
+            # Euclidean norm. Note: squared Eucledian norm is identical to
+            # calculating the RSS.
+            betas, rnorm = self.fit(X, expression)
+            rss_alt = rnorm * rnorm
 
+            # Only safe the best configuration.
             if rss_alt < top_rss:
                 top_config = config
                 top_betas = betas
@@ -352,30 +480,7 @@ class main():
 
     @staticmethod
     def fit(X, y):
-        betas, _ = nnls(X, y)
-        return betas
-
-    @staticmethod
-    def predict(X, betas):
-        return np.dot(X, betas)
-
-    def fit_and_predict(self, X, y):
-        return self.predict(X=X, betas=self.fit(X=X, y=y))
-
-    @staticmethod
-    def calc_pearsonr(x, y):
-        x_dev = x - np.mean(x)
-        y_dev = y - np.mean(y)
-        dev_sum = np.sum(x_dev * y_dev)
-        x_rss = np.sum(x_dev * x_dev)
-        y_rss = np.sum(y_dev * y_dev)
-        return dev_sum / np.sqrt(x_rss * y_rss)
-
-    @staticmethod
-    def calc_rss(y, y_hat):
-        res = y - y_hat
-        res_squared = res * res
-        return np.sum(res_squared)
+        return nnls(X, y)
 
     @staticmethod
     def calc_p_value(rss1, rss2, df1, df2, n):
@@ -393,8 +498,6 @@ class main():
         dfd = n - df2
         f_value = ((rss1 - rss2) / dfn) / (rss2 / dfd)
         p_value = betainc(dfd / 2, dfn / 2, 1 - ((dfn * f_value) / ((dfn * f_value) + dfd)))
-        if p_value == 0:
-            p_value = 2.2250738585072014e-308
         return p_value
 
     @staticmethod
@@ -413,8 +516,8 @@ class main():
         print("  > Genotype path: {}".format(self.geno_path))
         print("  > Expression path: {}".format(self.expr_path))
         print("  > Cell counts path: {}".format(self.cc_path))
+        print("  > Sample-to-cohort path: {}".format(self.stc_path))
         print("  > Missing genotype: {}".format(self.missing_geno))
-        print("  > Alpha: {}".format(self.alpha))
         print("  > N permutations: {}".format(self.n_permutations))
         print("  > Output directory: {}".format(self.outdir))
         print("")
