@@ -64,6 +64,10 @@ Syntax:
 ./compare_deconvolution_matrices.py -d1 ../2021-06-24-decon-QTL/CortexEUR-cis-OldCellCounts/deconvolutionResults.csv -n1 old_cell-counts -d2 ../2021-06-24-decon-QTL/CortexEUR-cis/deconvolutionResults.csv -n2 new_cell_counts -o OldCellCounts_vs_NewCellCounts
 
 ./compare_deconvolution_matrices.py -d1 ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -n1 Decon-eQTL -d2 ../decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/output/deconvolutionResults.txt.gz -n2 Martijn -o DeconeQTL_vs_Martijn
+
+./compare_deconvolution_matrices.py -d1 ../decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-woPermFDR-Old/deconvolutionResults.txt.gz -n1 OLD -d2 ../decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-woPermFDR-New/deconvolutionResults.txt.gz -n2 NEW -o PythonCode_Old_vs_New
+
+./compare_deconvolution_matrices.py -d1 ../decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-woPermFDR-New-OldCC/deconvolutionResults.txt.gz -n1 OLD_cc -d2 ../decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-woPermFDR-New/deconvolutionResults.txt.gz -n2 NEW_cc -o PythonCode_OldCC_vs_NewCC
 """
 
 
@@ -75,6 +79,7 @@ class main():
         self.decon1_name = getattr(arguments, 'name1')
         self.decon2_path = getattr(arguments, 'decon2')
         self.decon2_name = getattr(arguments, 'name2')
+        self.log10_transform = getattr(arguments, 'log10')
         self.outfile = getattr(arguments, 'outfile')
         self.nrows = None
 
@@ -132,6 +137,10 @@ class main():
                             required=False,
                             default="y",
                             help="The name for the first deconvolution matrix")
+        parser.add_argument("-log10",
+                            action='store_true',
+                            help="Log10 transform the profile values."
+                                 " Default: False.")
         parser.add_argument("-o",
                             "--outfile",
                             type=str,
@@ -289,6 +298,12 @@ class main():
 
             accent_color = self.accent_colormap[celltype]
 
+            # Convert to log10 scale.
+            if self.log10_transform:
+                df.loc[df[x_label] == 0, x_label] = 2.2250738585072014e-308
+                df.loc[df[y_label] == 0, y_label] = 2.2250738585072014e-308
+                df[[x_label, y_label]] = np.log10(df[[x_label, y_label]])
+
             # Creat the subplot.
             ax = fig.add_subplot(grid[row_index, col_index])
             sns.despine(fig=fig, ax=ax)
@@ -362,12 +377,18 @@ class main():
                           fontsize=18,
                           fontweight='bold')
 
-            ax.axhline(0.05, ls='--', color="#000000", zorder=-1)
-            ax.axvline(0.05, ls='--', color="#000000", zorder=-1)
+            signif_line = 0.05
+            if self.log10_transform:
+                signif_line = np.log10(0.05)
+            ax.axhline(signif_line, ls='--', color="#000000", zorder=-1)
+            ax.axvline(signif_line, ls='--', color="#000000", zorder=-1)
 
-            ax.set_xlim(-0.1, 1.1)
-            ax.set_ylim(-0.1, 1.1)
-            ax.plot([-0.1, 1.1], [-0.1, 1.1], ls="--", c="#000000")
+            min_value = np.min((df[[x_label, y_label]].min(axis=0).min() * 1.1, -0.1))
+            max_value = np.max((df[[x_label, y_label]].max(axis=0).max() * 1.1, 1.1))
+
+            ax.set_xlim(min_value, max_value)
+            ax.set_ylim(min_value, max_value)
+            ax.plot([min_value, max_value], [min_value, max_value], ls="--", c="#000000")
 
             # Increment indices.
             col_index += 1

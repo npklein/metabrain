@@ -41,7 +41,11 @@ from scipy.special import betainc
 
 """
 Syntax:
-./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2020-11-20-decon-QTL/cis/cortex/expression_table/2020-07-16-MetaBrainDeconQtlGenes.TMM.SampSelect.ZeroVarRemov.covRemoved.expAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt.gz -stc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_cohort_matrix/sample_to_cohort.txt.gz -o CortexEUR-cis
+./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2020-11-20-decon-QTL/cis/cortex/expression_table/2020-07-16-MetaBrainDeconQtlGenes.TMM.SampSelect.ZeroVarRemov.covRemoved.expAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt.gz -stc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_cohort_matrix/sample_to_cohort.txt.gz -of CortexEUR-ciswoPermFDR-OLD -p 0
+
+./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt -stc /groups/umcg-biogen/tmp01/output/2020-11-10-DeconOptimizer/preprocess_scripts/pre_process_expression_matrix/CortexEUR-cis/data/SampleToCohorts.txt.gz -of CortexEUR-cis-woPermFDR-New -p 0
+
+./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table_OLD.txt -stc /groups/umcg-biogen/tmp01/output/2020-11-10-DeconOptimizer/preprocess_scripts/pre_process_expression_matrix/CortexEUR-cis/data/SampleToCohorts.txt.gz -of CortexEUR-cis-woPermFDR-New-OldCC -p 0
 """
 
 # Metadata
@@ -70,17 +74,22 @@ class main():
         self.expr_path = getattr(arguments, 'expression')
         self.cc_path = getattr(arguments, 'cell_counts')
         self.stc_path = getattr(arguments, 'sample_to_cohort')
-        self.missing_geno = getattr(arguments, 'missing_genotype')
+        self.nrows = getattr(arguments, 'rows')
         self.n_permutations = getattr(arguments, 'permutations')
+        self.missing_geno = getattr(arguments, 'missing_genotype')
         outdir = getattr(arguments, 'outdir')
-        self.alpha = 0.05
-        self.print_interval = 30
-        self.nrows = None
+        outfolder = getattr(arguments, 'outfolder')
 
         # Set variables.
-        self.outdir = os.path.join(str(Path(__file__).parent.parent.absolute()), "decon_eqtl_with_permutation_fdr", outdir)
+        if outdir is None:
+            outdir = str(Path(__file__).parent.parent)
+        self.outdir = os.path.join(outdir, "decon_eqtl_with_permutation_fdr", outfolder)
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
+
+        # Set other variables.
+        self.alpha = 0.05
+        self.print_interval = 30
 
     @staticmethod
     def create_argument_parser():
@@ -114,6 +123,16 @@ class main():
                             type=str,
                             required=True,
                             help="The path to the sample-to-cohort matri.x")
+        parser.add_argument("-r",
+                            "--rows",
+                            type=int,
+                            default=None,
+                            help="The number of rows to analyze.")
+        parser.add_argument("-p",
+                            "--permutations",
+                            type=int,
+                            default=10,
+                            help="The number of permutations to run.")
         parser.add_argument("-m",
                             "--missing_genotype",
                             type=int,
@@ -121,17 +140,18 @@ class main():
                             default=-1,
                             help="The genotype value that equals a missing "
                                  "value. Default: -1. Note: has to be int.")
-        parser.add_argument("-p",
-                            "--permutations",
-                            type=int,
-                            default=10,
-                            help="The number of permutations to run.")
-        parser.add_argument("-o",
+        parser.add_argument("-od",
                             "--outdir",
                             type=str,
+                            required=False,
+                            default=None,
+                            help="The name of the output path.")
+        parser.add_argument("-of",
+                            "--outfolder",
+                            type=str,
+                            required=False,
                             default="output",
-                            help="The name of the output directory. "
-                                 "Default: 'output'")
+                            help="The name of the output folder.")
 
         return parser.parse_args()
 
@@ -188,11 +208,9 @@ class main():
         n_samples = geno_m.shape[1]
         n_eqtls = geno_m.shape[0]
         n_covariates = cc_m.shape[0]
-        n_permutation_values = n_eqtls * self.n_permutations
         print("\tN-samples: {}".format(n_samples))
         print("\tN-eQTLs: {}".format(n_eqtls))
         print("\tN-covariates: {}".format(n_covariates))
-        print("\tN-permutation values: {}".format(n_permutation_values))
         print("")
 
         ########################################################################
@@ -201,8 +219,11 @@ class main():
         print("Creating permutation matrix.")
         perm_order_m = self.create_perm_orders(n_permutations=self.n_permutations,
                                                stc_df=stc_df)
-        self.save_file(df=pd.DataFrame(perm_order_m, index=["permutation{}".format(i) for i in range(self.n_permutations)]),
-                       outpath=os.path.join(self.outdir, "permutation_order.txt.gz"))
+        if self.n_permutations > 0:
+            self.save_file(df=pd.DataFrame(perm_order_m, index=["permutation{}".format(i) for i in range(self.n_permutations)]),
+                           outpath=os.path.join(self.outdir, "permutation_order.txt.gz"))
+        n_permutation_values = n_eqtls * self.n_permutations
+        print("\tN-permutation values in null distribution (per cell type): {}".format(n_permutation_values))
         print("")
 
         ########################################################################
@@ -317,37 +338,39 @@ class main():
 
         print("### STEP 5 ###")
         print("Calculating the permutation FDR.")
-        print("\nN-interaction (FDR < {}):".format(self.alpha))
-        cov_length = np.max([len(x) for x in cell_types_indices])
         perm_fdr_m = np.empty_like(real_pvalues_m)
-        n_values = real_pvalues_m.shape[0]
-        n_hits_total = 0
-        for cov_index in range(n_covariates):
-            n_hits = 0
-            for pvalue_index in range(n_values):
-                real_pvalue = real_pvalues_m[pvalue_index, cov_index]
+        perm_fdr_m[:] = np.nan
+        if self.n_permutations > 0:
+            print("\nN-interaction (FDR < {}):".format(self.alpha))
+            cov_length = np.max([len(x) for x in cell_types_indices])
+            n_hits_total = 0
+            for cov_index in range(n_covariates):
+                n_hits = 0
+                for row_index in range(n_eqtls):
+                    # Get the real p-value.
+                    real_pvalue = real_pvalues_m[row_index, cov_index]
 
-                # Get the rank of this p-value in both distributions.
-                rank = np.sum(real_pvalues_m[:, cov_index] <= real_pvalue)
-                perm_rank = np.sum(perm_pvalues_m[:, cov_index] <= real_pvalue)
+                    # Get the rank of this p-value in both distributions.
+                    rank = np.sum(real_pvalues_m[:, cov_index] <= real_pvalue)
+                    perm_rank = np.sum(perm_pvalues_m[:, cov_index] <= real_pvalue)
 
-                # Calculate and safe the fdr.
-                fdr = (perm_rank / self.n_permutations) / rank
-                perm_fdr_m[pvalue_index, cov_index] = fdr
+                    # Calculate and safe the fdr.
+                    fdr = (perm_rank / self.n_permutations) / rank
+                    perm_fdr_m[row_index, cov_index] = fdr
 
-                # Increment the counter.
-                if fdr < self.alpha:
-                    n_hits += 1
+                    # Increment the counter.
+                    if fdr < self.alpha:
+                        n_hits += 1
 
-            print("\t{:{}s}  {}".format(cell_types_indices[cov_index], cov_length, n_hits))
-            n_hits_total += n_hits
+                print("\t{:{}s}  {}".format(cell_types_indices[cov_index], cov_length, n_hits))
+                n_hits_total += n_hits
 
-        print("\t{}".format("".join(["-"] * cov_length)))
-        print("\t{:{}s}  {}".format("total", cov_length, n_hits_total))
+            print("\t{}".format("".join(["-"] * cov_length)))
+            print("\t{:{}s}  {}".format("total", cov_length, n_hits_total))
 
-        # Cap the permutation FDR values.
-        perm_fdr_m[perm_fdr_m > 1] = 1
-        perm_fdr_m[perm_fdr_m == 0] = 2.2250738585072014e-308
+            # Cap the permutation FDR values.
+            perm_fdr_m[perm_fdr_m > 1] = 1
+            perm_fdr_m[perm_fdr_m == 0] = 2.2250738585072014e-308
         print("")
 
         ########################################################################
@@ -370,6 +393,7 @@ class main():
                                          ["Beta{}_{}:GT".format(len(cell_types_indices) + i + 1, x) for i, x in enumerate(cell_types_indices)])
         print(output_df)
         self.save_file(df=output_df, outpath=os.path.join(self.outdir, "deconvolutionResults.txt.gz"))
+
         print("")
 
     @staticmethod
@@ -443,7 +467,7 @@ class main():
             for cov_index, flip in enumerate(config):
                 # If we exclude an interaction term we still have that cell
                 # type fraction in the matrix. Therefore, when matching
-                # interacition column position with cell fraction column
+                # interaction column position with cell fraction column
                 # (cc_index) position we need to increment with 1 if the
                 # cc_index with 1.
                 cc_index = cov_index
@@ -517,8 +541,9 @@ class main():
         print("  > Expression path: {}".format(self.expr_path))
         print("  > Cell counts path: {}".format(self.cc_path))
         print("  > Sample-to-cohort path: {}".format(self.stc_path))
-        print("  > Missing genotype: {}".format(self.missing_geno))
+        print("  > N rows: {}".format(self.nrows))
         print("  > N permutations: {}".format(self.n_permutations))
+        print("  > Missing genotype: {}".format(self.missing_geno))
         print("  > Output directory: {}".format(self.outdir))
         print("")
 
