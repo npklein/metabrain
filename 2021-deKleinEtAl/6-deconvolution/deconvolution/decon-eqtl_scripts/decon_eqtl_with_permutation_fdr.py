@@ -25,7 +25,6 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 from __future__ import print_function
 from pathlib import Path
 import argparse
-import itertools
 import random
 import time
 import os
@@ -198,91 +197,53 @@ class main():
         geno_m = geno_df.to_numpy(np.float64)
         expr_m = expr_df.to_numpy(np.float64)
         cc_m = cc_df.to_numpy(np.float64)
+        stc_m = stc_df.to_numpy(object)
         
         # Save properties.
         eqtl_indices = expr_df.index + "_" + geno_df.index
         cell_types_indices = cc_df.index.to_numpy(dtype=object)
-        del geno_df, expr_df, cc_df
+        cohorts = np.unique(stc_m[:, 1])
+        del geno_df, expr_df, cc_df, stc_df
         
         # Print info.
-        n_samples = geno_m.shape[1]
-        n_cohorts = len(stc_df.iloc[:, 1].unique())
         n_eqtls = geno_m.shape[0]
+        n_samples = geno_m.shape[1]
         n_covariates = cc_m.shape[0]
-        print("\tN-samples: {}".format(n_samples))
-        print("\tN-cohorts: {}".format(n_cohorts))
-        print("\tN-eQTLs: {}".format(n_eqtls))
-        print("\tN-covariates: {}".format(n_covariates))
+        n_cohorts = len(cohorts)
+        n_permutation_values = n_eqtls * self.n_permutations
+        n_configurations_alt = (n_covariates * 2) + 2
+        n_configurations_null = ((n_covariates - 1) * 2) + 2
+        print("\tN-eQTLs: {:,}".format(n_eqtls))
+        print("\tN-samples: {:,}".format(n_samples))
+        print("\tN-covariates: {:,}".format(n_covariates))
+        print("\tN-cohorts: {:,}".format(n_cohorts))
+        print("\tN-configurations (full model): {:,}".format(n_configurations_alt))
+        print("\tN-configurations (cell type model): {:,}".format(n_configurations_null))
+        print("\tN-permutation values in null distribution (per cell type): {:,}".format(n_permutation_values))
+        print("\tN-models to calculate: {:,}".format(n_eqtls * (n_covariates * self.n_permutations * n_configurations_alt + n_covariates * n_configurations_null + n_configurations_alt)))
         print("")
 
         ########################################################################
 
         print("### STEP 3 ###")
-        print("Analyzing missingness in the data.")
-        cohorts_sizes = dict(zip(*np.unique(stc_df.iloc[:, 1], return_counts=True)))
-        cohort_length = np.max([len(x) for x in cohorts_sizes.keys()] + [len("total")])
-        samples_length = np.max([len(str(x)) for x in cohorts_sizes.values()])
-        for cohort, size in cohorts_sizes.items():
-            cohort_mask = (stc_df.iloc[:, 1] == cohort).to_numpy(dtype=bool)
-            complete_mask = np.sum(geno_m[:, cohort_mask] == self.missing_geno, axis=0) == 0
-            n_complete = np.sum(complete_mask)
-
-            print("\t{cohort:{cohort_length}s} {n_complete:{samples_length}d}"
-                  "/{size:{samples_length}d} complete [{pcnt:.2f}%]".format(
-                cohort=cohort,
-                cohort_length=cohort_length,
-                n_complete=n_complete,
-                samples_length=samples_length,
-                size=size,
-                pcnt=(100 / size) * n_complete))
-
-        completeness_mask = np.sum(geno_m == self.missing_geno, axis=0) == 0
-        n_total_complete = np.sum(completeness_mask)
-        print("\t{}".format("".join(["-"] * cohort_length)))
-        print("\t{cohort:{cohort_length}s} {n_complete:{samples_length}d}"
-              "/{size:{samples_length}d} complete [{pcnt:.2f}%]".format(
-            cohort="Total",
-            cohort_length=cohort_length,
-            n_complete=n_total_complete,
-            samples_length=samples_length,
-            size=n_samples,
-            pcnt=(100 / n_samples) * n_total_complete))
-
-        # validate shuffle mask.
-        if np.sum(geno_m[:, completeness_mask] == self.missing_geno) != 0:
-            print("Error, still missing values in shuffle mask")
-            exit()
-
-        print("")
-
-        ########################################################################
-
-        print("### STEP 4 ###")
-        print("Creating permutation matrix.")
-        perm_order_m = self.create_perm_orders(n_permutations=self.n_permutations,
-                                               stc_df=stc_df,
-                                               completeness_mask=completeness_mask)
-        if self.n_permutations > 0:
-            self.save_file(df=pd.DataFrame(perm_order_m, index=["permutation{}".format(i) for i in range(self.n_permutations)]),
-                           outpath=os.path.join(self.outdir, "permutation_order.txt.gz"))
-        n_permutation_values = n_eqtls * self.n_permutations
-        print("\tN-permutation values in null distribution (per cell type): {}".format(n_permutation_values))
-        print("")
-
-        ########################################################################
-
-        print("### STEP 5 ###")
         print("Analyzing.")
-
         # Initializing output matrices / arrays.
         real_pvalues_m = np.empty((n_eqtls, n_covariates), dtype=np.float64)
         perm_pvalues_m = np.empty((n_permutation_values, n_covariates), dtype=np.float64)
         betas_m = np.empty((n_eqtls, n_covariates * 2), dtype=np.float64)
 
+        order_dtype = np.int16
+        if n_samples >= 32767:
+            order_dtype = np.int32
+        perm_order_m = None
+        if self.n_permutations > 0:
+            perm_order_m = np.empty((n_eqtls, n_samples, n_covariates, self.n_permutations), dtype=order_dtype)
+            perm_order_m[:] = -1
+
         # Create a list of possible genotype encoding configuration. True means
         # we change the encoding by 2 - value. False means we do nothing.
-        alt_model_configs = list(itertools.product([True, False], repeat=n_covariates))
-        null_model_configs = list(itertools.product([True, False], repeat=n_covariates - 1))
+        alt_model_configs = self.create_model_configs(n=n_covariates)
+        null_model_configs = self.create_model_configs(n=n_covariates - 1)
 
         # Start loop.
         start_time = int(time.time())
@@ -331,7 +292,6 @@ class main():
             # determine the significance of the change in residuals sum of
             # squares with a f-test.
             for cov_index in range(n_covariates):
-
                 # Model the null matrix (without the interaction term). In
                 # this model 1 (and only 1!) of the cc * geno terms is removed.
                 _, _, rss_null = \
@@ -351,10 +311,19 @@ class main():
 
                 # Perform n permutations.
                 for perm_index in range(self.n_permutations):
-                    # Shuffle the genotype.
-                    permutation_order = perm_order_m[perm_index, :]
-                    shuffled_genotype = np.copy(genotype)
-                    shuffled_genotype = shuffled_genotype[permutation_order]
+                    # Shuffle the indices (only for the ones that we included
+                    # in the model). Save this order.
+                    perm_order = self.create_perm_order(n_samples=n,
+                                                        cohorts=cohorts,
+                                                        stc_m=stc_m,
+                                                        mask=mask,
+                                                        seed=perm_index,
+                                                        dtype=order_dtype)
+                    perm_order_m[row_index, mask, cov_index, perm_index] = perm_order
+
+                    # Reorder the genotype array.
+                    shuffled_genotype = np.copy(genotype[mask])
+                    shuffled_genotype = shuffled_genotype[perm_order]
 
                     # Model the alternative matrix (with the interaction term)
                     # and shuffle the genotype of the interaction of interest.
@@ -367,7 +336,7 @@ class main():
                             n_samples=n,
                             n_covariates=n_covariates,
                             shuffle_index=cov_index,
-                            shuffled_genotype=shuffled_genotype[mask],
+                            shuffled_genotype=shuffled_genotype,
                         )
 
                     # Calculate and save the permutation p-value.
@@ -380,7 +349,7 @@ class main():
 
         ########################################################################
 
-        print("### STEP 6 ###")
+        print("### STEP 4 ###")
         print("Calculating the permutation FDR.")
         perm_fdr_m = np.empty_like(real_pvalues_m)
         perm_fdr_m[:] = np.nan
@@ -418,7 +387,7 @@ class main():
         print(pd.DataFrame(perm_fdr_m, columns=["{}_FDR".format(x) for x in cell_types_indices]))
         print(pd.DataFrame(betas_m, columns=["Beta{}_{}".format(i+1, x) for i, x in enumerate(cell_types_indices)] + ["Beta{}_{}:GT".format(len(cell_types_indices) + i + 1, x) for i, x in enumerate(cell_types_indices)]))
 
-        print("### STEP 7 ###")
+        print("### STEP 5 ###")
         print("Saving results.")
 
         perm_pvalues_df = pd.DataFrame(perm_pvalues_m, columns=cell_types_indices)
@@ -432,6 +401,9 @@ class main():
                                          ["Beta{}_{}:GT".format(len(cell_types_indices) + i + 1, x) for i, x in enumerate(cell_types_indices)])
         print(output_df)
         self.save_file(df=output_df, outpath=os.path.join(self.outdir, "deconvolutionResults.txt.gz"))
+
+        if perm_order_m is not None:
+            self.save_matrix(m=perm_order_m, outpath=os.path.join(self.outdir, "permutation_orders.npy"))
 
         print("")
 
@@ -463,50 +435,71 @@ class main():
             exit()
 
     @staticmethod
-    def create_perm_orders(n_permutations, stc_df, completeness_mask):
-        n_samples = stc_df.shape[0]
-        cohorts = stc_df.iloc[:, 1].unique()
-        standard_indices = np.array([x for x in range(n_samples)])
-        perm_order_m = np.empty((n_permutations, n_samples), dtype=np.int)
-        for i in range(n_permutations):
-            perm_indices = np.copy(standard_indices)
-            for cohort in cohorts:
-                cohort_mask = (stc_df.iloc[:, 1] == cohort).to_numpy(dtype=bool)
-                shuffle_mask = np.logical_and(cohort_mask, completeness_mask)
-                if np.sum(shuffle_mask) <= 1:
-                    continue
+    def create_model_configs(n):
+        """
+        Create the allele encoding configurations. All configurations could
+        be created using list(itertools.product([True, False], repeat=n))
+        however they mention in the article that Decon-eQTL restrict the
+        configurations to max one opposite. This limits the
+        configurations from k^2 to (2*k) + 2.
 
-                copy = perm_indices[shuffle_mask]
-                random.shuffle(copy)
-                perm_indices[shuffle_mask] = copy
+        Example for n = 3
+        Output:
+            [ False False False ]
+            [ True False False ]
+            [ False True False ]
+            [ False False True ]
+            [ True True True ]
+            [ False True True ]
+            [ True False True ]
+            [ True True False ]
 
-            # Check if all indices are present.
-            if bool(set(standard_indices).symmetric_difference(set(perm_indices))):
-                print("Unvalid permutation order.")
-                exit()
+        """
+        configurations = []
 
-            # Check if all complete indices are shuffled.
-            if np.array_equal(standard_indices[completeness_mask], perm_indices[completeness_mask]):
-                print("Unvalid permutation order.")
-                exit()
+        false_array = np.zeros(n, dtype=bool)
+        true_array = np.ones(n, dtype=bool)
+        for value, array in zip([True, False], [false_array, true_array]):
+            configurations.append(array)
+            for i in range(n):
+                configuration = np.copy(array)
+                configuration[i] = value
+                configurations.append(configuration)
 
-            # Check if all indices with missing genotypes remained the same.
-            if not np.array_equal(standard_indices[~completeness_mask], perm_indices[~completeness_mask]):
-                print("Unvalid permutation order.")
-                exit()
+        return configurations
 
-            perm_order_m[i, :] = perm_indices
+    @staticmethod
+    def create_perm_order(n_samples, cohorts, stc_m, mask, seed, dtype):
+        """
+        Shuffles an array of size n_samples into a random order (with seed).
+        However, this function only shuffles samples within the same cohort.
+        """
+        order = np.array([x for x in range(n_samples)], dtype=dtype)
+        for cohort in cohorts:
+            cohort_mask = stc_m[:, 1][mask] == cohort
+            if np.sum(cohort_mask) <= 1:
+                continue
 
-        return perm_order_m
+            copy = order[cohort_mask]
+            random.Random(seed).shuffle(copy)
+            order[cohort_mask] = copy
 
-    def model(self, genotype, expression, cell_fractions, configs, n_samples,
+        return order
+
+    @staticmethod
+    def model(genotype, expression, cell_fractions, configs, n_samples,
               n_covariates, exclude=None, shuffle_index=None, shuffled_genotype=None):
+        """
+        Create the interaction model. Try different allele encodings and
+        find the optimal configurations. Only the best configuration is stored
+        and returned.
+        """
         n_columns = n_covariates * 2
         if exclude is not None:
             n_columns -= 1
 
         # Create the model matrix. Leave the interaction columns blank for now.
-        X = np.empty((n_samples, n_columns), np.float32)
+        X = np.empty((n_samples, n_columns), dtype=np.float64)
         for cov_index in range(n_covariates):
             X[:, cov_index] = cell_fractions[cov_index, :]
 
@@ -548,7 +541,7 @@ class main():
             # the model matrix. Determine the beta's as well as the squared
             # Euclidean norm. Note: squared Eucledian norm is identical to
             # calculating the RSS.
-            betas, rnorm = self.fit(X, expression)
+            betas, rnorm = nnls(X, expression)
             rss_alt = rnorm * rnorm
 
             # Only safe the best configuration.
@@ -558,10 +551,6 @@ class main():
                 top_rss = rss_alt
 
         return top_config, top_betas, top_rss
-
-    @staticmethod
-    def fit(X, y):
-        return nnls(X, y)
 
     @staticmethod
     def calc_p_value(rss1, rss2, df1, df2, n):
@@ -591,6 +580,15 @@ class main():
                   compression=compression)
         print("\tSaved dataframe: {} "
               "with shape: {}".format(os.path.basename(outpath), df.shape))
+
+    @staticmethod
+    def save_matrix(m, outpath):
+        with open(outpath, 'wb') as f:
+            np.save(f, m)
+        f.close()
+
+        print("\tSaved matrix: {} "
+              "with shape: {}".format(os.path.basename(outpath), m.shape))
 
     def print_arguments(self):
         print("Arguments:")
