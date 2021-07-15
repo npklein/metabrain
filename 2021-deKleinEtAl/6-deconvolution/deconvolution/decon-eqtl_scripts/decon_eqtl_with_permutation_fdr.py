@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_with_permutation_fdr.py
 Created:      2021/07/12
-Last Changed: 2021/07/14
+Last Changed: 2021/07/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -206,9 +206,11 @@ class main():
         
         # Print info.
         n_samples = geno_m.shape[1]
+        n_cohorts = len(stc_df.iloc[:, 1].unique())
         n_eqtls = geno_m.shape[0]
         n_covariates = cc_m.shape[0]
         print("\tN-samples: {}".format(n_samples))
+        print("\tN-cohorts: {}".format(n_cohorts))
         print("\tN-eQTLs: {}".format(n_eqtls))
         print("\tN-covariates: {}".format(n_covariates))
         print("")
@@ -216,9 +218,50 @@ class main():
         ########################################################################
 
         print("### STEP 3 ###")
+        print("Analyzing missingness in the data.")
+        cohorts_sizes = dict(zip(*np.unique(stc_df.iloc[:, 1], return_counts=True)))
+        cohort_length = np.max([len(x) for x in cohorts_sizes.keys()] + [len("total")])
+        samples_length = np.max([len(str(x)) for x in cohorts_sizes.values()])
+        for cohort, size in cohorts_sizes.items():
+            cohort_mask = (stc_df.iloc[:, 1] == cohort).to_numpy(dtype=bool)
+            complete_mask = np.sum(geno_m[:, cohort_mask] == self.missing_geno, axis=0) == 0
+            n_complete = np.sum(complete_mask)
+
+            print("\t{cohort:{cohort_length}s} {n_complete:{samples_length}d}"
+                  "/{size:{samples_length}d} complete [{pcnt:.2f}%]".format(
+                cohort=cohort,
+                cohort_length=cohort_length,
+                n_complete=n_complete,
+                samples_length=samples_length,
+                size=size,
+                pcnt=(100 / size) * n_complete))
+
+        completeness_mask = np.sum(geno_m == self.missing_geno, axis=0) == 0
+        n_total_complete = np.sum(completeness_mask)
+        print("\t{}".format("".join(["-"] * cohort_length)))
+        print("\t{cohort:{cohort_length}s} {n_complete:{samples_length}d}"
+              "/{size:{samples_length}d} complete [{pcnt:.2f}%]".format(
+            cohort="Total",
+            cohort_length=cohort_length,
+            n_complete=n_total_complete,
+            samples_length=samples_length,
+            size=n_samples,
+            pcnt=(100 / n_samples) * n_total_complete))
+
+        # validate shuffle mask.
+        if np.sum(geno_m[:, completeness_mask] == self.missing_geno) != 0:
+            print("Error, still missing values in shuffle mask")
+            exit()
+
+        print("")
+
+        ########################################################################
+
+        print("### STEP 4 ###")
         print("Creating permutation matrix.")
         perm_order_m = self.create_perm_orders(n_permutations=self.n_permutations,
-                                               stc_df=stc_df)
+                                               stc_df=stc_df,
+                                               completeness_mask=completeness_mask)
         if self.n_permutations > 0:
             self.save_file(df=pd.DataFrame(perm_order_m, index=["permutation{}".format(i) for i in range(self.n_permutations)]),
                            outpath=os.path.join(self.outdir, "permutation_order.txt.gz"))
@@ -228,7 +271,7 @@ class main():
 
         ########################################################################
 
-        print("### STEP 4 ###")
+        print("### STEP 5 ###")
         print("Analyzing.")
 
         # Initializing output matrices / arrays.
@@ -247,7 +290,7 @@ class main():
         for row_index in range(n_eqtls):
             # Print update for user.
             now_time = int(time.time())
-            if last_print_time is None or (now_time - last_print_time) >= self.print_interval or row_index == (n_eqtls - 1):
+            if n_eqtls > 1 and (last_print_time is None or (now_time - last_print_time) >= self.print_interval or row_index == (n_eqtls - 1)):
                 print("\t[{}] {}/{} ieQTLs analysed [{:.2f}%]".format(time.strftime('%H:%M:%S', time.gmtime(now_time - start_time)),
                                                                       row_index,
                                                                       (n_eqtls - 1),
@@ -285,7 +328,7 @@ class main():
             df2 = n_covariates * 2
 
             # Remove one interaction column (cc * geno) one by one and
-            # determine the significance of the change in risdual sum of
+            # determine the significance of the change in residuals sum of
             # squares with a f-test.
             for cov_index in range(n_covariates):
 
@@ -310,7 +353,8 @@ class main():
                 for perm_index in range(self.n_permutations):
                     # Shuffle the genotype.
                     permutation_order = perm_order_m[perm_index, :]
-                    shuffled_genotype = genotype[permutation_order][mask]
+                    shuffled_genotype = np.copy(genotype)
+                    shuffled_genotype = shuffled_genotype[permutation_order]
 
                     # Model the alternative matrix (with the interaction term)
                     # and shuffle the genotype of the interaction of interest.
@@ -323,7 +367,7 @@ class main():
                             n_samples=n,
                             n_covariates=n_covariates,
                             shuffle_index=cov_index,
-                            shuffled_genotype=shuffled_genotype,
+                            shuffled_genotype=shuffled_genotype[mask],
                         )
 
                     # Calculate and save the permutation p-value.
@@ -336,16 +380,12 @@ class main():
 
         ########################################################################
 
-        print("### STEP 5 ###")
+        print("### STEP 6 ###")
         print("Calculating the permutation FDR.")
         perm_fdr_m = np.empty_like(real_pvalues_m)
         perm_fdr_m[:] = np.nan
         if self.n_permutations > 0:
-            print("\nN-interaction (FDR < {}):".format(self.alpha))
-            cov_length = np.max([len(x) for x in cell_types_indices])
-            n_hits_total = 0
             for cov_index in range(n_covariates):
-                n_hits = 0
                 for row_index in range(n_eqtls):
                     # Get the real p-value.
                     real_pvalue = real_pvalues_m[row_index, cov_index]
@@ -355,22 +395,21 @@ class main():
                     perm_rank = np.sum(perm_pvalues_m[:, cov_index] <= real_pvalue)
 
                     # Calculate and safe the fdr.
-                    fdr = (perm_rank / self.n_permutations) / rank
-                    perm_fdr_m[row_index, cov_index] = fdr
-
-                    # Increment the counter.
-                    if fdr < self.alpha:
-                        n_hits += 1
-
-                print("\t{:{}s}  {}".format(cell_types_indices[cov_index], cov_length, n_hits))
-                n_hits_total += n_hits
-
-            print("\t{}".format("".join(["-"] * cov_length)))
-            print("\t{:{}s}  {}".format("total", cov_length, n_hits_total))
+                    perm_fdr_m[row_index, cov_index] = (perm_rank / self.n_permutations) / rank
 
             # Cap the permutation FDR values.
             perm_fdr_m[perm_fdr_m > 1] = 1
             perm_fdr_m[perm_fdr_m == 0] = 2.2250738585072014e-308
+
+            print("\nN-interaction (FDR < {}):".format(self.alpha))
+            n_hits_a = (perm_fdr_m < self.alpha).sum(axis=0)
+            n_hits_total = np.sum(n_hits_a)
+            cov_length = np.max([len(x) for x in cell_types_indices])
+            hits_length = np.max([len(str(x)) for x in n_hits_a] + [len(str(n_hits_total))])
+            for n_hits, cell_type in zip(n_hits_a, cell_types_indices):
+                print("\t{:{}s}  {:{}d}".format(cell_type, cov_length, n_hits, hits_length))
+            print("\t{}".format("".join(["-"] * cov_length)))
+            print("\t{:{}s}  {:{}d}".format("total", cov_length, n_hits_total, hits_length))
         print("")
 
         ########################################################################
@@ -379,7 +418,7 @@ class main():
         print(pd.DataFrame(perm_fdr_m, columns=["{}_FDR".format(x) for x in cell_types_indices]))
         print(pd.DataFrame(betas_m, columns=["Beta{}_{}".format(i+1, x) for i, x in enumerate(cell_types_indices)] + ["Beta{}_{}:GT".format(len(cell_types_indices) + i + 1, x) for i, x in enumerate(cell_types_indices)]))
 
-        print("### STEP 6 ###")
+        print("### STEP 7 ###")
         print("Saving results.")
 
         perm_pvalues_df = pd.DataFrame(perm_pvalues_m, columns=cell_types_indices)
@@ -424,26 +463,40 @@ class main():
             exit()
 
     @staticmethod
-    def create_perm_orders(n_permutations, stc_df):
+    def create_perm_orders(n_permutations, stc_df, completeness_mask):
         n_samples = stc_df.shape[0]
         cohorts = stc_df.iloc[:, 1].unique()
-        valid_order = set([x for x in range(n_samples)])
-        perm_order_m = np.empty((n_permutations, n_samples), dtype=np.uint8)
+        standard_indices = np.array([x for x in range(n_samples)])
+        perm_order_m = np.empty((n_permutations, n_samples), dtype=np.int)
         for i in range(n_permutations):
-            sample_indices = np.array([x for x in range(n_samples)])
+            perm_indices = np.copy(standard_indices)
             for cohort in cohorts:
-                mask = (stc_df.iloc[:, 1] == cohort).to_numpy(dtype=bool)
-                if np.sum(mask) <= 1:
+                cohort_mask = (stc_df.iloc[:, 1] == cohort).to_numpy(dtype=bool)
+                shuffle_mask = np.logical_and(cohort_mask, completeness_mask)
+                if np.sum(shuffle_mask) <= 1:
                     continue
-                copy = sample_indices[mask]
-                random.shuffle(copy)
-                sample_indices[mask] = copy
 
-            if bool(valid_order.symmetric_difference(set(sample_indices))):
+                copy = perm_indices[shuffle_mask]
+                random.shuffle(copy)
+                perm_indices[shuffle_mask] = copy
+
+            # Check if all indices are present.
+            if bool(set(standard_indices).symmetric_difference(set(perm_indices))):
                 print("Unvalid permutation order.")
                 exit()
 
-            perm_order_m[i, :] = sample_indices
+            # Check if all complete indices are shuffled.
+            if np.array_equal(standard_indices[completeness_mask], perm_indices[completeness_mask]):
+                print("Unvalid permutation order.")
+                exit()
+
+            # Check if all indices with missing genotypes remained the same.
+            if not np.array_equal(standard_indices[~completeness_mask], perm_indices[~completeness_mask]):
+                print("Unvalid permutation order.")
+                exit()
+
+            perm_order_m[i, :] = perm_indices
+
         return perm_order_m
 
     def model(self, genotype, expression, cell_fractions, configs, n_samples,
@@ -479,6 +532,10 @@ class main():
                 genotype_a = genotype
                 if cov_index == shuffle_index:
                     genotype_a = shuffled_genotype
+
+                if np.min(genotype_a) < 0:
+                    print("Error: negative values in genotype array.")
+                    exit()
 
                 # Calculate genotype * cell fraction. If flip is true we
                 # change the allele encoding (0 = 2, 1 = 1, 2 = 0).
