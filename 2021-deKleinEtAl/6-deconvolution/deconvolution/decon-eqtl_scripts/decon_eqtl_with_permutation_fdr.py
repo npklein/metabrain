@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_with_permutation_fdr.py
 Created:      2021/07/12
-Last Changed: 2021/07/15
+Last Changed: 2021/07/16
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -178,7 +178,7 @@ class main():
                            expr_df=expr_df,
                            cc_df=cc_df,
                            stc_df=stc_df)
-        print("")
+        print("", flush=True)
 
         ########################################################################
 
@@ -198,13 +198,13 @@ class main():
         expr_m = expr_df.to_numpy(np.float64)
         cc_m = cc_df.to_numpy(np.float64)
         stc_m = stc_df.to_numpy(object)
-        
+
         # Save properties.
         eqtl_indices = expr_df.index + "_" + geno_df.index
         cell_types_indices = cc_df.index.to_numpy(dtype=object)
         cohorts = np.unique(stc_m[:, 1])
         del geno_df, expr_df, cc_df, stc_df
-        
+
         # Print info.
         n_eqtls = geno_m.shape[0]
         n_samples = geno_m.shape[1]
@@ -221,7 +221,7 @@ class main():
         print("\tN-configurations (cell type model): {:,}".format(n_configurations_null))
         print("\tN-permutation values in null distribution (per cell type): {:,}".format(n_permutation_values))
         print("\tN-models to calculate: {:,}".format(n_eqtls * (n_covariates * self.n_permutations * n_configurations_alt + n_covariates * n_configurations_null + n_configurations_alt)))
-        print("")
+        print("", flush=True)
 
         ########################################################################
 
@@ -255,7 +255,8 @@ class main():
                 print("\t[{}] {}/{} ieQTLs analysed [{:.2f}%]".format(time.strftime('%H:%M:%S', time.gmtime(now_time - start_time)),
                                                                       row_index,
                                                                       (n_eqtls - 1),
-                                                                      (100 / (n_eqtls - 1)) * row_index))
+                                                                      (100 / (n_eqtls - 1)) * row_index),
+                      flush=True)
                 last_print_time = now_time
 
             # Get the genotype.
@@ -345,7 +346,7 @@ class main():
 
         # Cap the p-values.
         real_pvalues_m[real_pvalues_m == 0] = 2.2250738585072014e-308
-        print("")
+        print("", flush=True)
 
         ########################################################################
 
@@ -361,7 +362,7 @@ class main():
 
                     # Get the rank of this p-value in both distributions.
                     rank = np.sum(real_pvalues_m[:, cov_index] <= real_pvalue)
-                    perm_rank = np.sum(perm_pvalues_m[:, cov_index] <= real_pvalue)
+                    perm_rank = np.sum(perm_pvalues_m[:, cov_index] <= real_pvalue) + 1
 
                     # Calculate and safe the fdr.
                     perm_fdr_m[row_index, cov_index] = (perm_rank / self.n_permutations) / rank
@@ -379,7 +380,7 @@ class main():
                 print("\t{:{}s}  {:{}d}".format(cell_type, cov_length, n_hits, hits_length))
             print("\t{}".format("".join(["-"] * cov_length)))
             print("\t{:{}s}  {:{}d}".format("total", cov_length, n_hits_total, hits_length))
-        print("")
+        print("", flush=True)
 
         ########################################################################
 
@@ -405,7 +406,7 @@ class main():
         if perm_order_m is not None:
             self.save_matrix(m=perm_order_m, outpath=os.path.join(self.outdir, "permutation_orders.npy"))
 
-        print("")
+        print("", flush=True)
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
