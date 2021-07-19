@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_with_permutation_fdr.py
 Created:      2021/07/12
-Last Changed: 2021/07/16
+Last Changed: 2021/07/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -130,8 +130,9 @@ class main():
         parser.add_argument("-p",
                             "--permutations",
                             type=int,
-                            default=10,
-                            help="The number of permutations to run.")
+                            default=0,
+                            help="The number of permutations to run. "
+                                 "Default: 0.")
         parser.add_argument("-m",
                             "--missing_genotype",
                             type=int,
@@ -210,40 +211,38 @@ class main():
         n_samples = geno_m.shape[1]
         n_covariates = cc_m.shape[0]
         n_cohorts = len(cohorts)
-        n_permutation_values = n_eqtls * self.n_permutations
-        n_configurations_alt = (n_covariates * 2) + 2
-        n_configurations_null = ((n_covariates - 1) * 2) + 2
         print("\tN-eQTLs: {:,}".format(n_eqtls))
         print("\tN-samples: {:,}".format(n_samples))
         print("\tN-covariates: {:,}".format(n_covariates))
         print("\tN-cohorts: {:,}".format(n_cohorts))
-        print("\tN-configurations (full model): {:,}".format(n_configurations_alt))
-        print("\tN-configurations (cell type model): {:,}".format(n_configurations_null))
-        print("\tN-permutation values in null distribution (per cell type): {:,}".format(n_permutation_values))
-        print("\tN-models to calculate: {:,}".format(n_eqtls * (n_covariates * self.n_permutations * n_configurations_alt + n_covariates * n_configurations_null + n_configurations_alt)))
         print("", flush=True)
 
         ########################################################################
 
         print("### STEP 3 ###")
-        print("Analyzing.")
+        print("Analyzing eQTLs.")
+
+        # Calculate and print some info about the analyses to be performed.
+        n_configurations_alt = (n_covariates * 2) + 2
+        n_configurations_null = ((n_covariates - 1) * 2) + 2
+        n_models = n_eqtls * (n_configurations_alt + n_covariates * n_configurations_null)
+        print("\tN-configurations (full model): {:,}".format(n_configurations_alt))
+        print("\tN-configurations (cell type model): {:,}".format(n_configurations_null))
+        print("\tN-models: {:,}".format(n_models))
+        print("")
+
         # Initializing output matrices / arrays.
         real_pvalues_m = np.empty((n_eqtls, n_covariates), dtype=np.float64)
-        perm_pvalues_m = np.empty((n_permutation_values, n_covariates), dtype=np.float64)
         betas_m = np.empty((n_eqtls, n_covariates * 2), dtype=np.float64)
-
-        order_dtype = np.int16
-        if n_samples >= 32767:
-            order_dtype = np.int32
-        perm_order_m = None
-        if self.n_permutations > 0:
-            perm_order_m = np.empty((n_eqtls, n_samples, n_covariates, self.n_permutations), dtype=order_dtype)
-            perm_order_m[:] = -1
+        rss_null_m = np.empty((n_eqtls, n_covariates), dtype=np.float64)
 
         # Create a list of possible genotype encoding configuration. True means
         # we change the encoding by 2 - value. False means we do nothing.
         alt_model_configs = self.create_model_configs(n=n_covariates)
         null_model_configs = self.create_model_configs(n=n_covariates - 1)
+
+        # Save the degrees of freedom the alternative model.
+        df = n_covariates * 2
 
         # Start loop.
         start_time = int(time.time())
@@ -286,9 +285,6 @@ class main():
             flip_array = np.hstack((np.ones(n_covariates), np.vectorize({True: -1, False: 1}.get)(config_alt)))
             betas_m[row_index, :] = betas_alt * flip_array
 
-            # Save the degrees of freedom of the alternative model.
-            df2 = n_covariates * 2
-
             # Remove one interaction column (cc * geno) one by one and
             # determine the significance of the change in residuals sum of
             # squares with a f-test.
@@ -307,27 +303,95 @@ class main():
                     )
 
                 # Calculate and save the p-value.
-                p_value = self.calc_p_value(rss1=rss_null, rss2=rss_alt, df1=df2 - 1, df2=df2, n=n)
+                p_value = self.calc_p_value(rss1=rss_null,
+                                            rss2=rss_alt,
+                                            df1=df - 1,
+                                            df2=df,
+                                            n=n)
                 real_pvalues_m[row_index, cov_index] = p_value
+
+                # Save the RSS null for permutations later.
+                rss_null_m[row_index, cov_index] = rss_null
+
+        # Cap the p-values.
+        real_pvalues_m[real_pvalues_m == 0] = 2.2250738585072014e-308
+        print("", flush=True)
+
+        ########################################################################
+
+        print("### STEP 4 ###")
+        print("Saving results.")
+
+        output_df = pd.DataFrame(np.hstack((real_pvalues_m, betas_m)),
+                                 index=eqtl_indices,
+                                 columns=["{}_pvalue".format(x) for x in cell_types_indices] +
+                                         ["Beta{}_{}".format(i+1, x) for i, x in enumerate(cell_types_indices)] +
+                                         ["Beta{}_{}:GT".format(len(cell_types_indices) + i + 1, x) for i, x in enumerate(cell_types_indices)])
+        print(output_df)
+        self.save_file(df=output_df, outpath=os.path.join(self.outdir, "deconvolutionResults.txt.gz"))
+        del output_df, betas_m
+
+        print("", flush=True)
+
+        #######################################################################
+
+        if self.n_permutations <= 0:
+            exit()
+
+        print("### STEP 5 ###")
+        print("Performing permutations.")
+
+        # Calculate and print some info about the analyses to be performed.
+        n_permutation_values = n_eqtls * self.n_permutations
+        n_perm_models = n_eqtls * (self.n_permutations * n_covariates * n_configurations_null)
+        print("\tN-permutation values: {:,}".format(n_permutation_values))
+        print("\tN-models: {:,}".format(n_perm_models))
+        print("")
+
+        # Initializing output matrices / arrays.
+        perm_pvalues_m = np.empty((n_permutation_values, n_covariates), dtype=np.float64)
+
+        # Start loop.
+        start_time = int(time.time())
+        last_print_time = None
+        for row_index in range(n_eqtls):
+            # Print update for user.
+            now_time = int(time.time())
+            if n_eqtls > 1 and (last_print_time is None or (now_time - last_print_time) >= self.print_interval or row_index == (n_eqtls - 1)):
+                print("\t[{}] {}/{} ieQTLs analysed [{:.2f}%]".format(time.strftime('%H:%M:%S', time.gmtime(now_time - start_time)),
+                                                                      row_index,
+                                                                      (n_eqtls - 1),
+                                                                      (100 / (n_eqtls - 1)) * row_index),
+                      flush=True)
+                last_print_time = now_time
+
+            # Get the genotype.
+            genotype = geno_m[row_index, :]
+
+            # Construct the mask to remove missing values.
+            mask = genotype != self.missing_geno
+            n = np.sum(mask)
+
+            # Loop over the covariates.
+            for cov_index in range(n_covariates):
 
                 # Perform n permutations.
                 for perm_index in range(self.n_permutations):
-                    # Shuffle the indices (only for the ones that we included
-                    # in the model). Save this order.
+                    # Shuffle the indices (only for the ones that we
+                    # included in the model). Save this order.
                     perm_order = self.create_perm_order(n_samples=n,
                                                         cohorts=cohorts,
                                                         stc_m=stc_m,
                                                         mask=mask,
-                                                        seed=perm_index,
-                                                        dtype=order_dtype)
-                    perm_order_m[row_index, mask, cov_index, perm_index] = perm_order
+                                                        seed=perm_index)
 
                     # Reorder the genotype array.
                     shuffled_genotype = np.copy(genotype[mask])
                     shuffled_genotype = shuffled_genotype[perm_order]
 
-                    # Model the alternative matrix (with the interaction term)
-                    # and shuffle the genotype of the interaction of interest.
+                    # Model the alternative matrix (with the interaction
+                    # term) and shuffle the genotype of the interaction of
+                    # interest.
                     _, _, rss_perm = \
                         self.model(
                             genotype=genotype[mask],
@@ -341,70 +405,60 @@ class main():
                         )
 
                     # Calculate and save the permutation p-value.
-                    perm_pvalue = self.calc_p_value(rss1=rss_null, rss2=rss_perm, df1=df2 - 1, df2=df2, n=n)
+                    perm_pvalue = self.calc_p_value(
+                        rss1=rss_null_m[row_index, cov_index],
+                        rss2=rss_perm,
+                        df1=df - 1,
+                        df2=df,
+                        n=n)
                     perm_pvalues_m[row_index * self.n_permutations + perm_index, cov_index] = perm_pvalue
 
-        # Cap the p-values.
-        real_pvalues_m[real_pvalues_m == 0] = 2.2250738585072014e-308
         print("", flush=True)
 
-        ########################################################################
+        #######################################################################
 
-        print("### STEP 4 ###")
-        print("Calculating the permutation FDR.")
+        print("### STEP 6 ###")
+        print("Calculating permutation based FDR.")
         perm_fdr_m = np.empty_like(real_pvalues_m)
-        perm_fdr_m[:] = np.nan
-        if self.n_permutations > 0:
-            for cov_index in range(n_covariates):
-                for row_index in range(n_eqtls):
-                    # Get the real p-value.
-                    real_pvalue = real_pvalues_m[row_index, cov_index]
+        for cov_index in range(n_covariates):
+            for row_index in range(n_eqtls):
+                # Get the real p-value.
+                real_pvalue = real_pvalues_m[row_index, cov_index]
 
-                    # Get the rank of this p-value in both distributions.
-                    rank = np.sum(real_pvalues_m[:, cov_index] <= real_pvalue)
-                    perm_rank = np.sum(perm_pvalues_m[:, cov_index] <= real_pvalue) + 1
+                # Get the rank of this p-value in both distributions.
+                rank = np.sum(real_pvalues_m[:, cov_index] <= real_pvalue)
+                perm_rank = np.sum(perm_pvalues_m[:, cov_index] <= real_pvalue)
 
-                    # Calculate and safe the fdr.
-                    perm_fdr_m[row_index, cov_index] = (perm_rank / self.n_permutations) / rank
+                # Calculate and safe the fdr.
+                fdr = (perm_rank / self.n_permutations) / rank
+                perm_fdr_m[row_index, cov_index] = fdr
 
-            # Cap the permutation FDR values.
-            perm_fdr_m[perm_fdr_m > 1] = 1
-            perm_fdr_m[perm_fdr_m == 0] = 2.2250738585072014e-308
+        # Cap the permutation FDR values.
+        perm_fdr_m[perm_fdr_m > 1] = 1
+        perm_fdr_m[perm_fdr_m == 0] = 2.2250738585072014e-308
 
-            print("\nN-interaction (FDR < {}):".format(self.alpha))
-            n_hits_a = (perm_fdr_m < self.alpha).sum(axis=0)
-            n_hits_total = np.sum(n_hits_a)
-            cov_length = np.max([len(x) for x in cell_types_indices])
-            hits_length = np.max([len(str(x)) for x in n_hits_a] + [len(str(n_hits_total))])
-            for n_hits, cell_type in zip(n_hits_a, cell_types_indices):
-                print("\t{:{}s}  {:{}d}".format(cell_type, cov_length, n_hits, hits_length))
-            print("\t{}".format("".join(["-"] * cov_length)))
-            print("\t{:{}s}  {:{}d}".format("total", cov_length, n_hits_total, hits_length))
+        print("\nN-interaction (FDR < {}):".format(self.alpha))
+        n_hits_a = (perm_fdr_m < self.alpha).sum(axis=0)
+        n_hits_total = np.sum(n_hits_a)
+        cov_length = np.max([len(x) for x in cell_types_indices])
+        hits_length = np.max([len(str(x)) for x in n_hits_a] + [len(str(n_hits_total))])
+        for n_hits, cell_type in zip(n_hits_a, cell_types_indices):
+            print("\t{:{}s}  {:{}d}".format(cell_type, cov_length, n_hits, hits_length))
+        print("\t{}".format("".join(["-"] * cov_length)))
+        print("\t{:{}s}  {:{}d}".format("total", cov_length, n_hits_total, hits_length))
+
         print("", flush=True)
 
         ########################################################################
 
-        print(pd.DataFrame(real_pvalues_m, columns=["{}_pvalue".format(x) for x in cell_types_indices]))
-        print(pd.DataFrame(perm_fdr_m, columns=["{}_FDR".format(x) for x in cell_types_indices]))
-        print(pd.DataFrame(betas_m, columns=["Beta{}_{}".format(i+1, x) for i, x in enumerate(cell_types_indices)] + ["Beta{}_{}:GT".format(len(cell_types_indices) + i + 1, x) for i, x in enumerate(cell_types_indices)]))
-
-        print("### STEP 5 ###")
+        print("### STEP 7 ###")
         print("Saving results.")
 
-        perm_pvalues_df = pd.DataFrame(perm_pvalues_m, columns=cell_types_indices)
+        perm_pvalues_df = pd.DataFrame(perm_pvalues_m, columns=["{}_pvalue".format(cell_type) for cell_type in cell_types_indices])
         self.save_file(df=perm_pvalues_df, outpath=os.path.join(self.outdir, "permutation_pvalues.txt.gz"))
 
-        output_df = pd.DataFrame(np.hstack((real_pvalues_m, perm_fdr_m, betas_m)),
-                                 index=eqtl_indices,
-                                 columns=["{}_pvalue".format(x) for x in cell_types_indices] +
-                                         ["{}_FDR".format(x) for x in cell_types_indices] +
-                                         ["Beta{}_{}".format(i+1, x) for i, x in enumerate(cell_types_indices)] +
-                                         ["Beta{}_{}:GT".format(len(cell_types_indices) + i + 1, x) for i, x in enumerate(cell_types_indices)])
-        print(output_df)
-        self.save_file(df=output_df, outpath=os.path.join(self.outdir, "deconvolutionResults.txt.gz"))
-
-        if perm_order_m is not None:
-            self.save_matrix(m=perm_order_m, outpath=os.path.join(self.outdir, "permutation_orders.npy"))
+        perm_fdr_df = pd.DataFrame(perm_fdr_m, columns=["{}_FDR".format(cell_type) for cell_type in cell_types_indices])
+        self.save_file(df=perm_fdr_df, outpath=os.path.join(self.outdir, "permutation_fdrvalues.txt.gz"))
 
         print("", flush=True)
 
@@ -470,12 +524,12 @@ class main():
         return configurations
 
     @staticmethod
-    def create_perm_order(n_samples, cohorts, stc_m, mask, seed, dtype):
+    def create_perm_order(n_samples, cohorts, stc_m, mask, seed):
         """
         Shuffles an array of size n_samples into a random order (with seed).
         However, this function only shuffles samples within the same cohort.
         """
-        order = np.array([x for x in range(n_samples)], dtype=dtype)
+        order = np.array([x for x in range(n_samples)], dtype=np.int32)
         for cohort in cohorts:
             cohort_mask = stc_m[:, 1][mask] == cohort
             if np.sum(cohort_mask) <= 1:
