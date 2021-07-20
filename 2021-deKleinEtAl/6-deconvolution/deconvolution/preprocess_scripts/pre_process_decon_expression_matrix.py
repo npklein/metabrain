@@ -205,6 +205,11 @@ class main():
         samples = gte_combined_df.iloc[:, 1].values.tolist()
         print("\tN samples: {}".format(len(samples)))
 
+        # Safe sample cohort data frame.
+        sample_cohort_df = gte_combined_df.iloc[:, [1, 3]]
+        sample_cohort_df.columns = ["sample", "cohort"]
+        self.save_file(sample_cohort_df, outpath=os.path.join(self.file_outdir, "SampleToCohorts.txt.gz"), index=False)
+
         # Create cohort matrix.
         cohort_sample_counts = list(zip(*np.unique(gte_combined_df["file"], return_counts=True)))
         cohort_sample_counts.sort(key=lambda x: -x[1])
