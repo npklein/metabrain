@@ -3,7 +3,7 @@
 """
 File:         pre_process_decon_expression_matrix.py
 Created:      2021/07/06
-Last Changed: 2021/07/08
+Last Changed: 2021/07/20
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -24,6 +24,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 # Standard imports.
 from __future__ import print_function
 from pathlib import Path
+from functools import reduce
 import argparse
 import time
 import glob
@@ -239,61 +240,26 @@ class main():
         print("Step 4: PCA analysis.")
         self.pca(df=df,
                  sample_to_cohort=sample_to_cohort,
-                 plot_appendix="_1_CovariatesRemovedOLS")
+                 plot_appendix="_1_Log2Transformed")
 
-        print("Step 4: Construct technical covariate matrix.")
+        print("Step 5: Construct technical covariate matrix.")
         tcov_df = self.load_file(self.tcov_path, header=0, index_col=0)
-        tcov_df = tcov_df.loc[samples, :]
-        tcov_df = tcov_df.loc[:, tcov_df.std(axis=0) != 0]
+        tcov_df = self.prepare_technical_covariates_matrix(tcov_df=tcov_df.loc[samples, :], cohort_df=cohort_df)
 
-        # replace cohort variables.
-        drop_cols = []
-        for col in tcov_df.columns:
-            if set(tcov_df[col].unique()) == {0, 1}:
-                drop_cols.append(col)
-        tcov_df.drop(drop_cols, axis=1, inplace=True)
-        tcov_df = tcov_df.merge(cohort_df.iloc[:, 1:], left_index=True, right_index=True)
+        print("Step 6: remove technical covariates OLS.")
+        corrected_df = self.calculate_residuals(df=df, tcov_df=tcov_df)
 
-        # filter on VIF.
-        pre_columns = tcov_df.columns.tolist()
-        tcov_df = self.remove_multicollinearity(tcov_df)
-        print("Dropped:\t{}".format(", ".join([x for x in pre_columns if x not in tcov_df.columns])))
-        #tcov_df = tcov_df.drop(['PCT_CODING_BASES', 'PCT_MRNA_BASES', 'PF_HQ_ALIGNED_READS'], axis=1)
-
-        # add intercept.
-        tcov_df.insert(0, "INTERCEPT", 1)
-        print(tcov_df)
-        print(tcov_df.columns)
-
-        print("Step 5: remove covariates OLS.")
-        corrected_m = np.empty_like(df, dtype=np.float64)
-        last_print_time = None
-        n_tests = df.shape[0]
-        for i in range(n_tests):
-            now_time = int(time.time())
-            if last_print_time is None or (now_time - last_print_time) >= 10 or (i + 1) == n_tests:
-                last_print_time = now_time
-                print("\t{}/{} ieQTLs analysed [{:.2f}%]".format((i + 1), n_tests, (100 / n_tests) * (i + 1)))
-
-            ols = OLS(df.iloc[i, :], tcov_df)
-            results = ols.fit()
-            # print(results.summary())
-            corrected_m[i, :] = results.resid
-
-        corrected_df = pd.DataFrame(corrected_m, index=df.index, columns=df.columns)
-        del df
-
-        print("Step 6: PCA analysis.")
+        print("Step 7: PCA analysis.")
         self.pca(df=corrected_df,
                  sample_to_cohort=sample_to_cohort,
                  plot_appendix="_2_Log2Transformed_CovariatesRemovedOLS")
 
-        print("Step 7: exp added.")
+        print("Step 8: exp added.")
         corrected_df = np.power(2, corrected_df)
         print("\tSaving file.")
         self.save_file(df=corrected_df, outpath=os.path.join(self.file_outdir, "{}.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt.gz".format(filename)))
 
-        print("Step 8: PCA analysis.")
+        print("Step 9: PCA analysis.")
         self.pca(df=corrected_df,
                  sample_to_cohort=sample_to_cohort,
                  plot_appendix="_3_Log2Transformed_CovariatesRemovedOLS_ExpAdded")
@@ -338,6 +304,65 @@ class main():
 
         return out_dict
 
+    def prepare_technical_covariates_matrix(self, tcov_df, cohort_df):
+        df = tcov_df.copy()
+
+        # Remove columns without variance.
+        df = df.loc[:, df.std(axis=0) != 0]
+
+        # Split the technical covariates matrix into technical covariates,
+        # MDS components and cohort dummy variables.
+        tech_cov_mask = np.zeros(df.shape[1], dtype=bool)
+        mds_mask = np.zeros(df.shape[1], dtype=bool)
+        cohort_mask = np.zeros(df.shape[1], dtype=bool)
+        for i, col in enumerate(df.columns):
+            if "MDS" in col:
+                mds_mask[i] = True
+            elif set(df[col].unique()) == {0, 1}:
+                cohort_mask[i] = True
+            else:
+                tech_cov_mask[i] = True
+        print("\tColumn in input file:")
+        print("\t  > N-technical covariates: {}".format(np.sum(tech_cov_mask)))
+        print("\t  > N-MDS components: {}".format(np.sum(mds_mask)))
+        print("\t  > N-cohort dummy variables: {}".format(np.sum(cohort_mask)))
+
+        # Create an intercept data frame.
+        intecept_df = pd.DataFrame(1, index=df.index, columns=["INTERCEPT"])
+
+        # filter the technical covariates on VIF.
+        tech_cov_df = self.remove_multicollinearity(df.loc[:, tech_cov_mask].copy())
+
+        # split the MDS components per cohort.
+        mds_columns = df.columns[mds_mask]
+        mds_df = pd.DataFrame(0, index=df.index, columns=["{}_{}".format(a, b) for a in cohort_df.columns for b in mds_columns])
+        for cohort in cohort_df.columns:
+            mask = cohort_df.loc[:, cohort] == 1
+            for mds_col in mds_columns:
+                col = "{}_{}".format(cohort, mds_col)
+                mds_df.loc[mask, col] = df.loc[mask, mds_col]
+
+        # replace cohort variables with the complete set defined by the GTE
+        # file. Don't include the cohort with the most samples.
+        tmp_cohort_df = cohort_df.iloc[:, 1:]
+
+        # construct the complete technical covariates matrix. Start with an
+        # intercept. Don't include the cohort with the most samples.
+        new_tcov_df = reduce(lambda left, right: pd.merge(left,
+                                                          right,
+                                                          left_index=True,
+                                                          right_index=True),
+                             [intecept_df, tech_cov_df, mds_df, tmp_cohort_df])
+        new_tcov_df.index.name = "-"
+
+        print("\tColumn in technical covariates matrix:")
+        print("\t  > N-intercept: {}".format(intecept_df.shape[1]))
+        print("\t  > N-technical covariates: {}".format(tech_cov_df.shape[1]))
+        print("\t  > N-MDS components: {}".format(mds_df.shape[1]))
+        print("\t  > N-cohort dummy variables: {}".format(tmp_cohort_df.shape[1]))
+
+        return new_tcov_df
+
     def remove_multicollinearity(self, df, threshold=0.9999):
         indices = np.arange(df.shape[1])
         max_vif = np.inf
@@ -354,6 +379,24 @@ class main():
     @staticmethod
     def calc_ols_rsquared(df, idx):
         return OLS(df.iloc[:, idx], df.loc[:, np.arange(df.shape[1]) != idx]).fit().rsquared
+
+    @staticmethod
+    def calculate_residuals(df, tcov_df):
+        corrected_m = np.empty_like(df, dtype=np.float64)
+        last_print_time = None
+        n_tests = df.shape[0]
+        for i in range(n_tests):
+            now_time = int(time.time())
+            if last_print_time is None or (now_time - last_print_time) >= 10 or (i + 1) == n_tests:
+                last_print_time = now_time
+                print("\t{}/{} ieQTLs analysed [{:.2f}%]".format((i + 1), n_tests, (100 / n_tests) * (i + 1)))
+
+            ols = OLS(df.iloc[i, :], tcov_df)
+            results = ols.fit()
+            # print(results.summary())
+            corrected_m[i, :] = results.resid
+
+        return pd.DataFrame(corrected_m, index=df.index, columns=df.columns)
 
     def pca(self, df, sample_to_cohort, plot_appendix=""):
         # samples should be on the columns and genes on the rows.
