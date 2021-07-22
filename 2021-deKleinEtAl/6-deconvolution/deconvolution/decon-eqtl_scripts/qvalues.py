@@ -1,7 +1,7 @@
 """
 File:         qvalues.py
 Created:      2020/07/21
-Last Changed: 2020/07/22
+Last Changed:
 Author:       M.Vochteloo
 
 This is a custom written Python implementation of R Bioconductor’s qvalue
@@ -33,7 +33,16 @@ from scipy.stats import norm
 
 
 def qvalue(p, fdr_level=None, pfdr=False, lfdr_out=True, pi0=None, **kwargs):
+    call = ["fdr_level={}".format(fdr_level) if fdr_level is not None else "",
+            "pfdr={}".format(pfdr) if pfdr else "",
+            "lfdr_out={}".format(lfdr_out) if not lfdr_out else "",
+            "pi0={}".format(pi0) if pi0 is not None else "",
+            ", ".join(["{}={}".format(key, value) for key, value in kwargs.items()])
+            ]
+    call = [x for x in call if x != ""]
+
     retval = {
+        "call": "qvalue(p={}{})".format(p, (", " if len(call) > 0 else "") + ", ".join(call)),
         "pi0": pi0,
         "qvalues": None,
         "pvalues": np.copy(p),
@@ -255,3 +264,25 @@ def emp_pvals(stat, stat0, pool=True):
         p[p < 1 / stat0.shape[1]] = 1 / stat0.shape[1]
 
     return p
+
+
+def summary(object, cuts=(0.0001, 0.001, 0.01, 0.025, 0.05, 0.10, 1)):
+    # Call
+    print("")
+    print("Call: {}".format(object["call"]))
+    print("")
+    # Proportion of nulls
+    print("pi0:\t{}".format(object["pi0"]))
+    print("")
+    # Number of significant values for p-value, q-value and local FDR
+    print("Cumulative number of significant calls:")
+    print("")
+    rm_na = ~np.isnan(object["pvalues"])
+    pvalues = object["pvalues"][rm_na]
+    qvalues = object["qvalues"][rm_na]
+    lfdr_values = object["lfdr"][rm_na]
+    counts = pd.DataFrame([[np.sum(x < c) for c in cuts] for x in [pvalues, qvalues, lfdr_values]],
+                          index=["p-value", "q-value", "local FDR"],
+                          columns=["<{}".format(x) for x in cuts])
+    print(counts)
+    print("")
