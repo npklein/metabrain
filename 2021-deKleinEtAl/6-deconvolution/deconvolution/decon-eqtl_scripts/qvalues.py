@@ -1,10 +1,24 @@
 """
 File:         qvalues.py
 Created:      2020/07/21
-Last Changed:
+Last Changed: 2020/07/22
 Author:       M.Vochteloo
 
-Python implementation of R Bioconductor’s qvalue package Version 2.24.0.
+This is a custom written Python implementation of R Bioconductor’s qvalue
+package Version 2.22.0. Qvalues is written under the GNU LESSER GENERAL PUBLIC
+LICENSE. A copy of the GNU LESSER GENERAL PUBLIC
+LICENSE can be found here <https://www.gnu.org/licenses/lgpl-3.0.txt>. This
+reimplementation is also licensed under the GNU LESSER GENERAL PUBLIC
+LICENSE.
+
+The q-values package in R on which from which this implementation is an
+derative is written by John D. Storey, Andrew J. Bass, Alan Dabney and
+David Robinson.
+
+Reference:
+John D. Storey, Andrew J. Bass, Alan Dabney and David Robinson (2020).
+qvalue: Q-value estimation for false discovery rate control. R package
+version 2.22.0. http://github.com/jdstorey/qvalue
 """
 
 # Standard imports.
@@ -15,35 +29,40 @@ import pandas as pd
 import rpy2.robjects as robjects
 from scipy.stats import norm
 
-
 # Local application imports.
 
 
-def qvalue(self, p, fdr_level=None, pfdr=False, lfdr_out=True, pi0=None,
-           **kwargs):
-    p_in = np.copy(p)
+def qvalue(p, fdr_level=None, pfdr=False, lfdr_out=True, pi0=None, **kwargs):
+    retval = {
+        "pi0": pi0,
+        "qvalues": None,
+        "pvalues": np.copy(p),
+        "lfdr": None,
+        "fdr_level": fdr_level,
+        "significant": None,
+        "pi0_lambda": None,
+        "lambda": None,
+        "pi0_smooth": None
+    }
+
     qvals_out = np.copy(p)
     lfdr_out_a = np.copy(p)
     rm_na = ~np.isnan(p)
     p = p[rm_na]
     if np.min(p) < 0 or np.max(p) > 1:
         print("p-values not in valid range [0, 1].")
-        return None
+        return retval
     if fdr_level is not None and (fdr_level <= 0 or fdr_level > 1):
         print("'fdr.level' must be in (0, 1].")
-        return None
+        return retval
     if pi0 is not None and (pi0 <= 0 or pi0 > 1):
         print("pi0 is not (0,1]")
-        return None
+        return retval
 
-    # Estimate pi0
-    pi0s = {"pi0": pi0,
-            "pi0_lambda": None,
-            "lambda_values": None,
-            "pi0_smooth": None}
     if pi0 is None:
-        pi0s = self.pi0est(p=p, **kwargs)
+        pi0s = pi0est(p=p, **kwargs)
         pi0 = pi0s["pi0"]
+        retval.update(pi0s)
 
     m = np.size(p)
     i = np.arange(m, 0, -1)
@@ -51,12 +70,10 @@ def qvalue(self, p, fdr_level=None, pfdr=False, lfdr_out=True, pi0=None,
     ro = np.argsort(o)
 
     if pfdr:
-        rank = i * (1 - (1 - p[o]) ^ m)
+        rank = i * (1 - np.power((1 - p[o]), m))
     else:
         rank = i
-    qvals = pi0 * np.min(
-        (np.ones_like(p), pd.Series(p[o] * m / rank).cummin().to_numpy()),
-        axis=0)[ro]
+    qvals = pi0 * np.min((np.ones_like(p), pd.Series(p[o] * m / rank).cummin().to_numpy()), axis=0)[ro]
     qvals_out[rm_na] = qvals
 
     if lfdr_out:
@@ -64,28 +81,20 @@ def qvalue(self, p, fdr_level=None, pfdr=False, lfdr_out=True, pi0=None,
     else:
         lfdr_out_a = None
 
-    retval = {
-        "pi0": pi0,
-        "qvalues": qvals_out,
-        "pvalues": p_in,
-        "lfdr_out": lfdr_out_a,
-        "pi0.lambda": pi0s["pi0_lambda"],
-        "lambda": pi0s["lambda_values"],
-        "pi0.smooth": pi0s["pi0_smooth"]
-    }
+    retval.update({"qvalues": qvals, "lfdr": lfdr_out_a})
     if fdr_level is not None:
-        retval["fdr_level"] = fdr_level
         retval["significant"] = qvals <= fdr_level
 
     return retval
 
 
-def lfdr(self, p, pi0, trunc=True, monotone=True, transf="logit", adj=1.5,
-         eps=1e-08):
+def lfdr(p, pi0=None, trunc=True, monotone=True, transf="probit", adj=1.5,
+         eps=1e-08, **kwargs):
     if transf not in ["probit", "logit"]:
         print("ERROR: transf invalid")
         return None
-    lfdr_out = np.copy(p)
+    lfdr_out = np.empty_like(p)
+    lfdr_out[:] = np.nan
     rm_na = ~np.isnan(p)
     p = p[rm_na]
 
@@ -93,18 +102,20 @@ def lfdr(self, p, pi0, trunc=True, monotone=True, transf="logit", adj=1.5,
         print("P-values not in valid range [0,1].")
         return lfdr_out
 
-    eps_a = np.full_like(p, eps)
+    if pi0 is None:
+        pi0 = pi0est(p=p, **kwargs)["pi0"]
+
     if transf == "probit":
-        p = np.max((p, eps_a), axis=0)
-        p = np.min((p, 1 - eps_a), axis=0)
+        p[p < eps] = eps
+        p[p > 1 - eps] = 1 - eps
         x = norm.ppf(p)
-        mydx, mydy = self.density(x, adjust=adj)
-        y = self.smooth_spline(x_train=mydx, y_train=mydy, x_test=x)
+        mydx, mydy = density(x, adjust=adj)
+        y = smooth_spline(x_train=mydx, y_train=mydy, x_test=x)
         lfdr_values = pi0 * norm.pdf(x) / y
     elif transf == "logit":
-        x = np.log((p + eps_a) / (1 - p + eps_a))
-        mydx, mydy = self.density(x, adjust=adj)
-        y = self.smooth_spline(x_train=mydx, y_train=mydy, x_test=x)
+        x = np.log((p + eps) / (1 - p + eps))
+        mydx, mydy = density(x, adjust=adj)
+        y = smooth_spline(x_train=mydx, y_train=mydy, x_test=x)
         dx = np.exp(x) / np.power((1 + np.exp(x)), 2)
         lfdr_values = (pi0 * dx) / y
     else:
@@ -115,7 +126,7 @@ def lfdr(self, p, pi0, trunc=True, monotone=True, transf="logit", adj=1.5,
         lfdr_values[lfdr_values > 1] = 1
 
     if monotone:
-        o = np.argsort(p)[::-1]
+        o = np.argsort(p)
         ro = np.argsort(o)
         lfdr_values = pd.Series(lfdr_values[o]).cummax().to_numpy()[ro]
 
@@ -124,12 +135,11 @@ def lfdr(self, p, pi0, trunc=True, monotone=True, transf="logit", adj=1.5,
     return lfdr_out
 
 
-def pi0est(self, p, lambda_values=np.arange(0.05, 1, 0.05),
-           pio_method="smoother",
-           smooth_df=3, smooth_log_pi0=False):
+def pi0est(p, lambda_values=np.arange(0.05, 1, 0.05), pio_method="smoother",
+           smooth_df=3, smooth_log_pi0=False, **kwargs):
     retval = {"pi0": None,
               "pi0_lambda": None,
-              "lambda_values": None,
+              "lambda": None,
               "pi0_smooth": None}
     if pio_method not in ["smoother", "bootstrap"]:
         print("ERROR: pio method invalid")
@@ -143,7 +153,7 @@ def pi0est(self, p, lambda_values=np.arange(0.05, 1, 0.05),
     lambda_values = np.sort(lambda_values)
     ll = np.size(lambda_values)
 
-    retval["lambda_values"] = lambda_values
+    retval["lambda"] = lambda_values
 
     if np.min(p) < 0 or np.max(p) > 1:
         print("ERROR: p-values not in valid range [0, 1].")
@@ -152,37 +162,34 @@ def pi0est(self, p, lambda_values=np.arange(0.05, 1, 0.05),
         print("ERROR: length(lambda)= {}. If length of lambda greater than"
               " 1, you need at least 4 values.".format(ll))
         return retval
-    if np.min(lambda_values) < 0 or np.max(lambda_values) > 1:
+    if np.min(lambda_values) < 0 or np.max(lambda_values) >= 1:
         print("ERROR: Lambda must be within [0, 1).")
         return retval
 
     if ll == 1:
         pi0 = np.mean(p >= lambda_values[0]) / (1 - lambda_values[0])
-        retval["pi0_lambda"] = pi0
+        pi0_lambda = pi0
         pi0 = min(pi0, 1)
+        pi0_smooth = None
     else:
         bins = np.digitize(p, lambda_values)
         bincounts = dict(zip(*np.unique(bins, return_counts=True)))
-        frequencies = np.array([bincounts[x] if x in bincounts else 0 for x in
-                                np.arange(ll, 0, -1)])
+        frequencies = np.array([bincounts[x] if x in bincounts else 0 for x in np.arange(ll, 0, -1)]) # for some reason bin 0 is excluded
         pi0 = np.cumsum(frequencies) / (m * (1 - lambda_values[::-1]))
         pi0 = pi0[::-1]
-        retval["pi0_lambda"] = pi0
+        pi0_lambda = pi0
         if pio_method == "smoother":
             if smooth_log_pi0:
                 pi0 = np.log(pi0)
-            pi0_smooth = np.exp(self.smooth_spline(x_train=lambda_values,
-                                                   y_train=pi0,
-                                                   df=smooth_df))
-            pi0 = min(pi0_smooth[ll - 1], 1)
+            pi0_smooth = smooth_spline(x_train=lambda_values, y_train=pi0, df=smooth_df)
+            pi0 = min(pi0_smooth[-1], 1)
             retval["pi0_smooth"] = pi0_smooth
         elif pio_method == "bootstrap":
             minpi0 = np.quantile(pi0, q=0.1)
-            W = np.array([np.sum(p >= l) for l in lambda_values],
-                         dtype=np.float64)
-            mse = (W / (m * m * np.power((1 - lambda_values), 2))) * (
-                        1 - W / m) + np.power((pi0 - minpi0), 2)
+            W = np.array([np.sum(p >= l) for l in lambda_values], dtype=np.float64)
+            mse = (W / (np.power(m, 2) * np.power((1 - lambda_values), 2))) * (1 - W / m) + np.power((pi0 - minpi0), 2)
             pi0 = min(pi0[mse == np.min(mse)][0], 1)
+            pi0_smooth = None
         else:
             print("ERROR: pi0.method must be one of \"smoother\" or \"bootstrap\".")
             return retval
@@ -190,7 +197,7 @@ def pi0est(self, p, lambda_values=np.arange(0.05, 1, 0.05),
     if pi0 <= 0:
         print("ERROR: The estimated pi0 <= 0. Check that you have valid p-values or use a different range of lambda.")
 
-    retval["pi0"] = pi0
+    retval.update({"pi0": pi0, "pi0_lambda": pi0_lambda, "pi0_smooth": pi0_smooth})
 
     return retval
 
@@ -209,3 +216,42 @@ def density(x, adjust):
     r_x = robjects.FloatVector(x)
     density_func = robjects.r['density'](r_x, adjust=adjust)
     return np.array(density_func.rx2('x')), np.array(density_func.rx2('y'))
+
+
+def emp_pvals(stat, stat0, pool=True):
+    m = np.size(stat)
+    n = np.shape(stat0)[1]
+
+    if pool:
+        if stat0.ndim > 2:
+            print("stat0 must be a 2D matrix or a 1D vector.")
+            return None
+        elif stat0.ndim == 2:
+            stat0 = stat0.flatten(order='F')
+
+        m0 = np.size(stat0)
+        v = np.hstack((np.ones(m, dtype=bool), np.zeros(m0, dtype=bool)))
+        v = v[np.argsort(np.hstack((stat, stat0)))[::-1]]
+        u = np.arange(1, np.size(v) + 1)
+        w = np.arange(1, m + 1)
+        p = (u[v == True] - w) / m0
+        # R uses method = 'average' but this doesn't work if there are ties.
+        p = p[pd.Series(-stat).rank(method="max").to_numpy(dtype=np.int) - 1]
+        p[p < 1 / m0] = 1 / m0
+    else:
+        if stat0.ndim == 1:
+            print("stat0 must be a matrix.")
+            return None
+
+        if stat0.shape[0] != m:
+            print("Number of rows of stat0 must equal length of stat.")
+            return None
+
+        if n == m:
+            stat0 = np.transpose(stat0)
+
+        stat0 = (stat0 - stat[:, np.newaxis]) >= 0
+        p = np.mean(stat0, axis=1)
+        p[p < 1 / stat0.shape[1]] = 1 / stat0.shape[1]
+
+    return p
