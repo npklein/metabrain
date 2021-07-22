@@ -27,7 +27,7 @@ version 2.22.0. http://github.com/jdstorey/qvalue
 import numpy as np
 import pandas as pd
 import rpy2.robjects as robjects
-from scipy.stats import norm
+from scipy.stats import norm, gaussian_kde
 
 # Local application imports.
 
@@ -221,10 +221,35 @@ def smooth_spline(x_train, y_train, x_test=None, **kwargs):
     return np.array(robjects.r['predict'](spline_xy, r_x_test).rx2('y'))
 
 
-def density(x, adjust):
-    r_x = robjects.FloatVector(x)
-    density_func = robjects.r['density'](r_x, adjust=adjust)
-    return np.array(density_func.rx2('x')), np.array(density_func.rx2('y'))
+def density(x, adjust=1., n=512, cut=3):
+    """
+    https://github.com/SurajGupta/r-source/blob/master/src/library/stats/R/density.R
+    """
+    if len(x) < 2:
+        print("need at least 2 data points")
+        return None, None
+
+    # Calculate bw.nrd0
+    # somehow the std is slightly different in R
+    hi = np.std(np.round(x, 6))
+    iqr = np.subtract(*np.percentile(x, [75, 25]))
+    lo = min(hi, iqr/1.34)
+    if not ((lo == hi) or (lo == abs(x[0])) or (lo == 1)):
+        lo = 1
+    bw_nrd0_val = 0.9 * lo * np.power(np.size(x), -0.2)
+
+    bw = adjust * bw_nrd0_val
+    if bw <= 0:
+        print("'bw' is not positive.")
+        return None, None
+
+    start = np.min(x) - bw * cut
+    stop = np.max(x) + bw * cut
+    x_eval = np.linspace(start=start, stop=stop, num=n)
+    kernel = gaussian_kde(x, bw_method=bw / hi)
+    y_kernel = kernel(x_eval)
+
+    return x_eval, y_kernel
 
 
 def emp_pvals(stat, stat0, pool=True):
