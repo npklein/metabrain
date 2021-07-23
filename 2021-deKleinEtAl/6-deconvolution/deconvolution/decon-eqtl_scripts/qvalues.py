@@ -1,7 +1,7 @@
 """
 File:         qvalues.py
 Created:      2020/07/21
-Last Changed:
+Last Changed: 2020/07/22
 Author:       M.Vochteloo
 
 This is a custom written Python implementation of R Bioconductor’s qvalue
@@ -231,7 +231,7 @@ def density(x, adjust=1., n=512, cut=3):
 
     # Calculate bw.nrd0
     # somehow the std is slightly different in R
-    hi = np.std(np.round(x, 6))
+    hi = np.std(x)
     iqr = np.subtract(*np.percentile(x, [75, 25]))
     lo = min(hi, iqr/1.34)
     if not ((lo == hi) or (lo == abs(x[0])) or (lo == 1)):
