@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_with_permutation_fdr.py
 Created:      2021/07/12
-Last Changed: 2021/07/23
+Last Changed: 2021/07/27
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -75,14 +75,9 @@ class main():
         self.nrows = getattr(arguments, 'rows')
         self.n_permutations = getattr(arguments, 'permutations')
         self.permutation_index_offset = getattr(arguments, 'permutation_index_offset')
-        lambda_value = getattr(arguments, 'lambda')
         self.missing_geno = getattr(arguments, 'missing_genotype')
         outdir = getattr(arguments, 'outdir')
         outfolder = getattr(arguments, 'outfolder')
-
-        if lambda_value is None:
-            lambda_value = np.arange(0.05, 1, 0.05)
-        self.lambda_value = lambda_value
 
         # Set variables.
         if outdir is None:
@@ -373,6 +368,8 @@ class main():
 
         # Initializing output matrices / arrays.
         perm_pvalues_m = np.empty((n_eqtls, n_covariates, self.n_permutations), dtype=np.float64)
+        perm_overlap_m = np.empty((n_eqtls, n_covariates, self.n_permutations), dtype=np.float64)
+        perm_order_m = np.empty((n_eqtls, n_covariates, self.n_permutations, n_samples), dtype=np.uint16)
 
         # Start loop.
         start_time = int(time.time())
@@ -402,15 +399,22 @@ class main():
                 for perm_index in range(self.n_permutations):
                     # Shuffle the indices (only for the ones that we
                     # included in the model). Save this order.
-                    perm_order = self.create_perm_order(n_samples=n,
+                    perm_order = self.create_perm_order(n_samples=n_samples,
                                                         cohorts=cohorts,
                                                         stc_m=stc_m,
-                                                        mask=mask,
+                                                        missing_mask=mask,
                                                         seed=self.permutation_index_offset + perm_index)
 
+                    # Save the order.
+                    perm_order_m[row_index, cov_index, perm_index, :] = perm_order
+
                     # Reorder the genotype array.
-                    shuffled_genotype = np.copy(genotype[mask])
+                    shuffled_genotype = np.copy(genotype)
                     shuffled_genotype = shuffled_genotype[perm_order]
+
+                    # Check how identical the shuffled genotype array and the
+                    # original genotype array are.
+                    perm_overlap_m[row_index, cov_index, perm_index] = np.sum(genotype[mask] == shuffled_genotype[mask]) / n
 
                     # Model the alternative matrix (with the interaction
                     # term) and shuffle the genotype of the interaction of
@@ -424,7 +428,7 @@ class main():
                             n_samples=n,
                             n_covariates=n_covariates,
                             shuffle_index=cov_index,
-                            shuffled_genotype=shuffled_genotype,
+                            shuffled_genotype=shuffled_genotype[mask],
                         )
 
                     # Calculate and save the permutation p-value.
@@ -438,49 +442,40 @@ class main():
 
         print("", flush=True)
 
-        # #######################################################################
-        #
-        # print("### STEP 6 ###")
-        # print("Calculating permutation based FDR.")
-        # perm_qvalues_m = np.empty_like(real_pvalues_m)
-        # for cov_index in range(n_covariates):
-        #     pvalue_a = np.empty(n_eqtls, dtype=np.float64)
-        #     for row_index in range(n_eqtls):
-        #         # Get the real p-value.
-        #         real_pvalue = real_pvalues_m[row_index, cov_index]
-        #
-        #         # Get the rank of this p-value in permutatin distribution.
-        #         perm_rank = np.sum(perm_pvalues_m[:, cov_index] <= real_pvalue)
-        #
-        #         # If there are less than 10 values <= real p-value in the
-        #         # permutation distribution then the tail is not accuractely
-        #         # estimated.
-        #         if perm_rank >= 10:
-        #             adj_pvalue = perm_rank / n_permutation_values
-        #         else:
-        #             # TODO
-        #             adj_pvalue = np.nan
-        #
-        #         # Save.
-        #         pvalue_a[row_index] = adj_pvalue
-        #
-        #     # Apply q-values package
-        #     qvalues_a = qvalue(p=pvalue_a, lambda_value=self.lambda_value)
-        #
-        #     # Save.
-        #     perm_qvalues_m[:, cov_index] = qvalues_a
-        #
-        # # Print the number of significant hits.
-        # self.print_n_signif(m=perm_qvalues_m, colnames=cell_types_indices, type="q-value")
-        # print("", flush=True)
-        #
-        # ########################################################################
+        #######################################################################
+
+        print("### STEP 6 ###")
+        print("Calculating permutation based FDR.")
+        perm_fdr_m = np.empty_like(real_pvalues_m)
+        perm_fdr_m[:] = np.nan
+        for cov_index in range(n_covariates):
+            for row_index in range(n_eqtls):
+                # Get the real p-value.
+                real_pvalue = real_pvalues_m[row_index, cov_index]
+
+                # Get the rank of this p-value in both distributions.
+                rank = np.sum(real_pvalues_m[:, cov_index] <= real_pvalue)
+                perm_rank = np.sum(perm_pvalues_m[:, cov_index, :] <= real_pvalue)
+
+                # Calculate and safe the fdr.
+                perm_fdr_m[row_index, cov_index] = (perm_rank / self.n_permutations) / rank
+
+        # Cap the permutation FDR values.
+        perm_fdr_m[perm_fdr_m > 1] = 1
+        perm_fdr_m[perm_fdr_m == 0] = 2.2250738585072014e-308
+
+        # Print the number of significant hits.
+        self.print_n_signif(m=perm_fdr_m, colnames=cell_types_indices, type="fdr-value")
+        print("", flush=True)
+
+        ########################################################################
 
         print("### STEP 7 ###")
         print("Saving results.")
 
-        #perm_pvalues_df = pd.DataFrame(perm_pvalues_m, columns=["{}_pvalue".format(cell_type) for cell_type in cell_types_indices])
-        self.save_matrix(m=perm_pvalues_m, outpath=os.path.join(self.outdir, "permutation_pvalues.npy"))
+        self.save_matrix(m=perm_pvalues_m, outpath=os.path.join(self.outdir, "permutation_pvalues_{}_until_{}.npy".format(self.permutation_index_offset, self.permutation_index_offset + self.n_permutations - 1)))
+        self.save_matrix(m=perm_order_m, outpath=os.path.join(self.outdir, "perm_orders_{}_until_{}.npy".format(self.permutation_index_offset, self.permutation_index_offset + self.n_permutations - 1)))
+        self.save_matrix(m=perm_overlap_m, outpath=os.path.join(self.outdir, "perm_order_overlap_{}_until_{}.npy".format(self.permutation_index_offset, self.permutation_index_offset + self.n_permutations - 1)))
 
         lowest_pvalues_m = np.transpose(np.min(perm_pvalues_m, axis=0))
         lowest_pvalues_df = pd.DataFrame(lowest_pvalues_m,
@@ -488,8 +483,8 @@ class main():
                                          columns=["{}_pvalue".format(cell_type) for cell_type in cell_types_indices])
         self.save_file(df=lowest_pvalues_df, outpath=os.path.join(self.outdir, "lowest_permutation_pvalues_{}_until_{}.txt.gz".format(self.permutation_index_offset, self.permutation_index_offset + self.n_permutations - 1)))
 
-        # perm_qvalues_df = pd.DataFrame(perm_qvalues_m, columns=["{}_qvalue".format(cell_type) for cell_type in cell_types_indices])
-        # self.save_file(df=perm_qvalues_df, outpath=os.path.join(self.outdir, "permutation_qvalues.txt.gz"))
+        perm_fdr_df = pd.DataFrame(perm_fdr_m, columns=["{}_FDR".format(cell_type) for cell_type in cell_types_indices])
+        self.save_file(df=perm_fdr_df, outpath=os.path.join(self.outdir, "permutation_FDR.txt.gz"))
 
         print("", flush=True)
 
@@ -555,20 +550,21 @@ class main():
         return configurations
 
     @staticmethod
-    def create_perm_order(n_samples, cohorts, stc_m, mask, seed):
+    def create_perm_order(n_samples, cohorts, stc_m, missing_mask, seed):
         """
         Shuffles an array of size n_samples into a random order (with seed).
         However, this function only shuffles samples within the same cohort.
         """
-        order = np.array([x for x in range(n_samples)], dtype=np.int32)
+        order = np.array([x for x in range(n_samples)], dtype=np.uint16)
         for cohort in cohorts:
-            cohort_mask = stc_m[:, 1][mask] == cohort
-            if np.sum(cohort_mask) <= 1:
+            cohort_mask = stc_m[:, 1] == cohort
+            shuffle_mask = np.logical_and(cohort_mask, missing_mask)
+            if np.sum(shuffle_mask) <= 1:
                 continue
 
-            copy = order[cohort_mask]
+            copy = order[shuffle_mask]
             random.Random(seed).shuffle(copy)
-            order[cohort_mask] = copy
+            order[shuffle_mask] = copy
 
         return order
 
@@ -656,6 +652,15 @@ class main():
         p_value = betainc(dfd / 2, dfn / 2, 1 - ((dfn * f_value) / ((dfn * f_value) + dfd)))
         return p_value
 
+    @staticmethod
+    def calc_pearsonr(x, y):
+        x_dev = x - np.mean(x)
+        y_dev = y - np.mean(y)
+        dev_sum = np.sum(x_dev * y_dev)
+        x_rss = np.sum(x_dev * x_dev)
+        y_rss = np.sum(y_dev * y_dev)
+        return dev_sum / np.sqrt(x_rss * y_rss)
+
     def print_n_signif(self, m, colnames, type):
         print("\nN-interaction ({} < {}):".format(type, self.alpha))
         n_hits_a = (m < self.alpha).sum(axis=0)
@@ -698,7 +703,6 @@ class main():
         print("  > N rows: {}".format(self.nrows))
         print("  > N permutations: {}".format(self.n_permutations))
         print("  > Permutation index offset: {}".format(self.permutation_index_offset))
-        print("  > Lambda: {}".format(", ".join(["{:.2f}".format(x) for x in self.lambda_value])))
         print("  > Missing genotype: {}".format(self.missing_geno))
         print("  > Output directory: {}".format(self.outdir))
         print("")
