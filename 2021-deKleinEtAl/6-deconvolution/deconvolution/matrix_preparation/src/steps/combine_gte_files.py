@@ -44,38 +44,40 @@ class CombineGTEFiles:
         self.outpath = os.path.join(self.outdir, "GTE_combined.txt.gz")
 
         # Declare variables.
-        self.gte = None
+        self.gte_df = None
         self.sample_dict = None
         self.reverse_sample_dict = None
         self.sample_order = None
+        self.dataset_to_samples_dict = None
 
     def start(self):
         self.log.info("Starting combining GTE files.")
         self.print_arguments()
 
-        # Check if output file exist.
+        # Check if GTE output file exist.
         if check_file_exists(self.outpath) and not self.force:
             self.log.info("Skipping step, loading result.")
-            self.gte = load_dataframe(inpath=self.outpath, header=None,
-                                      index_col=None, logger=self.log)
+            self.gte_df = load_dataframe(inpath=self.outpath, header=None, index_col=None, logger=self.log)
         else:
             # Load each GTE file.
             self.log.info("Loading GTE files.")
-            self.gte = self.combine_files()
+            self.gte_df = self.combine_files()
             self.save()
 
         # Construct sample translate dict.
         self.sample_dict = self.create_sample_dict()
-        self.reverse_sample_dict = self.create_reverse_sample_dict()
-        self.sample_order = self.set_sample_order()
+        self.sample_order = list(self.gte_df.iloc[:, 1])
+        self.dataset_to_samples_dict = self.set_dataset_to_samples_dict()
 
     def combine_files(self):
         combined = None
-        for i, infile in enumerate(glob.glob(self.inpath)):
-            if os.path.basename(infile) in self.exclude:
+        for i, gte_inpath in enumerate(glob.glob(self.inpath)):
+            gte_file = os.path.basename(gte_inpath).replace(".txt", "")
+            if gte_file in self.exclude:
                 continue
-            df = load_dataframe(inpath=infile, header=None, index_col=None,
+            df = load_dataframe(inpath=gte_inpath, header=None, index_col=None,
                                 logger=self.log)
+            df["dataset"] = gte_file
             if combined is None:
                 combined = df
             else:
@@ -86,18 +88,19 @@ class CombineGTEFiles:
 
         return combined
 
-    def save(self):
-        save_dataframe(df=self.gte, outpath=self.outpath,
-                       index=False, header=False, logger=self.log)
+    def set_dataset_to_samples_dict(self):
+        datasets = list(self.gte_df.iloc[:, 2].unique())
 
-    def clear_variables(self):
-        self.inpath = None
-        self.force = None
+        dataset_to_samples_dict = {}
+        for dataset in datasets:
+            dataset_to_samples_dict[dataset] = list(self.gte_df.loc[self.gte_df.iloc[:, 2] == dataset, self.gte_df.columns[1]].values)
+
+        return dataset_to_samples_dict
 
     def create_sample_dict(self):
         sample_dict = {}
 
-        for _, (name1, name2) in self.gte.iterrows():
+        for _, (name1, name2, _) in self.gte_df.iterrows():
             name1 = str(name1)
             name2 = str(name2)
 
@@ -106,28 +109,33 @@ class CombineGTEFiles:
 
         return sample_dict
 
-    def create_reverse_sample_dict(self):
-        if self.sample_dict is None:
-            return None
-        return {v: k for k, v in self.sample_dict.items()}
+    def save(self):
+        save_dataframe(df=self.gte_df, outpath=self.outpath,
+                       index=False, header=False, logger=self.log)
 
-    def get_outpath(self):
+        sample_dataset_df = self.gte_df.iloc[:, [1, 2]]
+        sample_dataset_df.columns = ["sample", "dataset"]
+        save_dataframe(df=sample_dataset_df, outpath=os.path.join(self.outdir, "SampleToDataset.txt.gz"),
+                       index=False, header=True, logger=self.log)
+
+    def clear_variables(self):
+        self.inpath = None
+        self.force = None
+
+    def get_gte_file(self):
         return self.outpath
 
-    def get_gte(self):
-        return self.gte
-
-    def get_sample_dict(self, reverse=False):
-        if reverse:
-            return self.reverse_sample_dict
-        else:
-            return self.sample_dict
-
-    def set_sample_order(self):
-        return list(self.gte.iloc[:, 1])
+    def get_gte_df(self):
+        return self.gte_df
 
     def get_sample_order(self):
         return self.sample_order
+
+    def get_sample_dict(self):
+        return self.sample_dict
+
+    def get_dataset_to_samples_dict(self):
+        return self.dataset_to_samples_dict
 
     def print_arguments(self):
         self.log.info("Arguments:")

@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_with_permutation_fdr.py
 Created:      2021/07/12
-Last Changed: 2021/07/27
+Last Changed: 2021/07/28
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -39,11 +39,11 @@ from scipy.special import betainc
 
 """
 Syntax:
-./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2020-11-20-decon-QTL/cis/cortex/expression_table/2020-07-16-MetaBrainDeconQtlGenes.TMM.SampSelect.ZeroVarRemov.covRemoved.expAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt.gz -stc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_cohort_matrix/sample_to_cohort.txt.gz -of cortex_eur_cis
+./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2020-11-20-decon-QTL/cis/cortex/expression_table/2020-07-16-MetaBrainDeconQtlGenes.TMM.SampSelect.ZeroVarRemov.covRemoved.expAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_cohort_matrix/sample_to_dataset.txt.gz -of cortex_eur_cis
 
-./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -stc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis/data/SampleToCohorts.txt.gz -of CortexEUR-cis
+./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis/data/SampleToDataset.txt.gz -of CortexEUR-cis
 
-./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR/genotype_table.txt -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/perform_deconvolution/deconvolution_table.txt.gz -stc /groups/umcg-biogen/tmp01/output/2020-11-10-DeconOptimizer/preprocess_scripts/pre_process_expression_matrix/CortexAFR-cis/data/SampleToCohorts.txt.gz -of CortexAFR-cis-Replication-EUR
+./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR/genotype_table.txt -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2020-11-10-DeconOptimizer/preprocess_scripts/pre_process_expression_matrix/CortexAFR-cis/data/SampleToDataset.txt.gz -of CortexAFR-cis-Replication-EUR
 """
 
 # Metadata
@@ -71,7 +71,7 @@ class main():
         self.geno_path = getattr(arguments, 'genotype')
         self.expr_path = getattr(arguments, 'expression')
         self.cc_path = getattr(arguments, 'cell_counts')
-        self.stc_path = getattr(arguments, 'sample_to_cohort')
+        self.std_path = getattr(arguments, 'sample_to_dataset')
         self.nrows = getattr(arguments, 'rows')
         self.n_permutations = getattr(arguments, 'permutations')
         self.permutation_index_offset = getattr(arguments, 'permutation_index_offset')
@@ -117,11 +117,11 @@ class main():
                             type=str,
                             required=True,
                             help="The path to the cell counts matrix.")
-        parser.add_argument("-stc",
-                            "--sample_to_cohort",
+        parser.add_argument("-std",
+                            "--sample_to_dataset",
                             type=str,
                             required=True,
-                            help="The path to the sample-to-cohort matrix.")
+                            help="The path to the sample-to-dataset matrix.")
         parser.add_argument("-r",
                             "--rows",
                             type=int,
@@ -177,7 +177,7 @@ class main():
         geno_df = self.load_file(self.geno_path, header=0, index_col=0, nrows=self.nrows)
         expr_df = self.load_file(self.expr_path, header=0, index_col=0, nrows=self.nrows)
         cc_df = self.load_file(self.cc_path, header=0, index_col=0)
-        stc_df = self.load_file(self.stc_path, header=0, index_col=None)
+        std_df = self.load_file(self.std_path, header=0, index_col=None)
 
         # Transpose if need be. We want samples always as columns.
         if cc_df.shape[0] == geno_df.shape[1] or cc_df.shape[0] == expr_df.shape[1]:
@@ -192,7 +192,7 @@ class main():
         self.validate_data(geno_df=geno_df,
                            expr_df=expr_df,
                            cc_df=cc_df,
-                           stc_df=stc_df)
+                           std_df=std_df)
         print("", flush=True)
 
         ########################################################################
@@ -212,13 +212,13 @@ class main():
         geno_m = geno_df.to_numpy(np.float64)
         expr_m = expr_df.to_numpy(np.float64)
         cc_m = cc_df.to_numpy(np.float64)
-        stc_m = stc_df.to_numpy(object)
+        std_m = std_df.to_numpy(object)
 
         # Save properties.
         eqtl_indices = expr_df.index + "_" + geno_df.index
         cell_types_indices = cc_df.index.to_numpy(dtype=object)
-        cohorts = np.unique(stc_m[:, 1])
-        del geno_df, expr_df, cc_df, stc_df
+        cohorts = np.unique(std_m[:, 1])
+        del geno_df, expr_df, cc_df, std_df
 
         # Print info.
         n_eqtls = geno_m.shape[0]
@@ -265,10 +265,10 @@ class main():
             # Print update for user.
             now_time = int(time.time())
             if n_eqtls > 1 and (last_print_time is None or (now_time - last_print_time) >= self.print_interval or row_index == (n_eqtls - 1)):
-                print("\t[{}] {}/{} ieQTLs analysed [{:.2f}%]".format(time.strftime('%H:%M:%S', time.gmtime(now_time - start_time)),
-                                                                      row_index,
-                                                                      (n_eqtls - 1),
-                                                                      (100 / (n_eqtls - 1)) * row_index),
+                print("\t[{}] {}/{} eQTLs analysed [{:.2f}%]".format(time.strftime('%H:%M:%S', time.gmtime(now_time - start_time)),
+                                                                     row_index,
+                                                                     (n_eqtls - 1),
+                                                                     (100 / (n_eqtls - 1)) * row_index),
                       flush=True)
                 last_print_time = now_time
 
@@ -378,10 +378,10 @@ class main():
             # Print update for user.
             now_time = int(time.time())
             if n_eqtls > 1 and (last_print_time is None or (now_time - last_print_time) >= self.print_interval or row_index == (n_eqtls - 1)):
-                print("\t[{}] {}/{} ieQTLs analysed [{:.2f}%]".format(time.strftime('%H:%M:%S', time.gmtime(now_time - start_time)),
-                                                                      row_index,
-                                                                      (n_eqtls - 1),
-                                                                      (100 / (n_eqtls - 1)) * row_index),
+                print("\t[{}] {}/{} eQTLs analysed [{:.2f}%]".format(time.strftime('%H:%M:%S', time.gmtime(now_time - start_time)),
+                                                                     row_index,
+                                                                     (n_eqtls - 1),
+                                                                     (100 / (n_eqtls - 1)) * row_index),
                       flush=True)
                 last_print_time = now_time
 
@@ -401,7 +401,7 @@ class main():
                     # included in the model). Save this order.
                     perm_order = self.create_perm_order(n_samples=n_samples,
                                                         cohorts=cohorts,
-                                                        stc_m=stc_m,
+                                                        std_m=std_m,
                                                         missing_mask=mask,
                                                         seed=self.permutation_index_offset + perm_index)
 
@@ -442,33 +442,33 @@ class main():
 
         print("", flush=True)
 
-        #######################################################################
-
-        print("### STEP 6 ###")
-        print("Calculating permutation based FDR.")
-        perm_fdr_m = np.empty_like(real_pvalues_m)
-        perm_fdr_m[:] = np.nan
-        for cov_index in range(n_covariates):
-            for row_index in range(n_eqtls):
-                # Get the real p-value.
-                real_pvalue = real_pvalues_m[row_index, cov_index]
-
-                # Get the rank of this p-value in both distributions.
-                rank = np.sum(real_pvalues_m[:, cov_index] <= real_pvalue)
-                perm_rank = np.sum(perm_pvalues_m[:, cov_index, :] <= real_pvalue)
-
-                # Calculate and safe the fdr.
-                perm_fdr_m[row_index, cov_index] = (perm_rank / self.n_permutations) / rank
-
-        # Cap the permutation FDR values.
-        perm_fdr_m[perm_fdr_m > 1] = 1
-        perm_fdr_m[perm_fdr_m == 0] = 2.2250738585072014e-308
-
-        # Print the number of significant hits.
-        self.print_n_signif(m=perm_fdr_m, colnames=cell_types_indices, type="fdr-value")
-        print("", flush=True)
-
-        ########################################################################
+        # #######################################################################
+        #
+        # print("### STEP 6 ###")
+        # print("Calculating permutation based FDR.")
+        # perm_fdr_m = np.empty_like(real_pvalues_m)
+        # perm_fdr_m[:] = np.nan
+        # for cov_index in range(n_covariates):
+        #     for row_index in range(n_eqtls):
+        #         # Get the real p-value.
+        #         real_pvalue = real_pvalues_m[row_index, cov_index]
+        #
+        #         # Get the rank of this p-value in both distributions.
+        #         rank = np.sum(real_pvalues_m[:, cov_index] <= real_pvalue)
+        #         perm_rank = np.sum(perm_pvalues_m[:, cov_index, :] <= real_pvalue)
+        #
+        #         # Calculate and safe the fdr.
+        #         perm_fdr_m[row_index, cov_index] = (perm_rank / self.n_permutations) / rank
+        #
+        # # Cap the permutation FDR values.
+        # perm_fdr_m[perm_fdr_m > 1] = 1
+        # perm_fdr_m[perm_fdr_m == 0] = 2.2250738585072014e-308
+        #
+        # # Print the number of significant hits.
+        # self.print_n_signif(m=perm_fdr_m, colnames=cell_types_indices, type="fdr-value")
+        # print("", flush=True)
+        #
+        # ########################################################################
 
         print("### STEP 7 ###")
         print("Saving results.")
@@ -483,8 +483,8 @@ class main():
                                          columns=["{}_pvalue".format(cell_type) for cell_type in cell_types_indices])
         self.save_file(df=lowest_pvalues_df, outpath=os.path.join(self.outdir, "lowest_permutation_pvalues_{}_until_{}.txt.gz".format(self.permutation_index_offset, self.permutation_index_offset + self.n_permutations - 1)))
 
-        perm_fdr_df = pd.DataFrame(perm_fdr_m, columns=["{}_FDR".format(cell_type) for cell_type in cell_types_indices])
-        self.save_file(df=perm_fdr_df, outpath=os.path.join(self.outdir, "permutation_FDR.txt.gz"))
+        # perm_fdr_df = pd.DataFrame(perm_fdr_m, columns=["{}_FDR".format(cell_type) for cell_type in cell_types_indices])
+        # self.save_file(df=perm_fdr_df, outpath=os.path.join(self.outdir, "permutation_FDR.txt.gz"))
 
         print("", flush=True)
 
@@ -499,7 +499,7 @@ class main():
         return df
 
     @staticmethod
-    def validate_data(geno_df, expr_df, cc_df, stc_df):
+    def validate_data(geno_df, expr_df, cc_df, std_df):
         if geno_df.columns.tolist() != expr_df.columns.tolist():
             print("The genotype file header does not match the "
                   "expression file header.")
@@ -510,8 +510,8 @@ class main():
                   "cell count file header.")
             exit()
 
-        if geno_df.columns.tolist() != stc_df.iloc[:, 0].tolist():
-            print("The sample-to-cohort file does not match the "
+        if geno_df.columns.tolist() != std_df.iloc[:, 0].tolist():
+            print("The sample-to-dataset file does not match the "
                   "genotype / expression file header.")
             exit()
 
@@ -550,14 +550,14 @@ class main():
         return configurations
 
     @staticmethod
-    def create_perm_order(n_samples, cohorts, stc_m, missing_mask, seed):
+    def create_perm_order(n_samples, cohorts, std_m, missing_mask, seed):
         """
         Shuffles an array of size n_samples into a random order (with seed).
         However, this function only shuffles samples within the same cohort.
         """
         order = np.array([x for x in range(n_samples)], dtype=np.uint16)
         for cohort in cohorts:
-            cohort_mask = stc_m[:, 1] == cohort
+            cohort_mask = std_m[:, 1] == cohort
             shuffle_mask = np.logical_and(cohort_mask, missing_mask)
             if np.sum(shuffle_mask) <= 1:
                 continue
@@ -699,7 +699,7 @@ class main():
         print("  > Genotype path: {}".format(self.geno_path))
         print("  > Expression path: {}".format(self.expr_path))
         print("  > Cell counts path: {}".format(self.cc_path))
-        print("  > Sample-to-cohort path: {}".format(self.stc_path))
+        print("  > Sample-to-dataset path: {}".format(self.std_path))
         print("  > N rows: {}".format(self.nrows))
         print("  > N permutations: {}".format(self.n_permutations))
         print("  > Permutation index offset: {}".format(self.permutation_index_offset))

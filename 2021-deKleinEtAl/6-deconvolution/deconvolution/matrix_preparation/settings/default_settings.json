@@ -11,9 +11,6 @@
     "iterations": 1
   },
   "create_cohort_matrix": {
-    "info_datafile": "",
-    "sample_id": "",
-    "cohort_id": ""
   },
   "create_matrices": {
     "genotype_datafile": "",

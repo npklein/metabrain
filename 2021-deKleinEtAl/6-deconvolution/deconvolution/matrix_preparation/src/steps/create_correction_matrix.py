@@ -1,7 +1,7 @@
 """
 File:         create_correction_matrix.py
 Created:      2020/10/15
-Last Changed: 2021/07/08
+Last Changed: 2021/07/28
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -32,14 +32,14 @@ from utilities import prepare_output_dir, check_file_exists, load_dataframe, \
 
 
 class CreateCorrectionMatrix:
-    def __init__(self, settings, log, cohort_file, cohort_df, sample_dict,
+    def __init__(self, settings, log, dataset_file, dataset_df, sample_dict,
                  sample_order, force, outdir):
         self.cov_file = settings["covariates_datafile"]
         self.tech_covs = settings["technical_covariates"]
         self.mds_covs = settings["MDS_covariates"]
         self.log = log
-        self.cohort_file = cohort_file
-        self.cohort_df = cohort_df
+        self.dataset_file = dataset_file
+        self.dataset_df = dataset_df
         self.sample_dict = sample_dict
         self.sample_order = sample_order
         self.force = force
@@ -83,15 +83,15 @@ class CreateCorrectionMatrix:
 
         # loading cohort matrix.
         self.log.info("Loading cohort matrix.")
-        if self.cohort_df is None:
-            self.cohort_df = load_dataframe(self.cohort_file,
-                                            header=0,
-                                            index_col=0,
-                                            logger=self.log)
+        if self.dataset_df is None:
+            self.dataset_df = load_dataframe(self.dataset_file,
+                                             header=0,
+                                             index_col=0,
+                                             logger=self.log)
 
         # merge.
         self.log.info("Merging matrices.")
-        correction_df = pd.merge(correction_df, self.cohort_df.T, left_index=True, right_index=True)
+        correction_df = pd.merge(correction_df, self.dataset_df, left_index=True, right_index=True)
         correction_df = correction_df.T
         correction_df.index.name = "-"
 
@@ -112,8 +112,8 @@ class CreateCorrectionMatrix:
                        index=True, header=True, logger=self.log)
 
     def clear_variables(self):
-        self.cohort_file = None
-        self.cohort_df = None
+        self.dataset_file = None
+        self.dataset_df = None
         self.cov_file = None
         self.tech_covs = None
         self.mds_covs = None
@@ -130,10 +130,10 @@ class CreateCorrectionMatrix:
         self.log.info("  > Covariates input file: {}".format(self.cov_file))
         self.log.info("  > Technical Covarates: {}".format(self.tech_covs))
         self.log.info("  > MDS Covarates: {}".format(self.mds_covs))
-        if self.cohort_df is not None:
-            self.log.info("  > Cohort input shape: {}".format(self.cohort_df.shape))
+        if self.dataset_df is not None:
+            self.log.info("  > Cohort input shape: {}".format(self.dataset_df.shape))
         else:
-            self.log.info("  > Cohort input file: {}".format(self.cohort_file))
+            self.log.info("  > Cohort input file: {}".format(self.dataset_file))
         self.log.info("  > Output path: {}".format(self.outpath))
         self.log.info("  > Force: {}".format(self.force))
         self.log.info("")

@@ -187,7 +187,7 @@ class main():
         # Loading samples.
         print("Loading samples.")
         gte_combined_df = None
-        cohort_to_sample = {}
+        dataset_to_samples_dict = {}
         for infile in glob.glob(os.path.join(self.gte_path, "{}*.txt".format(self.gte_prefix))):
             file = os.path.basename(infile).replace(".txt", "").replace(self.gte_prefix, "")
             if file in self.exclude:
@@ -199,7 +199,7 @@ class main():
             else:
                 gte_combined_df = pd.concat([gte_combined_df, gte_df], axis=0, ignore_index=True)
 
-            cohort_to_sample[file] = gte_df.iloc[:, 1]
+            dataset_to_samples_dict[file] = gte_df.iloc[:, 1]
         gte_combined_df["cohort"] = gte_combined_df.iloc[:, 2].map(self.file_cohort_dict)
         sample_to_cohort = dict(zip(gte_combined_df.iloc[:, 1], gte_combined_df.iloc[:, 3]))
         samples = gte_combined_df.iloc[:, 1].values.tolist()
@@ -208,18 +208,21 @@ class main():
         # Safe sample cohort data frame.
         sample_cohort_df = gte_combined_df.iloc[:, [1, 3]]
         sample_cohort_df.columns = ["sample", "cohort"]
-        self.save_file(sample_cohort_df, outpath=os.path.join(self.file_outdir, "SampleToCohorts.txt.gz"), index=False)
+        self.save_file(sample_cohort_df, outpath=os.path.join(self.file_outdir, "SampleToCohort.txt.gz"), index=False)
+        sample_dataset_df = gte_combined_df.iloc[:, [1, 2]]
+        sample_dataset_df.columns = ["sample", "dataset"]
+        self.save_file(sample_dataset_df, outpath=os.path.join(self.file_outdir, "SampleToDataset.txt.gz"), index=False)
 
         # Create cohort matrix.
-        cohort_sample_counts = list(zip(*np.unique(gte_combined_df["file"], return_counts=True)))
-        cohort_sample_counts.sort(key=lambda x: -x[1])
-        cohorts = [csc[0] for csc in cohort_sample_counts]
-        print("\tCohorts: {} [N = {}]".format(", ".join(cohorts), len(cohorts)))
+        dataset_sample_counts = list(zip(*np.unique(gte_combined_df["file"], return_counts=True)))
+        dataset_sample_counts.sort(key=lambda x: -x[1])
+        datasets = [csc[0] for csc in dataset_sample_counts]
+        print("\tDatasets: {} [N = {}]".format(", ".join(datasets), len(datasets)))
 
-        cohort_df = pd.DataFrame(0, index=samples, columns=cohorts)
-        for cohort in cohorts:
-            cohort_df.loc[cohort_to_sample[cohort], cohort] = 1
-        cohort_df.index.name = "-"
+        dataset_df = pd.DataFrame(0, index=samples, columns=datasets)
+        for dataset in datasets:
+            dataset_df.loc[dataset_to_samples_dict[dataset], dataset] = 1
+        dataset_df.index.name = "-"
 
         # Load data.
         print("Loading data.")
@@ -249,7 +252,7 @@ class main():
 
         print("Step 5: Construct technical covariate matrix.")
         tcov_df = self.load_file(self.tcov_path, header=0, index_col=0)
-        tcov_df = self.prepare_technical_covariates_matrix(tcov_df=tcov_df.loc[samples, :], cohort_df=cohort_df)
+        tcov_df = self.prepare_technical_covariates_matrix(tcov_df=tcov_df.loc[samples, :], dataset_df=dataset_df)
 
         print("Step 6: remove technical covariates OLS.")
         corrected_df = self.calculate_residuals(df=df, tcov_df=tcov_df)
@@ -309,7 +312,7 @@ class main():
 
         return out_dict
 
-    def prepare_technical_covariates_matrix(self, tcov_df, cohort_df):
+    def prepare_technical_covariates_matrix(self, tcov_df, dataset_df):
         df = tcov_df.copy()
 
         # Remove columns without variance.
@@ -341,15 +344,15 @@ class main():
         # split the MDS components per cohort.
         mds_columns = df.columns[mds_mask]
         mds_df = pd.DataFrame(0, index=df.index, columns=["{}_{}".format(a, b) for a in cohort_df.columns for b in mds_columns])
-        for cohort in cohort_df.columns:
-            mask = cohort_df.loc[:, cohort] == 1
+        for cohort in dataset_df.columns:
+            mask = dataset_df.loc[:, cohort] == 1
             for mds_col in mds_columns:
                 col = "{}_{}".format(cohort, mds_col)
                 mds_df.loc[mask, col] = df.loc[mask, mds_col]
 
         # replace cohort variables with the complete set defined by the GTE
         # file. Don't include the cohort with the most samples.
-        tmp_cohort_df = cohort_df.iloc[:, 1:]
+        tmp_cohort_df = dataset_df.iloc[:, 1:]
 
         # construct the complete technical covariates matrix. Start with an
         # intercept. Don't include the cohort with the most samples.

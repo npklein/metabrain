@@ -3,7 +3,7 @@
 """
 File:         create_decon_eqtl_with_permutation_jobs.py
 Created:      2021/07/23
-Last Changed:
+Last Changed: 2021/07/28
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -33,7 +33,7 @@ import numpy as np
 
 """
 Syntax:
-./create_decon_eqtl_with_permutation_jobs.py -py /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -stc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis/data/SampleToCohorts.txt.gz -od /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -of CortexEUR-cis-WithPermutations
+./create_decon_eqtl_with_permutation_jobs.py -py /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis/data/SampleToDataset.txt.gz -od /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -of CortexEUR-cis-WithPermutations
 """
 
 # Metadata
@@ -59,7 +59,7 @@ class main():
         self.geno_path = getattr(arguments, 'genotype')
         self.expr_path = getattr(arguments, 'expression')
         self.cc_path = getattr(arguments, 'cell_counts')
-        self.stc_path = getattr(arguments, 'sample_to_cohort')
+        self.std_path = getattr(arguments, 'sample_to_dataset')
         self.missing_geno = getattr(arguments, 'missing_genotype')
         self.outdir = getattr(arguments, 'outdir')
         self.outfolder = getattr(arguments, 'outfolder')
@@ -109,11 +109,11 @@ class main():
                             type=str,
                             required=True,
                             help="The path to the cell counts matrix.")
-        parser.add_argument("-stc",
-                            "--sample_to_cohort",
+        parser.add_argument("-std",
+                            "--sample_to_dataset",
                             type=str,
                             required=True,
-                            help="The path to the sample-to-cohort matrix.")
+                            help="The path to the sample-to-dataset matrix.")
         parser.add_argument("-m",
                             "--missing_genotype",
                             type=int,
@@ -163,7 +163,7 @@ class main():
             self.create_job_file(job_name=job_name, permutation_index_offset=permutation_index_offset, n_permutations=n_permutations)
 
     def create_job_file(self, job_name, n_permutations, permutation_index_offset,
-                        cpus=1, mem=4, nodes=1, qos="regular"):
+                        cpus=1, mem=8, nodes=1, qos="regular"):
         lines = ["#!/bin/bash",
                  "#SBATCH --job-name={}".format(job_name),
                  "#SBATCH --output={}".format(os.path.join(self.job_output_outdir, job_name + ".out")),
@@ -181,7 +181,7 @@ class main():
                  "     -ge {} \\".format(self.geno_path),
                  "     -ex {} \\".format(self.expr_path),
                  "     -cc {} \\".format(self.cc_path),
-                 "     -stc {} \\".format(self.stc_path),
+                 "     -std {} \\".format(self.std_path),
                  "     -od {} \\".format(self.outdir),
                  "     -of {} \\".format(self.outfolder),
                  "     -p {} \\".format(n_permutations),
@@ -204,7 +204,7 @@ class main():
         print("  > Genotype path: {}".format(self.geno_path))
         print("  > Expression path: {}".format(self.expr_path))
         print("  > Cell counts path: {}".format(self.cc_path))
-        print("  > Sample-to-cohort path: {}".format(self.stc_path))
+        print("  > Sample-to-dataset path: {}".format(self.std_path))
         print("  > N permutations: {}".format(self.n_permutations))
         print("  > Missing genotype: {}".format(self.missing_geno))
         print("  > Output directory: {}".format(self.outdir))
