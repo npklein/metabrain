@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_with_permutation_fdr.py
 Created:      2021/07/12
-Last Changed: 2021/07/28
+Last Changed: 2021/07/29
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -24,6 +24,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 # Standard imports.
 from __future__ import print_function
 from pathlib import Path
+import warnings
 import argparse
 import random
 import time
@@ -214,21 +215,41 @@ class main():
         cc_m = cc_df.to_numpy(np.float64)
         std_m = std_df.to_numpy(object)
 
+        # Replace missing values with nan
+        geno_m[geno_m == self.missing_geno] = np.nan
+
         # Save properties.
         eqtl_indices = expr_df.index + "_" + geno_df.index
         cell_types_indices = cc_df.index.to_numpy(dtype=object)
-        cohorts = np.unique(std_m[:, 1])
+        dataset_counts = list(zip(*np.unique(std_m[:, 1], return_counts=True)))
+        dataset_counts.sort(key=lambda x: -x[1])
+        datasets = [x[0] for x in dataset_counts]
+        dataset_sample_sizes = np.array([x[1] for x in dataset_counts])
+        if np.min(dataset_sample_sizes) <= 1:
+            print("Dataset with 0 or 1 sample is not allowed.")
+            exit()
         del geno_df, expr_df, cc_df, std_df
+
+        # Calculate missing values stats. Set 1 as np.nan for a better average.
+        prcnt_missing_m = np.sum(np.isnan(geno_m), axis=1) / geno_m.shape[1]
+        prcnt_missing_m[prcnt_missing_m == 1] = np.nan
+
+        prcnt_missing_per_dataset_m = np.empty((geno_m.shape[0], len(datasets)), dtype=np.float64)
+        for dataset_index, dataset in enumerate(datasets):
+            dataset_mask = std_m[:, 1] == dataset
+            prcnt_missing_per_dataset_m[:, dataset_index] = np.sum(np.isnan(geno_m[:, dataset_mask]), axis=1) / np.sum(dataset_mask)
+        prcnt_missing_per_dataset_m[prcnt_missing_per_dataset_m == 1] = np.nan
 
         # Print info.
         n_eqtls = geno_m.shape[0]
         n_samples = geno_m.shape[1]
         n_covariates = cc_m.shape[0]
-        n_cohorts = len(cohorts)
         print("\tN-eQTLs: {:,}".format(n_eqtls))
         print("\tN-samples: {:,}".format(n_samples))
         print("\tN-covariates: {:,}".format(n_covariates))
-        print("\tN-cohorts: {:,}".format(n_cohorts))
+        print("\tN-datasets: {:,}".format(len(datasets)))
+        print("\t%-missing (avg per eQTL): {:.2f}%".format(np.nanmean(prcnt_missing_m) * 100))
+        print("\t%-missing (per eQTL per dataset): mean = {:.2f}%\tmax = {:.2f}%".format(np.mean(np.nanmean(prcnt_missing_per_dataset_m, axis=1)) * 100, np.nanmax(prcnt_missing_per_dataset_m) * 100))
         print("", flush=True)
 
         ########################################################################
@@ -276,7 +297,7 @@ class main():
             genotype = geno_m[row_index, :]
 
             # Construct the mask to remove missing values.
-            mask = genotype != self.missing_geno
+            mask = ~np.isnan(genotype)
             n = np.sum(mask)
 
             # Model the alternative matrix (with the interaction term).
@@ -340,14 +361,21 @@ class main():
             print("### STEP 4 ###")
             print("Saving results.")
 
-            output_df = pd.DataFrame(np.hstack((real_pvalues_m, betas_m)),
-                                     index=eqtl_indices,
-                                     columns=["{}_pvalue".format(x) for x in cell_types_indices] +
-                                             ["Beta{}_{}".format(i+1, x) for i, x in enumerate(cell_types_indices)] +
-                                             ["Beta{}_{}:GT".format(len(cell_types_indices) + i + 1, x) for i, x in enumerate(cell_types_indices)])
-            print(output_df)
-            self.save_file(df=output_df, outpath=os.path.join(self.outdir, "deconvolutionResults.txt.gz"))
-            del output_df, betas_m
+            # Combine missing matrices and set np.nan == 1 back.
+            combined_prcnt_missing_m = np.hstack((prcnt_missing_m[:, np.newaxis], prcnt_missing_per_dataset_m))
+            combined_prcnt_missing_m[np.isnan(combined_prcnt_missing_m)] = 1
+            combined_prcnt_missing_df = pd.DataFrame(combined_prcnt_missing_m, columns=["Total"] + datasets, index=eqtl_indices)
+            print(combined_prcnt_missing_df)
+            self.save_file(df=combined_prcnt_missing_df, outpath=os.path.join(self.outdir, "missing_values_info.txt.gz"))
+
+            decon_df = pd.DataFrame(np.hstack((real_pvalues_m, betas_m)),
+                                    index=eqtl_indices,
+                                    columns=["{}_pvalue".format(x) for x in cell_types_indices] +
+                                            ["Beta{}_{}".format(i+1, x) for i, x in enumerate(cell_types_indices)] +
+                                            ["Beta{}_{}:GT".format(len(cell_types_indices) + i + 1, x) for i, x in enumerate(cell_types_indices)])
+            print(decon_df)
+            self.save_file(df=decon_df, outpath=os.path.join(self.outdir, "deconvolutionResults.txt.gz"))
+            del prcnt_missing_m, prcnt_missing_per_dataset_m, combined_prcnt_missing_df, decon_df, betas_m
 
             print("", flush=True)
 
@@ -366,10 +394,23 @@ class main():
         print("\tN-models: {:,}".format(n_perm_models))
         print("")
 
+        # Create the permutation orders.
+        perm_order_m = self.create_perm_orders(n_permutations=self.n_permutations,
+                                               n_samples=n_samples,
+                                               datasets=datasets,
+                                               std_m=std_m,
+                                               seed_offset=self.permutation_index_offset)
+
+        # Calculate the overlap between the genotype matrices
+        perm_overlap_m = self.check_permutation_overlap(geno_m=geno_m, perm_order_m=perm_order_m)
+
+        # Calculate the dataset genotype means per eQTL.
+        geno_dataset_mean_m = self.calculate_geno_mean_per_dataset(geno_m=geno_m,
+                                                                   datasets=datasets,
+                                                                   std_m=std_m)
+
         # Initializing output matrices / arrays.
         perm_pvalues_m = np.empty((n_eqtls, n_covariates, self.n_permutations), dtype=np.float64)
-        perm_overlap_m = np.empty((n_eqtls, n_covariates, self.n_permutations), dtype=np.float64)
-        perm_order_m = np.empty((n_eqtls, n_covariates, self.n_permutations, n_samples), dtype=np.uint16)
 
         # Start loop.
         start_time = int(time.time())
@@ -389,7 +430,7 @@ class main():
             genotype = geno_m[row_index, :]
 
             # Construct the mask to remove missing values.
-            mask = genotype != self.missing_geno
+            mask = ~np.isnan(genotype)
             n = np.sum(mask)
 
             # Loop over the covariates.
@@ -397,24 +438,14 @@ class main():
 
                 # Perform n permutations.
                 for perm_index in range(self.n_permutations):
-                    # Shuffle the indices (only for the ones that we
-                    # included in the model). Save this order.
-                    perm_order = self.create_perm_order(n_samples=n_samples,
-                                                        cohorts=cohorts,
-                                                        std_m=std_m,
-                                                        missing_mask=mask,
-                                                        seed=self.permutation_index_offset + perm_index)
-
-                    # Save the order.
-                    perm_order_m[row_index, cov_index, perm_index, :] = perm_order
-
-                    # Reorder the genotype array.
+                    # Replace missing values in the genotype array with the
+                    # group mean.
                     shuffled_genotype = np.copy(genotype)
-                    shuffled_genotype = shuffled_genotype[perm_order]
+                    shuffled_genotype[~mask] = geno_dataset_mean_m[row_index, ~mask]
 
-                    # Check how identical the shuffled genotype array and the
-                    # original genotype array are.
-                    perm_overlap_m[row_index, cov_index, perm_index] = np.sum(genotype[mask] == shuffled_genotype[mask]) / n
+                    # Shuffle the indices.
+                    perm_order = perm_order_m[perm_index, :]
+                    shuffled_genotype = shuffled_genotype[perm_order]
 
                     # Model the alternative matrix (with the interaction
                     # term) and shuffle the genotype of the interaction of
@@ -550,23 +581,71 @@ class main():
         return configurations
 
     @staticmethod
-    def create_perm_order(n_samples, cohorts, std_m, missing_mask, seed):
+    def create_perm_orders(n_permutations, n_samples, datasets, std_m, seed_offset):
         """
-        Shuffles an array of size n_samples into a random order (with seed).
-        However, this function only shuffles samples within the same cohort.
+        Shuffles an array of size n_samples into a random order (with seed)
+        N times. However, this function only shuffles samples within the same
+        dataset.
         """
-        order = np.array([x for x in range(n_samples)], dtype=np.uint16)
-        for cohort in cohorts:
-            cohort_mask = std_m[:, 1] == cohort
-            shuffle_mask = np.logical_and(cohort_mask, missing_mask)
-            if np.sum(shuffle_mask) <= 1:
-                continue
+        default_order = np.array([x for x in range(n_samples)], dtype=np.uint16)
+        all_indices = set(default_order)
+        perm_order_m = np.empty((n_permutations, n_samples), dtype=np.uint16)
+        for i in range(perm_order_m.shape[0]):
+            perm_order = np.copy(default_order)
+            for dataset in datasets:
+                dataset_mask = std_m[:, 1] == dataset
+                if np.sum(dataset_mask) <= 1:
+                    continue
 
-            copy = order[shuffle_mask]
-            random.Random(seed).shuffle(copy)
-            order[shuffle_mask] = copy
+                copy = perm_order[dataset_mask]
+                random.Random(seed_offset + i).shuffle(copy)
+                perm_order[dataset_mask] = copy
 
-        return order
+            if set(perm_order) != all_indices:
+                print("Invalid permutation order.")
+                exit()
+
+            perm_order_m[i, :] = perm_order
+        return perm_order_m
+
+    @staticmethod
+    def check_permutation_overlap(geno_m, perm_order_m):
+        """
+        Function to calculate how identical the permuted genotype matrix is to
+        the original genotype matrix. Returns a matrix with n-eQTLs x n-permutations
+        with the % overlap in the cells.
+        """
+        perm_overlap_m = np.empty((geno_m.shape[0], perm_order_m.shape[0]), dtype=np.float64)
+
+        for perm_index in range(perm_order_m.shape[0]):
+            perm_order = perm_order_m[perm_index, :]
+            perm_geno_m = np.copy(geno_m)
+            perm_geno_m = perm_geno_m[:, perm_order]
+            perm_overlap_m[:, perm_index] = np.sum(np.logical_and(geno_m == perm_geno_m, ~np.isnan(geno_m)), axis=1) / geno_m.shape[1]
+
+        return perm_overlap_m
+
+    @staticmethod
+    def calculate_geno_mean_per_dataset(geno_m, datasets, std_m):
+        """
+        Method for calculating the mean genotype per dataset per eQTL. Missing
+        values are not included. Returns a matrix with n-eQTLs x n-samples
+        with the mean genotype per dataset in the cells.
+        """
+        geno_dataset_mean_m = np.empty_like(geno_m)
+
+        # Ignore RuntimeWarning: Mean of empty slice
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+
+            # Fill in the missing values with the dataset mean.
+            for dataset_index, dataset in enumerate(datasets):
+                dataset_mask = std_m[:, 1] == dataset
+                geno_dataset_m = geno_m[:, dataset_mask]
+                dataset_mean_a = np.nanmean(geno_dataset_m, axis=1)
+                geno_dataset_mean_m[:, dataset_mask] = np.tile(dataset_mean_a[:, np.newaxis], np.sum(dataset_mask))
+
+        return geno_dataset_mean_m
 
     @staticmethod
     def model(genotype, expression, cell_fractions, configs, n_samples,

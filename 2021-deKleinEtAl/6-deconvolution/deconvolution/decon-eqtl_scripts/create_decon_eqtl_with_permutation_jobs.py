@@ -3,7 +3,7 @@
 """
 File:         create_decon_eqtl_with_permutation_jobs.py
 Created:      2021/07/23
-Last Changed: 2021/07/28
+Last Changed: 2021/07/29
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -163,7 +163,7 @@ class main():
             self.create_job_file(job_name=job_name, permutation_index_offset=permutation_index_offset, n_permutations=n_permutations)
 
     def create_job_file(self, job_name, n_permutations, permutation_index_offset,
-                        cpus=1, mem=8, nodes=1, qos="regular"):
+                        cpus=1, mem=4, nodes=1, qos="regular"):
         lines = ["#!/bin/bash",
                  "#SBATCH --job-name={}".format(job_name),
                  "#SBATCH --output={}".format(os.path.join(self.job_output_outdir, job_name + ".out")),
