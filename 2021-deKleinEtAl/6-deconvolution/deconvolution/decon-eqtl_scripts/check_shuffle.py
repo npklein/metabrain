@@ -3,7 +3,7 @@
 """
 File:         check_shuffle.py
 Created:      2021/07/28
-Last Changed: 2021/07/29
+Last Changed: 2021/07/30
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -43,7 +43,7 @@ import matplotlib.pyplot as plt
 
 """
 Syntax:
-./check_shuffle.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-WithPermutations -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis/data/SampleToDataset.txt.gz
+./check_shuffle.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-WithPermutations -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis/data/SampleToDataset.txt.gz
 """
 
 # Metadata
@@ -67,6 +67,7 @@ class main():
         arguments = self.create_argument_parser()
         indir = getattr(arguments, 'indir')
         infolder = getattr(arguments, 'infolder')
+        self.geno_path = getattr(arguments, 'genotype')
         self.std_path = getattr(arguments, 'sample_to_dataset')
         self.n_files = getattr(arguments, 'n_files')
 
@@ -134,6 +135,11 @@ class main():
                             required=False,
                             default="output",
                             help="The name of the input folder.")
+        parser.add_argument("-ge",
+                            "--genotype",
+                            type=str,
+                            required=True,
+                            help="The path to the genotype matrix.")
         parser.add_argument("-std",
                             "--sample_to_dataset",
                             type=str,
@@ -161,14 +167,11 @@ class main():
 
         print("Plotting permutation order.")
         perm_order_m_list = []
-        for i, perm_order_inpath in enumerate(glob.glob(os.path.join(self.indir, "perm_orders_*"))):
-            for i, perm_pvalues_inpath in enumerate(glob.glob(os.path.join(self.indir, "permutation_pvalues_*"))):
-                if i >= (self.n_files - 1):
-                    break
+        for perm_order_inpath in glob.glob(os.path.join(self.indir, "perm_orders_*")):
             perm_order_m_list.append(self.load_matrix(perm_order_inpath))
         perm_order_m = np.vstack(perm_order_m_list)
         del perm_order_m_list
-        print("Shape: {}".format(perm_order_m.shape))
+        print("\tShape: {}".format(perm_order_m.shape))
 
         self.plot_clustermap(m=perm_order_m, col_colors=col_colors,
                              filename="perm_order_m")
@@ -180,13 +183,12 @@ class main():
         print("Loading permutation order overlap")
         perm_order_overlap_m_list = []
         for i, perm_order_overlap_inpath in enumerate(glob.glob(os.path.join(self.indir, "perm_order_overlap_*"))):
-            for i, perm_pvalues_inpath in enumerate(glob.glob(os.path.join(self.indir, "permutation_pvalues_*"))):
-                if i >= (self.n_files - 1):
-                    break
+            if i >= self.n_files:
+                break
             perm_order_overlap_m_list.append(self.load_matrix(perm_order_overlap_inpath))
-        perm_order_overlap_m = np.vstack(perm_order_overlap_m_list)
+        perm_order_overlap_m = np.hstack(perm_order_overlap_m_list)
         del perm_order_overlap_m_list
-        print("Shape: {}".format(perm_order_overlap_m.shape))
+        print("\tShape: {}".format(perm_order_overlap_m.shape))
 
         print("\tplotting distribution")
         self.distplot(x=perm_order_overlap_m.flatten(), xlabel="%overlap", filename="overlap")
@@ -194,15 +196,34 @@ class main():
 
         ########################################################################
 
+        print("Loading genotype matrix and calculating MAF")
+        geno_m = np.rint(self.load_file(self.geno_path, header=0, index_col=0).to_numpy())
+        maf_a = np.empty(geno_m.shape[0], dtype=np.float64)
+        for geno_index in range(geno_m.shape[0]):
+            unique, counts = np.unique(geno_m[geno_index, :], return_counts=True)
+            group_sizes = dict(zip(unique, counts))
+            group_sizes_a = np.array([group_sizes.get(0, 0), group_sizes.get(1, 0), group_sizes.get(2, 0)], dtype=np.float64)
+
+            allele1 = group_sizes_a[0] * 2 + group_sizes_a[1]
+            allele2 = group_sizes_a[2] * 2 + group_sizes_a[1]
+            maf_a[geno_index] = min(allele1, allele2) / (allele1 + allele2)
+        print("\tShape: {}".format(maf_a.shape))
+
+        print("\tplotting distribution")
+        self.distplot(x=maf_a, xlabel="MAF", filename="MAF")
+        print("")
+
+        ########################################################################
+
         print("Loading permutation p-value data")
         perm_pvalues_m_list = []
         for i, perm_pvalues_inpath in enumerate(glob.glob(os.path.join(self.indir, "permutation_pvalues_*"))):
-            if i >= (self.n_files - 1):
+            if i >= self.n_files:
                 break
             perm_pvalues_m_list.append(self.load_matrix(perm_pvalues_inpath))
         perm_pvalues_m = np.dstack(perm_pvalues_m_list)
         del perm_pvalues_m_list
-        print("Shape: {}".format(perm_pvalues_m.shape))
+        print("\tShape: {}".format(perm_pvalues_m.shape))
 
         print("\tplotting distributions")
         for cov_index in range(perm_pvalues_m.shape[1]):
@@ -221,17 +242,55 @@ class main():
 
         ########################################################################
 
+        print("Creating overview plots")
+
         # Align the shape of the matrices.
         perm_order_overlap_m = np.repeat(perm_order_overlap_m[:, np.newaxis, :], perm_pvalues_m.shape[1], axis=1)
+        maf_m = np.tile(maf_a[:, np.newaxis, np.newaxis], (perm_order_overlap_m.shape[1], perm_order_overlap_m.shape[2]))
         real_pvalues_m = np.repeat(real_pvalues_m[:, :, np.newaxis], perm_pvalues_m.shape[2], axis=2)
 
-        print("Plotting perm p-value vs %overlap")
+        print("\tConstruct plot DF")
+        print(real_pvalues_m.shape, perm_pvalues_m.shape, perm_order_overlap_m.shape, maf_m.shape)
         plot_df = pd.DataFrame({"real p-value": real_pvalues_m.flatten(),
                                 "perm. p-value": perm_pvalues_m.flatten(),
-                                "%overlap": perm_order_overlap_m.flatten()})
-        print(plot_df)
-        self.regplot(df=plot_df, x="perm. p-value", y="%overlap", group="real p-value", xlabel="perm p-value",
-                     ylabel="%identical genotype", filename="pval_vs_overlap")
+                                "%overlap": perm_order_overlap_m.flatten(),
+                                "MAF": maf_m.flatten()})
+
+        print("\tPlotting single comparisons")
+        self.single_regplot(df=plot_df,
+                            x="perm. p-value",
+                            y="%overlap",
+                            xlabel="perm. p-value",
+                            ylabel="%overlap",
+                            filename="perm_pval_vs_overlap")
+        self.single_regplot(df=plot_df,
+                            x="perm. p-value",
+                            y="MAF",
+                            xlabel="perm. p-value",
+                            ylabel="MAF",
+                            filename="perm_pval_vs_MAF")
+        self.single_regplot(df=plot_df,
+                            x="MAF",
+                            y="%overlap",
+                            xlabel="MAF",
+                            ylabel="%overlap",
+                            filename="MAF_vs_overlap")
+
+        print("\tPlotting grouped comparisons")
+        self.regplot(df=plot_df,
+                     x="perm. p-value",
+                     y="%overlap",
+                     group="real p-value",
+                     xlabel="perm p-value",
+                     ylabel="%identical genotype",
+                     filename="perm_pval_vs_overlap_panels")
+        self.regplot(df=plot_df,
+                     x="perm. p-value",
+                     y="MAF",
+                     group="real p-value",
+                     xlabel="perm p-value",
+                     ylabel="MAF",
+                     filename="perm_pval_vs_MAF_panels")
         print("")
 
     @staticmethod
@@ -284,13 +343,72 @@ class main():
         plt.close()
         print("\tSaved figure: {} ".format(os.path.basename(outpath)))
 
+    def single_regplot(self, df, x, y, xlabel="", ylabel="", title="", filename="plot"):
+        sns.set(rc={'figure.figsize': (12, 12)})
+        sns.set_style("ticks")
+        fig, (ax1, ax2) = plt.subplots(nrows=1,
+                                       ncols=2,
+                                       gridspec_kw={"width_ratios": [0.85, 0.15]})
+        sns.despine(fig=fig, ax=ax1)
+
+        sns.regplot(x=x, y=y, data=df, ci=None,
+                    scatter_kws={'facecolors': "#000000",
+                                 'linewidth': 0,
+                                 'alpha': 0.25},
+                    line_kws={"color": "#000000"},
+                    ax=ax1)
+
+        ax1.set_xlabel(xlabel,
+                       fontsize=14,
+                       fontweight='bold')
+        ax1.set_ylabel(ylabel,
+                       fontsize=14,
+                       fontweight='bold')
+        ax1.set_title(title,
+                      fontsize=18,
+                      fontweight='bold')
+
+        # Change margins.
+        xlim = ax1.get_xlim()
+        ylim = ax1.get_ylim()
+
+        xmargin = (xlim[1] - xlim[0]) * 0.05
+        ymargin = (ylim[1] - ylim[0]) * 0.05
+
+        ax1.set_xlim(xlim[0] - xmargin, xlim[1] + xmargin)
+        ax1.set_ylim(ylim[0] - ymargin, ylim[1] + ymargin)
+
+        # Set annotation.
+        ax2.set_axis_off()
+        coef, _ = stats.pearsonr(df[y], df[x])
+        ax2.annotate(
+            'r = {:.2f}'.format(coef),
+            xy=(0, 0.94),
+            xycoords=ax2.transAxes,
+            color="#000000",
+            fontsize=14,
+            fontweight='bold')
+        ax2.annotate(
+            'total N = {:,}'.format(df.shape[0]),
+            xy=(0, 0.91),
+            xycoords=ax2.transAxes,
+            color="#404040",
+            fontsize=14,
+            fontweight='bold')
+
+        outpath = os.path.join(self.outdir, "{}.png".format(filename))
+        fig.savefig(outpath)
+        plt.close()
+        print("\tSaved figure: {} ".format(os.path.basename(outpath)))
+
     def regplot(self, df, x, y, group, xlabel="", ylabel="", filename="regplot"):
+        tmp_df = df.copy()
         offset = 2.2250738585072014e-308
 
-        df.loc[:, [x, group]] = np.log10(df.loc[:, [x, group]] + offset)
+        tmp_df.loc[:, [x, group]] = np.log10(tmp_df.loc[:, [x, group]] + offset)
         cutoff = np.log10(0.05 + offset)
-        df["hue"] = "#808080"
-        df.loc[df[x] < cutoff, "hue"] = "#0072B2"
+        tmp_df["hue"] = "#808080"
+        tmp_df.loc[tmp_df[x] < cutoff, "hue"] = "#0072B2"
         groups = np.array([-100, -75, -50, -25, -10, -5, -1, 0, None])
 
         ngroups = np.size(groups)
@@ -317,20 +435,20 @@ class main():
                 ax = axes[row_index, col_index]
 
             if i < ngroups:
-                plot_df = df
+                tmp_plot_df = tmp_df.copy()
                 title = "All"
                 if groups[i] is not None:
-                    mask = df[group] <= groups[i]
+                    mask = tmp_df[group] <= groups[i]
                     title = "{} <= {}".format(groups[i], group)
                     if i > 0:
-                        mask = np.logical_and(df[group] > groups[i - 1], df[group] <= groups[i])
+                        mask = np.logical_and(tmp_df[group] > groups[i - 1], tmp_df[group] <= groups[i])
                         title = "{} < {} <= {}".format(groups[i - 1], group, groups[i])
-                    plot_df = df.loc[mask, :]
+                    tmp_plot_df = tmp_plot_df.loc[mask, :]
 
                 sns.despine(fig=fig, ax=ax)
 
-                sns.regplot(x=x, y=y, data=plot_df, ci=None,
-                            scatter_kws={'facecolors': plot_df["hue"],
+                sns.regplot(x=x, y=y, data=tmp_plot_df, ci=None,
+                            scatter_kws={'facecolors': tmp_plot_df["hue"],
                                          'linewidth': 0,
                                          'alpha': 0.75},
                             line_kws={"color": "#000000"},
@@ -338,29 +456,30 @@ class main():
 
                 ax.axvline(cutoff, ls='--', color="#000000", zorder=-1)
 
+                coef, _ = stats.pearsonr(tmp_plot_df[y], tmp_plot_df[x])
                 ax.annotate(
-                    'r = {:.2f}'.format(*stats.spearmanr(plot_df[y], plot_df[x])),
+                    'r = {:.2f}'.format(coef),
                     xy=(0.03, 0.94),
                     xycoords=ax.transAxes,
                     color="#000000",
                     fontsize=15,
                     fontweight='bold')
                 ax.annotate(
-                    'total N = {}'.format(plot_df.shape[0]),
+                    'total N = {:,}'.format(tmp_plot_df.shape[0]),
                     xy=(0.03, 0.9),
                     xycoords=ax.transAxes,
                     color="#404040",
                     fontsize=15,
                     fontweight='bold')
                 ax.annotate(
-                    'N = {}'.format(plot_df[plot_df["hue"] == "#0072B2"].shape[0]),
+                    'N = {:,}'.format(tmp_plot_df[tmp_plot_df["hue"] == "#0072B2"].shape[0]),
                     xy=(0.03, 0.86),
                     xycoords=ax.transAxes,
                     color="#0072B2",
                     fontsize=15,
                     fontweight='bold')
                 ax.annotate(
-                    'N = {}'.format(plot_df[plot_df["hue"] == "#808080"].shape[0]),
+                    'N = {:,}'.format(tmp_plot_df[tmp_plot_df["hue"] == "#808080"].shape[0]),
                     xy=(0.03, 0.82),
                     xycoords=ax.transAxes,
                     color="#808080",
@@ -408,6 +527,7 @@ class main():
         print("Arguments:")
         print("  > Input directory: {}".format(self.indir))
         print("  > Output directory: {}".format(self.outdir))
+        print("  > Genotype path: {}".format(self.geno_path))
         print("  > Sample-to-dataset path: {}".format(self.std_path))
         print("  > N-files: {}".format(self.n_files))
         print("")

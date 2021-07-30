@@ -675,8 +675,8 @@ class main():
                 # If we exclude an interaction term we still have that cell
                 # type fraction in the matrix. Therefore, when matching
                 # interaction column position with cell fraction column
-                # (cc_index) position we need to increment with 1 if the
-                # cc_index with 1.
+                # (cc_index) position we need to increment with 1 for all
+                # cell fractions > exclude column.
                 cc_index = cov_index
                 if exclude is not None and cc_index >= exclude:
                     cc_index += 1
