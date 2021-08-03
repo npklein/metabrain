@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_replication_plot.py
 Created:      2021/06/24
-Last Changed:
+Last Changed: 2021/08/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -44,6 +44,8 @@ import matplotlib.patches as mpatches
 """
 Syntax:
 ./decon_eqtl_replication_plot.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2021-06-24-decon-QTL/CortexEUR-cis-PrimaryeQTLs/deconvolutionResults.csv -dn EUR -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2021-06-24-decon-QTL/CortexAFR-cis-Replication-EUR/deconvolutionResults.csv -rn AFR
+
+./decon_eqtl_replication_plot.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-PrimaryeQTLs/deconvolutionResults.txt.gz -dn EUR -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexAFR-cis-Replication-EUR/deconvolutionResults.txt.gz -rn AFR
 """
 
 # Metadata
@@ -71,9 +73,12 @@ class main():
         self.replication_name = getattr(arguments, 'replication_name')
 
         # Set variables.
-        self.outdir = os.path.join(str(Path(__file__).parent.parent), 'decon_eqtl_replication_plot')
-        if not os.path.exists(self.outdir):
-            os.makedirs(self.outdir)
+        outdir = os.path.join(str(Path(__file__).parent.parent), 'decon_eqtl_replication_plot')
+        self.plot_outdir = os.path.join(outdir, 'plot')
+        self.data_outdir = os.path.join(outdir, 'data')
+        for tmp_outdir in [self.plot_outdir, self.data_outdir]:
+            if not os.path.exists(tmp_outdir):
+                os.makedirs(tmp_outdir)
 
         self.colormap = {
             "CellMapNNLS_Neuron": "#0072B2",
@@ -176,9 +181,16 @@ class main():
                     replication_beta_column = col
                     break
 
-            ct_df = discovery_df[["{}_FDR".format(cell_type), discovery_beta_column]].merge(replication_df[["{}_pvalue".format(cell_type), replication_beta_column]], left_index=True, right_index=True)
-            ct_df.columns = ["discovery FDR", "discovery beta", "replication p-value", "replication beta"]
+            discovery_subset_df = discovery_df[["{}_FDR".format(cell_type), discovery_beta_column]].copy()
+            discovery_subset_df["discovery index"] = [x for x in range(discovery_subset_df.shape[0])]
+
+            replication_subset_df = replication_df[["{}_pvalue".format(cell_type), replication_beta_column]].copy()
+            replication_subset_df["replication index"] = [x for x in range(replication_subset_df.shape[0])]
+
+            ct_df = discovery_subset_df.merge(replication_subset_df, left_index=True, right_index=True)
+            ct_df.columns = ["discovery FDR", "discovery beta", "discovery index", "replication p-value", "replication beta", "replication index"]
             ct_df.insert(0, "cell type", cell_type)
+            ct_df.reset_index(drop=False, inplace=True)
 
             # Adding the replication FDR.
             ct_df["replication FDR"] = np.nan
@@ -186,14 +198,20 @@ class main():
             print("\t  Discovery N-ieqtls: {}".format(np.sum(mask)))
             ct_df.loc[mask, "replication FDR"] = multitest.multipletests(ct_df.loc[mask, "replication p-value"], method='fdr_bh')[1]
             print("\t  Replication N-ieqtls: {}".format(ct_df.loc[ct_df["replication FDR"] < 0.05, :].shape[0]))
-            ct_df.reset_index(drop=True, inplace=True)
 
             if combined_df is None:
                 combined_df = ct_df
             else:
                 combined_df = pd.concat([combined_df, ct_df], axis=0)
 
+            del discovery_subset_df, replication_subset_df
+
+        print("Saving")
         print(combined_df)
+        self.save_file(df=combined_df, outpath=os.path.join(self.data_outdir, "replication_table.txt.gz"))
+        opposite_df = combined_df.loc[(combined_df["discovery FDR"] < 0.05) & (combined_df["replication FDR"] < 0.05) & (((combined_df["discovery beta"] < 0) & (combined_df["replication beta"] > 0)) | ((combined_df["discovery beta"] > 0) & (combined_df["replication beta"] < 0))), :]
+        print(opposite_df)
+        self.save_file(df=opposite_df, outpath=os.path.join(self.data_outdir, "replication_opposite_efects_table.txt.gz"))
 
         print("Plotting")
         self.plot_scatterplot(
@@ -288,6 +306,18 @@ class main():
 
         return df
 
+    @staticmethod
+    def save_file(df, outpath, header=True, index=True, sep="\t"):
+        compression = 'infer'
+        if outpath.endswith('.gz'):
+            compression = 'gzip'
+
+        df.to_csv(outpath, sep=sep, index=index, header=header,
+                  compression=compression)
+        print("\tSaved dataframe: {} "
+              "with shape: {}".format(os.path.basename(outpath),
+                                      df.shape))
+
     def plot_boxplot(self, df_m, x="x", y="value", col=None, hue=None,
                      palette=None, xlabel="", ylabel="", title="", filename=""):
         cols = [None]
@@ -370,7 +400,7 @@ class main():
                 col_index = 0
                 row_index += 1
 
-        fig.savefig(os.path.join(self.outdir, "decon_eqtl_betas{}.png".format( filename)))
+        fig.savefig(os.path.join(self.plot_outdir, "decon_eqtl_betas{}.png".format( filename)))
         plt.close()
 
     def plot_scatterplot(self, df, group_column, x="x", y="y", xlabel="",
@@ -481,8 +511,10 @@ class main():
                 col_index = 0
                 row_index += 1
 
-        fig.savefig(os.path.join(self.outdir, "decon_eqtl_replication_{}.png".format(filename)))
+        outpath = os.path.join(self.plot_outdir, "decon_eqtl_replication_{}.png".format(filename))
+        fig.savefig(outpath)
         plt.close()
+        print("\tSaved: {}".format(outpath))
 
     def print_arguments(self):
         print("Arguments:")

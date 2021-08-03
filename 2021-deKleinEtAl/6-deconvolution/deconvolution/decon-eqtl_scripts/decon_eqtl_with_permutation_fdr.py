@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_with_permutation_fdr.py
 Created:      2021/07/12
-Last Changed: 2021/07/29
+Last Changed: 2021/08/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -43,6 +43,8 @@ Syntax:
 ./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2020-11-20-decon-QTL/cis/cortex/expression_table/2020-07-16-MetaBrainDeconQtlGenes.TMM.SampSelect.ZeroVarRemov.covRemoved.expAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_cohort_matrix/sample_to_dataset.txt.gz -of cortex_eur_cis
 
 ./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis/data/SampleToDataset.txt.gz -of CortexEUR-cis
+
+./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis/data/SampleToDataset.txt.gz -of CortexEUR-cis-PrimaryeQTLs -r 11803 -p 0
 
 ./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR/genotype_table.txt -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2020-11-10-DeconOptimizer/preprocess_scripts/pre_process_expression_matrix/CortexAFR-cis/data/SampleToDataset.txt.gz -of CortexAFR-cis-Replication-EUR
 """
@@ -390,7 +392,7 @@ class main():
         # Calculate and print some info about the analyses to be performed.
         n_permutation_values = n_eqtls * self.n_permutations
         n_perm_models = n_eqtls * (self.n_permutations * n_covariates * n_configurations_null)
-        print("\tN-permutation values: {:,}".format(n_permutation_values))
+        print("\tN-permutation p-values (per cell type): {:,}".format(n_permutation_values))
         print("\tN-models: {:,}".format(n_perm_models))
         print("")
 
@@ -404,10 +406,15 @@ class main():
         # Calculate the overlap between the genotype matrices
         perm_overlap_m = self.check_permutation_overlap(geno_m=geno_m, perm_order_m=perm_order_m)
 
-        # Calculate the dataset genotype means per eQTL.
-        geno_dataset_mean_m = self.calculate_geno_mean_per_dataset(geno_m=geno_m,
-                                                                   datasets=datasets,
-                                                                   std_m=std_m)
+        geno_nan_mask = np.isnan(geno_m)
+        nanfilled_geno_m = np.copy(geno_m)
+        if np.sum(geno_nan_mask) > 0:
+            # Calculate the dataset genotype means per eQTL and fill nan values
+            # with the dataset mean.
+            geno_dataset_mean_m = self.calculate_geno_mean_per_dataset(geno_m=geno_m,
+                                                                       datasets=datasets,
+                                                                       std_m=std_m)
+            nanfilled_geno_m[geno_nan_mask] = geno_dataset_mean_m[geno_nan_mask]
 
         # Initializing output matrices / arrays.
         perm_pvalues_m = np.empty((n_eqtls, n_covariates, self.n_permutations), dtype=np.float64)
@@ -426,8 +433,9 @@ class main():
                       flush=True)
                 last_print_time = now_time
 
-            # Get the genotype.
+            # Get the genotype arrays.
             genotype = geno_m[row_index, :]
+            nanfilled_genotype = nanfilled_geno_m[row_index, :]
 
             # Construct the mask to remove missing values.
             mask = ~np.isnan(genotype)
@@ -438,14 +446,15 @@ class main():
 
                 # Perform n permutations.
                 for perm_index in range(self.n_permutations):
-                    # Replace missing values in the genotype array with the
-                    # group mean.
-                    shuffled_genotype = np.copy(genotype)
-                    shuffled_genotype[~mask] = geno_dataset_mean_m[row_index, ~mask]
+                    # Calculate the interaction term for both allele encodings.
+                    # Use the NaN-filled genotype array for this.
+                    interaction_a = nanfilled_genotype * cc_m[cov_index, :]
+                    interaction_flipped_a = (2 - nanfilled_genotype) * cc_m[cov_index, :]
 
                     # Shuffle the indices.
                     perm_order = perm_order_m[perm_index, :]
-                    shuffled_genotype = shuffled_genotype[perm_order]
+                    interaction_a = interaction_a[perm_order]
+                    interaction_flipped_a = interaction_flipped_a[perm_order]
 
                     # Model the alternative matrix (with the interaction
                     # term) and shuffle the genotype of the interaction of
@@ -459,7 +468,8 @@ class main():
                             n_samples=n,
                             n_covariates=n_covariates,
                             shuffle_index=cov_index,
-                            shuffled_genotype=shuffled_genotype[mask],
+                            shuffle_inter=interaction_a[mask],
+                            shuffle_inter_flipped=interaction_flipped_a[mask]
                         )
 
                     # Calculate and save the permutation p-value.
@@ -649,12 +659,18 @@ class main():
 
     @staticmethod
     def model(genotype, expression, cell_fractions, configs, n_samples,
-              n_covariates, exclude=None, shuffle_index=None, shuffled_genotype=None):
+              n_covariates, exclude=None, shuffle_index=None,
+              shuffle_inter=None, shuffle_inter_flipped=None):
         """
         Create the interaction model. Try different allele encodings and
         find the optimal configurations. Only the best configuration is stored
         and returned.
         """
+        if shuffle_index is not None and (shuffle_inter is None or shuffle_inter_flipped is None):
+            print("Both shuffle_inter and shuffle_inter_flipped arguments "
+                  "are required if shuffle index is set.")
+            exit()
+
         n_columns = n_covariates * 2
         if exclude is not None:
             n_columns -= 1
@@ -683,20 +699,23 @@ class main():
 
                 # Use a shuffled genotype vector if we are doing a permutation
                 # analysis.
-                genotype_a = genotype
                 if cov_index == shuffle_index:
-                    genotype_a = shuffled_genotype
-
-                if np.min(genotype_a) < 0:
-                    print("Error: negative values in genotype array.")
-                    exit()
-
-                # Calculate genotype * cell fraction. If flip is true we
-                # change the allele encoding (0 = 2, 1 = 1, 2 = 0).
-                if flip:
-                    X[:, n_covariates + cov_index] = (2 - genotype_a) * X[:, cc_index]
+                    if flip:
+                        X[:, n_covariates + cov_index] = shuffle_inter_flipped
+                    else:
+                        X[:, n_covariates + cov_index] = shuffle_inter
                 else:
-                    X[:, n_covariates + cov_index] = genotype_a * X[:, cc_index]
+                    # Calculate genotype * cell fraction. If flip is true we
+                    # change the allele encoding (0 = 2, 1 = 1, 2 = 0).
+                    if flip:
+                        X[:, n_covariates + cov_index] = (2 - genotype) * X[:, cc_index]
+                    else:
+                        X[:, n_covariates + cov_index] = genotype * X[:, cc_index]
+
+            # Check if all values are positive.
+            if np.min(X) < 0:
+                print("Error: negative values in regression matrix.")
+                exit()
 
             # Model the expression vector as non-negative linear combination of
             # the model matrix. Determine the beta's as well as the squared

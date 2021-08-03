@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_replication_select_and_harmonize.py
 Created:      2021/06/23
-Last Changed:
+Last Changed: 2021/08/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -133,22 +133,34 @@ class main():
         snps_of_interest = eqtl_df["SNPName"]
         genes_of_interest = eqtl_df["ProbeName"]
 
+        print(len(snps_of_interest))
+
         print("Loading the allele assessed files.")
         replication_alleles_df = self.load_file(self.alleles_path, header=0, index_col=0)
         discovery_alleles_df = self.load_file(self.discovery_alleles_path, header=0, index_col=0)
         alleles_df = replication_alleles_df[["MinorAllele"]].merge(discovery_alleles_df[["MinorAllele"]], left_index=True, right_index=True)
+        alleles_df = alleles_df.groupby(alleles_df.index).first()
         alleles_df["flip"] = alleles_df.iloc[:, 0] != alleles_df.iloc[:, 1]
-        flip_dict = dict(zip(alleles_df.index, alleles_df["flip"]))
-        del replication_alleles_df, discovery_alleles_df
+        alleles_df = alleles_df.groupby(alleles_df.index).first()
+        alleles_df = alleles_df.loc[snps_of_interest, :]
+        flip_mask = alleles_df["flip"].to_numpy(dtype=bool)
+        del replication_alleles_df, discovery_alleles_df, alleles_df
 
         print("Processing genotype file.")
-        geno_df = self.process_file(inpath=self.geno_path,
-                                    filter_set=set(snps_of_interest),
-                                    flip_dict=flip_dict)
-
-        print("\tReordering matrix.")
+        geno_df = self.load_file(inpath=self.geno_path, header=0, index_col=0)
+        geno_df = geno_df.groupby(geno_df.index).first()
         geno_df = geno_df.loc[snps_of_interest, :]
+
+        # Flip genotypes.
+        geno_m = geno_df.to_numpy()
+        missing_mask = geno_m == -1
+        geno_m[flip_mask, :] = 2 - geno_m[flip_mask, :]
+        geno_m[missing_mask] = -1
+        geno_df = pd.DataFrame(geno_m, index=geno_df.index, columns=geno_df.columns)
         geno_df.index.name = None
+        del geno_m
+
+        # Delete rows with all NaN.
         mask = geno_df.isnull().all(1).to_numpy()
         geno_df = geno_df.loc[~mask, :]
 
@@ -158,10 +170,8 @@ class main():
         del geno_df
 
         print("Processing expression file.")
-        expr_df = self.process_file(inpath=self.expr_path,
-                                    filter_set=set(genes_of_interest))
-
-        print("\tReordering matrix.")
+        expr_df = self.load_file(inpath=self.expr_path, header=0, index_col=0)
+        expr_df = expr_df.groupby(expr_df.index).first()
         expr_df = expr_df.loc[genes_of_interest, :]
         expr_df.index.name = None
         expr_df = expr_df.loc[~mask, :]
@@ -186,40 +196,6 @@ class main():
         print("\tLoaded dataframe: {} "
               "with shape: {}".format(os.path.basename(inpath),
                                       df.shape))
-        return df
-
-    @staticmethod
-    def process_file(inpath, filter_set, flip_dict=None, sep="\t",
-                     header=0, index_col=0):
-        found_indices = set()
-        info = []
-        with gzip.open(inpath, 'rb') as f:
-            for i, line in enumerate(f):
-                splitted_line = line.decode().strip('\n').split(sep)
-                if i == 0:
-                    info.append(splitted_line)
-                else:
-                    index = splitted_line[0]
-                    if index not in filter_set or index in found_indices:
-                        continue
-
-                    if flip_dict is not None and flip_dict[index]:
-                        values = [float(x) if x != '' else np.nan for x in splitted_line[1:]]
-                        data = np.array(values)
-                        data = 2 - data
-                        info.append([index] + data.tolist())
-                    else:
-                        info.append(splitted_line)
-
-                    found_indices.add(index)
-        f.close()
-
-        df = pd.DataFrame(info)
-        df.index = df.iloc[:, index_col]
-        df.index.name = "-"
-        df = df.drop(df.columns[index_col], axis=1)
-        df.columns = df.iloc[header, :]
-        df = df.drop(df.index[header], axis=0)
         return df
 
     @staticmethod
