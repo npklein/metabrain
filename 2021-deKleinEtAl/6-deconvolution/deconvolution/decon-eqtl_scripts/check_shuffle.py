@@ -3,7 +3,7 @@
 """
 File:         check_shuffle.py
 Created:      2021/07/28
-Last Changed: 2021/07/30
+Last Changed: 2021/08/04
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -255,16 +255,17 @@ class main():
                                 "perm. p-value": perm_pvalues_m.flatten(),
                                 "%overlap": perm_order_overlap_m.flatten(),
                                 "MAF": maf_m.flatten()})
+        plot_df["log10 perm. p-value"] = np.log10(plot_df["perm. p-value"] + 2.2250738585072014e-308)
 
         print("\tPlotting single comparisons")
         self.single_regplot(df=plot_df,
-                            x="perm. p-value",
+                            x="log10 perm. p-value",
                             y="%overlap",
                             xlabel="perm. p-value",
                             ylabel="%overlap",
                             filename="perm_pval_vs_overlap")
         self.single_regplot(df=plot_df,
-                            x="perm. p-value",
+                            x="log10 perm. p-value",
                             y="MAF",
                             xlabel="perm. p-value",
                             ylabel="MAF",
