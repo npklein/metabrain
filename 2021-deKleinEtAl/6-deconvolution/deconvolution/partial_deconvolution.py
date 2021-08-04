@@ -3,7 +3,7 @@
 """
 File:         partial_deconvolution.py
 Created:      2020/06/29
-Last Changed: 2020/12/15
+Last Changed: 2020/08/04
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -47,9 +47,9 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./partial_deconvolution.py -d /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.txt.gz -s /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/data/CellMap_brain_celltype_avgCPM.txt -t /groups/umcg-biogen/tmp03/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz -g /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-03-12-deconvolution/test_scripts/AMP-AD/IHC_counts.txt.gz -o ALL_TMM_LOG2 -sa /groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-02-03-phenotype-table/2020-09-04.brain.phenotypes.withReannotatedDiagnosis.txt -sid rnaseq_id -cid cohort -os IHC_0CPM_LOG2_FILTERED_CC_TEST -cohort_corr -log2 -sum_to_one -visualise -e pdf
+./partial_deconvolution.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.txt.gz -s /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/CellMap_brain_celltype_avgCPM.txt -t /groups/umcg-biogen/tmp01/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz -g /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/AMP-AD/IHC_counts.txt.gz -o OLD_PROFILE_ALL_TMM_LOG2 -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_cohort_matrix/sample_to_dataset.txt.gz -os IHC_0CPM_LOG2_FILTERED_CC -dataset_correction -log2 -sum_to_one -visualise -e pdf
 
-./partial_deconvolution.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.txt.gz -s /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/CellMap_brain_CNS7_avgCPM.txt -t /groups/umcg-biogen/tmp01/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz -g /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/AMP-AD/IHC_counts.txt.gz -o NEW_PROFILE_ALL_TMM_LOG2 -sa /groups/umcg-biogen/tmp01/output/2020-11-10-DeconOptimizer/2020-11-10-decon-optimizer/data/2021-04-28.brain.phenotypes.CortexEUR.txt.gz -sid rnaseq_id -cid MetaBrain_cohort -os IHC_0CPM_LOG2_FILTERED_CC -cohort_corr -log2 -sum_to_one -visualise -e pdf
+./partial_deconvolution.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.txt.gz -s /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/CellMap_brain_CNS7_avgCPM.txt -t /groups/umcg-biogen/tmp01/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz -g /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/AMP-AD/IHC_counts.txt.gz -o NEW_PROFILE_ALL_TMM_LOG2 -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_cohort_matrix/sample_to_dataset.txt.gz -os IHC_0CPM_LOG2_FILTERED_CC -dataset_correction -log2 -sum_to_one -visualise -e pdf
 """
 
 
@@ -62,15 +62,11 @@ if __name__ == '__main__':
                         signature_path=CLA.get_argument("signature"),
                         translate_path=CLA.get_argument("translate"),
                         ground_truth_path=CLA.get_argument("ground_truth"),
-                        sample_annotation_path=CLA.get_argument("sample_annotation"),
-                        sample_id=CLA.get_argument("sample_id"),
+                        sample_to_dataset_path=CLA.get_argument("sample_to_dataset"),
                         sample_filter_path=CLA.get_argument("sample_filter"),
-                        cohort_id=CLA.get_argument("cohort_id"),
-                        cohort_filter=CLA.get_argument("cohort_filter"),
-                        annotation_id=CLA.get_argument("annotation_id"),
-                        annotation_filter=CLA.get_argument("annotation_filter"),
+                        dataset_filter=CLA.get_argument("dataset_filter"),
                         min_expr=CLA.get_argument("min_expr"),
-                        cohort_corr=CLA.get_argument("cohort_corr"),
+                        dataset_correction=CLA.get_argument("dataset_correction"),
                         normalize=CLA.get_argument("normalize"),
                         zscore=CLA.get_argument("zscore"),
                         log2=CLA.get_argument("log2"),
