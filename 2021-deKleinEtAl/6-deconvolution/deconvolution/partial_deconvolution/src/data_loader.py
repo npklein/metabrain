@@ -1,7 +1,7 @@
 """
 File:         data_loader.py
 Created:      2020/06/29
-Last Changed: 2020/09/04
+Last Changed: 2021/08/04
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -24,6 +24,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 from __future__ import print_function
 import gzip
 import json
+import time
 import os
 
 # Third party imports.
@@ -97,9 +98,12 @@ class DataLoader:
         data_collection = []
 
         print("\tLoading expression matrix")
+        last_print_time = None
         with gzip.open(filepath, 'rb') as f:
             for i, line in enumerate(f):
-                if (i == 0) or (i % 1000 == 0):
+                now_time = int(time.time())
+                if last_print_time is None or (now_time - last_print_time) >= 30:
+                    last_print_time = now_time
                     print("\t\tfound {}/{} genes".format(len(data_collection),
                                                          len(profile_genes)))
 

@@ -1,7 +1,7 @@
 """
 File:         settings.py
 Created:      2020/06/29
-Last Changed: 2020/09/17
+Last Changed: 2021/08/04
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -33,27 +33,20 @@ import os
 
 class Settings:
     def __init__(self, data_path, signature_path, translate_path,
-                 ground_truth_path, sample_annotation_path, sample_id,
-                 sample_filter_path, cohort_id, cohort_filter, annotation_id,
-                 annotation_filter, min_expr, cohort_corr, normalize, zscore,
+                 ground_truth_path, sample_to_dataset_path, sample_filter_path,
+                 dataset_filter, min_expr, dataset_correction, normalize, zscore,
                  log2, decon_method, sum_to_one, extension):
         self.data_path = data_path
         self.signature_path = signature_path
         self.translate_path = translate_path
         self.ground_truth_path = ground_truth_path
-        self.sample_annotation_path = sample_annotation_path
-        self.sample_id = sample_id
+        self.sample_to_dataset_path = sample_to_dataset_path
         self.sample_filter_path = sample_filter_path
-        self.cohort_id = cohort_id
-        if cohort_filter is not None:
-            cohort_filter = [x.replace("_", " ").upper() for x in cohort_filter]
-        self.cohort_filter = cohort_filter
-        self.annotation_id = annotation_id
-        if annotation_filter is not None:
-            annotation_filter = [x.replace("_", " ").upper() for x in annotation_filter]
-        self.annotation_filter = annotation_filter
+        if dataset_filter is not None:
+            dataset_filter = [x.replace("_", " ").upper() for x in dataset_filter]
+        self.dataset_filter = dataset_filter
         self.min_expr = min_expr
-        self.cohort_corr = cohort_corr
+        self.dataset_correction = dataset_correction
         self.normalize = normalize
         self.zscore = zscore
         self.log2 = log2
@@ -66,6 +59,7 @@ class Settings:
         self.real_info_per_celltype = None
         self.filter1_shape_diff = None
         self.filter2_shape_diff = None
+        self.reference_dataset = None
         self.sign_shift = None
         self.expr_shift = None
         self.n_samples = None
@@ -91,32 +85,20 @@ class Settings:
     def get_ground_truth_type(self):
         return os.path.basename(self.ground_truth_path).split(".")[0].replace("_counts", "")
 
-    def get_sample_annotation_path(self):
-        return self.sample_annotation_path
-
-    def get_sample_id(self):
-        return self.sample_id
+    def get_sample_to_dataset_path(self):
+        return self.sample_to_dataset_path
 
     def get_sample_filter_path(self):
         return self.sample_filter_path
 
-    def get_cohort_id(self):
-        return self.cohort_id
-
-    def get_cohort_filter(self):
-        return self.cohort_filter
-
-    def get_annotation_id(self):
-        return self.annotation_id
-
-    def get_annotation_filter(self):
-        return self.annotation_filter
+    def get_dataset_filter(self):
+        return self.dataset_filter
 
     def get_min_expr(self):
         return self.min_expr
 
-    def get_cohort_corr(self):
-        return self.cohort_corr
+    def get_dataset_correction(self):
+        return self.dataset_correction
 
     def get_normalize(self):
         return self.normalize
@@ -157,6 +139,9 @@ class Settings:
     def set_filter2_shape_diff(self, filter2_shape_diff):
         self.filter2_shape_diff = filter2_shape_diff
 
+    def set_reference_dataset(self, reference_dataset):
+        self.reference_dataset = reference_dataset
+
     def set_sign_shift(self, sign_shift):
         self.sign_shift = sign_shift
 
@@ -196,9 +181,9 @@ class Settings:
         if self.comparison_rss is not None:
             rss_str = "{:.2f}".format(self.comparison_rss)
 
-        return "min.expr.: {}, coh.corr: {}, norm.: {}, z-score: {}, " \
+        return "min.expr.: {}, dataset corr.: {}, norm.: {}, z-score: {}, " \
                "log2: {},\nsum-to-one: {}, avg.residuals: {}, N: {}, " \
-               "RSS: {}".format(self.min_expr, self.cohort_corr, self.normalize,
+               "RSS: {}".format(self.min_expr, self.dataset_correction, self.normalize,
                                 self.zscore, self.log2, self.sum_to_one,
                                 avg_resid_str, self.comparison_n_samples,
                                 rss_str)
@@ -219,15 +204,12 @@ class Settings:
                 "translate_path": self.translate_path,
                 "ground_truth_path": self.ground_truth_path,
                 "outdir_path": self.outdir_path,
-                "sample_annotation_path": self.sample_annotation_path,
-                "sample_id": self.sample_id,
+                "sample_to_dataset_path": self.sample_to_dataset_path,
                 "sample_filter_path": self.sample_filter_path,
-                "cohort_id": self.cohort_id,
-                "cohort_filter": self.cohort_filter,
-                "annotation_id": self.annotation_id,
-                "annotation_filter": self.annotation_filter,
+                "dataset_filter": self.dataset_filter,
                 "filter1_shape_diff": self.filter1_shape_diff,
-                "cohort_corr": self.cohort_corr,
+                "dataset_correction": self.dataset_correction,
+                "reference_dataset": self.reference_dataset,
                 "outsubdir_path": self.outsubdir_path,
                 "min_expr": self.min_expr,
                 "normalize": self.normalize,

@@ -1,7 +1,7 @@
 """
 File:         perform_deconvolution.py
 Created:      2020/06/29
-Last Changed: 2020/09/04
+Last Changed: 2021/08/04
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -40,7 +40,7 @@ class PerformDeconvolution:
         self.expression = expression
 
         self.deconvolution = None
-        self.residuals = None
+        self.rss = None
 
     def work(self):
         print("Performing deconvolution using '{}'".format(self.decon_method))
@@ -52,17 +52,16 @@ class PerformDeconvolution:
             exit()
 
         decon_data = []
-        residuals_data = []
+        rss_data = []
         for index, sample in self.expression.T.iterrows():
             proportions, rnorm = decon_function(self.signature, sample)
             decon_data.append(proportions)
-            residuals_data.append(rnorm)
+            rss_data.append(rnorm * rnorm)
 
         deconvolution = pd.DataFrame(decon_data,
                                      index=self.expression.columns,
                                      columns=self.signature.columns)
-        residuals = pd.Series(residuals_data,
-                              index=self.expression.columns)
+        rss = pd.Series(rss_data, index=self.expression.columns)
 
         # Make weights sum up to one.
         if self.sum_to_one:
@@ -70,7 +69,7 @@ class PerformDeconvolution:
 
         # Save.
         self.deconvolution = deconvolution
-        self.residuals = residuals
+        self.rss = rss
         self.save()
 
     @staticmethod
@@ -85,11 +84,11 @@ class PerformDeconvolution:
     def get_deconvolution(self):
         return self.deconvolution
 
-    def get_residuals(self):
-        return self.residuals
+    def get_rss(self):
+        return self.rss
 
-    def get_avg_residuals(self):
-        return self.residuals.mean()
+    def get_avg_rss(self):
+        return self.rss.mean()
 
     def get_info_per_celltype(self):
         means = self.deconvolution.mean(axis=0).to_dict()
@@ -110,7 +109,7 @@ class PerformDeconvolution:
               "with shape: {}".format(self.deconvolution.shape))
 
     def print_info(self):
-        print("Average residuals: {:.2f}".format(self.get_avg_residuals()))
+        print("Average RSS: {:.2f}".format(self.get_avg_rss()))
         print("Average weights per celltype:")
         for celltype, (mean, std) in self.get_info_per_celltype().items():
             print("\t{:20s}: mean = {:.2f} std = {:.2f}".format(celltype, mean, std))
