@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_with_permutation_fdr.py
 Created:      2021/07/12
-Last Changed: 2021/08/02
+Last Changed: 2021/08/05
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -44,6 +44,8 @@ Syntax:
 
 ./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis/data/SampleToDataset.txt.gz -of CortexEUR-cis
 
+./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis-HalfNormalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceHalfNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis-HalfNormalised/data/SampleToDataset.txt.gz -maf 5 -of CortexEUR-cis-HalfNormalizedMAF1
+
 ./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis/data/SampleToDataset.txt.gz -of CortexEUR-cis-PrimaryeQTLs -r 11803 -p 0
 
 ./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR/genotype_table.txt -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2020-11-10-DeconOptimizer/preprocess_scripts/pre_process_expression_matrix/CortexAFR-cis/data/SampleToDataset.txt.gz -of CortexAFR-cis-Replication-EUR
@@ -78,6 +80,7 @@ class main():
         self.nrows = getattr(arguments, 'rows')
         self.n_permutations = getattr(arguments, 'permutations')
         self.permutation_index_offset = getattr(arguments, 'permutation_index_offset')
+        self.maf = getattr(arguments, 'minor_allele_frequency')
         self.missing_geno = getattr(arguments, 'missing_genotype')
         outdir = getattr(arguments, 'outdir')
         outfolder = getattr(arguments, 'outfolder')
@@ -142,14 +145,12 @@ class main():
                             default=0,
                             help="The first index of the first permutation "
                                  "run. Default: 0.")
-        parser.add_argument("-l",
-                            "--lambda",
-                            type=float,
-                            default=None,
-                            help="The values of the tuning parameter to be "
-                                 "considered in estimating π0. Default: "
-                                 "smoother estimation with values"
-                                 "0.05 - 0.95.")
+        parser.add_argument("-maf",
+                            "--minor_allele_frequency",
+                            type=int,
+                            default=1,
+                            help="The minimal required MAF for a genotype."
+                                 "Default: 1%")
         parser.add_argument("-m",
                             "--missing_genotype",
                             type=int,
@@ -232,6 +233,17 @@ class main():
             exit()
         del geno_df, expr_df, cc_df, std_df
 
+        # Calculate MAF and filter on cut-off.
+        maf_a = self.calculate_maf(m=geno_m)
+        maf_mask = maf_a > (self.maf / 100)
+        if np.sum(maf_mask) == 0:
+            print("No genotype above MAF cut-off")
+            exit()
+        if np.sum(maf_mask) != np.size(maf_mask):
+            eqtl_indices = eqtl_indices[maf_mask]
+            geno_m = geno_m[maf_mask, :]
+            expr_m = expr_m[maf_mask, :]
+
         # Calculate missing values stats. Set 1 as np.nan for a better average.
         prcnt_missing_m = np.sum(np.isnan(geno_m), axis=1) / geno_m.shape[1]
         prcnt_missing_m[prcnt_missing_m == 1] = np.nan
@@ -250,8 +262,13 @@ class main():
         print("\tN-samples: {:,}".format(n_samples))
         print("\tN-covariates: {:,}".format(n_covariates))
         print("\tN-datasets: {:,}".format(len(datasets)))
+        if np.sum(maf_mask) != np.size(maf_mask):
+            print("\tMAF% (before filter): N = {:,}\tmean = {:.2f}\tmin = {:.2f}\tmax = {:.2f}".format(np.size(maf_a), np.mean(maf_a), np.min(maf_a), np.max(maf_a)))
+            print("\tMAF% (after filter):  N = {:,}\tmean = {:.2f}\tmin = {:.2f}\tmax = {:.2f}".format(np.size(maf_a[maf_mask]), np.mean(maf_a[maf_mask]), np.min(maf_a[maf_mask]), np.max(maf_a[maf_mask])))
+        else:
+            print("\tMAF%: mean = {:.2f}\tmin = {:.2f}\tmax = {:.2f}".format(np.mean(maf_a), np.min(maf_a), np.max(maf_a)))
         print("\t%-missing (avg per eQTL): {:.2f}%".format(np.nanmean(prcnt_missing_m) * 100))
-        print("\t%-missing (per eQTL per dataset): mean = {:.2f}%\tmax = {:.2f}%".format(np.mean(np.nanmean(prcnt_missing_per_dataset_m, axis=1)) * 100, np.nanmax(prcnt_missing_per_dataset_m) * 100))
+        print("\t%-missing (per eQTL per dataset): mean = {:.2f}%\tmin = {:.2f}\tmax = {:.2f}%".format(np.mean(np.nanmean(prcnt_missing_per_dataset_m, axis=1)) * 100, np.nanmin(prcnt_missing_per_dataset_m) * 100, np.nanmax(prcnt_missing_per_dataset_m) * 100))
         print("", flush=True)
 
         ########################################################################
@@ -362,6 +379,8 @@ class main():
         if self.permutation_index_offset == 0:
             print("### STEP 4 ###")
             print("Saving results.")
+
+            self.save_file(df=pd.DataFrame(maf_a[maf_mask], index=eqtl_indices, columns=["NAF"]), outpath=os.path.join(self.outdir, "MAF.txt.gz"))
 
             # Combine missing matrices and set np.nan == 1 back.
             combined_prcnt_missing_m = np.hstack((prcnt_missing_m[:, np.newaxis], prcnt_missing_per_dataset_m))
@@ -555,6 +574,20 @@ class main():
             print("The sample-to-dataset file does not match the "
                   "genotype / expression file header.")
             exit()
+
+    @staticmethod
+    def calculate_maf(m):
+        rounded_m = np.copy(m)
+        rounded_m = np.rint(rounded_m)
+
+        zero_a = (rounded_m == 0).sum(axis=1)
+        one_a = (rounded_m == 1).sum(axis=1)
+        two_a = (rounded_m == 2).sum(axis=1)
+
+        allele1_a = (zero_a * 2) + one_a
+        allele2_a = (two_a * 2) + one_a
+
+        return np.minimum(allele1_a, allele2_a) / (allele1_a + allele2_a)
 
     @staticmethod
     def create_model_configs(n):
@@ -801,6 +834,7 @@ class main():
         print("  > N rows: {}".format(self.nrows))
         print("  > N permutations: {}".format(self.n_permutations))
         print("  > Permutation index offset: {}".format(self.permutation_index_offset))
+        print("  > MAF: {}%".format(self.maf))
         print("  > Missing genotype: {}".format(self.missing_geno))
         print("  > Output directory: {}".format(self.outdir))
         print("")

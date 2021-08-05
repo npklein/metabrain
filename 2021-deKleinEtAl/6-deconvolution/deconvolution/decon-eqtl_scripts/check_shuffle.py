@@ -44,6 +44,8 @@ import matplotlib.pyplot as plt
 """
 Syntax:
 ./check_shuffle.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-WithPermutations -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis/data/SampleToDataset.txt.gz
+
+./check_shuffle.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-HalfNormalizedMAF5 -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis/data/SampleToDataset.txt.gz
 """
 
 # Metadata
@@ -149,8 +151,8 @@ class main():
                             "--n_files",
                             type=int,
                             required=False,
-                            default=5,
-                            help="The number of files to load. Default: 5.")
+                            default=None,
+                            help="The number of files to load. Default: None.")
 
         return parser.parse_args()
 
@@ -167,7 +169,9 @@ class main():
 
         print("Plotting permutation order.")
         perm_order_m_list = []
-        for perm_order_inpath in glob.glob(os.path.join(self.indir, "perm_orders_*")):
+        perm_order_inpaths = glob.glob(os.path.join(self.indir, "perm_orders_*"))
+        perm_order_inpaths.sort()
+        for perm_order_inpath in perm_order_inpaths:
             perm_order_m_list.append(self.load_matrix(perm_order_inpath))
         perm_order_m = np.vstack(perm_order_m_list)
         del perm_order_m_list
@@ -182,9 +186,9 @@ class main():
 
         print("Loading permutation order overlap")
         perm_order_overlap_m_list = []
-        for i, perm_order_overlap_inpath in enumerate(glob.glob(os.path.join(self.indir, "perm_order_overlap_*"))):
-            if i >= self.n_files:
-                break
+        perm_order_overlap_inpaths = glob.glob(os.path.join(self.indir, "perm_order_overlap_*"))
+        perm_order_overlap_inpaths.sort()
+        for perm_order_overlap_inpath in perm_order_overlap_inpaths:
             perm_order_overlap_m_list.append(self.load_matrix(perm_order_overlap_inpath))
         perm_order_overlap_m = np.hstack(perm_order_overlap_m_list)
         del perm_order_overlap_m_list
@@ -197,16 +201,7 @@ class main():
         ########################################################################
 
         print("Loading genotype matrix and calculating MAF")
-        geno_m = np.rint(self.load_file(self.geno_path, header=0, index_col=0).to_numpy())
-        maf_a = np.empty(geno_m.shape[0], dtype=np.float64)
-        for geno_index in range(geno_m.shape[0]):
-            unique, counts = np.unique(geno_m[geno_index, :], return_counts=True)
-            group_sizes = dict(zip(unique, counts))
-            group_sizes_a = np.array([group_sizes.get(0, 0), group_sizes.get(1, 0), group_sizes.get(2, 0)], dtype=np.float64)
-
-            allele1 = group_sizes_a[0] * 2 + group_sizes_a[1]
-            allele2 = group_sizes_a[2] * 2 + group_sizes_a[1]
-            maf_a[geno_index] = min(allele1, allele2) / (allele1 + allele2)
+        maf_a = self.load_file(os.path.join(self.indir, "MAF.txt.gz"), header=0, index_col=0).to_numpy().flatten()
         print("\tShape: {}".format(maf_a.shape))
 
         print("\tplotting distribution")
@@ -217,9 +212,9 @@ class main():
 
         print("Loading permutation p-value data")
         perm_pvalues_m_list = []
-        for i, perm_pvalues_inpath in enumerate(glob.glob(os.path.join(self.indir, "permutation_pvalues_*"))):
-            if i >= self.n_files:
-                break
+        perm_pvalues_inpaths = glob.glob(os.path.join(self.indir, "permutation_pvalues_*"))
+        perm_pvalues_inpaths.sort()
+        for perm_pvalues_inpath in perm_pvalues_inpaths:
             perm_pvalues_m_list.append(self.load_matrix(perm_pvalues_inpath))
         perm_pvalues_m = np.dstack(perm_pvalues_m_list)
         del perm_pvalues_m_list

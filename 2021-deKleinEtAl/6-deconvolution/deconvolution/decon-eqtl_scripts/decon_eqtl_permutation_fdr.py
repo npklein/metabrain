@@ -47,6 +47,8 @@ import matplotlib.pyplot as plt
 """
 Syntax:
 ./decon_eqtl_permutation_fdr.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-WithPermutations
+
+./decon_eqtl_permutation_fdr.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-HalfNormalizedMAF5
 """
 
 # Metadata

@@ -117,6 +117,7 @@ class DataLoader:
                     indices.append(trans_dict[index])
                     data_collection.append([float(x) for x in data])
         f.close()
+        print("\t\tfound {}/{} genes".format(len(data_collection), len(profile_genes)))
 
         return pd.DataFrame(data_collection, index=indices, columns=columns)
 
