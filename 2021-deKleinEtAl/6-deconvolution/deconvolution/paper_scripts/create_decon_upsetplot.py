@@ -52,6 +52,8 @@ Syntax:
 ./create_decon_upsetplot.py -d decon_eqtl_permutation/decon_output/real/deconvolutionResults.csv -e png
 
 ./create_decon_upsetplot.py -d ../2021-06-24-decon-QTL/cortex_eur_cis_NoENA_NoGVEX/decon_cis_cortex_eur_noENA_noGVEX_out/deconvolutionResults.csv -calc_fdr -e png
+
+./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/output/deconvolutionResults.txt.gz -calc_fdr -e png
 """
 
 

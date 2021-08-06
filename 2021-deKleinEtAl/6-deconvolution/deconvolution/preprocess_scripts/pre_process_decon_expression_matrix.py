@@ -3,7 +3,7 @@
 """
 File:         pre_process_decon_expression_matrix.py
 Created:      2021/07/06
-Last Changed: 2021/08/05
+Last Changed: 2021/08/06
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -206,62 +206,63 @@ class main():
         samples = gte_combined_df.iloc[:, 1].values.tolist()
         print("\tN samples: {}".format(len(samples)))
 
-        # # Safe sample cohort data frame.
-        # sample_cohort_df = gte_combined_df.iloc[:, [1, 3]]
-        # sample_cohort_df.columns = ["sample", "cohort"]
-        # self.save_file(sample_cohort_df, outpath=os.path.join(self.file_outdir, "SampleToCohort.txt.gz"), index=False)
-        # sample_dataset_df = gte_combined_df.iloc[:, [1, 2]]
-        # sample_dataset_df.columns = ["sample", "dataset"]
-        # self.save_file(sample_dataset_df, outpath=os.path.join(self.file_outdir, "SampleToDataset.txt.gz"), index=False)
-        #
-        # # Create cohort matrix.
-        # dataset_sample_counts = list(zip(*np.unique(gte_combined_df["file"], return_counts=True)))
-        # dataset_sample_counts.sort(key=lambda x: -x[1])
-        # datasets = [csc[0] for csc in dataset_sample_counts]
-        # print("\tDatasets: {} [N = {}]".format(", ".join(datasets), len(datasets)))
-        #
-        # dataset_df = pd.DataFrame(0, index=samples, columns=datasets)
-        # for dataset in datasets:
-        #     dataset_df.loc[dataset_to_samples_dict[dataset], dataset] = 1
-        # dataset_df.index.name = "-"
-        #
-        # # Load data.
-        # print("Loading data.")
-        # df = self.load_file(self.data_path, header=0, index_col=0)
-        #
-        # print("Step 1: sample selection.")
-        # print("\tUsing {}/{} samples.".format(len(samples), df.shape[1]))
-        # df = df.loc[:, samples]
-        #
-        # print("Step 2: remove probes with zero variance.")
-        # mask = df.std(axis=1) != 0
-        # print("\tUsing {}/{} probes.".format(np.sum(mask), np.size(mask)))
-        # df = df.loc[mask, :]
-        #
-        # print("Step 3: log2 transform.")
-        # min_value = df.min(axis=1).min()
-        # if min_value <= 0:
-        #     df = np.log2(df - min_value + 1)
-        # else:
-        #     df = np.log2(df + 1)
-        #
-        # print("Step 4: PCA analysis.")
-        # self.pca(df=df,
-        #          sample_to_cohort=sample_to_cohort,
-        #          plot_appendix="_1_Log2Transformed")
+        # Safe sample cohort data frame.
+        sample_cohort_df = gte_combined_df.iloc[:, [1, 3]]
+        sample_cohort_df.columns = ["sample", "cohort"]
+        self.save_file(sample_cohort_df, outpath=os.path.join(self.file_outdir, "SampleToCohort.txt.gz"), index=False)
+        sample_dataset_df = gte_combined_df.iloc[:, [1, 2]]
+        sample_dataset_df.columns = ["sample", "dataset"]
+        self.save_file(sample_dataset_df, outpath=os.path.join(self.file_outdir, "SampleToDataset.txt.gz"), index=False)
 
-        # print("Step 5: save mean and std per gene.")
-        # mean = df.mean(axis=1)
-        # std = df.std(axis=1)
+        # Create cohort matrix.
+        dataset_sample_counts = list(zip(*np.unique(gte_combined_df["file"], return_counts=True)))
+        dataset_sample_counts.sort(key=lambda x: -x[1])
+        datasets = [csc[0] for csc in dataset_sample_counts]
+        print("\tDatasets: {} [N = {}]".format(", ".join(datasets), len(datasets)))
 
-        # print("Step 6: Construct technical covariate matrix.")
-        # tcov_df = self.load_file(self.tcov_path, header=0, index_col=0)
-        # tcov_df = self.prepare_technical_covariates_matrix(tcov_df=tcov_df.loc[samples, :], dataset_df=dataset_df)
-        #
-        # print("Step 7: remove technical covariates OLS.")
-        # corrected_df = self.calculate_residuals(df=df, tcov_df=tcov_df)
-        # self.save_file(df=corrected_df, outpath=os.path.join(self.file_outdir, "{}.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.txt.gz".format(filename)))
-        corrected_df = self.load_file(os.path.join(self.file_outdir, "{}.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.txt.gz".format(filename)), header=0, index_col=0)
+        dataset_df = pd.DataFrame(0, index=samples, columns=datasets)
+        for dataset in datasets:
+            dataset_df.loc[dataset_to_samples_dict[dataset], dataset] = 1
+        dataset_df.index.name = "-"
+
+        # Load data.
+        print("Loading data.")
+        df = self.load_file(self.data_path, header=0, index_col=0)
+
+        print("Step 1: sample selection.")
+        print("\tUsing {}/{} samples.".format(len(samples), df.shape[1]))
+        df = df.loc[:, samples]
+
+        print("Step 2: remove probes with zero variance.")
+        mask = df.std(axis=1) != 0
+        print("\tUsing {}/{} probes.".format(np.sum(mask), np.size(mask)))
+        df = df.loc[mask, :]
+
+        print("Step 3: log2 transform.")
+        min_value = df.min(axis=1).min()
+        if min_value <= 0:
+            df = np.log2(df - min_value + 1)
+        else:
+            df = np.log2(df + 1)
+
+        print("Step 4: PCA analysis.")
+        self.pca(df=df,
+                 sample_to_cohort=sample_to_cohort,
+                 plot_appendix="_1_Log2Transformed")
+
+        print("Step 5: save mean and std per gene.")
+        mean = df.mean(axis=1)
+        std = df.std(axis=1)
+
+        print("Step 6: Construct technical covariate matrix.")
+        tcov_df = self.load_file(self.tcov_path, header=0, index_col=0)
+        tcov_df = self.prepare_technical_covariates_matrix(tcov_df=tcov_df.loc[samples, :], dataset_df=dataset_df)
+
+        print("Step 7: remove technical covariates OLS.")
+        corrected_df = self.calculate_residuals(df=df, tcov_df=tcov_df)
+        self.save_file(df=corrected_df, outpath=os.path.join(self.file_outdir, "{}.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.txt.gz".format(filename)))
+        # corrected_df = self.load_file(os.path.join(self.file_outdir, "{}.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.txt.gz".format(filename)), header=0, index_col=0)
+
         print("Step 8: PCA analysis.")
         self.pca(df=corrected_df,
                  sample_to_cohort=sample_to_cohort,
@@ -286,12 +287,12 @@ class main():
         print("Step 13: exp added.")
         decon_df = np.power(2, halfnormal_df)
         print("\tSaving file.")
-        self.save_file(df=decon_df, outpath=os.path.join(self.file_outdir, "{}.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceHalfNormalised.ScaleAndLocReturned.ExpAdded.txt.gz".format(filename)))
+        self.save_file(df=decon_df, outpath=os.path.join(self.file_outdir, "{}.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceHalfNormalised.ExpAdded.txt.gz".format(filename)))
 
         print("Step 14: PCA analysis.")
         self.pca(df=decon_df,
                  sample_to_cohort=sample_to_cohort,
-                 plot_appendix="_5_Log2Transformed_CovariatesRemovedOLS_ForceHalfNormalised_ScaleAndLocReturned_ExpAdded")
+                 plot_appendix="_5_Log2Transformed_CovariatesRemovedOLS_ForceHalfNormalised_ExpAdded")
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,

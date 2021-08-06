@@ -3,7 +3,7 @@
 """
 File:         compare_deconvolution_matrices.py
 Created:      2020/09/03
-Last Changed: 2021/07/14
+Last Changed: 2021/08/06
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -57,17 +57,13 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./compare_deconvolution_matrices.py -d1 ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -n1 Niek -d2 ../2021-06-24-decon-QTL/CortexEUR-cis/deconvolutionResults.csv -n2 Martijn -o Niek_vs_Martijn
+./compare_deconvolution_matrices.py -d1 ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -n1 Manuscript -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/cortex_eur_cis/deconvolutionResults.txt.gz -n2 CorrectFTest -log10 -o manuscript_vs_correctFTest
 
-./compare_deconvolution_matrices.py -d1 ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -n1 old_pre_processing -d2 ../2021-06-24-decon-QTL/CortexEUR-cis-OldCellCounts/deconvolutionResults.csv -n2 new_pre_processing -o OldPreProcessing_vs_NewPreProcessing
+./compare_deconvolution_matrices.py -d1 ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -n1 Manuscript -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis/deconvolutionResults.txt.gz -n2 CorrectMDSAndFTest -log10 -o manuscript_vs_correctMDSAndFTest
 
-./compare_deconvolution_matrices.py -d1 ../2021-06-24-decon-QTL/CortexEUR-cis-OldCellCounts/deconvolutionResults.csv -n1 old_cell-counts -d2 ../2021-06-24-decon-QTL/CortexEUR-cis/deconvolutionResults.csv -n2 new_cell_counts -o OldCellCounts_vs_NewCellCounts
+./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/cortex_eur_cis/deconvolutionResults.txt.gz -n1 CorrectFTest -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis/deconvolutionResults.txt.gz -n2 CorrectMDSAndFTest -log10 -o correctFTest_vs_correctMDSAndFTest
 
-./compare_deconvolution_matrices.py -d1 ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -n1 Decon-eQTL -d2 ../decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/output/deconvolutionResults.txt.gz -n2 Martijn -o DeconeQTL_vs_Martijn
-
-./compare_deconvolution_matrices.py -d1 ../decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-woPermFDR-Old/deconvolutionResults.txt.gz -n1 OLD -d2 ../decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-woPermFDR-New/deconvolutionResults.txt.gz -n2 NEW -o PythonCode_Old_vs_New
-
-./compare_deconvolution_matrices.py -d1 ../decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-woPermFDR-New-OldCC/deconvolutionResults.txt.gz -n1 OLD_cc -d2 ../decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-woPermFDR-New/deconvolutionResults.txt.gz -n2 NEW_cc -o PythonCode_OldCC_vs_NewCC
+./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-WithPermutations-StaticInteractionShuffle/deconvolutionResults.txt.gz -n1 Original -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-HalfNormalizedMAF5/deconvolutionResults.txt.gz -n2 HalfNormalized -log10 -o original_vs_halfnormalized
 """
 
 
@@ -82,6 +78,7 @@ class main():
         self.log10_transform = getattr(arguments, 'log10')
         self.outfile = getattr(arguments, 'outfile')
         self.nrows = None
+        self.alpha = 0.05
 
         # Set variables.
         self.outdir = os.path.join(str(Path(__file__).parent.parent), 'plot')
@@ -158,7 +155,8 @@ class main():
               "with shape: {}".format(os.path.basename(self.decon1_path),
                                       decon1_df.shape))
         decon1_pval_df, decon1_fdr_df = self.bh_correct(decon1_df)
-        # decon2_pval_df, decon2_fdr_df = self.bh_correct2(decon1_df)
+        for df, type in ([decon1_pval_df, "p-value"], [decon1_fdr_df, "FDR"]):
+            self.print_n_signif(df=df, type=type)
 
         print("Loading deconvolution matrix 2.")
         decon2_df = pd.read_csv(self.decon2_path, sep="\t", header=0,
@@ -167,6 +165,8 @@ class main():
               "with shape: {}".format(os.path.basename(self.decon2_path),
                                       decon2_df.shape))
         decon2_pval_df, decon2_fdr_df = self.bh_correct(decon2_df)
+        for df, type in ([decon2_pval_df, "p-value"], [decon2_fdr_df, "FDR"]):
+            self.print_n_signif(df=df, type=type)
 
         for decon1_df, decon2_df, appendix in ([decon1_pval_df, decon2_pval_df, "pvalue"], [decon1_fdr_df, decon2_fdr_df, "FDR"]):
             print("Plotting {}".format(appendix))
@@ -197,6 +197,19 @@ class main():
             print("\tPlotting.")
             #self.plot_violin_comparison(decon1_df, decon2_df, self.outfile + "_" + appendix)
             self.plot_regression_comparison(decon1_df, decon2_df, self.outfile + "_" + appendix)
+
+    def print_n_signif(self, df, type):
+        print("\nN-interaction ({} < {}):".format(type, self.alpha))
+        n_hits_s = (df < self.alpha).sum(axis=0)
+        n_hits_total = n_hits_s.sum()
+        cov_length = np.max([len(x) for x in df.columns])
+        hits_length = np.max([len(str(x)) for x in n_hits_s] + [len(str(n_hits_total))])
+        for cell_type, n_hits in n_hits_s.iteritems():
+            print("\t{:{}s}  {:{}d}".format(cell_type, cov_length, n_hits, hits_length))
+        print("\t{}".format("".join(["-"] * cov_length)))
+        print("\t{:{}s}  {:{}d}".format("total", cov_length, n_hits_total, hits_length))
+
+        print("", flush=True)
 
     @staticmethod
     def bh_correct(input_df):

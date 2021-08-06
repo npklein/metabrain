@@ -3,7 +3,7 @@
 """
 File:         cellmap_reference_profile.py
 Created:      2021/07/06
-Last Changed:
+Last Changed: 2021/08/05
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -23,14 +23,17 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 
 # Standard imports.
 from __future__ import print_function
-from pathlib import Path
 import argparse
-import gzip
+import sys
 import os
 
 # Third party imports.
 import pandas as pd
 import numpy as np
+import seaborn as sns
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 # Local application imports.
 
@@ -107,9 +110,14 @@ class main():
         print(info_df)
 
         print("Step 1: inversing log2 transform.")
-        df = df.pow(2)
+        df = np.power(2, df)
+        print(df)
+        exit()
 
-        print("Step 2: take average per cell type")
+        print("Step 2: Plotting input matrix")
+        self.plot_clustermap(df=df, filename=self.outfile.replace('.txt', ''))
+
+        print("Step 3: take average per cell type")
         avg_df = None
         for cell_type in info_df["cell type"].unique():
             mask = (info_df["cell type"] == cell_type).to_numpy()
@@ -124,7 +132,7 @@ class main():
             else:
                 avg_df = pd.concat([avg_df, ct_avg_expr], axis=1)
 
-        print("Step 3: prepare output matrix")
+        print("Step 4: prepare output matrix")
         avg_df.insert(0, "GeneSymbol", avg_df.index)
 
         print("Saving file")
@@ -141,6 +149,22 @@ class main():
               "with shape: {}".format(os.path.basename(inpath),
                                       df.shape))
         return df
+
+    @staticmethod
+    def plot_clustermap(df, filename):
+        sys.setrecursionlimit(100000)
+
+        sns.set(color_codes=True)
+        g = sns.clustermap(df, cmap="Blues",
+                           row_cluster=True, col_cluster=False,
+                           yticklabels=False, xticklabels=False,
+                           figsize=(12, 9))
+
+        outpath = "{}_clustermap.png".format(filename)
+        plt.tight_layout()
+        g.savefig(outpath)
+        plt.close()
+        print("\tSaved figure: {} ".format(outpath))
 
     @staticmethod
     def save_file(df, outpath, header=True, index=True, sep="\t"):

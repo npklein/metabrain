@@ -126,7 +126,7 @@ class main():
                                  "value. Default: -1. Note: has to be int.")
         parser.add_argument("-maf",
                             "--minor_allele_frequency",
-                            type=float,
+                            type=int,
                             default=1,
                             help="The minimal required MAF for a genotype."
                                  "Default: 1%")

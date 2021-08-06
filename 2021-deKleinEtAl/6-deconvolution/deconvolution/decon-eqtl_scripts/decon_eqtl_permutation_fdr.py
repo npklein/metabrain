@@ -72,6 +72,7 @@ class main():
         arguments = self.create_argument_parser()
         indir = getattr(arguments, 'indir')
         infolder = getattr(arguments, 'infolder')
+        self.alpha = 0.05
 
         # Set variables.
         if indir is None:
@@ -111,9 +112,10 @@ class main():
         # Load the real data.
         print("Loading real p-value data")
         real_pvalues_df = self.load_file(os.path.join(self.indir, "deconvolutionResults.txt.gz"), header=0, index_col=0)
+        pvalue_columns = [x for x in real_pvalues_df.columns if x.endswith("_pvalue")]
+        real_pvalues_m = real_pvalues_df.loc[:, pvalue_columns].to_numpy()
         rownames = real_pvalues_df.index.tolist()
-        colnames = real_pvalues_df.columns.tolist()
-        real_pvalues_m = real_pvalues_df.loc[:, [x for x in real_pvalues_df.columns if x.endswith("_pvalue")]].to_numpy()
+        colnames = [x.replace("_pvalue", "") for x in pvalue_columns]
         del real_pvalues_df
         print("\tShape: {}".format(real_pvalues_m.shape))
         print("")
@@ -148,9 +150,6 @@ class main():
         qvalues_m = np.empty_like(real_pvalues_m, dtype=np.float64)
         for cov_index in range(real_pvalues_m.shape[1]):
             column = colnames[cov_index]
-            if column != "CellMapNNLS_Oligodendrocyte_pvalue":
-                continue
-
             print("  Analyzing: {}".format(column))
 
             # Extract the data.
@@ -192,76 +191,77 @@ class main():
 
             real_qvalues = self.qvalues(p=real_pvalues)
 
-            print("\tPlotting.")
-            for log10 in [(False, False), (True, True)]:
-                self.regplot(x=real_pvalues, y=bh_fdr,
-                             xlabel="p-values",
-                             ylabel="BH fdr-values",
-                             log10=log10,
-                             filename="{}_real_pval_vs_bh_fdr".format(column))
+            if column == "CellMapNNLS_Oligodendrocyte_pvalue":
+                print("\tPlotting.")
+                for log10 in [(False, False), (True, True)]:
+                    self.regplot(x=real_pvalues, y=bh_fdr,
+                                 xlabel="p-values",
+                                 ylabel="BH fdr-values",
+                                 log10=log10,
+                                 filename="{}_real_pval_vs_bh_fdr".format(column))
 
-                self.regplot(x=real_pvalues, y=ranks,
-                             xlabel="real p-values",
-                             ylabel="ranks",
-                             log10=(log10[0], False),
-                             cutoff=(True, False),
-                             filename="{}_real_pval_vs_ranks".format(column))
-                self.regplot(x=real_pvalues, y=perm_ranks,
-                             xlabel="real p-values",
-                             ylabel="perm_ranks",
-                             log10=(log10[0], False),
-                             cutoff=(True, False),
-                             filename="{}_real_pval_vs_perm_ranks".format(column))
-                self.regplot(x=real_pvalues, y=emp_fdr,
-                             xlabel="p-values",
-                             ylabel="EMP fdr-values",
-                             log10=log10,
-                             filename="{}_real_pval_vs_emp_fdr".format(column))
+                    self.regplot(x=real_pvalues, y=ranks,
+                                 xlabel="real p-values",
+                                 ylabel="ranks",
+                                 log10=(log10[0], False),
+                                 cutoff=(True, False),
+                                 filename="{}_real_pval_vs_ranks".format(column))
+                    self.regplot(x=real_pvalues, y=perm_ranks,
+                                 xlabel="real p-values",
+                                 ylabel="perm_ranks",
+                                 log10=(log10[0], False),
+                                 cutoff=(True, False),
+                                 filename="{}_real_pval_vs_perm_ranks".format(column))
+                    self.regplot(x=real_pvalues, y=emp_fdr,
+                                 xlabel="p-values",
+                                 ylabel="EMP fdr-values",
+                                 log10=log10,
+                                 filename="{}_real_pval_vs_emp_fdr".format(column))
 
-                self.regplot(x=real_pvalues, y=adj_pvalues,
-                             xlabel="real p-values",
-                             ylabel="adj. p-values",
-                             log10=log10,
-                             filename="{}_real_pval_vs_adj_pval".format(column))
-                self.regplot(x=adj_pvalues, y=qvalues,
-                             xlabel="adj. p-values",
-                             ylabel="q-values",
-                             log10=log10,
-                             filename="{}_adj_pval_vs_qval".format(column))
-                self.regplot(x=real_pvalues, y=qvalues,
-                             xlabel="p-values",
-                             ylabel="q-values",
-                             log10=log10,
-                             filename="{}_real_pval_vs_qval".format(column))
-                self.regplot(x=real_pvalues, y=real_qvalues,
-                             xlabel="p-values",
-                             ylabel="real q-values",
-                             log10=log10,
-                             filename="{}_real_pval_vs_real_qval".format(column))
-                self.regplot(x=qvalues, y=bh_fdr,
-                             xlabel="q-values",
-                             ylabel="BH fdr-values",
-                             log10=log10,
-                             filename="{}_qval_vs_bh_fdr".format(column))
-                self.regplot(x=qvalues, y=emp_fdr,
-                             xlabel="q-values",
-                             ylabel="EMP fdr-values",
-                             log10=log10,
-                             filename="{}_qval_vs_emp_fdr".format(column))
-                self.regplot(x=bh_fdr, y=emp_fdr,
-                             xlabel="BH fdr-values",
-                             ylabel="EMP fdr-values",
-                             log10=log10,
-                             filename="{}_bh_fdr_vs_emp_fdr".format(column))
+                    self.regplot(x=real_pvalues, y=adj_pvalues,
+                                 xlabel="real p-values",
+                                 ylabel="adj. p-values",
+                                 log10=log10,
+                                 filename="{}_real_pval_vs_adj_pval".format(column))
+                    self.regplot(x=adj_pvalues, y=qvalues,
+                                 xlabel="adj. p-values",
+                                 ylabel="q-values",
+                                 log10=log10,
+                                 filename="{}_adj_pval_vs_qval".format(column))
+                    self.regplot(x=real_pvalues, y=qvalues,
+                                 xlabel="p-values",
+                                 ylabel="q-values",
+                                 log10=log10,
+                                 filename="{}_real_pval_vs_qval".format(column))
+                    self.regplot(x=real_pvalues, y=real_qvalues,
+                                 xlabel="p-values",
+                                 ylabel="real q-values",
+                                 log10=log10,
+                                 filename="{}_real_pval_vs_real_qval".format(column))
+                    self.regplot(x=qvalues, y=bh_fdr,
+                                 xlabel="q-values",
+                                 ylabel="BH fdr-values",
+                                 log10=log10,
+                                 filename="{}_qval_vs_bh_fdr".format(column))
+                    self.regplot(x=qvalues, y=emp_fdr,
+                                 xlabel="q-values",
+                                 ylabel="EMP fdr-values",
+                                 log10=log10,
+                                 filename="{}_qval_vs_emp_fdr".format(column))
+                    self.regplot(x=bh_fdr, y=emp_fdr,
+                                 xlabel="BH fdr-values",
+                                 ylabel="EMP fdr-values",
+                                 log10=log10,
+                                 filename="{}_bh_fdr_vs_emp_fdr".format(column))
 
             # Saving results.
             bh_fdr_m[:, cov_index] = bh_fdr
             emp_fdr_m[:, cov_index] = emp_fdr
             qvalues_m[:, cov_index] = qvalues
-            exit()
 
         print("Saving data frames")
         for m, name in zip([bh_fdr_m, emp_fdr_m, qvalues_m], ["BH_FDR", "EMP_FDR", "qvalues"]):
+            self.print_n_signif(m=m, colnames=colnames, type=name)
             df = pd.DataFrame(m, columns=colnames, index=rownames)
             self.save_file(df=df, outpath=os.path.join(self.indir, "{}.txt.gz".format(name)))
 
@@ -329,6 +329,19 @@ class main():
         pvals = robjects.FloatVector(p)
         qobj = robjects.r['qvalue'](pvals)
         return np.array(qobj.rx2('qvalues'))
+
+    def print_n_signif(self, m, colnames, type):
+        print("\nN-interaction ({} < {}):".format(type, self.alpha))
+        n_hits_a = (m < self.alpha).sum(axis=0)
+        n_hits_total = np.sum(n_hits_a)
+        cov_length = np.max([len(x) for x in colnames])
+        hits_length = np.max([len(str(x)) for x in n_hits_a] + [len(str(n_hits_total))])
+        for n_hits, cell_type in zip(n_hits_a, colnames):
+            print("\t{:{}s}  {:{}d}".format(cell_type, cov_length, n_hits, hits_length))
+        print("\t{}".format("".join(["-"] * cov_length)))
+        print("\t{:{}s}  {:{}d}".format("total", cov_length, n_hits_total, hits_length))
+
+        print("", flush=True)
 
     def histplot(self, real, permuted, lowest_permuted, beta_parameters, nit, nfev, filename="plot"):
         sns.set(rc={'figure.figsize': (27, 12)})
