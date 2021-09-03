@@ -3,7 +3,7 @@
 """
 File:         cellmap_reference_profile.py
 Created:      2021/07/06
-Last Changed: 2021/08/05
+Last Changed: 2021/09/03
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -23,6 +23,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 
 # Standard imports.
 from __future__ import print_function
+from pathlib import Path
 import argparse
 import sys
 import os
@@ -53,7 +54,7 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./cellmap_reference_profile.py -d ../data/CellMap_brain_CNS7_log2CPM.txt -o CellMap_brain_CNS7_avgCPM.txt
+./cellmap_reference_profile.py -d ../data/CellMap_brain_CNS7_log2CPM.txt -s ../data/CNS7_signature_genes.txt -o CellMap_brain_CNS7_avgCPM.txt
 """
 
 
@@ -62,7 +63,12 @@ class main():
         # Get the command line arguments.
         arguments = self.create_argument_parser()
         self.data_path = getattr(arguments, 'data')
+        self.signature_genes_path = getattr(arguments, 'signature_genes')
         self.outfile = getattr(arguments, 'outfile')
+
+        self.plotdir = os.path.join(str(Path(__file__).parent.parent), 'plot')
+        if not os.path.exists(self.plotdir):
+            os.makedirs(self.plotdir)
 
         self.cell_type_dict = {
             "Oligodendrocytes": "Oligodendrocyte",
@@ -88,6 +94,11 @@ class main():
                             type=str,
                             required=True,
                             help="The path to the Cellmap reference profile")
+        parser.add_argument("-s",
+                            "--signature_genes",
+                            type=str,
+                            required=True,
+                            help="The path to the signature genes list")
         parser.add_argument("-o",
                             "--outfile",
                             type=str,
@@ -101,6 +112,12 @@ class main():
 
         print("Loading data.")
         df = self.load_file(self.data_path, header=0, index_col=0)
+        signature_genes_df = self.load_file(self.signature_genes_path, header=0, index_col=None)
+
+        print("Selecting signature genes")
+        overlap = set(signature_genes_df["gene"]).intersection(set(df.index))
+        print("\toverlap = {} [{}/{}]".format(len(overlap), len(overlap), signature_genes_df.shape[0]))
+        df = df.loc[signature_genes_df["gene"], :]
 
         print("Preprocessing header")
         info = []
@@ -111,11 +128,9 @@ class main():
 
         print("Step 1: inversing log2 transform.")
         df = np.power(2, df)
-        print(df)
-        exit()
 
         print("Step 2: Plotting input matrix")
-        self.plot_clustermap(df=df, filename=self.outfile.replace('.txt', ''))
+        self.plot_clustermap(df=df, filename=self.outfile.split(".txt")[0] + "_full")
 
         print("Step 3: take average per cell type")
         avg_df = None
@@ -131,8 +146,12 @@ class main():
                 avg_df = ct_avg_expr
             else:
                 avg_df = pd.concat([avg_df, ct_avg_expr], axis=1)
+        print(avg_df)
 
-        print("Step 4: prepare output matrix")
+        print("Step 4: Plotting average matrix")
+        self.plot_clustermap(df=avg_df, filename=self.outfile.split(".txt")[0] + "_average")
+
+        print("Step 5: prepare output matrix")
         avg_df.insert(0, "GeneSymbol", avg_df.index)
 
         print("Saving file")
@@ -150,8 +169,7 @@ class main():
                                       df.shape))
         return df
 
-    @staticmethod
-    def plot_clustermap(df, filename):
+    def plot_clustermap(self, df, filename):
         sys.setrecursionlimit(100000)
 
         sns.set(color_codes=True)
@@ -160,7 +178,7 @@ class main():
                            yticklabels=False, xticklabels=False,
                            figsize=(12, 9))
 
-        outpath = "{}_clustermap.png".format(filename)
+        outpath = os.path.join(self.plotdir, "{}_clustermap.png".format(filename))
         plt.tight_layout()
         g.savefig(outpath)
         plt.close()
@@ -181,6 +199,7 @@ class main():
     def print_arguments(self):
         print("Arguments:")
         print("  > Data path: {}".format(self.data_path))
+        print("  > Signature genes path: {}".format(self.signature_genes_path))
         print("  > Output filename: {}".format(self.outfile))
         print("")
 

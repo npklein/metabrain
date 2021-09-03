@@ -3,7 +3,7 @@
 """
 File:         pre_process_decon_expression_matrix.py
 Created:      2021/07/06
-Last Changed: 2021/08/06
+Last Changed: 2021/09/01
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -65,6 +65,10 @@ Syntax:
 ./pre_process_decon_expression_matrix.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz -t /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-05-26-step5-remove-covariates-per-dataset/2020-05-25-covariatefiles/2020-02-17-freeze2dot1.TMM.Covariates.withBrainRegion-noncategorical-variable.top20correlated-cortex-withMDS.txt.gz -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR -p GTE-EUR- -e ENA GVEX -of CortexEUR_noENA_noGVEX
 
 ./pre_process_decon_expression_matrix.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz -t /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-05-26-step5-remove-covariates-per-dataset/2020-05-25-covariatefiles/2020-02-17-freeze2dot1.TMM.Covariates.withBrainRegion-noncategorical-variable.top20correlated-cortex-withMDS.txt.gz -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-AFR -p GTE-AFR- -e ENA -of CortexAFR_noENA
+
+./pre_process_decon_expression_matrix.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz -t /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-05-26-step5-remove-covariates-per-dataset/2020-05-25-covariatefiles/2020-02-17-freeze2dot1.TMM.Covariates.withBrainRegion-noncategorical-variable.top20correlated-cortex-withMDS.txt.gz -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR -p GTE-EUR- -of CortexEUR-cis-Normalised
+
+./pre_process_decon_expression_matrix.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz -t /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-05-26-step5-remove-covariates-per-dataset/2020-05-25-covariatefiles/2020-02-17-freeze2dot1.TMM.Covariates.withBrainRegion-noncategorical-variable.top20correlated-cortex-withMDS.txt.gz -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-AFR -p GTE-AFR- -of CortexAFR-cis-Normalised
 """
 
 
@@ -250,9 +254,9 @@ class main():
                  sample_to_cohort=sample_to_cohort,
                  plot_appendix="_1_Log2Transformed")
 
-        print("Step 5: save mean and std per gene.")
-        mean = df.mean(axis=1)
-        std = df.std(axis=1)
+        # print("Step 5: save mean and std per gene.")
+        # mean = df.mean(axis=1)
+        # std = df.std(axis=1)
 
         print("Step 6: Construct technical covariate matrix.")
         tcov_df = self.load_file(self.tcov_path, header=0, index_col=0)
@@ -268,31 +272,31 @@ class main():
                  sample_to_cohort=sample_to_cohort,
                  plot_appendix="_2_Log2Transformed_CovariatesRemovedOLS")
 
-        print("Step 9: force half-normalise.")
-        halfnormal_df = self.force_halfnormalise(df=corrected_df)
+        print("Step 9: force normalise.")
+        normal_df = self.force_normalise(df=corrected_df)
 
         print("Step 10: PCA analysis.")
-        self.pca(df=halfnormal_df,
+        self.pca(df=normal_df,
                  sample_to_cohort=sample_to_cohort,
-                 plot_appendix="_3_Log2Transformed_CovariatesRemovedOLS_ForceHalfNormalised")
+                 plot_appendix="_3_Log2Transformed_CovariatesRemovedOLS_ForceNormalised")
 
         # print("Step 11: return distribution shape and location.")
-        # halfnormal_df = halfnormal_df.subtract(halfnormal_df.mean(axis=1), axis=0).mul(std / halfnormal_df.std(axis=1), axis=0).add(mean, axis=0)
+        # normal_df = normal_df.subtract(normal_df.mean(axis=1), axis=0).mul(std / normal_df.std(axis=1), axis=0).add(mean, axis=0)
 
-        # print("Step 12: PCA analysis.")
-        # self.pca(df=halfnormal_df,
-        #          sample_to_cohort=sample_to_cohort,
-        #          plot_appendix="_4_Log2Transformed_CovariatesRemovedOLS_ForceHalfNormalised_ScaleAndLocReturned")
+        print("Step 12: PCA analysis.")
+        self.pca(df=normal_df,
+                 sample_to_cohort=sample_to_cohort,
+                 plot_appendix="_4_Log2Transformed_CovariatesRemovedOLS_ForceNormalised_ScaleAndLocReturned")
 
         print("Step 13: exp added.")
-        decon_df = np.power(2, halfnormal_df)
+        decon_df = np.power(2, normal_df)
         print("\tSaving file.")
-        self.save_file(df=decon_df, outpath=os.path.join(self.file_outdir, "{}.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceHalfNormalised.ExpAdded.txt.gz".format(filename)))
+        self.save_file(df=decon_df, outpath=os.path.join(self.file_outdir, "{}.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt.gz".format(filename)))
 
         print("Step 14: PCA analysis.")
         self.pca(df=decon_df,
                  sample_to_cohort=sample_to_cohort,
-                 plot_appendix="_5_Log2Transformed_CovariatesRemovedOLS_ForceHalfNormalised_ExpAdded")
+                 plot_appendix="_5_Log2Transformed_CovariatesRemovedOLS_ForceNormalised_ExpAdded")
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
@@ -429,8 +433,8 @@ class main():
         return pd.DataFrame(corrected_m, index=df.index, columns=df.columns)
 
     @staticmethod
-    def force_halfnormalise(df):
-        return pd.DataFrame(stats.halfnorm.ppf((df.rank(axis=1, ascending=True) - 0.5) / df.shape[1]), index=df.index, columns=df.columns)
+    def force_normalise(df):
+        return pd.DataFrame(stats.norm.ppf((df.rank(axis=1, ascending=True) - 0.5) / df.shape[1]), index=df.index, columns=df.columns)
 
     def pca(self, df, sample_to_cohort, plot_appendix=""):
         # samples should be on the columns and genes on the rows.

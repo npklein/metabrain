@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_replication_plot.py
 Created:      2021/06/24
-Last Changed: 2021/08/03
+Last Changed: 2021/09/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -48,6 +48,8 @@ Syntax:
 ./decon_eqtl_replication_plot.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-PrimaryeQTLs/deconvolutionResults.txt.gz -dn EUR -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexAFR-cis-Replication-EUR/deconvolutionResults.txt.gz -rn AFR
 
 ./decon_eqtl_replication_plot.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-WithPermutations-StaticInteractionShuffle/deconvolutionResults.txt.gz -dn EUR -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexAFR-cis-Replication-EUR-HalfNormalised/deconvolutionResults.txt.gz -rn AFR
+
+./decon_eqtl_replication_plot.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-NormalisedMAF5/deconvolutionResults.txt.gz -dn EUR -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexAFR-cis-Replication-EUR-Normalised/deconvolutionResults.txt.gz -rn AFR
 """
 
 # Metadata
@@ -145,6 +147,7 @@ class main():
         print("Transfer betas to log scale")
         discovery_df = self.log_transform(discovery_df)
         replication_df = self.log_transform(replication_df)
+        print(replication_df)
 
         print("Pre-processing")
         discovery_beta_df_m = discovery_df.loc[:, [col for col in discovery_df.columns if "Beta" in col]].melt()
@@ -164,6 +167,7 @@ class main():
 
         print("Calculating BH-FDR for discovery")
         discovery_df = self.add_fdr_columns(discovery_df)
+        print(discovery_df)
 
         print("Merging")
         combined_df = None
@@ -183,14 +187,11 @@ class main():
                     replication_beta_column = col
                     break
 
-            discovery_subset_df = discovery_df[["{}_FDR".format(cell_type), discovery_beta_column]].copy()
-            discovery_subset_df["discovery index"] = [x for x in range(discovery_subset_df.shape[0])]
-
+            discovery_subset_df = discovery_df[["{}_pvalue".format(cell_type), "{}_FDR".format(cell_type), discovery_beta_column]].copy()
             replication_subset_df = replication_df[["{}_pvalue".format(cell_type), replication_beta_column]].copy()
-            replication_subset_df["replication index"] = [x for x in range(replication_subset_df.shape[0])]
 
             ct_df = discovery_subset_df.merge(replication_subset_df, left_index=True, right_index=True)
-            ct_df.columns = ["discovery FDR", "discovery beta", "discovery index", "replication p-value", "replication beta", "replication index"]
+            ct_df.columns = ["discovery p-value", "discovery FDR", "discovery beta", "replication p-value", "replication beta"]
             ct_df.insert(0, "cell type", cell_type)
             ct_df.reset_index(drop=False, inplace=True)
 
@@ -521,7 +522,7 @@ class main():
     def print_arguments(self):
         print("Arguments:")
         print("  > Discovery:")
-        print("    > File path: {}".format(self.discovery_name))
+        print("    > File path: {}".format(self.discovery_path))
         print("    > Name: {}".format(self.discovery_name))
         print("  > Replication:")
         print("    > File path: {}".format(self.replication_path))

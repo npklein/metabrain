@@ -3,7 +3,7 @@
 """
 File:         visualise_permutation_interactions.py
 Created:      2021/08/05
-Last Changed:
+Last Changed: 2021/09/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -24,6 +24,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 # Standard imports.
 from __future__ import print_function
 from pathlib import Path
+from random import randrange
 import warnings
 import argparse
 import glob
@@ -57,6 +58,8 @@ __description__ = "{} is a program developed and maintained by {}. " \
 """
 Syntax:
 ./visualise_permutation_interactions.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_cohort_matrix/sample_to_dataset.txt.gz -df CortexEUR-cis-WithPermutations-StaticGenoShuffle
+
+./visualise_permutation_interactions.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_cohort_matrix/sample_to_dataset.txt.gz -df CortexEUR-cis-NormalisedMAF5
 """
 
 
@@ -159,48 +162,26 @@ class main():
         del perm_pvalues_m_list
         print("\tShape: {}".format(perm_pvalues_m.shape))
 
-        print("Loading genotype data")
-        geno_m = self.load_file(self.geno_path, header=0, index_col=0).to_numpy(dtype=np.float64)
-
-        print("Calculate MAF")
-        maf_a = np.empty(geno_m.shape[0], dtype=np.float64)
-        for geno_index in range(geno_m.shape[0]):
-            unique, counts = np.unique(geno_m[geno_index, :], return_counts=True)
-            group_sizes = dict(zip(unique, counts))
-            group_sizes_a = np.array([group_sizes.get(0, 0),
-                                      group_sizes.get(1, 0),
-                                      group_sizes.get(2, 0)],
-                                     dtype=np.float64)
-
-            allele1 = group_sizes_a[0] * 2 + group_sizes_a[1]
-            allele2 = group_sizes_a[2] * 2 + group_sizes_a[1]
-            maf_a[geno_index] = min(allele1, allele2) / (allele1 + allele2)
-        maf_mask = maf_a > 0.14
-
-        print("Finding the lowest N values.")
-        maf_filtered_perm_pvalues_m = perm_pvalues_m[maf_mask, :]
-        smallest_indices = []
-        cutoff = 0
-        nrows = None
-        for i in range(self.n):
-            lowest_value = np.min(maf_filtered_perm_pvalues_m[maf_filtered_perm_pvalues_m > cutoff])
-            index = np.where(perm_pvalues_m == lowest_value)
-
-            row_index = index[0][0]
-            col_index = index[1][0]
-            perm_index = index[2][0]
-
-            smallest_indices.append((row_index, col_index, perm_index))
-            cutoff = lowest_value
-
-            if nrows is None or row_index > nrows:
-                nrows = row_index
-
-        print(smallest_indices)
-
         print("Loading real p-value data")
         real_pvalues_df = self.load_file(os.path.join(self.decondir, "deconvolutionResults.txt.gz"), header=0, index_col=0)
         real_pvalues_m = real_pvalues_df.loc[:, [x for x in real_pvalues_df.columns if x.endswith("_pvalue")]].to_numpy()
+
+        print("Finding the lowest N values.")
+        all_pvalues = real_pvalues_m.flatten()
+        all_pvalues.sort()
+        smallest_indices = []
+        nrows = None
+        for i in range(self.n):
+            index = np.where(real_pvalues_m == all_pvalues[i])
+
+            eqtl_index = index[0][0]
+            ct_index = index[1][0]
+
+            smallest_indices.append((eqtl_index, ct_index))
+
+            if nrows is None or eqtl_index > nrows:
+                nrows = eqtl_index
+        print(smallest_indices)
 
         print("Loading other data")
         geno_m = self.load_file(self.geno_path, header=0, index_col=0, nrows=nrows + 1).to_numpy(dtype=np.float64)
@@ -226,7 +207,9 @@ class main():
             nanfilled_geno_m[geno_nan_mask] = geno_dataset_mean_m[geno_nan_mask]
 
         print("Plotting")
-        for row_index, cov_index, perm_index in smallest_indices:
+        for row_index, cov_index in smallest_indices:
+            perm_index = randrange(0, perm_order_m.shape[0])
+
             genotype = geno_m[row_index, :]
             expression = expr_m[row_index, :]
             cell_count = cc_m[:, cov_index]
@@ -265,14 +248,14 @@ class main():
                                  ax=axes[1, 0],
                                  annotate=[("Decon-eQTL p-value", real_p_value, ".2e")])
 
-            self.plot_eqtl(df=plot_df.loc[plot_df['shuffled genotype'].notnull(), :],
+            self.plot_eqtl(df=plot_df.loc[plot_df['genotype'].notnull(), :],
                            x="shuffled genotype",
                            y="expression",
                            x_group="shuffled genotype group",
                            palette=self.palette,
                            ax=axes[0, 1],
                            title="permuted genotype")
-            self.plot_inter_eqtl(df=plot_df.loc[plot_df['shuffled genotype'].notnull(), :],
+            self.plot_inter_eqtl(df=plot_df.loc[plot_df['genotype'].notnull(), :],
                                  x="cell count",
                                  y="expression",
                                  group="shuffled genotype group",

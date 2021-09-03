@@ -3,7 +3,7 @@
 """
 File:         visualise_opposite_effects.py
 Created:      2021/08/03
-Last Changed:
+Last Changed: 2021/09/02
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -57,7 +57,7 @@ __description__ = "{} is a program developed and maintained by {}. " \
 Syntax:
 ./visualise_opposite_effects.py -dq /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR/Iteration1/eQTLProbesFDR0.05-ProbeLevel.txt.gz -dg /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -de /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -dcc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -dn EUR -rq /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-AFR/replicateCortex-EUR/eQTLProbesFDR0.05-ProbeLevel.txt.gz -rg /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR/genotype_table.txt -re /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -rcc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/perform_deconvolution/deconvolution_table.txt.gz -rn AFR -i /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_replication_plot/data/replication_opposite_efects_table.txt.gz
 
-./visualise_opposite_effects.py -dq /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR/Iteration1/eQTLProbesFDR0.05-ProbeLevel.txt.gz -dg /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -de /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis-HalfNormalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceHalfNormalised.ExpAdded.txt -dcc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -dn EUR -rq /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-AFR/replicateCortex-EUR/eQTLProbesFDR0.05-ProbeLevel.txt.gz -rg /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR-HalfNormalized/genotype_table.txt -re /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR-HalfNormalized/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceHalfNormalised.ExpAdded.txt -rcc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/perform_deconvolution/deconvolution_table.txt.gz -rn AFR -i /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_replication_plot/data/replication_opposite_efects_table_ForceHalfNormalisedMAF5.txt.gz
+./visualise_opposite_effects.py -dq /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR/Iteration1/eQTLProbesFDR0.05-ProbeLevel.txt.gz -dg /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -de /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt -dcc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -dn EUR -rq /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-AFR/replicateCortex-EUR/eQTLProbesFDR0.05-ProbeLevel.txt.gz -rg /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR-Normalised/genotype_table.txt -re /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt -rcc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/perform_deconvolution/deconvolution_table.txt.gz -rn AFR -i /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_replication_plot/data/replication_opposite_efects_table.txt.gz
 
 ./visualise_opposite_effects.py -dq /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR/Iteration1/eQTLProbesFDR0.05-ProbeLevel.txt.gz -dg /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -de /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/expression_table.txt.gz -dcc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -dn EUR -rq /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-AFR/replicateCortex-EUR/eQTLProbesFDR0.05-ProbeLevel.txt.gz -rg /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR/genotype_table.txt -re /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/create_matrices/expression_table.txt.gz -rcc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/perform_deconvolution/deconvolution_table.txt.gz -rn AFR -i /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_replication_plot/data/replication_opposite_efects_table.txt.gz
 
@@ -188,27 +188,31 @@ class main():
 
         print("Loading interest")
         interest_df = self.load_file(self.interest_path, header=0, index_col=0)
-        nrows = max(max(interest_df["discovery index"]), max(interest_df["replication index"])) + 1
-        # nrows = None
+        # nrows = max(max(interest_df["discovery index"]), max(interest_df["replication index"])) + 1
+        nrows = None
 
         print("Loading discovery data")
         d_eqtl_df = self.load_file(self.d_eqtl_path, header=0, index_col=None, nrows=nrows)
         d_eqtl_df.index = d_eqtl_df["ProbeName"] + "_" + d_eqtl_df["SNPName"]
         d_geno_df = self.load_file(self.d_geno_path, header=0, index_col=0, nrows=nrows)
+        d_geno_df = d_geno_df.groupby(d_geno_df.index).first()
         # d_allele_df = self.load_file(self.d_allele_path, header=0, index_col=0, nrows=nrows)
         d_expr_df = self.load_file(self.d_expr_path, header=0, index_col=0, nrows=nrows)
+        d_expr_df = d_expr_df.groupby(d_expr_df.index).first()
         d_cc_df = self.load_file(self.d_cc_path, header=0, index_col=0)
 
         print("Loading replication data")
         r_eqtl_df = self.load_file(self.r_eqtl_path, header=0, index_col=None, nrows=nrows)
         r_eqtl_df.index = r_eqtl_df["ProbeName"] + "_" + r_eqtl_df["SNPName"]
         r_geno_df = self.load_file(self.r_geno_path, header=0, index_col=0, nrows=nrows)
+        r_geno_df = r_geno_df.groupby(r_geno_df.index).first()
         # r_allele_df = self.load_file(self.r_allele_path, header=0, index_col=0, nrows=nrows)
         r_expr_df = self.load_file(self.r_expr_path, header=0, index_col=0, nrows=nrows)
+        r_expr_df = r_expr_df.groupby(r_expr_df.index).first()
         r_cc_df = self.load_file(self.r_cc_path, header=0, index_col=0)
 
         print("Looping over interest")
-        for _, (index, cell_type, d_fdr, d_beta, _, _, r_beta, _, r_fdr) in interest_df.iterrows():
+        for _, (index, cell_type, d_pvalue, d_fdr, d_beta, r_pvalue, r_beta, r_fdr) in interest_df.iterrows():
             gene = index.split("_")[0]
             snp = "_".join(index.split("_")[1:])
             print("\tPlotting {} - {} - {}".format(gene, snp, cell_type))
@@ -218,15 +222,14 @@ class main():
             sns.set_style("ticks")
             fig, axes = plt.subplots(ncols=2, nrows=2)
 
-            for eqtl_ax, inter_ax, eqtl_df, geno_df, expr_df, cc_df, fdr, \
-                beta, name in ([*axes[:, 0], d_eqtl_df, d_geno_df, d_expr_df, d_cc_df, d_fdr, d_beta, self.d_name],
-                               [*axes[:, 1], r_eqtl_df, r_geno_df, r_expr_df, r_cc_df, r_fdr, r_beta, self.r_name]):
+            for eqtl_ax, inter_ax, eqtl_df, geno_df, expr_df, cc_df, pvalue, fdr, \
+                beta, name in ([*axes[:, 0], d_eqtl_df, d_geno_df, d_expr_df, d_cc_df, d_pvalue, d_fdr, d_beta, self.d_name],
+                               [*axes[:, 1], r_eqtl_df, r_geno_df, r_expr_df, r_cc_df, r_pvalue, r_fdr, r_beta, self.r_name]):
                 sns.despine(fig=fig, ax=eqtl_ax)
                 sns.despine(fig=fig, ax=inter_ax)
 
-                eqtl_stats = eqtl_df.loc[(eqtl_df["SNPName"] == snp) & (eqtl_df["ProbeName"] == gene), :]
-                eqtl_pvalue = eqtl_stats["PValue"].values[0]
-                eqtl_fdr = eqtl_stats["FDR"].values[0]
+                eqtl_pvalue = eqtl_df.loc[gene + "_" + snp, "PValue"]
+                eqtl_fdr = eqtl_df.loc[gene + "_" + snp, "FDR"]
 
                 genotype = geno_df.loc[snp, :]
                 expression = expr_df.loc[gene, :]
@@ -249,7 +252,9 @@ class main():
                                      title="",
                                      xlabel=cell_type,
                                      ylabel=gene,
-                                     annotate=[("Decon-eQTL FDR", fdr, ".2e"), ("Decon-eQTL beta", beta, ".2f")])
+                                     annotate=[("Decon-eQTL p-value", pvalue, ".2e"),
+                                               ("Decon-eQTL FDR", fdr, ".2e"),
+                                               ("Decon-eQTL beta", beta, ".2f")])
 
             outpath = os.path.join(self.outdir, "opposite_effects_plot_{}_vs_{}_{}_{}_{}.png".format(self.d_name, self.r_name, gene, snp, cell_type))
             fig.savefig(outpath)
@@ -415,7 +420,7 @@ class main():
             coef = np.nan
             if len(subset.index) > 1:
                 # Calculate the correlation.
-                coef, _ = stats.pearsonr(df["cell count"], df["expression"])
+                coef, _ = stats.pearsonr(subset["cell count"], subset["expression"])
 
                 # Plot the scatter / box plot.
                 sns.regplot(x="cell count", y="expression", data=subset,
