@@ -3,7 +3,7 @@
 """
 File:         visualise_permutation_interactions.py
 Created:      2021/08/05
-Last Changed: 2021/09/02
+Last Changed: 2021/09/06
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -29,6 +29,7 @@ import warnings
 import argparse
 import glob
 import os
+import re
 
 # Third party imports.
 import numpy as np
@@ -38,6 +39,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy import stats
+import plotly.graph_objects as go
 
 # Local application imports.
 
@@ -143,7 +145,7 @@ class main():
 
         print("Loading permutation order.")
         perm_order_inpath = glob.glob(os.path.join(self.decondir, "perm_orders_*"))
-        perm_order_inpath.sort()
+        perm_order_inpath.sort(self.natural_keys)
         perm_order_m_list = []
         for perm_order_inpath in perm_order_inpath:
             perm_order_m_list.append(self.load_matrix(perm_order_inpath))
@@ -154,7 +156,7 @@ class main():
 
         print("Loading permutation p-value data")
         perm_pvalues_inpaths = glob.glob(os.path.join(self.decondir, "permutation_pvalues_*"))
-        perm_pvalues_inpaths.sort()
+        perm_pvalues_inpaths.sort(key=self.natural_keys)
         perm_pvalues_m_list = []
         for perm_pvalues_inpath in perm_pvalues_inpaths:
             perm_pvalues_m_list.append(self.load_matrix(perm_pvalues_inpath))
@@ -208,24 +210,33 @@ class main():
 
         print("Plotting")
         for row_index, cov_index in smallest_indices:
-            perm_index = randrange(0, perm_order_m.shape[0])
+            perm_index = np.argmin(perm_pvalues_m[row_index, cov_index])
 
             genotype = geno_m[row_index, :]
+            genotype_group = np.rint(genotype)
             expression = expr_m[row_index, :]
             cell_count = cc_m[:, cov_index]
             perm_order = perm_order_m[perm_index, :]
             nanfilled_genotype = nanfilled_geno_m[row_index, :]
             shuffled_genotype = nanfilled_genotype[perm_order]
+            shuffled_genotype_group = np.rint(shuffled_genotype)
 
             plot_df = pd.DataFrame({"genotype": genotype,
-                                    "genotype group": np.rint(genotype),
+                                    "genotype group": genotype_group,
                                     "expression": expression,
                                     "cell count": cell_count,
                                     "shuffled genotype": shuffled_genotype,
-                                    "shuffled genotype group": np.rint(shuffled_genotype)})
+                                    "shuffled genotype group": shuffled_genotype_group})
+            plot_df = plot_df.loc[plot_df['genotype'].notnull(), :]
 
             real_p_value = real_pvalues_m[row_index, cov_index]
             perm_p_value = perm_pvalues_m[row_index, cov_index, perm_index]
+
+            # Plot the shuffle flow.
+            self.plot_sankey(start=plot_df["genotype group"].to_numpy(),
+                             end=plot_df["shuffled genotype group"].to_numpy(),
+                             row_index=row_index,
+                             perm_index=perm_index)
 
             # Initialize plot.
             sns.set(rc={'figure.figsize': (24, 18)})
@@ -233,14 +244,14 @@ class main():
             fig, axes = plt.subplots(ncols=2, nrows=2)
 
             # Plot the original genotype.
-            self.plot_eqtl(df=plot_df.loc[plot_df['genotype'].notnull(), :],
+            self.plot_eqtl(df=plot_df,
                            x="genotype",
                            y="expression",
                            x_group="genotype group",
                            palette=self.palette,
                            ax=axes[0, 0],
                            title="real genotype")
-            self.plot_inter_eqtl(df=plot_df.loc[plot_df['genotype'].notnull(), :],
+            self.plot_inter_eqtl(df=plot_df,
                                  x="cell count",
                                  y="expression",
                                  group="genotype group",
@@ -248,14 +259,14 @@ class main():
                                  ax=axes[1, 0],
                                  annotate=[("Decon-eQTL p-value", real_p_value, ".2e")])
 
-            self.plot_eqtl(df=plot_df.loc[plot_df['genotype'].notnull(), :],
+            self.plot_eqtl(df=plot_df,
                            x="shuffled genotype",
                            y="expression",
                            x_group="shuffled genotype group",
                            palette=self.palette,
                            ax=axes[0, 1],
                            title="permuted genotype")
-            self.plot_inter_eqtl(df=plot_df.loc[plot_df['genotype'].notnull(), :],
+            self.plot_inter_eqtl(df=plot_df,
                                  x="cell count",
                                  y="expression",
                                  group="shuffled genotype group",
@@ -286,6 +297,10 @@ class main():
         return m
 
     @staticmethod
+    def natural_keys(text):
+        return [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', text)]
+
+    @staticmethod
     def calculate_geno_mean_per_dataset(geno_m, datasets, std_m):
         """
         Method for calculating the mean genotype per dataset per eQTL. Missing
@@ -306,6 +321,43 @@ class main():
                 geno_dataset_mean_m[:, dataset_mask] = np.tile(dataset_mean_a[:, np.newaxis], np.sum(dataset_mask))
 
         return geno_dataset_mean_m
+
+    def plot_sankey(self, start, end, row_index, perm_index):
+        start_sizes = dict(zip(*np.unique(start, return_counts=True)))
+        end_sizes = dict(zip(*np.unique(end, return_counts=True)))
+
+        data = []
+        for source_group in [0, 1, 2]:
+            subset = end[start == source_group]
+            counts = dict(zip(*np.unique(subset, return_counts=True)))
+            for target_group in [0, 1, 2]:
+                if target_group not in counts:
+                    continue
+                data.append([source_group, 3 + target_group, counts[target_group], counts[target_group], self.palette[target_group]])
+        link_df = pd.DataFrame(data, columns=["source", "target", "value", "label", "color"])
+
+        data = go.Sankey(link=link_df.to_dict(orient='list'),
+                         node=dict(label=["0 [N = {}]".format(start_sizes[0]),
+                                          "1 [N = {}]".format(start_sizes[1]),
+                                          "2 [N = {}]".format(start_sizes[2]),
+                                          "0 [N = {}]".format(end_sizes[0]),
+                                          "1 [N = {}]".format(end_sizes[1]),
+                                          "2 [N = {}]".format(end_sizes[2])],
+                                   pad=50,
+                                   thickness=5,
+                                   color=[self.palette[0.0], self.palette[1.0], self.palette[2.0]] * 2))
+        fig = go.Figure(data)
+        fig.update_layout(
+            hovermode="x",
+            title="Start N = {}\tEnd N = {}\tSNP {}\tshuffle {}".format(np.size(start), np.size(end), row_index, perm_index),
+            font=dict(size=10, color='#000000')
+        )
+
+        outpath = os.path.join(self.outdir,
+                               "permutation_shuffle_row{}_shuffle{}.html".format(row_index, perm_index))
+        fig.write_html(outpath)
+        plt.close()
+        print("\tSaved: {}".format(outpath))
 
     @staticmethod
     def plot_eqtl(df, x, y, x_group, palette, ax, title="", xlabel="SNP", ylabel="gene",
@@ -392,7 +444,7 @@ class main():
             coef = np.nan
             if len(subset.index) > 1:
                 # Calculate the correlation.
-                coef, _ = stats.pearsonr(df[x], df[y])
+                coef, _ = stats.pearsonr(subset[x], subset[y])
 
                 # Plot the scatter / box plot.
                 sns.regplot(x=x, y=y, data=subset,

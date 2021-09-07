@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_permutation_fdr.py
 Created:      2021/06/07
-Last Changed: 2021/07/30
+Last Changed: 2021/09/07
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -27,6 +27,7 @@ from pathlib import Path
 import argparse
 import glob
 import os
+import re
 
 # Third party imports.
 import numpy as np
@@ -41,6 +42,7 @@ from statsmodels.stats import multitest
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from venn import venn
 
 # Local application imports.
 
@@ -49,6 +51,8 @@ Syntax:
 ./decon_eqtl_permutation_fdr.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-WithPermutations
 
 ./decon_eqtl_permutation_fdr.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-HalfNormalizedMAF5
+
+./decon_eqtl_permutation_fdr.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-NormalisedMAF5
 """
 
 # Metadata
@@ -124,7 +128,9 @@ class main():
 
         print("Loading permutation p-value data")
         perm_pvalues_m_list = []
-        for i, perm_pvalues_inpath in enumerate(glob.glob(os.path.join(self.indir, "permutation_pvalues_*"))):
+        perm_pvalues_inpaths = glob.glob(os.path.join(self.indir, "permutation_pvalues_*"))
+        perm_pvalues_inpaths.sort(key=self.natural_keys)
+        for perm_pvalues_inpath in perm_pvalues_inpaths:
             perm_pvalues_m_list.append(self.load_matrix(perm_pvalues_inpath))
         perm_pvalues_m = np.dstack(perm_pvalues_m_list)
         n_permutations = perm_pvalues_m.shape[2]
@@ -148,6 +154,7 @@ class main():
         bh_fdr_m = np.empty_like(real_pvalues_m, dtype=np.float64)
         emp_fdr_m = np.empty_like(real_pvalues_m, dtype=np.float64)
         qvalues_m = np.empty_like(real_pvalues_m, dtype=np.float64)
+        per_eqtl_qvalues_m = np.empty_like(real_pvalues_m, dtype=np.float64)
         for cov_index in range(real_pvalues_m.shape[1]):
             column = colnames[cov_index]
             print("  Analyzing: {}".format(column))
@@ -189,9 +196,22 @@ class main():
             print("\tCalculating q-values.")
             qvalues = self.qvalues(p=adj_pvalues)
 
-            real_qvalues = self.qvalues(p=real_pvalues)
+            print("\tMethod 4: per eQTL FDR")
+            print("\t  Calculating adjusted p-values.")
+            per_eqtl_adj_pvalues = np.empty(real_pvalues_m.shape[0], dtype=np.float64)
+            for eqtl_index in range(real_pvalues_m.shape[0]):
+                real_pvalue = real_pvalues_m[eqtl_index, cov_index]
+                perm_pvalues = perm_pvalues_m[eqtl_index, cov_index].flatten()
+                adj_pvalue = (np.sum(perm_pvalues <= real_pvalue) + 0.5) / (n_permutations + 1)
+                # if adj_pvalue < real_pvalue:
+                #     adj_pvalue = real_pvalue
 
-            if column == "CellMapNNLS_Oligodendrocyte_pvalue":
+                per_eqtl_adj_pvalues[eqtl_index] = adj_pvalue
+
+            print("\t  Calculating q-values.")
+            per_eqtl_qvalues = self.qvalues(p=per_eqtl_adj_pvalues)
+
+            if column.startswith("CellMapNNLS_Oligodendrocyte"):
                 print("\tPlotting.")
                 for log10 in [(False, False), (True, True)]:
                     self.regplot(x=real_pvalues, y=bh_fdr,
@@ -233,11 +253,23 @@ class main():
                                  ylabel="q-values",
                                  log10=log10,
                                  filename="{}_real_pval_vs_qval".format(column))
-                    self.regplot(x=real_pvalues, y=real_qvalues,
-                                 xlabel="p-values",
-                                 ylabel="real q-values",
+
+                    self.regplot(x=real_pvalues, y=per_eqtl_adj_pvalues,
+                                 xlabel="real p-values",
+                                 ylabel="adj. p-values",
                                  log10=log10,
-                                 filename="{}_real_pval_vs_real_qval".format(column))
+                                 filename="{}_per_eqtl_real_pval_vs_adj_pval".format(column))
+                    self.regplot(x=per_eqtl_adj_pvalues, y=per_eqtl_qvalues,
+                                 xlabel="adj. p-values",
+                                 ylabel="q-values",
+                                 log10=log10,
+                                 filename="{}_per_eqtl_adj_pval_vs_qval".format(column))
+                    self.regplot(x=real_pvalues, y=per_eqtl_qvalues,
+                                 xlabel="p-values",
+                                 ylabel="q-values",
+                                 log10=log10,
+                                 filename="{}_per_eqtl_real_pval_vs_qval".format(column))
+
                     self.regplot(x=qvalues, y=bh_fdr,
                                  xlabel="q-values",
                                  ylabel="BH fdr-values",
@@ -248,19 +280,58 @@ class main():
                                  ylabel="EMP fdr-values",
                                  log10=log10,
                                  filename="{}_qval_vs_emp_fdr".format(column))
+                    self.regplot(x=qvalues, y=per_eqtl_qvalues,
+                                 xlabel="q-values",
+                                 ylabel="per eQTL qvalues",
+                                 log10=log10,
+                                 filename="{}_qval_vs_per_eqtl_qval".format(column))
                     self.regplot(x=bh_fdr, y=emp_fdr,
                                  xlabel="BH fdr-values",
                                  ylabel="EMP fdr-values",
                                  log10=log10,
                                  filename="{}_bh_fdr_vs_emp_fdr".format(column))
+                    self.regplot(x=bh_fdr, y=per_eqtl_qvalues,
+                                 xlabel="BH fdr-values",
+                                 ylabel="per eQTL qvalues",
+                                 log10=log10,
+                                 filename="{}_bh_fdr_vs_per_eqtl_qval".format(column))
+                    self.regplot(x=emp_fdr, y=per_eqtl_qvalues,
+                                 xlabel="EMP fdr-values",
+                                 ylabel="per eQTL qvalues",
+                                 log10=log10,
+                                 filename="{}_emp_fdr_vs_per_eqtl_qval".format(column))
 
             # Saving results.
             bh_fdr_m[:, cov_index] = bh_fdr
             emp_fdr_m[:, cov_index] = emp_fdr
             qvalues_m[:, cov_index] = qvalues
+            per_eqtl_qvalues_m[:, cov_index] = per_eqtl_qvalues
+
+        # bh_fdr_df = self.load_file(os.path.join(self.indir, "BH_FDR.txt.gz"), header=0, index_col=0)
+        # emp_fdr_df = self.load_file(os.path.join(self.indir, "EMP_FDR.txt.gz"), header=0, index_col=0)
+        # qvalues_df = self.load_file(os.path.join(self.indir, "qvalues.txt.gz"), header=0, index_col=0)
+        #
+        # colnames = bh_fdr_df.columns.tolist()
+        # rownames = bh_fdr_df.index.tolist()
+        #
+        # bh_fdr_m = bh_fdr_df.to_numpy()
+        # emp_fdr_m = emp_fdr_df.to_numpy()
+        # qvalues_m = qvalues_df.to_numpy()
+
+        print("Creating VENN diagram")
+        venn_dict = {}
+        for m, name in zip([bh_fdr_m, emp_fdr_m, qvalues_m, per_eqtl_qvalues_m], ["BH_FDR", "EMP_FDR", "qvalues", "per_eQTL"]):
+            signif_hits = set()
+            for j, colname in enumerate(colnames):
+                signif_hits.update(set(["{}_{}".format(rownames[i], colname) for i in range(len(rownames)) if m[i, j] < 0.05]))
+            venn_dict["{} [N = {:,}]".format(name, len(signif_hits))] = signif_hits
+
+        self.vennplot(data=venn_dict,
+                      title="interaction overlap",
+                      filename="signif_interaction_overlap")
 
         print("Saving data frames")
-        for m, name in zip([bh_fdr_m, emp_fdr_m, qvalues_m], ["BH_FDR", "EMP_FDR", "qvalues"]):
+        for m, name in zip([bh_fdr_m, emp_fdr_m, qvalues_m, per_eqtl_qvalues_m], ["BH_FDR", "EMP_FDR", "qvalues", "per_eQTL"]):
             self.print_n_signif(m=m, colnames=colnames, type=name)
             df = pd.DataFrame(m, columns=colnames, index=rownames)
             self.save_file(df=df, outpath=os.path.join(self.indir, "{}.txt.gz".format(name)))
@@ -282,6 +353,10 @@ class main():
               "with shape: {}".format(os.path.basename(inpath),
                                       m.shape))
         return m
+
+    @staticmethod
+    def natural_keys(text):
+        return [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', text)]
 
     @staticmethod
     def save_file(df, outpath, header=True, index=True, sep="\t"):
@@ -495,8 +570,18 @@ class main():
         xmargin = (xlim[1] - xlim[0]) * 0.05
         ymargin = (ylim[1] - ylim[0]) * 0.05
 
-        ax1.set_xlim(xlim[0] - xmargin, xlim[1] + xmargin)
-        ax1.set_ylim(ylim[0] - ymargin, ylim[1] + ymargin)
+        new_xlim = (xlim[0] - xmargin, xlim[1] + xmargin)
+        new_ylim = (ylim[0] - ymargin, ylim[1] + ymargin)
+
+        ax1.set_xlim(new_xlim[0], new_xlim[1])
+        ax1.set_ylim(new_ylim[0], new_ylim[1])
+
+        # Set diagonal.
+        min_pos = min(new_xlim[0], new_ylim[0])
+        max_pos = max(new_xlim[1], new_ylim[1])
+        ax1.plot([min_pos, max_pos],
+                 [min_pos, max_pos],
+                 ls='--', color="#000000", zorder=-1)
 
         # Set annotation.
         ax2.set_axis_off()
@@ -552,7 +637,24 @@ class main():
             if log10[1]:
                 file_appendix += "_yTrue"
 
-        fig.savefig(os.path.join(self.outdir, "{}{}.png".format(filename, file_appendix)))
+        outpath = os.path.join(self.outdir, "{}{}.png".format(filename, file_appendix))
+        fig.savefig(outpath)
+        plt.close()
+        print("\tsaved plot: {}".format(outpath))
+
+    def vennplot(self, data, title, filename):
+        sns.set(rc={'figure.figsize': (12, 12)})
+        sns.set_style("ticks")
+        fig, ax = plt.subplots()
+        sns.despine(fig=fig, ax=ax)
+
+        venn(data, ax=ax)
+
+        ax.set_title(title,
+                     fontsize=35,
+                     fontweight='bold')
+
+        fig.savefig(os.path.join(self.outdir, "{}.png".format(filename)))
         plt.close()
 
     def print_arguments(self):

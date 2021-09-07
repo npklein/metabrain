@@ -3,7 +3,7 @@
 """
 File:         check_shuffle.py
 Created:      2021/07/28
-Last Changed: 2021/08/04
+Last Changed: 2021/09/07
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -28,6 +28,7 @@ import argparse
 import glob
 import sys
 import os
+import re
 
 # Third party imports.
 import numpy as np
@@ -37,6 +38,7 @@ from scipy import stats
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from statsmodels.stats import multitest
 
 # Local application imports.
 
@@ -46,6 +48,8 @@ Syntax:
 ./check_shuffle.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-WithPermutations -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis/data/SampleToDataset.txt.gz
 
 ./check_shuffle.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-HalfNormalizedMAF5 -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis/data/SampleToDataset.txt.gz
+
+./check_shuffle.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-NormalisedMAF5 -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis/data/SampleToDataset.txt.gz
 """
 
 # Metadata
@@ -170,7 +174,7 @@ class main():
         print("Plotting permutation order.")
         perm_order_m_list = []
         perm_order_inpaths = glob.glob(os.path.join(self.indir, "perm_orders_*"))
-        perm_order_inpaths.sort()
+        perm_order_inpaths.sort(key=self.natural_keys)
         for perm_order_inpath in perm_order_inpaths:
             perm_order_m_list.append(self.load_matrix(perm_order_inpath))
         perm_order_m = np.vstack(perm_order_m_list)
@@ -187,7 +191,7 @@ class main():
         print("Loading permutation order overlap")
         perm_order_overlap_m_list = []
         perm_order_overlap_inpaths = glob.glob(os.path.join(self.indir, "perm_order_overlap_*"))
-        perm_order_overlap_inpaths.sort()
+        perm_order_overlap_inpaths.sort(key=self.natural_keys)
         for perm_order_overlap_inpath in perm_order_overlap_inpaths:
             perm_order_overlap_m_list.append(self.load_matrix(perm_order_overlap_inpath))
         perm_order_overlap_m = np.hstack(perm_order_overlap_m_list)
@@ -213,7 +217,7 @@ class main():
         print("Loading permutation p-value data")
         perm_pvalues_m_list = []
         perm_pvalues_inpaths = glob.glob(os.path.join(self.indir, "permutation_pvalues_*"))
-        perm_pvalues_inpaths.sort()
+        perm_pvalues_inpaths.sort(key=self.natural_keys)
         for perm_pvalues_inpath in perm_pvalues_inpaths:
             perm_pvalues_m_list.append(self.load_matrix(perm_pvalues_inpath))
         perm_pvalues_m = np.dstack(perm_pvalues_m_list)
@@ -228,8 +232,9 @@ class main():
         ########################################################################
 
         print("Loading real p-value data")
-        real_pvalues_df = self.load_file(os.path.join(self.indir, "deconvolutionResults.txt.gz"), header=0, index_col=0)
-        real_pvalues_m = real_pvalues_df.loc[:, [x for x in real_pvalues_df.columns if x.endswith("_pvalue")]].to_numpy()
+        decon_df = self.load_file(os.path.join(self.indir, "deconvolutionResults.txt.gz"), header=0, index_col=0)
+        pvalue_columns = [x for x in decon_df.columns if x.endswith("_pvalue")]
+        real_pvalues_m = decon_df.loc[:, pvalue_columns].to_numpy()
 
         print("\tplotting distribution")
         self.distplot(x=real_pvalues_m.flatten(), xlabel="real p-value", filename="real_pvalues")
@@ -250,9 +255,22 @@ class main():
                                 "perm. p-value": perm_pvalues_m.flatten(),
                                 "%overlap": perm_order_overlap_m.flatten(),
                                 "MAF": maf_m.flatten()})
+        plot_df["log10 real p-value"] = np.log10(plot_df["real p-value"] + 2.2250738585072014e-308)
         plot_df["log10 perm. p-value"] = np.log10(plot_df["perm. p-value"] + 2.2250738585072014e-308)
 
         print("\tPlotting single comparisons")
+        self.single_regplot(df=plot_df,
+                            x="log10 real p-value",
+                            y="log10 perm. p-value",
+                            xlabel="log10 nominal p-value",
+                            ylabel="log10 perm p-value",
+                            filename="nominal_vs_permuted_pvalues_log10")
+        self.single_regplot(df=plot_df,
+                            x="real p-value",
+                            y="perm. p-value",
+                            xlabel="nominal p-value",
+                            ylabel="perm p-value",
+                            filename="nominal_vs_permuted_pvalues")
         self.single_regplot(df=plot_df,
                             x="log10 perm. p-value",
                             y="%overlap",
@@ -307,6 +325,10 @@ class main():
                                       m.shape))
         return m
 
+    @staticmethod
+    def natural_keys(text):
+        return [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', text)]
+
     def distplot(self, x, xlabel="", title="", filename="distribution"):
         sns.set_style("ticks")
         fig, ax = plt.subplots(figsize=(12, 12))
@@ -351,7 +373,7 @@ class main():
                     scatter_kws={'facecolors': "#000000",
                                  'linewidth': 0,
                                  'alpha': 0.25},
-                    line_kws={"color": "#000000"},
+                    line_kws={"color": "#b22222"},
                     ax=ax1)
 
         ax1.set_xlabel(xlabel,
