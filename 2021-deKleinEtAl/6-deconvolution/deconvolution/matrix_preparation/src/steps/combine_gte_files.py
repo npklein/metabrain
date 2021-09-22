@@ -90,8 +90,11 @@ class CombineGTEFiles:
         # Remove samples.
         if self.exclude_samples_path is not None:
             sample_exclude_df = load_dataframe(inpath=self.exclude_samples_path,
-                                               header=None, index_col=None)
+                                               header=None, index_col=None,
+                                               logger=self.log)
+            pre_shape = combined.shape[0]
             combined = combined.loc[~combined.iloc[:, 1].isin(sample_exclude_df.iloc[:, 0].tolist()), :]
+            self.log.warn("\tRemoving '{}' samples".format(pre_shape - combined.shape[0]))
 
         return combined
 
@@ -148,7 +151,7 @@ class CombineGTEFiles:
         self.log.info("Arguments:")
         self.log.info("  > Input files: {}".format(self.inpath))
         self.log.info("  > Exclude files: {}".format(", ".join(self.exclude_files)))
-        self.log.info("  > Exclude samples: {}".format(", ".join(self.exclude_samples_path)))
+        self.log.info("  > Exclude samples: {}".format(self.exclude_samples_path))
         self.log.info("  > Output path: {}".format(self.outpath))
         self.log.info("  > Force: {}".format(self.force))
         self.log.info("")
