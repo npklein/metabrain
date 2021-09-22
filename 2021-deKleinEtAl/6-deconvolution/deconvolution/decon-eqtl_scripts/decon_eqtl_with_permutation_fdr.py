@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_with_permutation_fdr.py
 Created:      2021/07/12
-Last Changed: 2021/08/05
+Last Changed: 2021/09/14
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -24,6 +24,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 # Standard imports.
 from __future__ import print_function
 from pathlib import Path
+import itertools
 import warnings
 import argparse
 import random
@@ -44,13 +45,19 @@ Syntax:
 
 ./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis/data/SampleToDataset.txt.gz -of CortexEUR-cis
 
-./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis-HalfNormalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceHalfNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis-HalfNormalised/data/SampleToDataset.txt.gz -maf 5 -of CortexEUR-cis-HalfNormalizedMAF1
-
 ./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis/data/SampleToDataset.txt.gz -of CortexEUR-cis-PrimaryeQTLs -r 11803 -p 0
 
 ./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR/genotype_table.txt -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2020-11-10-DeconOptimizer/preprocess_scripts/pre_process_expression_matrix/CortexAFR-cis/data/SampleToDataset.txt.gz -of CortexAFR-cis-Replication-EUR
 
-./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR-HalfNormalized/genotype_table.txt -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR-HalfNormalized/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceHalfNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexAFR-cis-HalfNormalised/data/SampleToDataset.txt.gz -of CortexAFR-cis-Replication-EUR-HalfNormalised -maf 5 
+./decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR-Normalised/genotype_table.txt -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexAFR-cis-Normalised/data/SampleToDataset.txt.gz -of CortexAFR-cis-Replication-EUR-NormalisedMAF5 -maf 5
+
+/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis-Normalised/data/SampleToDataset.txt.gz -of CortexEUR-cis-NormalisedMAF5 -maf 5 
+
+/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table_CNS7.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis-Normalised/data/SampleToDataset.txt.gz -of CortexEUR-cis-NormalisedMAF5-CNS7Profile -maf 5 
+
+/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis-Normalised/data/SampleToDataset.txt.gz -of CortexEUR-cis-NormalisedMAF5-ALlConfigs -maf 5 
+
+/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis-Normalised/data/SampleToDataset.txt.gz -of CortexEUR-cis-NormalisedMAF5-LimitedConfigs -maf 5 
 """
 
 # Metadata
@@ -78,10 +85,12 @@ class main():
         self.geno_path = getattr(arguments, 'genotype')
         self.expr_path = getattr(arguments, 'expression')
         self.cc_path = getattr(arguments, 'cell_counts')
+        self.allele_configs = getattr(arguments, 'allele_configurations')
         self.std_path = getattr(arguments, 'sample_to_dataset')
         self.nrows = getattr(arguments, 'rows')
         self.n_permutations = getattr(arguments, 'permutations')
         self.permutation_index_offset = getattr(arguments, 'permutation_index_offset')
+        self.leading_zeros = getattr(arguments, 'permutation_leading_zeros')
         self.maf = getattr(arguments, 'minor_allele_frequency')
         self.missing_geno = getattr(arguments, 'missing_genotype')
         outdir = getattr(arguments, 'outdir')
@@ -89,7 +98,7 @@ class main():
 
         # Set variables.
         if outdir is None:
-            outdir = str(Path(__file__).parent.parent)
+            outdir = str(Path(__file__).parent)
         self.outdir = os.path.join(outdir, "decon_eqtl_with_permutation_fdr", outfolder)
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
@@ -125,6 +134,15 @@ class main():
                             type=str,
                             required=True,
                             help="The path to the cell counts matrix.")
+        parser.add_argument("-ac",
+                            "--allele_configurations",
+                            type=str,
+                            choices=["complete", "limited"],
+                            default="complete",
+                            help="The number of allele encoding configurations"
+                                 "to test. Either 'complete' for all or"
+                                 "'limited' for restricting a max of 1 flipped"
+                                 "allele. Default: complete.")
         parser.add_argument("-std",
                             "--sample_to_dataset",
                             type=str,
@@ -147,6 +165,12 @@ class main():
                             default=0,
                             help="The first index of the first permutation "
                                  "run. Default: 0.")
+        parser.add_argument("-plz",
+                            "--permutation_leading_zeros",
+                            type=int,
+                            default=0,
+                            help="The number of leading zeros to print for the "
+                                 "permutation output files. Default: 0.")
         parser.add_argument("-maf",
                             "--minor_allele_frequency",
                             type=int,
@@ -278,9 +302,14 @@ class main():
         print("### STEP 3 ###")
         print("Analyzing eQTLs.")
 
+        # Create a list of possible genotype encoding configuration. True means
+        # we change the encoding by 2 - value. False means we do nothing.
+        alt_model_configs = self.create_model_configs(n=n_covariates, type=self.allele_configs)
+        null_model_configs = self.create_model_configs(n=n_covariates - 1, type=self.allele_configs)
+
         # Calculate and print some info about the analyses to be performed.
-        n_configurations_alt = (n_covariates * 2) + 2
-        n_configurations_null = ((n_covariates - 1) * 2) + 2
+        n_configurations_alt = len(alt_model_configs)
+        n_configurations_null = len(null_model_configs)
         n_models = n_eqtls * (n_configurations_alt + n_covariates * n_configurations_null)
         print("\tN-configurations (full model): {:,}".format(n_configurations_alt))
         print("\tN-configurations (cell type model): {:,}".format(n_configurations_null))
@@ -289,13 +318,9 @@ class main():
 
         # Initializing output matrices / arrays.
         real_pvalues_m = np.empty((n_eqtls, n_covariates), dtype=np.float64)
-        betas_m = np.empty((n_eqtls, n_covariates * 2), dtype=np.float64)
+        betas_alt_m = np.empty((n_eqtls, n_covariates * 2), dtype=np.float64)
+        betas_null_m = np.empty((n_eqtls, n_covariates, n_covariates * 2), dtype=np.float64)
         rss_null_m = np.empty((n_eqtls, n_covariates), dtype=np.float64)
-
-        # Create a list of possible genotype encoding configuration. True means
-        # we change the encoding by 2 - value. False means we do nothing.
-        alt_model_configs = self.create_model_configs(n=n_covariates)
-        null_model_configs = self.create_model_configs(n=n_covariates - 1)
 
         # Save the degrees of freedom the alternative model.
         df = n_covariates * 2
@@ -307,10 +332,10 @@ class main():
             # Print update for user.
             now_time = int(time.time())
             if n_eqtls > 1 and (last_print_time is None or (now_time - last_print_time) >= self.print_interval or row_index == (n_eqtls - 1)):
-                print("\t[{}] {}/{} eQTLs analysed [{:.2f}%]".format(time.strftime('%H:%M:%S', time.gmtime(now_time - start_time)),
-                                                                     row_index,
-                                                                     (n_eqtls - 1),
-                                                                     (100 / (n_eqtls - 1)) * row_index),
+                print("\t[{}] {:,}/{:,} eQTLs analysed [{:.2f}%]".format(time.strftime('%H:%M:%S', time.gmtime(now_time - start_time)),
+                                                                         row_index,
+                                                                         (n_eqtls - 1),
+                                                                         (100 / (n_eqtls - 1)) * row_index),
                       flush=True)
                 last_print_time = now_time
 
@@ -324,7 +349,7 @@ class main():
             # Model the alternative matrix (with the interaction term).
             # This is the matrix with expression ~ cc1 + cc2 + cc1 * geno +
             # cc2 * geno.
-            config_alt, betas_alt, rss_alt = \
+            betas_alt, rss_alt = \
                 self.model(
                     genotype=genotype[mask],
                     expression=expr_m[row_index, mask],
@@ -335,11 +360,7 @@ class main():
                 )
 
             # Save the alternative model stats.
-            # The beta's of the interaction terms are flipped if we
-            # flipped the allele encoding. This makes it possible that some
-            # betas are negative even though we use NNLS.
-            flip_array = np.hstack((np.ones(n_covariates), np.vectorize({True: -1, False: 1}.get)(config_alt)))
-            betas_m[row_index, :] = betas_alt * flip_array
+            betas_alt_m[row_index, :] = betas_alt
 
             # Remove one interaction column (cc * geno) one by one and
             # determine the significance of the change in residuals sum of
@@ -347,7 +368,7 @@ class main():
             for cov_index in range(n_covariates):
                 # Model the null matrix (without the interaction term). In
                 # this model 1 (and only 1!) of the cc * geno terms is removed.
-                _, _, rss_null = \
+                betas_null, rss_null = \
                     self.model(
                         genotype=genotype[mask],
                         expression=expr_m[row_index, mask],
@@ -357,6 +378,9 @@ class main():
                         n_covariates=n_covariates,
                         exclude=cov_index
                     )
+
+                # Save the null model stats.
+                betas_null_m[row_index, cov_index, :] = betas_null
 
                 # Calculate and save the p-value.
                 p_value = self.calc_p_value(rss1=rss_null,
@@ -382,7 +406,9 @@ class main():
             print("### STEP 4 ###")
             print("Saving results.")
 
-            self.save_file(df=pd.DataFrame(maf_a[maf_mask], index=eqtl_indices, columns=["NAF"]), outpath=os.path.join(self.outdir, "MAF.txt.gz"))
+            maf_df = pd.DataFrame(maf_a[maf_mask], index=eqtl_indices, columns=["MAF"])
+            print(maf_df)
+            self.save_file(df=maf_df, outpath=os.path.join(self.outdir, "MAF.txt.gz"))
 
             # Combine missing matrices and set np.nan == 1 back.
             combined_prcnt_missing_m = np.hstack((prcnt_missing_m[:, np.newaxis], prcnt_missing_per_dataset_m))
@@ -391,14 +417,19 @@ class main():
             print(combined_prcnt_missing_df)
             self.save_file(df=combined_prcnt_missing_df, outpath=os.path.join(self.outdir, "missing_values_info.txt.gz"))
 
-            decon_df = pd.DataFrame(np.hstack((real_pvalues_m, betas_m)),
+            decon_df = pd.DataFrame(np.hstack((real_pvalues_m, betas_alt_m)),
                                     index=eqtl_indices,
                                     columns=["{}_pvalue".format(x) for x in cell_types_indices] +
                                             ["Beta{}_{}".format(i+1, x) for i, x in enumerate(cell_types_indices)] +
                                             ["Beta{}_{}:GT".format(len(cell_types_indices) + i + 1, x) for i, x in enumerate(cell_types_indices)])
             print(decon_df)
             self.save_file(df=decon_df, outpath=os.path.join(self.outdir, "deconvolutionResults.txt.gz"))
-            del prcnt_missing_m, prcnt_missing_per_dataset_m, combined_prcnt_missing_df, decon_df, betas_m
+
+            # Save the beta's.
+            self.save_matrix(m=betas_alt_m, outpath=os.path.join(self.outdir, "betas_alternative_model.npy"))
+            self.save_matrix(m=betas_null_m, outpath=os.path.join(self.outdir, "betas_null_model.npy"))
+
+            del prcnt_missing_m, prcnt_missing_per_dataset_m, combined_prcnt_missing_df, decon_df, betas_null_m, betas_alt_m
 
             print("", flush=True)
 
@@ -439,6 +470,7 @@ class main():
 
         # Initializing output matrices / arrays.
         perm_pvalues_m = np.empty((n_eqtls, n_covariates, self.n_permutations), dtype=np.float64)
+        perm_betas_alt_m = np.empty((n_eqtls, n_covariates, self.n_permutations, n_covariates * 2), dtype=np.float64)
 
         # Start loop.
         start_time = int(time.time())
@@ -447,10 +479,10 @@ class main():
             # Print update for user.
             now_time = int(time.time())
             if n_eqtls > 1 and (last_print_time is None or (now_time - last_print_time) >= self.print_interval or row_index == (n_eqtls - 1)):
-                print("\t[{}] {}/{} eQTLs analysed [{:.2f}%]".format(time.strftime('%H:%M:%S', time.gmtime(now_time - start_time)),
-                                                                     row_index,
-                                                                     (n_eqtls - 1),
-                                                                     (100 / (n_eqtls - 1)) * row_index),
+                print("\t[{}] {:,}/{:,} eQTLs analysed [{:.2f}%]".format(time.strftime('%H:%M:%S', time.gmtime(now_time - start_time)),
+                                                                         row_index,
+                                                                         (n_eqtls - 1),
+                                                                         (100 / (n_eqtls - 1)) * row_index),
                       flush=True)
                 last_print_time = now_time
 
@@ -480,7 +512,7 @@ class main():
                     # Model the alternative matrix (with the interaction
                     # term) and shuffle the genotype of the interaction of
                     # interest.
-                    _, _, rss_perm = \
+                    perm_betas_alt, perm_rss_alt = \
                         self.model(
                             genotype=genotype[mask],
                             expression=expr_m[row_index, mask],
@@ -493,10 +525,13 @@ class main():
                             shuffle_inter_flipped=interaction_flipped_a[mask]
                         )
 
+                    # Save the permuted alternative model stats.
+                    perm_betas_alt_m[row_index, cov_index, perm_index, :] = perm_betas_alt
+
                     # Calculate and save the permutation p-value.
                     perm_pvalue = self.calc_p_value(
                         rss1=rss_null_m[row_index, cov_index],
-                        rss2=rss_perm,
+                        rss2=perm_rss_alt,
                         df1=df - 1,
                         df2=df,
                         n=n)
@@ -535,9 +570,10 @@ class main():
         print("### STEP 7 ###")
         print("Saving results.")
 
-        self.save_matrix(m=perm_pvalues_m, outpath=os.path.join(self.outdir, "permutation_pvalues_{}_until_{}.npy".format(self.permutation_index_offset, self.permutation_index_offset + self.n_permutations - 1)))
-        self.save_matrix(m=perm_order_m, outpath=os.path.join(self.outdir, "perm_orders_{}_until_{}.npy".format(self.permutation_index_offset, self.permutation_index_offset + self.n_permutations - 1)))
-        self.save_matrix(m=perm_overlap_m, outpath=os.path.join(self.outdir, "perm_order_overlap_{}_until_{}.npy".format(self.permutation_index_offset, self.permutation_index_offset + self.n_permutations - 1)))
+        self.save_matrix(m=perm_order_m, outpath=os.path.join(self.outdir, "perm_orders_{}{}_until_{}.npy".format("0" * self.leading_zeros, self.permutation_index_offset, self.permutation_index_offset + self.n_permutations - 1)))
+        self.save_matrix(m=perm_overlap_m, outpath=os.path.join(self.outdir, "perm_order_overlap_{}{}_until_{}.npy".format("0" * self.leading_zeros, self.permutation_index_offset, self.permutation_index_offset + self.n_permutations - 1)))
+        self.save_matrix(m=perm_pvalues_m, outpath=os.path.join(self.outdir, "permutation_pvalues_{}{}_until_{}.npy".format("0" * self.leading_zeros, self.permutation_index_offset, self.permutation_index_offset + self.n_permutations - 1)))
+        self.save_matrix(m=perm_betas_alt_m, outpath=os.path.join(self.outdir, "permutation_betas_alternative_model_{}{}_until_{}.npy".format("0" * self.leading_zeros, self.permutation_index_offset, self.permutation_index_offset + self.n_permutations - 1)))
 
         lowest_pvalues_m = np.transpose(np.min(perm_pvalues_m, axis=0))
         lowest_pvalues_df = pd.DataFrame(lowest_pvalues_m,
@@ -592,12 +628,10 @@ class main():
         return np.minimum(allele1_a, allele2_a) / (allele1_a + allele2_a)
 
     @staticmethod
-    def create_model_configs(n):
+    def create_model_configs(n, type):
         """
-        Create the allele encoding configurations. All configurations could
-        be created using list(itertools.product([True, False], repeat=n))
-        however they mention in the article that Decon-eQTL restrict the
-        configurations to max one opposite. This limits the
+        Create the allele encoding configurations. In the Decon-eQTL article
+        they restrict the configurations to max one opposite. This limits the
         configurations from k^2 to (2*k) + 2.
 
         Example for n = 3
@@ -612,18 +646,25 @@ class main():
             [ True True False ]
 
         """
-        configurations = []
+        if type == "complete":
+            return list(itertools.product([True, False], repeat=n))
+        elif type == "limited":
+            configurations = []
 
-        false_array = np.zeros(n, dtype=bool)
-        true_array = np.ones(n, dtype=bool)
-        for value, array in zip([True, False], [false_array, true_array]):
-            configurations.append(array)
-            for i in range(n):
-                configuration = np.copy(array)
-                configuration[i] = value
-                configurations.append(configuration)
+            false_array = np.zeros(n, dtype=bool)
+            true_array = np.ones(n, dtype=bool)
+            for value, array in zip([True, False], [false_array, true_array]):
+                configurations.append(array)
+                for i in range(n):
+                    configuration = np.copy(array)
+                    configuration[i] = value
+                    configurations.append(configuration)
 
-        return configurations
+            return configurations
+        else:
+            print("Unexpected argument for allele encoding configurations.")
+            exit()
+            return None
 
     @staticmethod
     def create_perm_orders(n_permutations, n_samples, datasets, std_m, seed_offset):
@@ -632,7 +673,7 @@ class main():
         N times. However, this function only shuffles samples within the same
         dataset.
         """
-        default_order = np.array([x for x in range(n_samples)], dtype=np.uint16)
+        default_order = np.arange(n_samples, dtype=np.uint16)
         all_indices = set(default_order)
         perm_order_m = np.empty((n_permutations, n_samples), dtype=np.uint16)
         for i in range(perm_order_m.shape[0]):
@@ -765,7 +806,17 @@ class main():
                 top_betas = betas
                 top_rss = rss_alt
 
-        return top_config, top_betas, top_rss
+        # The beta's of the interaction terms are flipped if we
+        # flipped the allele encoding. This makes it possible that some
+        # betas are negative even though we use NNLS.
+        flip_array = np.hstack((np.ones(n_covariates), np.vectorize({True: -1, False: 1}.get)(top_config)))
+        top_betas = top_betas * flip_array
+
+        # Insert NaN in betas if we excluded an interaction term.
+        if exclude is not None:
+            top_betas = np.insert(top_betas, n_covariates + exclude, np.nan)
+
+        return top_betas, top_rss
 
     @staticmethod
     def calc_p_value(rss1, rss2, df1, df2, n):
@@ -832,10 +883,12 @@ class main():
         print("  > Genotype path: {}".format(self.geno_path))
         print("  > Expression path: {}".format(self.expr_path))
         print("  > Cell counts path: {}".format(self.cc_path))
+        print("  > Allele configs: {}".format(self.allele_configs))
         print("  > Sample-to-dataset path: {}".format(self.std_path))
         print("  > N rows: {}".format(self.nrows))
         print("  > N permutations: {}".format(self.n_permutations))
         print("  > Permutation index offset: {}".format(self.permutation_index_offset))
+        print("  > Permutation leading zeros: {}".format(self.leading_zeros))
         print("  > MAF: {}%".format(self.maf))
         print("  > Missing genotype: {}".format(self.missing_geno))
         print("  > Output directory: {}".format(self.outdir))

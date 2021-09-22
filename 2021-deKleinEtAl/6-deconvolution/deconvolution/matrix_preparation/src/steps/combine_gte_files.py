@@ -1,7 +1,7 @@
 """
 File:         combine_gte_files.py
 Created:      2020/10/08
-Last Changed: 2020/10/12
+Last Changed: 2021/09/22
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -34,7 +34,8 @@ class CombineGTEFiles:
     def __init__(self, settings, log, force, outdir):
         self.inpath = os.path.join(settings["input_directory"],
                                    settings["filename_regex"])
-        self.exclude = settings["exclude"]
+        self.exclude_files = settings["exclude_files"]
+        self.exclude_samples_path = settings["exclude_samples"]
         self.log = log
         self.force = force
 
@@ -73,7 +74,7 @@ class CombineGTEFiles:
         combined = None
         for i, gte_inpath in enumerate(glob.glob(self.inpath)):
             gte_file = os.path.basename(gte_inpath).replace(".txt", "")
-            if gte_file in self.exclude:
+            if gte_file in self.exclude_files:
                 continue
             df = load_dataframe(inpath=gte_inpath, header=None, index_col=None,
                                 logger=self.log)
@@ -85,6 +86,12 @@ class CombineGTEFiles:
 
         # Remove duplicate entries.
         combined.drop_duplicates(inplace=True)
+
+        # Remove samples.
+        if self.exclude_samples_path is not None:
+            sample_exclude_df = load_dataframe(inpath=self.exclude_samples_path,
+                                               header=None, index_col=None)
+            combined = combined.loc[~combined.iloc[:, 1].isin(sample_exclude_df.iloc[:, 0].tolist()), :]
 
         return combined
 
@@ -140,7 +147,8 @@ class CombineGTEFiles:
     def print_arguments(self):
         self.log.info("Arguments:")
         self.log.info("  > Input files: {}".format(self.inpath))
-        self.log.info("  > Exclude: {}".format(", ".join(self.exclude)))
+        self.log.info("  > Exclude files: {}".format(", ".join(self.exclude_files)))
+        self.log.info("  > Exclude samples: {}".format(", ".join(self.exclude_samples_path)))
         self.log.info("  > Output path: {}".format(self.outpath))
         self.log.info("  > Force: {}".format(self.force))
         self.log.info("")

@@ -3,7 +3,7 @@
 """
 File:         pre_process_decon_expression_matrix.py
 Created:      2021/07/06
-Last Changed: 2021/09/01
+Last Changed: 2021/09/22
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -80,7 +80,8 @@ class main():
         self.tcov_path = getattr(arguments, 'technical_covariates')
         self.gte_path = getattr(arguments, 'gene_to_expression')
         self.gte_prefix = getattr(arguments, 'gte_prefix')
-        self.exclude = getattr(arguments, 'exclude')
+        self.gte_exclude = getattr(arguments, 'gte_exclude')
+        self.sample_exclude_path = getattr(arguments, 'sample_exclude')
         outdir = getattr(arguments, 'outdir')
         outfolder = getattr(arguments, 'outfolder')
 
@@ -162,12 +163,17 @@ class main():
                             type=str,
                             required=True,
                             help="The gene-expression link file prefix.")
-        parser.add_argument("-e",
-                            "--exclude",
+        parser.add_argument("-ge",
+                            "--gte_exclude",
                             nargs="*",
                             type=str,
                             default=[],
                             help="The gene-expression link files to exclude.")
+        parser.add_argument("-se",
+                            "--sample_exclude",
+                            type=str,
+                            default=None,
+                            help="The samples to exclude. Default: None.")
         parser.add_argument("-od",
                             "--outdir",
                             type=str,
@@ -192,10 +198,10 @@ class main():
         # Loading samples.
         print("Loading samples.")
         gte_combined_df = None
-        dataset_to_samples_dict = {}
+        dataset_to_sample_dict = {}
         for infile in glob.glob(os.path.join(self.gte_path, "{}*.txt".format(self.gte_prefix))):
             file = os.path.basename(infile).replace(".txt", "").replace(self.gte_prefix, "")
-            if file in self.exclude:
+            if file in self.gte_exclude:
                 continue
             gte_df = self.load_file(infile, header=None, index_col=None)
             gte_df["file"] = file
@@ -204,11 +210,21 @@ class main():
             else:
                 gte_combined_df = pd.concat([gte_combined_df, gte_df], axis=0, ignore_index=True)
 
-            dataset_to_samples_dict[file] = gte_df.iloc[:, 1]
+            dataset_to_sample_dict[file] = set(gte_df.iloc[:, 1].values)
         gte_combined_df["cohort"] = gte_combined_df.iloc[:, 2].map(self.file_cohort_dict)
         sample_to_cohort = dict(zip(gte_combined_df.iloc[:, 1], gte_combined_df.iloc[:, 3]))
         samples = gte_combined_df.iloc[:, 1].values.tolist()
         print("\tN samples: {}".format(len(samples)))
+
+        # Remove samples to exclude.
+        if self.sample_exclude_path is not None:
+            sample_exclude_df = self.load_file(self.sample_exclude_path, header=None, index_col=None)
+            sample_to_exclude = sample_exclude_df.iloc[:, 0].tolist()
+            print("\tRemoving N samples: {}".format(len(sample_to_exclude)))
+
+            gte_combined_df = gte_combined_df.loc[~gte_combined_df.iloc[:, 1].isin(sample_to_exclude), :]
+            samples = gte_combined_df.iloc[:, 1].values.tolist()
+            print("\tN samples: {}".format(len(samples)))
 
         # Safe sample cohort data frame.
         sample_cohort_df = gte_combined_df.iloc[:, [1, 3]]
@@ -225,8 +241,11 @@ class main():
         print("\tDatasets: {} [N = {}]".format(", ".join(datasets), len(datasets)))
 
         dataset_df = pd.DataFrame(0, index=samples, columns=datasets)
+        samples_set = set(samples)
         for dataset in datasets:
-            dataset_df.loc[dataset_to_samples_dict[dataset], dataset] = 1
+            dataset_samples = dataset_to_sample_dict[dataset]
+            dataset_samples = dataset_samples.intersection(samples_set)
+            dataset_df.loc[dataset_samples, dataset] = 1
         dataset_df.index.name = "-"
 
         # Load data.
@@ -506,7 +525,8 @@ class main():
         print("  > Technical covariates: {}".format(self.tcov_path))
         print("  > GtE path: {}".format(self.gte_path))
         print("  >   GtE prefix: {}".format(self.gte_prefix))
-        print("  >   Exclude: {}".format(self.exclude))
+        print("  >   Exclude: {}".format(self.gte_prefix))
+        print("  > Sample exclude path: {}".format(self.sample_exclude_path))
         print("  > Plot output directory {}".format(self.plot_outdir))
         print("  > File output directory {}".format(self.file_outdir))
         print("")
