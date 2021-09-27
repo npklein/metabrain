@@ -50,8 +50,6 @@ from venn import venn
 Syntax:
 ./decon_eqtl_permutation_fdr.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-WithPermutations
 
-./decon_eqtl_permutation_fdr.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-HalfNormalizedMAF5
-
 ./decon_eqtl_permutation_fdr.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-NormalisedMAF5
 """
 
@@ -81,7 +79,7 @@ class main():
         # Set variables.
         if indir is None:
             indir = str(Path(__file__).parent.parent)
-        self.indir = os.path.join(indir, "decon_eqtl_with_permutation_fdr", infolder)
+        self.indir = os.path.join(indir, "decon_eqtl", infolder)
         self.outdir = os.path.join(self.indir, "plot")
         for dir in [self.indir, self.outdir]:
             if not os.path.exists(dir):

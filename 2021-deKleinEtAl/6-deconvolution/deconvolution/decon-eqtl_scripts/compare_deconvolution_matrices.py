@@ -64,6 +64,12 @@ Syntax:
 ./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/cortex_eur_cis/deconvolutionResults.txt.gz -n1 CorrectFTest -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis/deconvolutionResults.txt.gz -n2 CorrectMDSAndFTest -log10 -o correctFTest_vs_correctMDSAndFTest
 
 ./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-WithPermutations-StaticInteractionShuffle/deconvolutionResults.txt.gz -n1 Original -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-HalfNormalizedMAF5/deconvolutionResults.txt.gz -n2 HalfNormalized -log10 -o original_vs_halfnormalized
+
+./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-NormalisedMAF5/deconvolutionResults.txt.gz -n1 OriginalProfile -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-NormalisedMAF5-CNS7Profile/deconvolutionResults.txt.gz -n2 CNS7Profile -log10 -o originalProfile_vs_CNS7Profile
+
+./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-NormalisedMAF5-LimitedConfigs/deconvolutionResults.txt.gz -n1 limited_configs -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-NormalisedMAF5-ALlConfigs/deconvolutionResults.txt.gz -n2 all_configs -log10 -o limited_vs_all_configurations
+
+./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/test/deconvolutionResults.txt.gz -n1 original -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_reborn/test/deconvolutionResults.txt.gz -n2 reborn -log10 -o original_vs_reborn
 """
 
 
@@ -86,13 +92,20 @@ class main():
             os.makedirs(self.outdir)
 
         self.accent_colormap = {
+            "Excitatory": "#56B4E9",
+            "Inhibitory": "#0072B2",
             "Neuron": "#0072B2",
             "Oligodendrocyte": "#009E73",
+            "OPC": "#009E73",
             "EndothelialCell": "#CC79A7",
             "Microglia": "#E69F00",
             "Macrophage": "#E69F00",
             "Astrocyte": "#D55E00",
-            "Average": "#E8E8E8"
+            "Pericytes": "#808080",
+            "Microglia/Macrophage": "#E69F00",
+            "Excitatory/Neuron": "#56B4E9",
+            "Inhibitory/Neuron": "#0072B2",
+            "Excitatory+Inhibitory/Neuron": "#BEBEBE"
         }
         self.point_colormap = {
             "no signif": "#808080",
@@ -148,35 +161,37 @@ class main():
         return parser.parse_args()
 
     def start(self):
-        print("Loading deconvolution matrix 1.")
-        decon1_df = pd.read_csv(self.decon1_path, sep="\t", header=0,
-                                index_col=0, nrows=self.nrows)
-        print("\tLoaded dataframe: {} "
-              "with shape: {}".format(os.path.basename(self.decon1_path),
-                                      decon1_df.shape))
-        decon1_pval_df, decon1_fdr_df = self.bh_correct(decon1_df)
-        for df, type in ([decon1_pval_df, "p-value"], [decon1_fdr_df, "FDR"]):
-            self.print_n_signif(df=df, type=type)
 
-        print("Loading deconvolution matrix 2.")
-        decon2_df = pd.read_csv(self.decon2_path, sep="\t", header=0,
-                                index_col=0, nrows=self.nrows)
-        print("\tLoaded dataframe: {} "
-              "with shape: {}".format(os.path.basename(self.decon2_path),
-                                      decon2_df.shape))
-        decon2_pval_df, decon2_fdr_df = self.bh_correct(decon2_df)
-        for df, type in ([decon2_pval_df, "p-value"], [decon2_fdr_df, "FDR"]):
-            self.print_n_signif(df=df, type=type)
+        print("Loading data")
+        decon1_df = self.load_file(self.decon1_path)
+        decon2_df = self.load_file(self.decon2_path)
 
-        for decon1_df, decon2_df, appendix in ([decon1_pval_df, decon2_pval_df, "pvalue"], [decon1_fdr_df, decon2_fdr_df, "FDR"]):
+        print("Splitting categories")
+        pval_df1, fdr_df1, intercept_beta_df1, genotype_beta_df1, ct_beta_df1, inter_beta_df1 = self.split_decon(df=decon1_df)
+        pval_df2, fdr_df2, intercept_beta_df2, genotype_beta_df2, ct_beta_df2, inter_beta_df2 = self.split_decon(df=decon2_df)
+
+        # inter_beta_df1 = np.abs(inter_beta_df1)
+        # inter_beta_df2 = np.abs(inter_beta_df2)
+
+        print("Plotting")
+        for decon1_df, decon2_df, appendix, log10_transform, signif_lines in \
+                ([intercept_beta_df1, intercept_beta_df2, "InterceptBeta", False, False],
+                 [genotype_beta_df1, genotype_beta_df2, "GenotypeBeta", False, False],
+                 [ct_beta_df1, ct_beta_df2, "CellTypeBeta", False, False],
+                 [inter_beta_df1, inter_beta_df2, "IteractionBeta", False, False],
+                 [pval_df1, pval_df2, "pvalue", self.log10_transform, True],
+                 [fdr_df1, fdr_df2, "FDR", self.log10_transform, True]):
+            if decon1_df is None or decon2_df is None:
+                continue
+
             print("Plotting {}".format(appendix))
-
-            # Change columns.
-            decon1_df.columns = [x.split("_")[1] for x in decon1_df.columns]
-            decon2_df.columns = [x.split("_")[1] for x in decon2_df.columns]
 
             # Filter on overlapping rows and columns.
             print("\tFiltering matrices.")
+            row_overlap = set(decon1_df.index).intersection(set(decon2_df.index))
+            decon1_df = decon1_df.loc[row_overlap, :]
+            decon2_df = decon2_df.loc[row_overlap, :]
+
             row_overlap = set(decon1_df.index).intersection(set(decon2_df.index))
             col_overlap = set(decon1_df.columns).intersection(set(decon2_df.columns))
 
@@ -190,13 +205,63 @@ class main():
                 print("\t  Shape's are not identical.")
                 exit()
 
-            if decon1_df.shape[0] > decon1_df.shape[1]:
-                decon1_df = decon1_df.T
-                decon2_df = decon2_df.T
+            decon1_signif_df = None
+            decon2_signif_df = None
+            if "Beta" in appendix:
+                decon1_signif_df = fdr_df1
+                decon2_signif_df = fdr_df2
 
             print("\tPlotting.")
             #self.plot_violin_comparison(decon1_df, decon2_df, self.outfile + "_" + appendix)
-            self.plot_regression_comparison(decon1_df, decon2_df, self.outfile + "_" + appendix)
+            self.plot_regression_comparison(decon1_df=decon1_df,
+                                            decon2_df=decon2_df,
+                                            decon1_signif_df=decon1_signif_df,
+                                            decon2_signif_df=decon2_signif_df,
+                                            log10_transform=log10_transform,
+                                            signif_lines=signif_lines,
+                                            filename=self.outfile + "_" + appendix)
+
+    @staticmethod
+    def load_file(path, sep="\t", header=0, index_col=0, nrows=None):
+        df = pd.read_csv(path, sep=sep, header=header, index_col=index_col,
+                         nrows=nrows)
+        print("\tLoaded dataframe: {} "
+              "with shape: {}".format(os.path.basename(path),
+                                      df.shape))
+        return df
+
+    @staticmethod
+    def split_decon(df):
+        # Get the p-values.
+        pval_df = df.loc[:, [x for x in df.columns if x.endswith("_pvalue")]].copy()
+        pval_df.columns = [x.split("_")[1] for x in pval_df]
+
+        # Calculate the FDR.
+        fdr_df = pd.DataFrame(np.nan, columns=pval_df.columns, index=pval_df.index)
+        for index, row in pval_df.T.iterrows():
+            fdr_df[index] = multitest.multipletests(row, method='fdr_bh')[1]
+
+        # Intercept beta.
+        intercept_beta_df = None
+        if "Beta1_Intercept" in df.columns:
+            intercept_beta_df = df.loc[:, ["Beta1_Intercept"]]
+            intercept_beta_df.columns = ["Intercept"]
+
+        # Genotype beta.
+        genotype_beta_df = None
+        if "Beta2_Genotype" in df.columns:
+            genotype_beta_df = df.loc[:, ["Beta2_Genotype"]]
+            genotype_beta_df.columns = ["Genotype"]
+
+        # Get the cell type beta's.
+        ct_beta_df = df.loc[:, [x for x in df.columns if "Beta" in x and not ":GT" in x and not x in ["Beta1_Intercept", "Beta2_Genotype"]]]
+        ct_beta_df.columns = [x.split("_")[2] for x in ct_beta_df.columns]
+
+        # Get the interaction beta's.
+        interaction_beta_df = df.loc[:, [x for x in df.columns if "Beta" in x and ":GT" in x]]
+        interaction_beta_df.columns = [x.split("_")[2].split(":")[0] for x in interaction_beta_df.columns]
+
+        return pval_df, fdr_df, intercept_beta_df, genotype_beta_df, ct_beta_df, interaction_beta_df
 
     def print_n_signif(self, df, type):
         print("\nN-interaction ({} < {}):".format(type, self.alpha))
@@ -210,40 +275,6 @@ class main():
         print("\t{:{}s}  {:{}d}".format("total", cov_length, n_hits_total, hits_length))
 
         print("", flush=True)
-
-    @staticmethod
-    def bh_correct(input_df):
-        pvalue_cols = []
-        for col in input_df.columns:
-            if col.endswith("_pvalue"):
-                pvalue_cols.append(col)
-        pvalue_df = input_df.loc[:, pvalue_cols]
-
-        fdr_data = []
-        indices = []
-        for col in pvalue_cols:
-            fdr_data.append(multitest.multipletests(input_df.loc[:, col], method='fdr_bh')[1])
-            indices.append(col.replace("_pvalue", ""))
-        fdr_df = pd.DataFrame(fdr_data, index=indices, columns=input_df.index)
-
-        return pvalue_df, fdr_df.T
-
-    @staticmethod
-    def bh_correct2(input_df):
-        pvalue_cols = []
-        for col in input_df.columns:
-            if col.endswith("_pvalue"):
-                pvalue_cols.append(col)
-        pvalue_df = input_df.loc[:, pvalue_cols]
-
-        pvalue_df_m = pvalue_df.copy()
-        pvalue_df_m.reset_index(drop=False, inplace=True)
-        pvalue_df_m = pvalue_df_m.melt(id_vars=["index"])
-        pvalue_df_m["FDR"] = multitest.multipletests(pvalue_df_m.loc[:, "value"], method='fdr_bh')[1]
-        fdr_df = pvalue_df_m.pivot(index='index', columns='variable', values='value')
-        fdr_df.columns = [x.replace("_pvalue", "") for x in fdr_df.columns]
-
-        return pvalue_df, fdr_df
 
     def plot_violin_comparison(self, decon1_df, decon2_df, filename):
         df1 = decon1_df.copy()
@@ -274,9 +305,19 @@ class main():
         fig.savefig(os.path.join(self.outdir, "{}_violin_comparison.png".format(filename)))
         plt.close()
 
-    def plot_regression_comparison(self, decon1_df, decon2_df, filename):
+    def plot_regression_comparison(self, decon1_df, decon2_df, decon1_signif_df=None,
+                                   decon2_signif_df=None, log10_transform=False,
+                                   signif_lines=False, filename="plot"):
+
+        # celltypes = (("Microglia", "Macrophage"),
+        #              ("EndothelialCell", "EndothelialCell"),
+        #              ("Oligodendrocyte", "Oligodendrocyte"),
+        #              ("Excitatory", "Neuron"),
+        #              ("Inhibitory", "Neuron"),
+        #              ("Astrocyte", "Astrocyte"))
+
         # Calculate number of rows / columns.
-        celltypes = list(decon1_df.index)
+        celltypes = list(decon1_df.columns)
         celltypes.sort()
         ncols = 3
         nrows = math.ceil(len(celltypes) / 3)
@@ -290,17 +331,27 @@ class main():
         row_index = 0
         col_index = 0
 
+        # for ct2, ct1 in celltypes:
         for celltype in celltypes:
             x_label = "{}_{}".format(self.decon1_name, celltype)
             y_label = "{}_{}".format(self.decon2_name, celltype)
-            df = pd.DataFrame({x_label: decon1_df.loc[celltype, :],
-                               y_label: decon2_df.loc[celltype, :]})
+            df = pd.DataFrame({x_label: decon1_df.loc[:, celltype],
+                               y_label: decon2_df.loc[:, celltype]})
+
+            x_signif_col = x_label
+            y_signif_col = y_label
+            if decon1_signif_df is not None and decon2_signif_df is not None:
+                df["x_signif"] = decon1_signif_df.loc[:, celltype]
+                df["y_signif"] = decon2_signif_df.loc[:, celltype]
+                x_signif_col = "x_signif"
+                y_signif_col = "y_signif"
 
             # Add color
             df["hue"] = self.point_colormap["no signif"]
-            df.loc[(df[x_label] < 0.05) & (df[y_label] >= 0.05), "hue"] = self.point_colormap["x signif"]
-            df.loc[(df[x_label] >= 0.05) & (df[y_label] < 0.05), "hue"] = self.point_colormap["y signif"]
-            df.loc[(df[x_label] < 0.05) & (df[y_label] < 0.05), "hue"] = self.point_colormap["both signif"]
+            df.loc[(df[x_signif_col] < 0.05) & (df[y_signif_col] >= 0.05), "hue"] = self.point_colormap["x signif"]
+            df.loc[(df[x_signif_col] >= 0.05) & (df[y_signif_col] < 0.05), "hue"] = self.point_colormap["y signif"]
+            df.loc[(df[x_signif_col] < 0.05) & (df[y_signif_col] < 0.05), "hue"] = self.point_colormap["both signif"]
+
             counts = df["hue"].value_counts()
             for value in self.point_colormap.values():
                 if value not in counts.index:
@@ -312,10 +363,9 @@ class main():
             accent_color = self.accent_colormap[celltype]
 
             # Convert to log10 scale.
-            if self.log10_transform:
-                df.loc[df[x_label] == 0, x_label] = 2.2250738585072014e-308
-                df.loc[df[y_label] == 0, y_label] = 2.2250738585072014e-308
-                df[[x_label, y_label]] = np.log10(df[[x_label, y_label]])
+            if log10_transform:
+                df[x_label] = np.log10(df[x_label] + 1)
+                df[y_label] = np.log10(df[y_label] + 1)
 
             # Creat the subplot.
             ax = fig.add_subplot(grid[row_index, col_index])
@@ -332,6 +382,16 @@ class main():
                             ax=ax
                             )
 
+            # sns.jointplot(data=df,
+            #               x=x_label,
+            #               y=y_label,
+            #               kind="reg",
+            #               scatter_kws={'facecolors': df["hue"],
+            #                            'linewidth': 0,
+            #                            'alpha': 0.5},
+            #               line_kws={"color": accent_color}
+            #               )
+
             # Add the text.
             ax.annotate(
                 'r = {}'.format(coef_str),
@@ -341,35 +401,35 @@ class main():
                 fontsize=18,
                 fontweight='bold')
             ax.annotate(
-                'total N = {}'.format(df.shape[0]),
+                'total N = {:,}'.format(df.shape[0]),
                 xy=(0.03, 0.9),
                 xycoords=ax.transAxes,
                 color="#404040",
                 fontsize=18,
                 fontweight='bold')
             ax.annotate(
-                'N = {}'.format(counts[self.point_colormap["both signif"]]),
+                'N = {:,}'.format(counts[self.point_colormap["both signif"]]),
                 xy=(0.03, 0.86),
                 xycoords=ax.transAxes,
                 color=self.point_colormap["both signif"],
                 fontsize=18,
                 fontweight='bold')
             ax.annotate(
-                'N = {}'.format(counts[self.point_colormap["x signif"]]),
+                'N = {:,}'.format(counts[self.point_colormap["x signif"]]),
                 xy=(0.03, 0.82),
                 xycoords=ax.transAxes,
                 color=self.point_colormap["x signif"],
                 fontsize=18,
                 fontweight='bold')
             ax.annotate(
-                'N = {}'.format(counts[self.point_colormap["y signif"]]),
+                'N = {:,}'.format(counts[self.point_colormap["y signif"]]),
                 xy=(0.03, 0.78),
                 xycoords=ax.transAxes,
                 color=self.point_colormap["y signif"],
                 fontsize=18,
                 fontweight='bold')
             ax.annotate(
-                'N = {}'.format(counts[self.point_colormap["no signif"]]),
+                'N = {:,}'.format(counts[self.point_colormap["no signif"]]),
                 xy=(0.03, 0.74),
                 xycoords=ax.transAxes,
                 color=self.point_colormap["no signif"],
@@ -390,18 +450,21 @@ class main():
                           fontsize=18,
                           fontweight='bold')
 
-            signif_line = 0.05
-            if self.log10_transform:
-                signif_line = np.log10(0.05)
-            ax.axhline(signif_line, ls='--', color="#000000", zorder=-1)
-            ax.axvline(signif_line, ls='--', color="#000000", zorder=-1)
+            if signif_lines:
+                signif_line = 0.05
+                if log10_transform:
+                    signif_line = np.log10(1.05)
+                ax.axhline(signif_line, ls='--', color="#000000", zorder=-1)
+                ax.axvline(signif_line, ls='--', color="#000000", zorder=-1)
 
-            min_value = np.min((df[[x_label, y_label]].min(axis=0).min() * 1.1, -0.1))
-            max_value = np.max((df[[x_label, y_label]].max(axis=0).max() * 1.1, 1.1))
-
-            ax.set_xlim(min_value, max_value)
-            ax.set_ylim(min_value, max_value)
-            ax.plot([min_value, max_value], [min_value, max_value], ls="--", c="#000000")
+            # min_value = np.min((df[[x_label, y_label]].min(axis=0).min() * 1.1, -0.1))
+            # max_value = np.max((df[[x_label, y_label]].max(axis=0).max() * 1.1, 1.1))
+            #
+            # print(min_value, max_value)
+            #
+            # ax.set_xlim(min_value, max_value)
+            # ax.set_ylim(min_value, max_value)
+            # ax.plot([min_value, max_value], [min_value, max_value], ls="--", c="#000000")
 
             # Increment indices.
             col_index += 1
