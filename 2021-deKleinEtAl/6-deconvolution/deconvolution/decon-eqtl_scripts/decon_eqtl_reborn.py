@@ -302,7 +302,7 @@ class main():
         print("Analyzing eQTLs.")
 
         # Save the degrees of freedom the alternative model.
-        n_columns = 2 + (n_covariates * 2)
+        n_columns = n_covariates * 2
 
         # Initializing output matrices / arrays.
         real_pvalues_m = np.empty((n_eqtls, n_covariates), dtype=np.float64)
@@ -310,9 +310,8 @@ class main():
 
         # Construct the X matrix.
         X = np.empty((n_samples, n_columns), np.float32)
-        X[:, 0] = 1
         for cov_index in range(n_covariates):
-            X[:, 2 + cov_index] = cc_m[cov_index, :]
+            X[:, cov_index] = cc_m[cov_index, :]
 
         # Start loop.
         start_time = int(time.time())
@@ -339,9 +338,8 @@ class main():
             y = expr_m[row_index, sample_mask]
 
             # Fill in the X matrix.
-            X[:, 1] = genotype
             for cov_index in range(n_covariates):
-                X[:, 2 + n_covariates + cov_index] = X[:, 1] * X[:, 2 + cov_index]
+                X[:, n_covariates + cov_index] = genotype * X[:, cov_index]
 
             # Model the alternative matrix (with the interaction term).
             # This is the matrix with expression ~ cc1 + cc2 + cc1 * geno +
@@ -363,7 +361,7 @@ class main():
             for cov_index in range(n_covariates):
                 # Construct mask.
                 covariates_mask = covariates_base_mask.copy()
-                covariates_mask[2 + n_covariates + cov_index] = False
+                covariates_mask[n_covariates + cov_index] = False
 
                 # Model the null matrix (without the interaction term). In
                 # this model 1 (and only 1!) of the cc * geno terms is removed.
@@ -395,9 +393,9 @@ class main():
 
         decon_df = pd.DataFrame(np.hstack((real_pvalues_m, betas_alt_m)),
                                 index=eqtl_indices,
-                                columns=["{}_pvalue".format(x) for x in cell_types_indices] + ["Beta1_Intercept", "Beta2_Genotype"] +
-                                        ["Beta{}_{}".format(i + 3, x) for i, x in enumerate(cell_types_indices)] +
-                                        ["Beta{}_{}:GT".format(i + 3 + len(cell_types_indices), x) for i, x in enumerate(cell_types_indices)])
+                                columns=["{}_pvalue".format(x) for x in cell_types_indices] +
+                                        ["Beta{}_{}".format(i + 2, x) for i, x in enumerate(cell_types_indices)] +
+                                        ["Beta{}_{}:GT".format(i + 2 + len(cell_types_indices), x) for i, x in enumerate(cell_types_indices)])
         print(decon_df)
         self.save_file(df=decon_df, outpath=os.path.join(self.outdir, "deconvolutionResults.txt.gz"))
 

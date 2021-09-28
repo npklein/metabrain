@@ -92,6 +92,7 @@ class main():
             os.makedirs(self.outdir)
 
         self.accent_colormap = {
+            "Intercept": "#000000",
             "Excitatory": "#56B4E9",
             "Inhibitory": "#0072B2",
             "Neuron": "#0072B2",
@@ -167,8 +168,8 @@ class main():
         decon2_df = self.load_file(self.decon2_path)
 
         print("Splitting categories")
-        pval_df1, fdr_df1, intercept_beta_df1, genotype_beta_df1, ct_beta_df1, inter_beta_df1 = self.split_decon(df=decon1_df)
-        pval_df2, fdr_df2, intercept_beta_df2, genotype_beta_df2, ct_beta_df2, inter_beta_df2 = self.split_decon(df=decon2_df)
+        pval_df1, fdr_df1, intercept_beta_df1, ct_beta_df1, inter_beta_df1 = self.split_decon(df=decon1_df)
+        pval_df2, fdr_df2, intercept_beta_df2, ct_beta_df2, inter_beta_df2 = self.split_decon(df=decon2_df)
 
         # inter_beta_df1 = np.abs(inter_beta_df1)
         # inter_beta_df2 = np.abs(inter_beta_df2)
@@ -176,15 +177,20 @@ class main():
         print("Plotting")
         for decon1_df, decon2_df, appendix, log10_transform, signif_lines in \
                 ([intercept_beta_df1, intercept_beta_df2, "InterceptBeta", False, False],
-                 [genotype_beta_df1, genotype_beta_df2, "GenotypeBeta", False, False],
                  [ct_beta_df1, ct_beta_df2, "CellTypeBeta", False, False],
                  [inter_beta_df1, inter_beta_df2, "IteractionBeta", False, False],
                  [pval_df1, pval_df2, "pvalue", self.log10_transform, True],
                  [fdr_df1, fdr_df2, "FDR", self.log10_transform, True]):
-            if decon1_df is None or decon2_df is None:
+            if decon1_df is None and decon2_df is None:
                 continue
 
             print("Plotting {}".format(appendix))
+            self.plot_violin_comparison(decon1_df=decon1_df,
+                                        decon2_df=decon2_df,
+                                        filename=self.outfile + "_" + appendix)
+
+            if decon1_df is None or decon2_df is None:
+                continue
 
             # Filter on overlapping rows and columns.
             print("\tFiltering matrices.")
@@ -212,7 +218,6 @@ class main():
                 decon2_signif_df = fdr_df2
 
             print("\tPlotting.")
-            #self.plot_violin_comparison(decon1_df, decon2_df, self.outfile + "_" + appendix)
             self.plot_regression_comparison(decon1_df=decon1_df,
                                             decon2_df=decon2_df,
                                             decon1_signif_df=decon1_signif_df,
@@ -247,12 +252,6 @@ class main():
             intercept_beta_df = df.loc[:, ["Beta1_Intercept"]]
             intercept_beta_df.columns = ["Intercept"]
 
-        # Genotype beta.
-        genotype_beta_df = None
-        if "Beta2_Genotype" in df.columns:
-            genotype_beta_df = df.loc[:, ["Beta2_Genotype"]]
-            genotype_beta_df.columns = ["Genotype"]
-
         # Get the cell type beta's.
         ct_beta_df = df.loc[:, [x for x in df.columns if "Beta" in x and not ":GT" in x and not x in ["Beta1_Intercept", "Beta2_Genotype"]]]
         ct_beta_df.columns = [x.split("_")[2] for x in ct_beta_df.columns]
@@ -261,7 +260,7 @@ class main():
         interaction_beta_df = df.loc[:, [x for x in df.columns if "Beta" in x and ":GT" in x]]
         interaction_beta_df.columns = [x.split("_")[2].split(":")[0] for x in interaction_beta_df.columns]
 
-        return pval_df, fdr_df, intercept_beta_df, genotype_beta_df, ct_beta_df, interaction_beta_df
+        return pval_df, fdr_df, intercept_beta_df, ct_beta_df, interaction_beta_df
 
     def print_n_signif(self, df, type):
         print("\nN-interaction ({} < {}):".format(type, self.alpha))
@@ -277,28 +276,32 @@ class main():
         print("", flush=True)
 
     def plot_violin_comparison(self, decon1_df, decon2_df, filename):
-        df1 = decon1_df.copy()
-        df2 = decon2_df.copy()
+        df1 = None
+        if decon1_df is not None:
+            df1 = decon1_df.copy()
+            df1.columns = [x.replace(":GT", "") for x in df1.columns]
+            df1 = df1.melt()
+            df1["name"] = self.decon1_name
 
-        df1 = df1.T.melt()
-        df2 = df2.T.melt()
-
-        df1["name"] = self.decon1_name
-        df2["name"] = self.decon2_name
+        df2 = None
+        if decon2_df is not None:
+            df2 = decon2_df.copy()
+            df2.columns = [x.replace(":GT", "") for x in df2.columns]
+            df2 = df2.melt()
+            df2["name"] = self.decon2_name
 
         df = pd.concat([df1, df2], axis=0)
-        del df1, df2
 
         sns.set(rc={'figure.figsize': (12, 9)})
         sns.set_style("ticks")
         fig, ax = plt.subplots()
         sns.despine(fig=fig, ax=ax)
-        sns.violinplot(x="variable", y="value", hue="name",
-                       data=df, ax=ax)
+        sns.violinplot(x="name", y="value", hue="variable", legend=False,
+                       data=df, palette=self.accent_colormap, ax=ax)
         ax.set_xlabel("",
                       fontsize=14,
                       fontweight='bold')
-        ax.set_ylabel("cell count %",
+        ax.set_ylabel("value",
                       fontsize=14,
                       fontweight='bold')
         plt.tight_layout()
