@@ -99,6 +99,7 @@ class Main:
         pf.work()
         pf.print_info()
         self.settings.set_avg_residuals(pf.get_avg_rss())
+        self.settings.set_avg_recon_accuracy(pf.get_avg_recon_accuracy())
         self.settings.set_pred_info_per_celltype(pf.get_info_per_celltype())
 
         # Comparison.
@@ -123,18 +124,19 @@ class Main:
                            deconvolution=pf.get_deconvolution(),
                            ground_truth=dl.get_ground_truth(),
                            comparison=dc.get_comparison())
-            v.plot_profile_clustermap()
-            v.plot_profile_correlations()
-            v.plot_profile_stripplot()
-            v.plot_profile_boxplot()
-            v.plot_deconvolution_clustermap()
-            v.plot_deconvolution_correlations()
-            v.plot_deconvolution_per_sample()
-            #v.plot_deconvolution_distribution()
-            v.plot_deconvolution_boxplot()
-            #v.plot_ground_truth_distribution()
-            v.plot_ground_truth_boxplot()
-            v.plot_prediction_comparison()
+            # v.plot_profile_clustermap()
+            # v.plot_profile_correlations()
+            # v.plot_profile_stripplot()
+            # v.plot_profile_boxplot()
+            # v.plot_deconvolution_clustermap()
+            # v.plot_deconvolution_correlations()
+            # v.plot_deconvolution_per_sample()
+            # #v.plot_deconvolution_distribution()
+            # v.plot_deconvolution_boxplot()
+            # #v.plot_ground_truth_distribution()
+            # v.plot_ground_truth_boxplot()
+            # v.plot_prediction_comparison()
+            v.plot_recon_accuracy_boxplot(s=pf.get_recon_accuracy())
 
             if self.plot_ids is not None:
                 for plot_id in self.plot_ids:

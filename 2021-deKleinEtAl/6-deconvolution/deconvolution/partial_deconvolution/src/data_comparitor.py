@@ -57,6 +57,51 @@ class DataComparitor:
             print("Invalid order")
             exit()
 
+        #
+        # # cell_types = np.intersect1d(decon_df.columns, truth_df.columns)
+        # cell_type_matches = (("Microglia", "Macrophage"),
+        #                      ("EndothelialCell", "EndothelialCell"),
+        #                      ("Oligodendrocyte", "Oligodendrocyte"),
+        #                      ("Excitatory", "Neuron"),
+        #                      ("Inhibitory", "Neuron"),
+        #                      (("Excitatory", "Inhibitory"), "Neuron"),
+        #                      ("Astrocyte", "Astrocyte"))
+        # data = []
+        # for i, sample in enumerate(overlap):
+        #     decon = decon_df.iloc[i, :]
+        #     truth = truth_df.iloc[i, :]
+        #     #for cell in cell_types:
+        #     #    data.append([sample, decon[cell], truth[cell], cell])
+        #     for ct1, ct2 in cell_type_matches:
+        #         if isinstance(ct1, str):
+        #             value1 = decon[ct1]
+        #         else:
+        #             value1 = 0
+        #             for sub_ct in ct1:
+        #                 value1 += decon[sub_ct]
+        #
+        #         if isinstance(ct2, str):
+        #             value2 = truth[ct2]
+        #         else:
+        #             value2 = 0
+        #             for sub_ct in ct2:
+        #                 value2 += truth[sub_ct]
+        #
+        #         name1 = ct1
+        #         name2 = ct2
+        #         if not isinstance(ct1, str):
+        #             name1 = "+".join([sub_ct for sub_ct in ct1])
+        #         if not isinstance(ct2, str):
+        #             name2 = "+".join([sub_ct for sub_ct in ct1])
+        #
+        #         cell = "{}/{}".format(name1, name2)
+        #         if ct1 == ct2:
+        #             cell = ct1
+        #
+        #         data.append([sample, value1, value2, cell])
+        # df = pd.DataFrame(data, columns=['-', 'x', 'y', 'hue'])
+        # df.set_index('-', inplace=True)
+
         cell_types = np.intersect1d(decon_df.columns, truth_df.columns)
         data = []
         for i, sample in enumerate(overlap):

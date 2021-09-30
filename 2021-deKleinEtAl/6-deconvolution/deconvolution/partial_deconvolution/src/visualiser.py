@@ -60,11 +60,17 @@ class Visualiser:
             "Inhibitory": "#0072B2",
             "Neuron": "#0072B2",
             "Oligodendrocyte": "#009E73",
+            "OPC": "#009E73",
             "EndothelialCell": "#CC79A7",
             "Microglia": "#E69F00",
             "Macrophage": "#E69F00",
             "Astrocyte": "#D55E00",
-            "Pericytes": "#808080"
+            "Pericytes": "#808080",
+            "Microglia/Macrophage": "#E69F00",
+            "Excitatory/Neuron": "#56B4E9",
+            "Inhibitory/Neuron": "#0072B2",
+            "Excitatory+Inhibitory/Neuron": "#BEBEBE",
+            "-": "#000000"
         }
 
         # Set the right pdf font for exporting.
@@ -159,6 +165,7 @@ class Visualiser:
 
         df = self.ground_truth.copy()
         dfm = df.melt()
+        exit()
         self.create_boxplot(dfm, name='ground_truth')
 
     def plot_prediction_comparison(self):
@@ -170,6 +177,12 @@ class Visualiser:
                                "NNLS predictions",
                                "{} counts".format(self.ground_truth_type),
                                '{}_comparison'.format(self.ground_truth_type))
+
+    def plot_recon_accuracy_boxplot(self, s):
+        df = s.to_frame()
+        df.columns = ["-"]
+        dfm = df.melt()
+        self.create_boxplot(dfm, name='reconstruction_accuracy')
 
     def plot_violin_comparison(self, label, trans_dict):
         df = self.deconvolution.copy()

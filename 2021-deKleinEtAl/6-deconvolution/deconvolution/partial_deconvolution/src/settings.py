@@ -1,7 +1,7 @@
 """
 File:         settings.py
 Created:      2020/06/29
-Last Changed: 2021/08/04
+Last Changed: 2021/09/30
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -66,6 +66,7 @@ class Settings:
         self.n_genes = None
         self.n_ng_per_ct = None
         self.avg_residuals = None
+        self.avg_recon_accuracy = None
         self.pred_info_per_celltype = None
         self.comparison_n_samples = None
         self.comparison_rss = None
@@ -160,6 +161,9 @@ class Settings:
     def set_avg_residuals(self, avg_residuals):
         self.avg_residuals = avg_residuals
 
+    def set_avg_recon_accuracy(self, avg_recon_accuracy):
+        self.avg_recon_accuracy = avg_recon_accuracy
+
     def set_pred_info_per_celltype(self, pred_info_per_celltype):
         self.pred_info_per_celltype = pred_info_per_celltype
 
@@ -177,15 +181,26 @@ class Settings:
         if self.avg_residuals is not None:
             avg_resid_str = "{:.2f}".format(self.avg_residuals)
 
+        avg_recon_accuracy_str = ""
+        if self.avg_recon_accuracy is not None:
+            avg_recon_accuracy_str = "{:.2f}".format(self.avg_recon_accuracy)
+
         rss_str = ""
         if self.comparison_rss is not None:
             rss_str = "{:.2f}".format(self.comparison_rss)
 
         return "min.expr.: {}, dataset corr.: {}, norm.: {}, z-score: {}, " \
-               "log2: {},\nsum-to-one: {}, avg.residuals: {}, N: {}, " \
-               "RSS: {}".format(self.min_expr, self.dataset_correction, self.normalize,
-                                self.zscore, self.log2, self.sum_to_one,
-                                avg_resid_str, self.comparison_n_samples,
+               "log2: {},\nsum-to-one: {}, avg.residuals: {}, " \
+               "avg.recon.accuracy.: {}% N: {}, " \
+               "RSS: {}".format(self.min_expr,
+                                self.dataset_correction,
+                                self.normalize,
+                                self.zscore,
+                                self.log2,
+                                self.sum_to_one,
+                                avg_resid_str,
+                                avg_recon_accuracy_str,
+                                self.comparison_n_samples,
                                 rss_str)
 
     def save_data_settings(self):
@@ -226,6 +241,7 @@ class Settings:
                 "n_genes": self.n_genes,
                 "n_ng_per_ct": self.n_ng_per_ct,
                 "avg_residuals": self.avg_residuals,
+                "avg_recon_accuracy": self.avg_recon_accuracy,
                 "pred_info_per_celltype": self.pred_info_per_celltype,
                 "comparison_n_samples": self.comparison_n_samples,
                 "comparison_rss": self.comparison_rss}
