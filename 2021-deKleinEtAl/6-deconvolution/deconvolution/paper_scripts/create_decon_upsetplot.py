@@ -54,6 +54,10 @@ Syntax:
 ./create_decon_upsetplot.py -d ../2021-06-24-decon-QTL/cortex_eur_cis_NoENA_NoGVEX/decon_cis_cortex_eur_noENA_noGVEX_out/deconvolutionResults.csv -calc_fdr -e png
 
 ./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/output/deconvolutionResults.txt.gz -calc_fdr -e png
+
+./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5/deconvolutionResults.txt.gz -calc_fdr -n original -e png
+
+./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5-CNS7Profile/deconvolutionResults.txt.gz -calc_fdr -n CNS7 -e png
 """
 
 
@@ -79,6 +83,7 @@ class main():
         self.decon_path = getattr(arguments, 'decon')
         self.alpha = getattr(arguments, 'alpha')
         self.calc_fdr = getattr(arguments, 'calc_fdr')
+        self.name = getattr(arguments, 'name')
         self.extensions = getattr(arguments, 'extension')
 
         # Set variables.
@@ -119,6 +124,13 @@ class main():
                             required=False,
                             default=0.05,
                             help="The significance cut-off. Default: 0.05.")
+        parser.add_argument("-n",
+                            "--name",
+                            type=str,
+                            required=False,
+                            default="plot",
+                            help="The name of the output file. "
+                                 "Default: 'plot'.")
         parser.add_argument("-e",
                             "--extension",
                             nargs="+",
@@ -153,7 +165,7 @@ class main():
         print("Creating plot.")
         up.plot(counts, sort_by='cardinality', show_counts=True)
         for extension in self.extensions:
-            plt.savefig(os.path.join(self.outdir, "eQTL_upsetplot.{}".format(extension)))
+            plt.savefig(os.path.join(self.outdir, "{}.{}".format(self.name, extension)))
         plt.close()
 
     @staticmethod
@@ -211,7 +223,11 @@ class main():
                          "CellMapNNLS_Oligodendrocyte": "oligo",
                          "CellMapNNLS_EndothelialCell": "endo",
                          "CellMapNNLS_Macrophage": "macro",
-                         "CellMapNNLS_Astrocyte": "astro"}
+                         "CellMapNNLS_Astrocyte": "astro",
+                         "CellMapNNLS_Inhibitory": "inhib",
+                         "CellMapNNLS_Microglia": "micro",
+                         "CellMapNNLS_Excitatory": "excit",
+                         "CellMapNNLS_Pericytes": "peri"}
         abbr_cols = []
         for col in cols:
             if col in abbreviations.keys():
@@ -259,6 +275,7 @@ class main():
         print("  > Deconvolution path: {}".format(self.decon_path))
         print("  > Alpha: {}".format(self.alpha))
         print("  > Calc FDR: {}".format(self.calc_fdr))
+        print("  > Name: {}".format(self.name))
         print("  > Extension: {}".format(self.extensions))
         print("  > Output directory: {}".format(self.outdir))
         print("")

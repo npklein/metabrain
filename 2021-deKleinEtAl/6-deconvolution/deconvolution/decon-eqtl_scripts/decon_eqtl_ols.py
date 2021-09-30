@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-File:         decon_eqtl_reborn.py
+File:         decon_eqtl_ols.py
 Created:      2021/09/27
 Last Changed:
 Author:       M.Vochteloo
@@ -38,7 +38,7 @@ from scipy.special import betainc
 
 """
 Syntax:
-/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_reborn.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis-Normalised/data/SampleToDataset.txt.gz -of CortexEUR-cis-NormalisedMAF5 -maf 0.05
+/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_ols.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis-Normalised/data/SampleToDataset.txt.gz -of CortexEUR-cis-NormalisedMAF5 -maf 0.05
 """
 
 # Metadata
@@ -78,7 +78,7 @@ class main():
         # Set variables.
         if outdir is None:
             outdir = str(Path(__file__).parent)
-        self.outdir = os.path.join(outdir, "decon_eqtl_reborn", outfolder)
+        self.outdir = os.path.join(outdir, "decon_eqtl_ols", outfolder)
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
 
@@ -302,7 +302,7 @@ class main():
         print("Analyzing eQTLs.")
 
         # Save the degrees of freedom the alternative model.
-        n_columns = n_covariates * 2
+        n_columns = (n_covariates * 2)
 
         # Initializing output matrices / arrays.
         real_pvalues_m = np.empty((n_eqtls, n_covariates), dtype=np.float64)
@@ -341,15 +341,24 @@ class main():
             for cov_index in range(n_covariates):
                 X[:, n_covariates + cov_index] = genotype * X[:, cov_index]
 
+            # df = pd.DataFrame(X, columns=["Intercept", "Genotype"] + [x.split("_")[1] for x in cell_types_indices] + ["{}xGenotype".format(x.split("_")[1]) for x in cell_types_indices])
+            # df["Expression"] = expr_m[row_index, :]
+            # print(df)
+            # df.to_csv(os.path.join(self.outdir, "ieqtl.csv"), sep=",", header=True, index=True)
+            #
+            # df = df.loc[sample_mask, :]
+            # betas_alt, residuals_alt = self.fit_and_predict(X=df, y=y)
+            # exit()
+
             # Model the alternative matrix (with the interaction term).
             # This is the matrix with expression ~ cc1 + cc2 + cc1 * geno +
             # cc2 * geno.
-            betas_alt, y_hat_alt = self.fit_and_predict(X=X[sample_mask, :], y=y)
-            if betas_alt is None or y_hat_alt is None:
+            betas_alt, residuals_alt = self.fit_and_predict(X=X[sample_mask, :], y=y)
+            if betas_alt is None or residuals_alt is None:
                 betas_alt_m[row_index, :] = np.nan
                 real_pvalues_m[row_index, :] = np.nan
                 continue
-            rss_alt = self.calc_rss(y=y, y_hat=y_hat_alt)
+            rss_alt = self.calc_rss(residuals=residuals_alt)
 
             # Save the alternative model stats.
             betas_alt_m[row_index, :] = betas_alt
@@ -365,11 +374,11 @@ class main():
 
                 # Model the null matrix (without the interaction term). In
                 # this model 1 (and only 1!) of the cc * geno terms is removed.
-                _, y_hat_null = self.fit_and_predict(X=X[sample_mask, :][:, covariates_mask], y=y)
-                if y_hat_null is None:
+                _, residuals_null = self.fit_and_predict(X=X[sample_mask, :][:, covariates_mask], y=y)
+                if residuals_null is None:
                     real_pvalues_m[row_index, cov_index] = np.nan
                     continue
-                rss_null = self.calc_rss(y=y, y_hat=y_hat_null)
+                rss_null = self.calc_rss(residuals=residuals_null)
 
                 # Calculate and save the p-value.
                 p_value = self.calc_p_value(rss1=rss_null,
@@ -564,15 +573,15 @@ class main():
         model = sm.OLS(y, X)
         try:
             results = model.fit()
+            print(results.summary())
             return results.params, results.resid
         except np.linalg.LinAlgError as e:
             print("\t\tError: {}".format(e))
             return None, None
 
     @staticmethod
-    def calc_rss(y, y_hat):
-        res = y - y_hat
-        res_squared = res * res
+    def calc_rss(residuals):
+        res_squared = residuals * residuals
         return np.sum(res_squared)
 
     @staticmethod

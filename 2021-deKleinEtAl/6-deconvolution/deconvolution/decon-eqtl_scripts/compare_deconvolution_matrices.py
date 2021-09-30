@@ -3,7 +3,7 @@
 """
 File:         compare_deconvolution_matrices.py
 Created:      2020/09/03
-Last Changed: 2021/08/06
+Last Changed: 2021/09/29
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -65,11 +65,11 @@ Syntax:
 
 ./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-WithPermutations-StaticInteractionShuffle/deconvolutionResults.txt.gz -n1 Original -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-HalfNormalizedMAF5/deconvolutionResults.txt.gz -n2 HalfNormalized -log10 -o original_vs_halfnormalized
 
-./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-NormalisedMAF5/deconvolutionResults.txt.gz -n1 OriginalProfile -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-NormalisedMAF5-CNS7Profile/deconvolutionResults.txt.gz -n2 CNS7Profile -log10 -o originalProfile_vs_CNS7Profile
+./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5/deconvolutionResults.txt.gz -n1 OriginalProfile -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5-CNS7Profile/deconvolutionResults.txt.gz -n2 CNS7Profile -log10 -o originalProfile_vs_CNS7Profile
 
 ./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-NormalisedMAF5-LimitedConfigs/deconvolutionResults.txt.gz -n1 limited_configs -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-NormalisedMAF5-ALlConfigs/deconvolutionResults.txt.gz -n2 all_configs -log10 -o limited_vs_all_configurations
 
-./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/test/deconvolutionResults.txt.gz -n1 original -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_reborn/test/deconvolutionResults.txt.gz -n2 reborn -log10 -o original_vs_reborn
+./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/test/deconvolutionResults.txt.gz -n1 NNLS -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_ols/test/deconvolutionResults.txt.gz -n2 OLS -log10 -o nnls_vs_ols
 """
 
 
@@ -174,6 +174,20 @@ class main():
         # inter_beta_df1 = np.abs(inter_beta_df1)
         # inter_beta_df2 = np.abs(inter_beta_df2)
 
+        print("Comparing")
+        df1_df2_replication_df = self.create_replication_df(df1=fdr_df1, df2=fdr_df2)
+        self.plot_heatmap(df=df1_df2_replication_df,
+                          xlabel=self.decon2_name,
+                          ylabel=self.decon1_name,
+                          filename="{}_replicating_in_{}".format(self.decon1_name, self.decon2_name))
+
+        df2_df1_replication_df = self.create_replication_df(df1=fdr_df2, df2=fdr_df1)
+        self.plot_heatmap(df=df2_df1_replication_df,
+                          xlabel=self.decon1_name,
+                          ylabel=self.decon2_name,
+                          filename="{}_replicating_in_{}".format(self.decon2_name, self.decon1_name))
+        exit()
+
         print("Plotting")
         for decon1_df, decon2_df, appendix, log10_transform, signif_lines in \
                 ([intercept_beta_df1, intercept_beta_df2, "InterceptBeta", False, False],
@@ -275,6 +289,64 @@ class main():
 
         print("", flush=True)
 
+    @staticmethod
+    def create_replication_df(df1, df2):
+        row_overlap = set(df1.index).intersection(set(df2.index))
+        df1_subset = df1.loc[row_overlap, :]
+        df2_subset = df2.loc[row_overlap, :]
+
+        replication_df = pd.DataFrame(np.nan,
+                                      index=df1_subset.columns,
+                                      columns=df2_subset.columns)
+        for ct1 in df1_subset.columns:
+            ct1_df = df2_subset.loc[df1_subset.loc[:, ct1] < 0.05, :]
+            for ct2 in df2_subset.columns:
+                replication_df.loc[ct1, ct2] = (ct1_df.loc[:, ct2] < 0.05).sum() / ct1_df.shape[0]
+        #replication_df = replication_df.divide(replication_df.sum(axis=1), axis=0)
+
+        return replication_df
+
+    def plot_heatmap(self, df, xlabel="", ylabel="", filename=""):
+        cmap = sns.diverging_palette(246, 24, as_cmap=True)
+
+        fig, axes = plt.subplots(nrows=2,
+                                 ncols=2,
+                                 figsize=(1 * df.shape[1] + 5, 1 * df.shape[0] + 5),
+                                 gridspec_kw={"width_ratios": [0.2, 0.8],
+                                              "height_ratios": [0.8, 0.2]})
+        sns.set(color_codes=True)
+
+        row_index = 0
+        col_index = 0
+        for _ in range(4):
+            ax = axes[row_index, col_index]
+            if row_index == 0 and col_index == 1:
+
+                sns.heatmap(df, cmap=cmap, vmin=-1, vmax=1, center=0,
+                            square=True, annot=df.round(2), fmt='',
+                            cbar=False, annot_kws={"size": 16, "color": "#000000"},
+                            ax=ax)
+
+                plt.setp(ax.set_yticklabels(ax.get_ymajorticklabels(), fontsize=20, rotation=0))
+                plt.setp(ax.set_xticklabels(ax.get_xmajorticklabels(), fontsize=20, rotation=90))
+
+                ax.set_xlabel(xlabel, fontsize=14)
+                ax.xaxis.set_label_position('top')
+
+                ax.set_ylabel(ylabel, fontsize=14)
+                ax.yaxis.set_label_position('right')
+            else:
+                ax.set_axis_off()
+
+            col_index += 1
+            if col_index > 1:
+                col_index = 0
+                row_index += 1
+
+        # plt.tight_layout()
+        fig.savefig(os.path.join(self.outdir, "{}_heatmap.png".format(filename)))
+        plt.close()
+
     def plot_violin_comparison(self, decon1_df, decon2_df, filename):
         df1 = None
         if decon1_df is not None:
@@ -304,6 +376,7 @@ class main():
         ax.set_ylabel("value",
                       fontsize=14,
                       fontweight='bold')
+
         plt.tight_layout()
         fig.savefig(os.path.join(self.outdir, "{}_violin_comparison.png".format(filename)))
         plt.close()

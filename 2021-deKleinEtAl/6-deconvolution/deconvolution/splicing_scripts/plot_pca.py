@@ -171,7 +171,7 @@ class main():
 
         for i, y_col in enumerate(columns):
             for j, x_col in enumerate(columns):
-
+                print(i, j)
                 ax = axes[i, j]
                 if i == 0 and j == (ncols - 1):
                     ax.set_axis_off()
