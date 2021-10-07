@@ -3,7 +3,7 @@
 """
 File:         visualise_decon_eqtl_betas.py
 Created:      2021/09/07
-Last Changed:
+Last Changed: 2021/10/07
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -30,6 +30,7 @@ import os
 import re
 
 # Third party imports.
+import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib
@@ -55,6 +56,10 @@ __description__ = "{} is a program developed and maintained by {}. " \
 """
 Syntax:
 ./visualise_decon_eqtl_betas.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-NormalisedMAF5-SaveAllBetas
+
+./visualise_decon_eqtl_betas.py -if CortexEUR-cis-NormalisedMAF5-AllConfigs
+
+./visualise_decon_eqtl_betas.py -if CortexEUR-cis-NormalisedMAF5-LimitedConfigs
 """
 
 
@@ -68,7 +73,7 @@ class main():
         # Set variables.
         if indir is None:
             indir = str(Path(__file__).parent.parent)
-        self.indir = os.path.join(indir, "decon_eqtl_with_permutation_fdr", infolder)
+        self.indir = os.path.join(indir, "decon_eqtl", infolder)
         self.outdir = os.path.join(self.indir, "plot")
         for dir in [self.indir, self.outdir]:
             if not os.path.exists(dir):
@@ -102,6 +107,13 @@ class main():
         print("\tLoading data")
         betas_alt_m = self.load_matrix(os.path.join(self.indir, "betas_alternative_model.npy"))
 
+        n_zero_betas_alt_s = np.sum((betas_alt_m == 0), axis=1)
+        n_zero_betas_alt_counts_df = pd.DataFrame(dict(zip(*np.unique(n_zero_betas_alt_s, return_counts=True))), index=["x"]).T
+        n_zero_betas_alt_counts_df["y"] = n_zero_betas_alt_counts_df.index
+        self.plot_barplot(df=n_zero_betas_alt_counts_df,
+                          xlabel="# beta's == 0 per alternative model",
+                          filename="n_zero_betas_alternative_model")
+
         self.plot(m=betas_alt_m,
                   xlabel="all beta's (alternative model)",
                   filename="all_betas_alternative_model")
@@ -119,6 +131,13 @@ class main():
         print("Processing nominal null model beta's")
         print("\tLoading data")
         betas_null_m = self.load_matrix(os.path.join(self.indir, "betas_null_model.npy"))
+
+        n_zero_betas_null_s = np.sum((betas_null_m == 0), axis=1)
+        n_zero_betas_null_counts_df = pd.DataFrame(dict(zip(*np.unique(n_zero_betas_null_s, return_counts=True))), index=["x"]).T
+        n_zero_betas_null_counts_df["y"] = n_zero_betas_null_counts_df.index
+        self.plot_barplot(df=n_zero_betas_null_counts_df,
+                          xlabel="# beta's == 0 per null model",
+                          filename="n_zero_betas_null_model")
 
         self.plot(m=betas_null_m,
                   xlabel="all beta's (null model)",
@@ -170,6 +189,35 @@ class main():
     @staticmethod
     def natural_keys(text):
         return [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', text)]
+
+    def plot_barplot(self, df, x="x", y="y", xlabel="", ylabel="", title="",
+                     filename=""):
+        sns.set_style("ticks")
+        fig, ax = plt.subplots(figsize=(12, 12))
+
+        sns.despine(fig=fig, ax=ax)
+
+        # Plot.
+        g = sns.barplot(x=x, y=y, color="#000000", dodge=False, data=df, orient="h", ax=ax)
+
+        offset = df["x"].max() / 25
+        for index, row in df.iterrows():
+            g.text(row["x"] + offset, row["y"], "{:,.0f}".format(row["x"]), color='#b22222', ha="center")
+
+        ax.set_title(title,
+                     fontsize=22,
+                     fontweight='bold')
+        ax.set_ylabel(ylabel,
+                      fontsize=14,
+                      fontweight='bold')
+        ax.set_xlabel(xlabel,
+                      fontsize=14,
+                      fontweight='bold')
+
+        outpath = os.path.join(self.outdir, "{}.png".format(filename))
+        fig.savefig(outpath)
+        plt.close()
+        print("\t  Saved figure: {} ".format(os.path.basename(outpath)))
 
     def plot(self, m, xlabel, filename):
         print("\tPre-process")
