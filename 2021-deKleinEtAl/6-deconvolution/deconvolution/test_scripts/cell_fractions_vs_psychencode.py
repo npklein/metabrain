@@ -30,6 +30,7 @@ import os
 
 # Third party imports.
 import pandas as pd
+import numpy as np
 from scipy import stats
 import seaborn as sns
 import matplotlib
@@ -59,13 +60,14 @@ Syntax:
 ./cell_fractions_vs_psychencode.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/OLD/ContainsDuplicateSamples/CortexEUR-cis/perform_deconvolution/deconvolution_table_CNS7.txt.gz
 """
 
+
 class main():
     def __init__(self):
         # Get the command line arguments.
         arguments = self.create_argument_parser()
         self.input_cf_path = getattr(arguments, 'cell_fractions')
-        self.phenotype_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-02-03-phenotype-table/2020-03-09.brain.phenotypes.txt"
         self.psychencode_cf_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/DER-24_Cell_fractions_Normalized.xlsx"
+        self.psychencode_link_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/test_scripts/PsychENCODE_ID_links.txt.gz"
 
         # Set variables.
         self.outdir = os.path.join(str(Path(__file__).parent.parent), 'plot')
@@ -128,35 +130,43 @@ class main():
         print("Step 1: loading data")
         input_cf_df = self.load_file(path=self.input_cf_path)
         psychencode_cf_df = self.load_file(path=self.psychencode_cf_path, sheet_name="Sheet1")
-        phenotype_df = self.load_file(path=self.phenotype_path, header=0, index_col=None, low_memory=False)
+
+        psychencode_link_df = self.load_file(path=self.psychencode_link_path, header=0, index_col=None)
+        psychencode_link_dict = dict(zip(psychencode_link_df.iloc[:, 0], psychencode_link_df.iloc[:, 1]))
 
         print("Step 2: pre-processing")
-        # Summarize.
-        psychencode_cf_df["cell type"] = [''.join([i for i in x if not i.isdigit()]) for x in [x.split("-")[1] for x in psychencode_cf_df.index]]
-        psychencode_cf_df = psychencode_cf_df.groupby(["cell type"]).sum()
         psychencode_cf_df = psychencode_cf_df.T
+        psychencode_cf_df.index = [psychencode_link_dict[sample] if sample in psychencode_link_dict else sample for sample in psychencode_cf_df.index]
+        psychencode_cf_df.index.name = None
+        psychencode_cf_df.columns.name = None
 
-        # Remove columns with no cell fraction.
-        psychencode_cf_df = psychencode_cf_df.loc[:, psychencode_cf_df.sum(axis=0) != 0]
+        print([x for x in input_cf_df.index if x not in psychencode_cf_df.index])
+        exit()
 
-        # Align sample ID's.
-        rownames = []
-        for sample_id in psychencode_cf_df.index:
-            rnaseq_id = sample_id
-            rnaseq_id_s = phenotype_df.loc[phenotype_df['SampleFull'].str.contains(sample_id), 'rnaseq_id']
-            if rnaseq_id_s.shape[0] == 1:
-                rnaseq_id = rnaseq_id_s.values[0]
-            rownames.append(rnaseq_id)
-        psychencode_cf_df.index = rownames
+        # Create correlation heatmap.
+        sample_overlap = set(psychencode_cf_df.index).intersection(set(input_cf_df.index))
+        print("\tN-overlap: {}".format(len(sample_overlap)))
+        psychencode_cf_df = psychencode_cf_df.loc[sample_overlap, :]
+        input_cf_df = input_cf_df.loc[sample_overlap, :]
+        corr_df = self.correlate(index_df=input_cf_df, columns_df=psychencode_cf_df)
+        self.plot_heatmap(corr_df=corr_df, xlabel="PsychENCODE", ylabel="Metabrain", filename="PsychENCODE_VS_MetaBrain_CF_full_correlations")
 
-        # Align cell types.
+        # Sum the cell types together.
+        psychencode_cf_df = psychencode_cf_df.T
+        psychencode_cf_df["cell type"] = [''.join([i for i in x if not i.isdigit()]) for x in [x.split("-")[1] for x in psychencode_cf_df.index]]
+        psychencode_cf_df = psychencode_cf_df.groupby(["cell type"]).sum().T
+
+        # Create correlation heatmap.
+        corr_df = self.correlate(index_df=input_cf_df, columns_df=psychencode_cf_df)
+        self.plot_heatmap(corr_df=corr_df, xlabel="PsychENCODE", ylabel="Metabrain", filename="PsychENCODE_VS_MetaBrain_CF_correlations")
+
+        print("Step 3: merging data")
         input_cf_df.columns = [cell_type.split("_")[1] for cell_type in input_cf_df.columns]
         psychencode_cf_df.columns = [self.cell_type_dict[cell_type] for cell_type in psychencode_cf_df.columns]
 
         print(input_cf_df)
         print(psychencode_cf_df)
 
-        print("Step 3: merging data")
         input_cf_df.reset_index(drop=False, inplace=True)
         psychencode_cf_df.reset_index(drop=False, inplace=True)
         input_cf_df_m = input_cf_df.melt(id_vars=["index"])
@@ -190,6 +200,66 @@ class main():
               "with shape: {}".format(os.path.basename(path),
                                       df.shape))
         return df
+
+
+    @staticmethod
+    def correlate(index_df, columns_df, triangle=False):
+        out_df = pd.DataFrame(np.nan, index=index_df.columns, columns=columns_df.columns)
+
+        for i, index_column in enumerate(index_df.columns):
+            for j, column_column in enumerate(columns_df.columns):
+                if triangle and i <= j:
+                    continue
+                corr_data = index_df.loc[:, [index_column]].merge(columns_df.loc[:, [column_column]], left_index=True, right_index=True)
+                filtered_corr_data = corr_data.dropna()
+                coef = np.nan
+                if filtered_corr_data.std(axis=0).min() > 0:
+                    coef, _ = stats.pearsonr(filtered_corr_data.iloc[:, 1], filtered_corr_data.iloc[:, 0])
+
+                out_df.loc[index_column, column_column] = coef
+
+        return out_df
+
+    def plot_heatmap(self, corr_df, xlabel="", ylabel="", filename="plot"):
+        cmap = sns.diverging_palette(246, 24, as_cmap=True)
+
+        fig, axes = plt.subplots(nrows=2,
+                                 ncols=2,
+                                 figsize=(1 * corr_df.shape[1] + 5, 1 * corr_df.shape[0] + 5),
+                                 gridspec_kw={"width_ratios": [0.2, 0.8],
+                                              "height_ratios": [0.8, 0.2]})
+        sns.set(color_codes=True)
+
+        row_index = 0
+        col_index = 0
+        for _ in range(4):
+            ax = axes[row_index, col_index]
+            if row_index == 0 and col_index == 1:
+
+                sns.heatmap(corr_df, cmap=cmap, vmin=-1, vmax=1, center=0,
+                            square=True, annot=corr_df.round(2), fmt='',
+                            cbar=False, annot_kws={"size": 16, "color": "#000000"},
+                            ax=ax)
+
+                plt.setp(ax.set_yticklabels(ax.get_ymajorticklabels(), fontsize=20, rotation=0))
+                plt.setp(ax.set_xticklabels(ax.get_xmajorticklabels(), fontsize=20, rotation=90))
+
+                ax.set_xlabel(xlabel, fontsize=14)
+                ax.xaxis.set_label_position('top')
+
+                ax.set_ylabel(ylabel, fontsize=14)
+                ax.yaxis.set_label_position('right')
+            else:
+                ax.set_axis_off()
+
+            col_index += 1
+            if col_index > 1:
+                col_index = 0
+                row_index += 1
+
+        # plt.tight_layout()
+        fig.savefig(os.path.join(self.outdir, "{}_corr_heatmap.png".format(filename)))
+        plt.close()
 
     def plot_regplot(self, df, x="x", y="y", hue=None, palette=None,
                      xlabel=None, ylabel=None, title="", name="plot"):
