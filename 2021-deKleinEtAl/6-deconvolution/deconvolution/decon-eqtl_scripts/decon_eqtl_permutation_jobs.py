@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_permutation_jobs.py
 Created:      2021/07/23
-Last Changed: 2021/09/07
+Last Changed: 2021/10/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -33,11 +33,9 @@ import numpy as np
 
 """
 Syntax:
-./decon_eqtl_permutation_jobs.py -py /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis/data/SampleToDataset.txt.gz -od /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -of CortexEUR-cis-WithPermutations
+./decon_eqtl_permutation_jobs.py -py /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis-Normalised/data/SampleToDataset.txt.gz -maf 5 -od /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -of CortexEUR-cis-NormalisedMAF5-LimitedConfigs-OldProfile -maf 0.05 -ac limited
 
-./decon_eqtl_permutation_jobs.py -py /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis-HalfNormalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceHalfNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis-HalfNormalised/data/SampleToDataset.txt.gz -maf 5 -od /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -of CortexEUR-cis-HalfNormalizedMAF5 
-
-./decon_eqtl_permutation_jobs.py -py /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis-Normalised/data/SampleToDataset.txt.gz -maf 5 -od /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -of CortexEUR-cis-NormalisedMAF5-SaveAllBetas 
+./decon_eqtl_permutation_jobs.py -py /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table_CNS7.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis-Normalised/data/SampleToDataset.txt.gz -maf 5 -od /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -of CortexEUR-cis-NormalisedMAF5-LimitedConfigs-NewProfile -maf 0.05 -ac limited
 """
 
 # Metadata
@@ -64,7 +62,10 @@ class main():
         self.expr_path = getattr(arguments, 'expression')
         self.cc_path = getattr(arguments, 'cell_counts')
         self.std_path = getattr(arguments, 'sample_to_dataset')
-        self.missing_geno = getattr(arguments, 'missing_genotype')
+        self.genotype_na = getattr(arguments, 'genotype_na')
+        self.allele_configs = getattr(arguments, 'allele_configurations')
+        self.call_rate = getattr(arguments, 'call_rate')
+        self.hw_pval = getattr(arguments, 'hardy_weinberg_pvalue')
         self.maf = getattr(arguments, 'minor_allele_frequency')
         self.outdir = getattr(arguments, 'outdir')
         self.outfolder = getattr(arguments, 'outfolder')
@@ -119,19 +120,43 @@ class main():
                             type=str,
                             required=True,
                             help="The path to the sample-to-dataset matrix.")
-        parser.add_argument("-m",
-                            "--missing_genotype",
-                            type=int,
+        parser.add_argument("-na",
+                            "--genotype_na",
+                            type=str,
                             required=False,
                             default=-1,
                             help="The genotype value that equals a missing "
-                                 "value. Default: -1. Note: has to be int.")
+                                 "value. Default: -1.")
+        parser.add_argument("-ac",
+                            "--allele_configurations",
+                            type=str,
+                            choices=["complete", "limited"],
+                            default="complete",
+                            help="The number of allele encoding configurations"
+                                 "to test. Either 'complete' for all or"
+                                 "'limited' for restricting a max of 1 flipped"
+                                 "allele. Default: complete.")
+        parser.add_argument("-cr",
+                            "--call_rate",
+                            type=float,
+                            required=False,
+                            default=0.95,
+                            help="The minimal call rate of a SNP (per dataset)."
+                                 "Equals to (1 - missingness). "
+                                 "Default: >= 0.95.")
+        parser.add_argument("-hw",
+                            "--hardy_weinberg_pvalue",
+                            type=float,
+                            required=False,
+                            default=1e-4,
+                            help="The Hardy-Weinberg p-value threshold."
+                                 "Default: >= 1e-4.")
         parser.add_argument("-maf",
                             "--minor_allele_frequency",
-                            type=int,
-                            default=1,
-                            help="The minimal required MAF for a genotype."
-                                 "Default: 1%")
+                            type=float,
+                            required=False,
+                            default=0.01,
+                            help="The MAF threshold. Default: >0.01.")
         parser.add_argument("-od",
                             "--outdir",
                             type=str,
@@ -197,13 +222,16 @@ class main():
                  "     -ex {} \\".format(self.expr_path),
                  "     -cc {} \\".format(self.cc_path),
                  "     -std {} \\".format(self.std_path),
-                 "     -od {} \\".format(self.outdir),
-                 "     -of {} \\".format(self.outfolder),
+                 "     -na {} \\".format(self.genotype_na),
+                 "     -ac {} \\".format(self.allele_configs),
+                 "     -cr {} \\".format(self.call_rate),
+                 "     -hw {} \\".format(self.hw_pval),
+                 "     -maf {} \\".format(self.maf),
                  "     -p {} \\".format(n_permutations),
                  "     -po {} \\".format(permutation_index_offset),
                  "     -plz {} \\".format(leading_zeros),
-                 "     -m {} \\".format(self.missing_geno),
-                 "     -maf {}".format(self.maf),
+                 "     -od {} \\".format(self.outdir),
+                 "     -of {} \\".format(self.outfolder),
                  "",
                  "deactivate",
                  ""]
@@ -223,7 +251,8 @@ class main():
         print("  > Cell counts path: {}".format(self.cc_path))
         print("  > Sample-to-dataset path: {}".format(self.std_path))
         print("  > N permutations: {}".format(self.n_permutations))
-        print("  > Missing genotype: {}".format(self.missing_geno))
+        print("  > Genotype NaN: {}".format(self.genotype_na))
+        print("  > Allele configs: {}".format(self.allele_configs))
         print("  > MAF: {}%".format(self.maf))
         print("  > Output directory: {}".format(self.outdir))
         print("  > Output folder: {}".format(self.outfolder))

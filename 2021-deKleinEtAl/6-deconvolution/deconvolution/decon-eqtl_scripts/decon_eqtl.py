@@ -88,13 +88,13 @@ class main():
         self.std_path = getattr(arguments, 'sample_to_dataset')
         self.genotype_na = getattr(arguments, 'genotype_na')
         self.allele_configs = getattr(arguments, 'allele_configurations')
+        self.call_rate = getattr(arguments, 'call_rate')
+        self.hw_pval = getattr(arguments, 'hardy_weinberg_pvalue')
+        self.maf = getattr(arguments, 'minor_allele_frequency')
         self.nrows = getattr(arguments, 'rows')
         self.n_permutations = getattr(arguments, 'permutations')
         self.permutation_index_offset = getattr(arguments, 'permutation_index_offset')
         self.leading_zeros = getattr(arguments, 'permutation_leading_zeros')
-        self.call_rate = getattr(arguments, 'call_rate')
-        self.hw_pval = getattr(arguments, 'hardy_weinberg_pvalue')
-        self.maf = getattr(arguments, 'minor_allele_frequency')
         outdir = getattr(arguments, 'outdir')
         outfolder = getattr(arguments, 'outfolder')
 
@@ -157,6 +157,27 @@ class main():
                                  "to test. Either 'complete' for all or"
                                  "'limited' for restricting a max of 1 flipped"
                                  "allele. Default: complete.")
+        parser.add_argument("-cr",
+                            "--call_rate",
+                            type=float,
+                            required=False,
+                            default=0.95,
+                            help="The minimal call rate of a SNP (per dataset)."
+                                 "Equals to (1 - missingness). "
+                                 "Default: >= 0.95.")
+        parser.add_argument("-hw",
+                            "--hardy_weinberg_pvalue",
+                            type=float,
+                            required=False,
+                            default=1e-4,
+                            help="The Hardy-Weinberg p-value threshold."
+                                 "Default: >= 1e-4.")
+        parser.add_argument("-maf",
+                            "--minor_allele_frequency",
+                            type=float,
+                            required=False,
+                            default=0.01,
+                            help="The MAF threshold. Default: >0.01.")
         parser.add_argument("-r",
                             "--rows",
                             type=int,
@@ -180,27 +201,6 @@ class main():
                             default=0,
                             help="The number of leading zeros to print for the "
                                  "permutation output files. Default: 0.")
-        parser.add_argument("-cr",
-                            "--call_rate",
-                            type=float,
-                            required=False,
-                            default=0.95,
-                            help="The minimal call rate of a SNP (per dataset)."
-                                 "Equals to (1 - missingness). "
-                                 "Default: >= 0.95.")
-        parser.add_argument("-hw",
-                            "--hardy_weinberg_pvalue",
-                            type=float,
-                            required=False,
-                            default=1e-4,
-                            help="The Hardy-Weinberg p-value threshold."
-                                 "Default: >= 1e-4.")
-        parser.add_argument("-maf",
-                            "--minor_allele_frequency",
-                            type=float,
-                            required=False,
-                            default=0.01,
-                            help="The MAF threshold. Default: >0.01.")
         parser.add_argument("-od",
                             "--outdir",
                             type=str,
@@ -601,10 +601,11 @@ class main():
         print("### STEP 8 ###")
         print("Saving results.")
 
-        self.save_matrix(m=perm_order_m, outpath=os.path.join(self.outdir, "perm_orders_{}{}_until_{}.npy".format("0" * self.leading_zeros, self.permutation_index_offset, self.permutation_index_offset + self.n_permutations - 1)))
-        self.save_matrix(m=perm_overlap_m, outpath=os.path.join(self.outdir, "perm_order_overlap_{}{}_until_{}.npy".format("0" * self.leading_zeros, self.permutation_index_offset, self.permutation_index_offset + self.n_permutations - 1)))
-        self.save_matrix(m=perm_pvalues_m, outpath=os.path.join(self.outdir, "permutation_pvalues_{}{}_until_{}.npy".format("0" * self.leading_zeros, self.permutation_index_offset, self.permutation_index_offset + self.n_permutations - 1)))
-        self.save_matrix(m=perm_betas_alt_m, outpath=os.path.join(self.outdir, "permutation_betas_alternative_model_{}{}_until_{}.npy".format("0" * self.leading_zeros, self.permutation_index_offset, self.permutation_index_offset + self.n_permutations - 1)))
+        file_suffix = "{}{}_until_{}{}".format("0" * self.leading_zeros, self.permutation_index_offset, "0" * self.leading_zeros, self.permutation_index_offset + self.n_permutations - 1)
+        self.save_matrix(m=perm_order_m, outpath=os.path.join(self.outdir, "perm_orders_{}.npy".format(file_suffix)))
+        self.save_matrix(m=perm_overlap_m, outpath=os.path.join(self.outdir, "perm_order_overlap_{}.npy".format(file_suffix)))
+        self.save_matrix(m=perm_pvalues_m, outpath=os.path.join(self.outdir, "permutation_pvalues_{}.npy".format(file_suffix)))
+        self.save_matrix(m=perm_betas_alt_m, outpath=os.path.join(self.outdir, "permutation_betas_alternative_model_{}.npy".format(file_suffix)))
 
         lowest_pvalues_m = np.transpose(np.min(perm_pvalues_m, axis=0))
         lowest_pvalues_df = pd.DataFrame(lowest_pvalues_m,
@@ -1017,16 +1018,16 @@ class main():
         print("  > Genotype path: {}".format(self.geno_path))
         print("  > Expression path: {}".format(self.expr_path))
         print("  > Cell counts path: {}".format(self.cc_path))
+        print("  > Sample-to-dataset path: {}".format(self.std_path))
         print("  > Genotype NaN: {}".format(self.genotype_na))
         print("  > Allele configs: {}".format(self.allele_configs))
-        print("  > Sample-to-dataset path: {}".format(self.std_path))
+        print("  > SNP call rate: >{}".format(self.call_rate))
+        print("  > Hardy-Weinberg p-value: >{}".format(self.hw_pval))
+        print("  > MAF: >{}".format(self.maf))
         print("  > N rows: {}".format(self.nrows))
         print("  > N permutations: {}".format(self.n_permutations))
         print("  > Permutation index offset: {}".format(self.permutation_index_offset))
         print("  > Permutation leading zeros: {}".format(self.leading_zeros))
-        print("  > SNP call rate: >{}".format(self.call_rate))
-        print("  > Hardy-Weinberg p-value: >{}".format(self.hw_pval))
-        print("  > MAF: >{}".format(self.maf))
         print("  > Output directory: {}".format(self.outdir))
         print("")
 
