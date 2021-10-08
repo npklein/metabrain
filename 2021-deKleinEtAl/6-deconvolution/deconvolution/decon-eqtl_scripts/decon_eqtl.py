@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl.py
 Created:      2021/07/12
-Last Changed: 2021/09/27
+Last Changed: 2021/10/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -977,7 +977,7 @@ class main():
         dfd = n - df2
         f_value = ((rss1 - rss2) / dfn) / (rss2 / dfd)
         p_value = betainc(dfd / 2, dfn / 2, 1 - ((dfn * f_value) / ((dfn * f_value) + dfd)))
-        return p_valueß
+        return p_value
 
     def print_n_signif(self, m, colnames, type):
         print("\nN-interaction ({} < {}):".format(type, self.alpha))
