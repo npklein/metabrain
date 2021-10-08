@@ -68,52 +68,82 @@ class main():
         # Pre-process.
         phenotype_df = phenotype_df.loc[:, ["rnaseq_id", "genotype_id", "SampleFull"]]
         phenotype_df.fillna("", inplace=True)
-        phenotype_df = phenotype_df.apply(lambda x: x.astype(str).str.upper())
-        phenotype_df["combined_id"] = phenotype_df["rnaseq_id"] + "|" + phenotype_df["genotype_id"] + "|" + phenotype_df["SampleFull"]
+        phenotype_df["combined_id"] = (phenotype_df["rnaseq_id"] + "|" + phenotype_df["genotype_id"] + "|" + phenotype_df["SampleFull"]).str.upper()
         combined_ids = set(phenotype_df["combined_id"])
         phenotype_df.set_index("combined_id", inplace=True)
         print(phenotype_df)
 
+        # Check if substrings in psychencode ids.
+        psychencode_ids = psychencode_cf_df.columns.tolist()
+        sample_substrings = {}
+        for sample1 in psychencode_ids:
+            substrings = []
+            for sample2 in psychencode_ids:
+                if (sample2 != sample1) and ((sample2 in sample1) or (sample1 in sample2)):
+                    substrings.append(sample2)
+
+            if len(substrings) > 0:
+                sample_substrings[sample1] = substrings
+
         print("Step 3: Matching")
         psychencode_matches = []
-        missing_psych_ids = []
         found_rnaseq_ids = set()
         doubles = []
         n_matched = 0
         for psychencode_id in psychencode_cf_df.columns:
             psychencode_id_str_upper = str(psychencode_id).upper()
 
-            rnaseq_id = None
+            match_info = [psychencode_id, None, None, None]
             for combined_id in combined_ids:
                 if psychencode_id_str_upper in combined_id:
-                    match_row = phenotype_df.loc[combined_id, :]
+                    # Check for substrings.
+                    skip = False
+                    if psychencode_id in sample_substrings:
+                        for sample_substring in sample_substrings[psychencode_id]:
+                            if sample_substring in combined_id:
+                                skip = True
+                                break
 
-                    # # Check if one of the columns match.
-                    # if not (match_row["rnaseq_id"] == psychencode_id) and not (match_row["genotype_id"] == psychencode_id) and not (psychencode_id in match_row["SampleFull"].split("_")):
-                    #     print(psychencode_id_str_upper)
-                    #     print(match_row)
-                    #     exit()
-
-                    rnaseq_id = match_row["rnaseq_id"]
-
-                    # Prevent duplicates where one sample id is a substring of another.
-                    if rnaseq_id.replace(psychencode_id_str_upper, "").isdigit():
+                    if skip:
                         continue
 
-                    n_matched += 1
-                    break
+                    rnaseq_id, genotype_id, sample_full = phenotype_df.loc[combined_id, :]
+                    rnaseq_id_str_upper = str(rnaseq_id).upper()
+                    genotype_id_str_upper = str(genotype_id).upper()
+                    sample_full_str_upper = str(sample_full).upper()
 
-            if rnaseq_id is None:
-                missing_psych_ids.append(psychencode_id)
+                    found = False
+                    if psychencode_id_str_upper == rnaseq_id_str_upper:
+                        match_info[2] = "rnaseq_id"
+                        match_info[3] = rnaseq_id
+                        found = True
+                    elif psychencode_id_str_upper == genotype_id_str_upper:
+                        match_info[2] = "genotype_id"
+                        match_info[3] = genotype_id
+                        found = True
+                    elif psychencode_id_str_upper in sample_full_str_upper:
+                        match_info[2] = "sample_full"
+                        match_info[3] = sample_full
+                        found = True
+                    else:
+                        pass
 
-            if rnaseq_id is not None and rnaseq_id in found_rnaseq_ids:
-                doubles.append(rnaseq_id)
-            found_rnaseq_ids.add(rnaseq_id)
+                    if found:
+                        match_info[1] = rnaseq_id
+                        n_matched += 1
+                        break
 
-            psychencode_matches.append((psychencode_id, rnaseq_id))
+            if match_info[1] in found_rnaseq_ids:
+                doubles.append(match_info[1])
 
-        link_df = pd.DataFrame(psychencode_matches, columns=["PsychENCODE", "MetaBrain"])
+            if match_info[1] is not None:
+                found_rnaseq_ids.add(match_info[1])
+
+            psychencode_matches.append(match_info)
+
+        link_df = pd.DataFrame(psychencode_matches, columns=["PsychENCODE", "MetaBrain", "ID name", "ID value"])
         print(link_df)
+        print(link_df["ID name"].value_counts())
         print("\tN-matched {}/{} [{:.2f}%]".format(n_matched, psychencode_cf_df.shape[1], (100 / psychencode_cf_df.shape[1]) * n_matched))
 
         link_df.dropna(inplace=True)

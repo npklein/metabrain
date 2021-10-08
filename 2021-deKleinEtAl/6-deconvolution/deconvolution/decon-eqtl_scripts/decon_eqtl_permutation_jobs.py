@@ -231,7 +231,7 @@ class main():
                  "     -po {} \\".format(permutation_index_offset),
                  "     -plz {} \\".format(leading_zeros),
                  "     -od {} \\".format(self.outdir),
-                 "     -of {} \\".format(self.outfolder),
+                 "     -of {}".format(self.outfolder),
                  "",
                  "deactivate",
                  ""]

@@ -140,9 +140,6 @@ class main():
         psychencode_cf_df.index.name = None
         psychencode_cf_df.columns.name = None
 
-        print([x for x in input_cf_df.index if x not in psychencode_cf_df.index])
-        exit()
-
         # Create correlation heatmap.
         sample_overlap = set(psychencode_cf_df.index).intersection(set(input_cf_df.index))
         print("\tN-overlap: {}".format(len(sample_overlap)))
