@@ -53,7 +53,7 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./correlate_ct_fractions_to_pcs.py -cf ../../2020-03-12-deconvolution/partial_deconvolution/ALL_TMM_LOG2/IHC_0CPM_LOG2_FILTERED_CC/deconvolution.txt.gz -pc ../data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.CovariatesRemovedOLS.100PrincipalComponents.pkl -e pdf
+./correlate_ct_fractions_to_pcs.py -cf ../../2020-03-12-deconvolution/partial_deconvolution/NEW_PROFILE_NOPERICYTES_CORTEX_EUR_TMM_LOG2/IHC_0CPM_LOG2_FILTERED_CC/deconvolution.txt.gz -pc ../data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.CovariatesRemovedOLS.100PrincipalComponents.pkl -e pdf
 
 ./correlate_ct_fractions_to_pcs.py -cf ../../2020-11-10-decon-optimizer/ftestAsPvalue/cycle0/optimized_cell_fractions.txt.gz -pc ../data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.CovariatesRemovedOLS.100PrincipalComponents.pkl -e pdf
 """

@@ -45,11 +45,13 @@ import matplotlib.patches as mpatches
 Syntax:
 ./decon_eqtl_replication_plot.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2021-06-24-decon-QTL/CortexEUR-cis-PrimaryeQTLs/deconvolutionResults.csv -dn EUR -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/2021-06-24-decon-QTL/CortexAFR-cis-Replication-EUR/deconvolutionResults.csv -rn AFR
 
-./decon_eqtl_replication_plot.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-PrimaryeQTLs/deconvolutionResults.txt.gz -dn EUR -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexAFR-cis-Replication-EUR/deconvolutionResults.txt.gz -rn AFR
+./decon_eqtl_replication_plot.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-PrimaryeQTLs/deconvolutionResults.txt.gz -dn EUR -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/CortexAFR-cis-Replication-EUR/deconvolutionResults.txt.gz -rn AFR
 
-./decon_eqtl_replication_plot.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-WithPermutations-StaticInteractionShuffle/deconvolutionResults.txt.gz -dn EUR -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexAFR-cis-Replication-EUR-HalfNormalised/deconvolutionResults.txt.gz -rn AFR
+./decon_eqtl_replication_plot.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-WithPermutations-StaticInteractionShuffle/deconvolutionResults.txt.gz -dn EUR -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/CortexAFR-cis-Replication-EUR-HalfNormalised/deconvolutionResults.txt.gz -rn AFR
 
-./decon_eqtl_replication_plot.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-NormalisedMAF5/deconvolutionResults.txt.gz -dn EUR -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexAFR-cis-Replication-EUR-Normalised/deconvolutionResults.txt.gz -rn AFR
+./decon_eqtl_replication_plot.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5-LimitedConfigs-NewProfileNoPericytes/deconvolutionResults.txt.gz -dn EUR -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/CortexAFR-cis-EURReplication-NormalisedMAF5-LimitedConfigs-NewProfileNoPericytes/deconvolutionResults.txt.gz -rn AFR
+
+./decon_eqtl_replication_plot.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5-LimitedConfigs-OldProfile/deconvolutionResults.txt.gz -dn EUR -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/CortexAFR-cis-EURReplication-NormalisedMAF5-LimitedConfigs-OldProfile/deconvolutionResults.txt.gz -rn AFR
 """
 
 # Metadata
@@ -85,11 +87,16 @@ class main():
                 os.makedirs(tmp_outdir)
 
         self.colormap = {
+            "Excitatory": "#56B4E9",
+            "Inhibitory": "#0072B2",
             "Neuron": "#0072B2",
             "Oligodendrocyte": "#009E73",
+            "OPC": "#009E73",
             "EndothelialCell": "#CC79A7",
+            "Microglia": "#E69F00",
             "Macrophage": "#E69F00",
-            "Astrocyte": "#D55E00"
+            "Astrocyte": "#D55E00",
+            "Pericytes": "#808080"
         }
 
     @staticmethod

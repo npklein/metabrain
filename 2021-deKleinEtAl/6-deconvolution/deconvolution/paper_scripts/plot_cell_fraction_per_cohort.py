@@ -57,7 +57,7 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./plot_cell_fraction_per_cohort.py -cf ../../2020-03-12-deconvolution/partial_deconvolution/ALL_TMM_LOG2/IHC_0CPM_LOG2_FILTERED_CC/deconvolution.txt.gz -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/trans/2020-05-26-Cortex-EUR-AFR-noENA-noPCA/gwasupdate/Iteration1-dsZscores -e pdf
+./plot_cell_fraction_per_cohort.py -cf ../../2020-03-12-deconvolution/partial_deconvolution/NEW_PROFILE_NOPERICYTES_CORTEX_EUR_TMM_LOG2/IHC_0CPM_LOG2_FILTERED_CC/deconvolution.txt.gz -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/trans/2020-05-26-Cortex-EUR-AFR-noENA-noPCA/gwasupdate/Iteration1-dsZscores -e pdf
 """
 
 

@@ -1,7 +1,7 @@
 """
 File:         data_loader.py
 Created:      2020/06/29
-Last Changed: 2021/08/04
+Last Changed: 2021/10/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -82,7 +82,6 @@ class DataLoader:
     def load_signature(filepath):
         print("\tLoading signature matrix")
         df = pd.read_csv(filepath, sep="\t", header=0, index_col=0)
-        df.columns = [x.split("_")[1] for x in df.columns]
         return df
 
     @staticmethod

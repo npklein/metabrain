@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_permutation_jobs.py
 Created:      2021/07/23
-Last Changed: 2021/10/08
+Last Changed: 2021/10/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -36,6 +36,12 @@ Syntax:
 ./decon_eqtl_permutation_jobs.py -py /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis-Normalised/data/SampleToDataset.txt.gz -maf 0.05 -od /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -of CortexEUR-cis-NormalisedMAF5-LimitedConfigs-OldProfile -maf 0.05 -ac limited
 
 ./decon_eqtl_permutation_jobs.py -py /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table_CNS7.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis-Normalised/data/SampleToDataset.txt.gz -maf 0.05 -od /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -of CortexEUR-cis-NormalisedMAF5-LimitedConfigs-NewProfile -maf 0.05 -ac limited
+
+./decon_eqtl_permutation_jobs.py -py /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_table.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/perform_deconvolution/deconvolution_table_CNS7_NoPericytes.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexEUR-cis-Normalised/data/SampleToDataset.txt.gz -maf 0.05 -od /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -of CortexEUR-cis-NormalisedMAF5-LimitedConfigs-NewProfileNoPericytes -maf 0.05 -ac limited
+
+./decon_eqtl_permutation_jobs.py -py /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR-Normalised/genotype_table.txt -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexAFR-cis-Normalised/data/SampleToDataset.txt.gz -od /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -of CortexAFR-cis-NormalisedMAF5-LimitedConfigs-OldProfile -maf 0.05 -ac limited
+
+./decon_eqtl_permutation_jobs.py -py /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl.py -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR-Normalised/genotype_table.txt -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/CortexAFR-cis-Replication-EUR-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/perform_deconvolution/deconvolution_table_CNS7_NoPericytes.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexAFR-cis-Normalised/data/SampleToDataset.txt.gz -od /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -of CortexAFR-cis-EURReplication-NormalisedMAF5-LimitedConfigs-NewProfileNoPericytes -maf 0.05 -ac limited
 """
 
 # Metadata
@@ -73,7 +79,8 @@ class main():
         self.n_jobs = getattr(arguments, 'jobs')
         self.time = getattr(arguments, 'time')
 
-        self.job_outdir = os.path.join(self.outdir, "decon_eqtl", self.outfolder, "jobs")
+        self.base_outdir = os.path.join(self.outdir, "decon_eqtl", self.outfolder)
+        self.job_outdir = os.path.join(self.base_outdir, "jobs")
         self.job_output_outdir = os.path.join(self.job_outdir, "output")
         for outdir in [self.job_outdir, self.job_output_outdir]:
             if not os.path.exists(outdir):
@@ -191,7 +198,10 @@ class main():
     def start(self):
         self.print_arguments()
 
-        print("Creating job files:")
+        print("Creating standard job files")
+        self.create_job_file(job_name=self.outfolder)
+
+        print("Creating permutation job files:")
         n_permutations = int(self.n_permutations / self.n_jobs)
         value_length = len(str(self.n_permutations - n_permutations))
         for permutation_index_offset in np.arange(0, self.n_permutations, n_permutations):
@@ -199,11 +209,13 @@ class main():
             self.create_job_file(job_name=job_name,
                                  leading_zeros=value_length - len(str(permutation_index_offset)),
                                  n_permutations=n_permutations,
-                                 permutation_index_offset=permutation_index_offset
+                                 permutation_index_offset=permutation_index_offset,
+                                 outdir=self.job_outdir,
                                  )
 
-    def create_job_file(self, job_name, leading_zeros, n_permutations,
-                        permutation_index_offset, cpus=1, mem=4, nodes=1, qos="regular"):
+    def create_job_file(self, job_name, leading_zeros=0, n_permutations=0,
+                        permutation_index_offset=0, cpus=1, mem=4, nodes=1,
+                        qos="regular", outdir=None):
         lines = ["#!/bin/bash",
                  "#SBATCH --job-name={}".format(job_name),
                  "#SBATCH --output={}".format(os.path.join(self.job_output_outdir, job_name + ".out")),
@@ -236,7 +248,10 @@ class main():
                  "deactivate",
                  ""]
 
-        jobfile_path = os.path.join(self.job_outdir, job_name + ".sh")
+        if outdir is None:
+            outdir = self.base_outdir
+
+        jobfile_path = os.path.join(outdir, job_name + ".sh")
         with open(jobfile_path, "w") as f:
             for line in lines:
                 f.write(line + "\n")

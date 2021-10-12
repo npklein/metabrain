@@ -194,201 +194,72 @@ class main():
         print("Loading discovery data")
         d_eqtl_df = self.load_file(self.d_eqtl_path, header=0, index_col=None, nrows=nrows)
         d_eqtl_df.index = d_eqtl_df["ProbeName"] + "_" + d_eqtl_df["SNPName"]
-        # d_geno_df = self.load_file(self.d_geno_path, header=0, index_col=0, nrows=nrows)
-        # d_geno_df = d_geno_df.groupby(d_geno_df.index).first()
-        # # d_allele_df = self.load_file(self.d_allele_path, header=0, index_col=0, nrows=nrows)
-        # d_expr_df = self.load_file(self.d_expr_path, header=0, index_col=0, nrows=nrows)
-        # d_expr_df = d_expr_df.groupby(d_expr_df.index).first()
-        # d_cc_df = self.load_file(self.d_cc_path, header=0, index_col=0)
+        d_geno_df = self.load_file(self.d_geno_path, header=0, index_col=0, nrows=nrows)
+        d_geno_df = d_geno_df.groupby(d_geno_df.index).first()
+        # d_allele_df = self.load_file(self.d_allele_path, header=0, index_col=0, nrows=nrows)
+        d_expr_df = self.load_file(self.d_expr_path, header=0, index_col=0, nrows=nrows)
+        d_expr_df = d_expr_df.groupby(d_expr_df.index).first()
+        d_cc_df = self.load_file(self.d_cc_path, header=0, index_col=0)
 
         print("Loading replication data")
         r_eqtl_df = self.load_file(self.r_eqtl_path, header=0, index_col=None, nrows=nrows)
         r_eqtl_df.index = r_eqtl_df["ProbeName"] + "_" + r_eqtl_df["SNPName"]
-        # r_geno_df = self.load_file(self.r_geno_path, header=0, index_col=0, nrows=nrows)
-        # r_geno_df = r_geno_df.groupby(r_geno_df.index).first()
-        # # r_allele_df = self.load_file(self.r_allele_path, header=0, index_col=0, nrows=nrows)
-        # r_expr_df = self.load_file(self.r_expr_path, header=0, index_col=0, nrows=nrows)
-        # r_expr_df = r_expr_df.groupby(r_expr_df.index).first()
-        # r_cc_df = self.load_file(self.r_cc_path, header=0, index_col=0)
+        r_geno_df = self.load_file(self.r_geno_path, header=0, index_col=0, nrows=nrows)
+        r_geno_df = r_geno_df.groupby(r_geno_df.index).first()
+        # r_allele_df = self.load_file(self.r_allele_path, header=0, index_col=0, nrows=nrows)
+        r_expr_df = self.load_file(self.r_expr_path, header=0, index_col=0, nrows=nrows)
+        r_expr_df = r_expr_df.groupby(r_expr_df.index).first()
+        r_cc_df = self.load_file(self.r_cc_path, header=0, index_col=0)
 
-        # print("Looping over interest")
-        # for _, (index, cell_type, d_pvalue, d_fdr, d_beta, r_pvalue, r_beta, r_fdr) in interest_df.iterrows():
-        #     gene = index.split("_")[0]
-        #     snp = "_".join(index.split("_")[1:])
-        #     print("\tPlotting {} - {} - {}".format(gene, snp, cell_type))
-        #
-        #     # Initialize plot.
-        #     sns.set(rc={'figure.figsize': (24, 18)})
-        #     sns.set_style("ticks")
-        #     fig, axes = plt.subplots(ncols=2, nrows=2)
-        #
-        #     for eqtl_ax, inter_ax, eqtl_df, geno_df, expr_df, cc_df, pvalue, fdr, \
-        #         beta, name in ([*axes[:, 0], d_eqtl_df, d_geno_df, d_expr_df, d_cc_df, d_pvalue, d_fdr, d_beta, self.d_name],
-        #                        [*axes[:, 1], r_eqtl_df, r_geno_df, r_expr_df, r_cc_df, r_pvalue, r_fdr, r_beta, self.r_name]):
-        #         sns.despine(fig=fig, ax=eqtl_ax)
-        #         sns.despine(fig=fig, ax=inter_ax)
-        #
-        #         eqtl_pvalue = eqtl_df.loc[gene + "_" + snp, "PValue"]
-        #         eqtl_fdr = eqtl_df.loc[gene + "_" + snp, "FDR"]
-        #
-        #         genotype = geno_df.loc[snp, :]
-        #         expression = expr_df.loc[gene, :]
-        #         cell_count = cc_df.loc[:, cell_type]
-        #
-        #         plot_df = pd.DataFrame({"genotype": genotype, "expression": expression, "cell count": cell_count})
-        #         plot_df["round_geno"] = np.rint(genotype)
-        #         plot_df = plot_df.loc[plot_df["genotype"] != -1, :]
-        #
-        #         self.plot_eqtl(df=plot_df,
-        #                        palette=self.palette,
-        #                        ax=eqtl_ax,
-        #                        title=name,
-        #                        xlabel=snp,
-        #                        ylabel=gene,
-        #                        annotate=[("eQTL p-value", eqtl_pvalue, ".2e"), ("eQTL FDR", eqtl_fdr, ".2e")])
-        #         self.plot_inter_eqtl(df=plot_df,
-        #                              palette=self.palette,
-        #                              ax=inter_ax,
-        #                              title="",
-        #                              xlabel=cell_type,
-        #                              ylabel=gene,
-        #                              annotate=[("Decon-eQTL p-value", pvalue, ".2e"),
-        #                                        ("Decon-eQTL FDR", fdr, ".2e"),
-        #                                        ("Decon-eQTL beta", beta, ".2f")])
-        #
-        #     outpath = os.path.join(self.outdir, "opposite_effects_plot_{}_vs_{}_{}_{}_{}.png".format(self.d_name, self.r_name, gene, snp, cell_type))
-        #     fig.savefig(outpath)
-        #     plt.close()
-        #     print("\tSaved: {}".format(outpath))
+        print("Looping over interest")
+        for _, (index, cell_type, d_pvalue, d_fdr, d_beta, r_pvalue, r_beta, r_fdr) in interest_df.iterrows():
+            gene = index.split("_")[0]
+            snp = "_".join(index.split("_")[1:])
+            print("\tPlotting {} - {} - {}".format(gene, snp, cell_type))
 
-        # d_gte_df = self.load_file(path="/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/combine_gte_files/GTE_combined.txt.gz", header=None, index_col=None)
-        # d_alle_df = d_geno_df.loc[d_eqtl_df["SNPName"], ["Alleles", "MinorAllele"]]
-        # d_geno_df = d_geno_df.loc[d_eqtl_df["SNPName"], d_gte_df.iloc[:, 0]]
-        # d_expr_df = d_expr_df.loc[d_eqtl_df["ProbeName"], d_gte_df.iloc[:, 1]]
-        #
-        # r_gte_df = self.load_file(path="/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/combine_gte_files/GTE_combined.txt.gz", header=None, index_col=None)
-        # r_alle_df = r_geno_df.loc[r_eqtl_df["SNPName"], ["Alleles", "MinorAllele"]]
-        # r_geno_df = r_geno_df.loc[r_eqtl_df["SNPName"], r_gte_df.iloc[:, 0]]
-        # r_expr_df = r_expr_df.loc[r_eqtl_df["ProbeName"], r_gte_df.iloc[:, 1]]
+            # Initialize plot.
+            sns.set(rc={'figure.figsize': (24, 18)})
+            sns.set_style("ticks")
+            fig, axes = plt.subplots(ncols=2, nrows=2)
 
-        # d_alle_df.to_csv("Original_EMP_EUR_alleles.txt.gz", compression="gzip", sep="\t", header=True, index=True)
-        # d_geno_df.to_csv("Original_EMP_EUR_expression.txt.gz", compression="gzip", sep="\t", header=True, index=True)
-        # d_expr_df.to_csv("Original_EMP_EUR_genotype.txt.gz", compression="gzip", sep="\t", header=True, index=True)
-        # r_alle_df.to_csv("Original_EMP_AFR_alleles.txt.gz", compression="gzip", sep="\t", header=True, index=True)
-        # r_geno_df.to_csv("Original_EMP_AFR_expression.txt.gz", compression="gzip", sep="\t", header=True, index=True)
-        # r_expr_df.to_csv("Original_EMP_AFR_genotype.txt.gz", compression="gzip", sep="\t", header=True, index=True)
+            for eqtl_ax, inter_ax, eqtl_df, geno_df, expr_df, cc_df, pvalue, fdr, \
+                beta, name in ([*axes[:, 0], d_eqtl_df, d_geno_df, d_expr_df, d_cc_df, d_pvalue, d_fdr, d_beta, self.d_name],
+                               [*axes[:, 1], r_eqtl_df, r_geno_df, r_expr_df, r_cc_df, r_pvalue, r_fdr, r_beta, self.r_name]):
+                sns.despine(fig=fig, ax=eqtl_ax)
+                sns.despine(fig=fig, ax=inter_ax)
 
-        # d_alle_df = self.load_file("Original_EMP_EUR_alleles.txt.gz", header=0, index_col=0)
-        # d_geno_df = self.load_file("Original_EMP_EUR_expression.txt.gz", header=0, index_col=0)
-        # d_expr_df = self.load_file("Original_EMP_EUR_genotype.txt.gz", header=0, index_col=0)
-        # r_alle_df = self.load_file("Original_EMP_AFR_alleles.txt.gz", header=0, index_col=0)
-        # r_geno_df = self.load_file("Original_EMP_AFR_expression.txt.gz", header=0, index_col=0)
-        # r_expr_df = self.load_file("Original_EMP_AFR_genotype.txt.gz", header=0, index_col=0)
-        #
-        # print(d_alle_df)
-        # print(d_geno_df)
-        # print(d_expr_df)
-        #
-        # print(r_alle_df)
-        # print(r_geno_df)
-        # print(r_expr_df)
-        #
-        # if list(d_alle_df.index) != list(d_eqtl_df["SNPName"].values):
-        #     print("Unequal input matrix.")
-        #     exit()
-        # if list(d_geno_df.index) != list(d_eqtl_df["SNPName"].values):
-        #     print("Unequal input matrix.")
-        #     exit()
-        # if list(d_expr_df.index) != list(d_eqtl_df["ProbeName"].values):
-        #     print("Unequal input matrix.")
-        #     exit()
-        # if list(r_alle_df.index) != list(r_eqtl_df["SNPName"].values):
-        #     print("Unequal input matrix.")
-        #     exit()
-        # if list(r_geno_df.index) != list(r_eqtl_df["SNPName"].values):
-        #     print("Unequal input matrix.")
-        #     exit()
-        # if list(r_expr_df.index) != list(r_eqtl_df["ProbeName"].values):
-        #     print("Unequal input matrix.")
-        #     exit()
-        #
-        # print("Modelling expression ~ genotype")
-        # d_coefs_a = []
-        # d_indices_a = []
-        # d_ma_a = []
-        # replicating_eqtls = set(r_eqtl_df.index)
-        # for i, (index, row) in enumerate(d_eqtl_df.iterrows()):
-        #     if index in replicating_eqtls:
-        #         genotype = d_geno_df.iloc[i, :].to_numpy()
-        #         expression = d_expr_df.iloc[i, :].to_numpy()
-        #         mask = genotype != -1
-        #         # mask = np.where((genotype == 0) | (genotype == 1) | (genotype == 2))
-        #         coef = np.nan
-        #         if np.std(genotype[mask]) != 0 and np.std(expression[mask]) != 0:
-        #             coef, _ = stats.pearsonr(genotype[mask], expression[mask])
-        #         d_coefs_a.append(coef)
-        #         d_indices_a.append(index)
-        #         d_ma_a.append(d_alle_df.iloc[i, :]["MinorAllele"])
-        # d_coefs_df = pd.DataFrame({"x": d_coefs_a, "discovery MA": d_ma_a}, index=d_indices_a)
-        # del d_coefs_a, d_indices_a
-        #
-        # r_coefs_a = []
-        # r_indices_a = []
-        # r_ma_a = []
-        # for i, index in enumerate(r_eqtl_df.index):
-        #     genotype = r_geno_df.iloc[i, :].to_numpy()
-        #     expression = r_expr_df.iloc[i, :].to_numpy()
-        #     mask = genotype != -1
-        #     # mask = np.where((genotype == 0) | (genotype == 1) | (genotype == 2))
-        #     coef = np.nan
-        #     if np.std(genotype[mask]) != 0 and np.std(expression[mask]) != 0:
-        #         coef, _ = stats.pearsonr(genotype[mask], expression[mask])
-        #     r_coefs_a.append(coef)
-        #     r_indices_a.append(index)
-        #     r_ma_a.append(r_alle_df.iloc[i, :]["MinorAllele"])
-        # r_coefs_df = pd.DataFrame({"y": r_coefs_a, "replication MA": r_ma_a}, index=r_indices_a)
-        # del r_coefs_a, r_indices_a
-        #
-        # print("Combining data")
-        # plot_df = d_coefs_df.merge(r_coefs_df, left_index=True, right_index=True)
-        # plot_df.dropna(inplace=True)
-        #
-        # print("\tAdding color")
-        # opposite_effects = set(interest_df["index"].values)
-        # plot_df["hue"] = ["#0072B2" if x in opposite_effects else "#000000" for x in plot_df.index]
-        #
-        # print(plot_df)
-        # print(plot_df.loc[plot_df["hue"] == "#0072B2", :])
-        #
-        # print("\tFlipping effects")
-        # plot_df["match"] = (plot_df["discovery MA"] == plot_df["replication MA"]).map({True: 1, False: -1})
-        # plot_df["y"] = plot_df["y"] * plot_df["match"]
-        #
-        # plot_df.to_csv("visualise_opposite_effects_plot_unimputed_genotype_df.txt.gz", header=True, index=True, sep="\t", compression="gzip")
+                eqtl_pvalue = eqtl_df.loc[gene + "_" + snp, "PValue"]
+                eqtl_fdr = eqtl_df.loc[gene + "_" + snp, "FDR"]
 
-        print(r_eqtl_df.columns.tolist())
+                genotype = geno_df.loc[snp, :]
+                expression = expr_df.loc[gene, :]
+                cell_count = cc_df.loc[:, cell_type]
 
-        beta_df = d_eqtl_df.loc[:, ['Meta-Beta (SE)']].merge(r_eqtl_df.loc[:, ['Meta-Beta (SE)']], left_index=True, right_index=True, how="left")
-        stats = []
-        print(beta_df)
-        beta_df["Discovery Meta-Beta"] = [float(str(x).split(" (")[0]) if x is not None else x for x in beta_df["Meta-Beta (SE)_x"]]
-        beta_df["Discovery Meta-SE"] = [float(str(x).split(" (")[1].split(")")[0]) if x is not None else x for x in beta_df["Meta-Beta (SE)_x"]]
-        beta_df["Replication Meta-Beta"] = [float(str(x).split(" (")[0]) if x is not None else x for x in beta_df["Meta-Beta (SE)_y"]]
-        beta_df["Replication Meta-SE"] = [float(str(x).split(" (")[1].split(")")[0]) if x is not None else x for x in beta_df["Meta-Beta (SE)_y"]]
-        print(beta_df)
-        exit()
+                plot_df = pd.DataFrame({"genotype": genotype, "expression": expression, "cell count": cell_count})
+                plot_df["round_geno"] = np.rint(genotype)
+                plot_df = plot_df.loc[plot_df["genotype"] != -1, :]
 
-        plot_df = self.load_file(path="visualise_opposite_effects_plot_unimputed_genotype_df.txt.gz")
-        plot_df["x z-score"] = (plot_df["x"] - plot_df["x"].mean()) / plot_df["x"].std()
-        plot_df["y z-score"] = (plot_df["y"] - plot_df["y"].mean()) / plot_df["y"].std()
-        print(plot_df)
-        exit()
+                self.plot_eqtl(df=plot_df,
+                               palette=self.palette,
+                               ax=eqtl_ax,
+                               title=name,
+                               xlabel=snp,
+                               ylabel=gene,
+                               annotate=[("eQTL p-value", eqtl_pvalue, ".2e"), ("eQTL FDR", eqtl_fdr, ".2e")])
+                self.plot_inter_eqtl(df=plot_df,
+                                     palette=self.palette,
+                                     ax=inter_ax,
+                                     title="",
+                                     xlabel=cell_type,
+                                     ylabel=gene,
+                                     annotate=[("Decon-eQTL p-value", pvalue, ".2e"),
+                                               ("Decon-eQTL FDR", fdr, ".2e"),
+                                               ("Decon-eQTL beta", beta, ".2f")])
 
-        print("Plotting comparison")
-        self.plot_replication(df=plot_df,
-                              xlabel=self.d_name,
-                              ylabel=self.r_name,
-                              title="expression ~ genotype")
+            outpath = os.path.join(self.outdir, "opposite_effects_plot_{}_vs_{}_{}_{}_{}.png".format(self.d_name, self.r_name, gene, snp, cell_type))
+            fig.savefig(outpath)
+            plt.close()
+            print("\tSaved: {}".format(outpath))
 
     @staticmethod
     def load_file(path, sep="\t", header=0, index_col=None, nrows=None):
@@ -504,86 +375,6 @@ class main():
         ax.set_xlabel(xlabel,
                       fontsize=14,
                       fontweight='bold')
-
-    def plot_replication(self, df, x="x", y="y", hue="hue", xlabel="",
-                         ylabel="", title=""):
-        if df.shape[0] <= 2:
-            return
-
-        sns.set_style("ticks")
-        fig, ax = plt.subplots(figsize=(12, 12))
-        sns.set(color_codes=True)
-
-        sns.despine(fig=fig, ax=ax)
-
-        lower_quadrant = df.loc[(df[x] < 0) & (df[y] < 0), :]
-        upper_quadrant = df.loc[(df[x] > 0) & (df[y] > 0), :]
-        concordance = (100 / df.shape[0]) * (lower_quadrant.shape[0] + upper_quadrant.shape[0])
-
-        coef, _ = stats.pearsonr(df[y], df[x])
-
-        sns.regplot(x=x, y=y, data=df, ci=None,
-                    scatter_kws={'facecolors': df[hue],
-                                 'linewidth': 0,
-                                 'alpha': 0.75},
-                    line_kws={"color": "#0072B2",
-                              'linewidth': 5},
-                    ax=ax)
-        sns.scatterplot(x=x, y=y, data=df.loc[df[hue] == "#0072B2", :],
-                        hue=hue, palette={"#000000":"#000000", "#0072B2":"#0072B2"},
-                        legend=False,
-                        ax=ax)
-
-        ax.annotate(
-            'N = {}'.format(df.loc[df[hue] == "#000000", :].shape[0]),
-            xy=(0.03, 0.94),
-            xycoords=ax.transAxes,
-            color="#000000",
-            alpha=1,
-            fontsize=18,
-            fontweight='bold')
-        ax.annotate(
-            'N = {}'.format(df.loc[df[hue] == "#0072B2", :].shape[0]),
-            xy=(0.03, 0.90),
-            xycoords=ax.transAxes,
-            color="#0072B2",
-            alpha=1,
-            fontsize=18,
-            fontweight='bold')
-        ax.annotate(
-            'r = {:.2f}'.format(coef),
-            xy=(0.03, 0.86),
-            xycoords=ax.transAxes,
-            color="#000000",
-            alpha=1,
-            fontsize=18,
-            fontweight='bold')
-        ax.annotate(
-            'concordance = {:.0f}%'.format(concordance),
-            xy=(0.03, 0.82),
-            xycoords=ax.transAxes,
-            color="#000000",
-            alpha=1,
-            fontsize=18,
-            fontweight='bold')
-
-        ax.axhline(0, ls='--', color="#000000", zorder=-1)
-        ax.axvline(0, ls='--', color="#000000", zorder=-1)
-
-        ax.set_xlabel(xlabel,
-                      fontsize=20,
-                      fontweight='bold')
-        ax.set_ylabel(ylabel,
-                      fontsize=20,
-                      fontweight='bold')
-        ax.set_title(title,
-                     fontsize=25,
-                     fontweight='bold')
-
-        outpath = os.path.join(self.outdir, "main_eqtl_replication_plot_{}_vs_{}.png".format(self.d_name, self.r_name))
-        fig.savefig(outpath)
-        plt.close()
-        print("\tSaved: {}".format(outpath))
 
     def print_arguments(self):
         print("Arguments:")

@@ -48,9 +48,9 @@ from venn import venn
 
 """
 Syntax:
-./decon_eqtl_permutation_fdr.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-WithPermutations
+./decon_eqtl_permutation_fdr.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-NormalisedMAF5-LimitedConfigs-NewProfile
 
-./decon_eqtl_permutation_fdr.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-NormalisedMAF5
+./decon_eqtl_permutation_fdr.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-NormalisedMAF5-LimitedConfigs-OldProfile
 """
 
 # Metadata
@@ -111,16 +111,23 @@ class main():
 
         ########################################################################
 
-        # Load the real data.
-        print("Loading real p-value data")
-        real_pvalues_df = self.load_file(os.path.join(self.indir, "deconvolutionResults.txt.gz"), header=0, index_col=0)
-        pvalue_columns = [x for x in real_pvalues_df.columns if x.endswith("_pvalue")]
-        real_pvalues_m = real_pvalues_df.loc[:, pvalue_columns].to_numpy()
-        rownames = real_pvalues_df.index.tolist()
+        # Load the nominal data.
+        print("Loading nominal p-value data")
+        nominal_pvalues_df = self.load_file(os.path.join(self.indir, "deconvolutionResults.txt.gz"), header=0, index_col=0)
+        pvalue_columns = [x for x in nominal_pvalues_df.columns if x.endswith("_pvalue")]
+        nominal_pvalues_m = nominal_pvalues_df.loc[:, pvalue_columns].to_numpy()
+        rownames = nominal_pvalues_df.index.tolist()
         colnames = [x.replace("_pvalue", "") for x in pvalue_columns]
-        del real_pvalues_df
-        print("\tShape: {}".format(real_pvalues_m.shape))
+        del nominal_pvalues_df
+        print("\tShape: {}".format(nominal_pvalues_m.shape))
         print("")
+
+        # Plotting.
+        for i in range(nominal_pvalues_m.shape[1]):
+            self.distplot(a=nominal_pvalues_m[:, i],
+                          xlabel="nominal p-value",
+                          title=colnames[i],
+                          filename="{}_nominal_pval_distribution".format(colnames[i].lower()))
 
         ########################################################################
 
@@ -136,6 +143,13 @@ class main():
         print("\tShape: {}".format(perm_pvalues_m.shape))
         print("")
 
+        # Plotting.
+        for i in range(perm_pvalues_m.shape[1]):
+            self.distplot(a=perm_pvalues_m[:, i, :],
+                          xlabel="permuted p-value",
+                          title=colnames[i],
+                          filename="{}_permuted_pval_distribution".format(colnames[i].lower()))
+
         ########################################################################
 
         print("Calculating lowest p-value per cell type per permutations")
@@ -146,32 +160,41 @@ class main():
         print("\tShape: {}".format(lowest_perm_pvalues_m.shape))
         print("")
 
+        # Plotting.
+        for i in range(lowest_perm_pvalues_m.shape[1]):
+            self.distplot(a=lowest_perm_pvalues_m[:, i],
+                          xlabel="permuted p-value",
+                          title=colnames[i],
+                          filename="{}_lowest_permuted_pval_distribution".format(colnames[i].lower()))
+
         ########################################################################
 
         print("Analyzing per cell type")
-        bh_fdr_m = np.empty_like(real_pvalues_m, dtype=np.float64)
-        emp_fdr_m = np.empty_like(real_pvalues_m, dtype=np.float64)
-        qvalues_m = np.empty_like(real_pvalues_m, dtype=np.float64)
-        per_eqtl_qvalues_m = np.empty_like(real_pvalues_m, dtype=np.float64)
-        for cov_index in range(real_pvalues_m.shape[1]):
+        bh_fdr_m = np.empty_like(nominal_pvalues_m, dtype=np.float64)
+        emp_fdr_m = np.empty_like(nominal_pvalues_m, dtype=np.float64)
+        qvalues_m = np.empty_like(nominal_pvalues_m, dtype=np.float64)
+        per_eqtl_qvalues_m = np.empty_like(nominal_pvalues_m, dtype=np.float64)
+        for cov_index in range(nominal_pvalues_m.shape[1]):
             column = colnames[cov_index]
+            if column != "Excitatory":
+                continue
             print("  Analyzing: {}".format(column))
 
             # Extract the data.
-            real_pvalues = real_pvalues_m[:, cov_index]
+            nominal_pvalues = nominal_pvalues_m[:, cov_index]
             perm_pvalues = perm_pvalues_m[:, cov_index].flatten()
             lowest_perm_pvalues = lowest_perm_pvalues_m[:, cov_index]
-            print("\tReal p-values: {}".format(real_pvalues.shape))
+            print("\tnominal p-values: {}".format(nominal_pvalues.shape))
             print("\tPermutation p-values: {}".format(perm_pvalues.shape))
             print("\tLowest permutation p-values: {}".format(lowest_perm_pvalues.shape))
             print("")
 
             print("\tMethod 1: Benjamini-Hochberg FDR")
-            bh_fdr = multitest.multipletests(real_pvalues, method='fdr_bh')[1]
+            bh_fdr = multitest.multipletests(nominal_pvalues, method='fdr_bh')[1]
 
             print("\tMethod 2: EMP style FDR")
-            ranks = np.array([np.sum(real_pvalues <= real_pvalue) for real_pvalue in real_pvalues])
-            perm_ranks = np.array([np.sum(perm_pvalues <= real_pvalue) for real_pvalue in real_pvalues])
+            ranks = np.array([np.sum(nominal_pvalues <= nominal_pvalue) for nominal_pvalue in nominal_pvalues])
+            perm_ranks = np.array([np.sum(perm_pvalues <= nominal_pvalue) for nominal_pvalue in nominal_pvalues])
             emp_fdr = (perm_ranks / n_permutations) / ranks
 
             print("\tMethod 3: Fast-QTL style FDR")
@@ -179,7 +202,7 @@ class main():
             (a, b), nfev, nit = self.fit_beta_distribution(p=lowest_perm_pvalues)
 
             # Plotting distributions.
-            self.histplot(real=real_pvalues,
+            self.histplot(nominal=nominal_pvalues,
                           permuted=perm_pvalues,
                           lowest_permuted=lowest_perm_pvalues,
                           beta_parameters=(a, b),
@@ -189,115 +212,137 @@ class main():
 
             # Calculating adjusted p-values.
             print("\tCalculating adjusted p-values.")
-            adj_pvalues = stats.beta.cdf(real_pvalues, a, b)
+            adj_pvalues = stats.beta.cdf(nominal_pvalues, a, b)
 
             print("\tCalculating q-values.")
             qvalues = self.qvalues(p=adj_pvalues)
 
             print("\tMethod 4: per eQTL FDR")
             print("\t  Calculating adjusted p-values.")
-            per_eqtl_adj_pvalues = np.empty(real_pvalues_m.shape[0], dtype=np.float64)
-            for eqtl_index in range(real_pvalues_m.shape[0]):
-                real_pvalue = real_pvalues_m[eqtl_index, cov_index]
+            per_eqtl_adj_pvalues = np.empty(nominal_pvalues_m.shape[0], dtype=np.float64)
+            for eqtl_index in range(nominal_pvalues_m.shape[0]):
+                nominal_pvalue = nominal_pvalues_m[eqtl_index, cov_index]
                 perm_pvalues = perm_pvalues_m[eqtl_index, cov_index].flatten()
-                adj_pvalue = (np.sum(perm_pvalues <= real_pvalue) + 0.5) / (n_permutations + 1)
-                # if adj_pvalue < real_pvalue:
-                #     adj_pvalue = real_pvalue
+                adj_pvalue = (np.sum(perm_pvalues <= nominal_pvalue) + 0.5) / (n_permutations + 1)
+                # if adj_pvalue < nominal_pvalue:
+                #     adj_pvalue = nominal_pvalue
 
                 per_eqtl_adj_pvalues[eqtl_index] = adj_pvalue
 
             print("\t  Calculating q-values.")
             per_eqtl_qvalues = self.qvalues(p=per_eqtl_adj_pvalues)
 
-            if column.startswith("Oligodendrocyte"):
+            if column.startswith("Excitatory"):
                 print("\tPlotting.")
                 for log10 in [(False, False), (True, True)]:
-                    self.regplot(x=real_pvalues, y=bh_fdr,
+                    outdir = self.outdir
+                    if log10[0] or log10[1]:
+                        outdir = os.path.join(self.outdir, "log10")
+                    if not os.path.exists(outdir):
+                        os.makedirs(outdir)
+
+                    self.regplot(x=nominal_pvalues, y=bh_fdr,
                                  xlabel="p-values",
                                  ylabel="BH fdr-values",
                                  log10=log10,
-                                 filename="{}_real_pval_vs_bh_fdr".format(column))
+                                 filename="{}_nominal_pval_vs_bh_fdr".format(column),
+                                 outdir=outdir)
 
-                    self.regplot(x=real_pvalues, y=ranks,
-                                 xlabel="real p-values",
+                    self.regplot(x=nominal_pvalues, y=ranks,
+                                 xlabel="nominal p-values",
                                  ylabel="ranks",
                                  log10=(log10[0], False),
                                  cutoff=(True, False),
-                                 filename="{}_real_pval_vs_ranks".format(column))
-                    self.regplot(x=real_pvalues, y=perm_ranks,
-                                 xlabel="real p-values",
+                                 filename="{}_nominal_pval_vs_ranks".format(column),
+                                 outdir=outdir)
+                    self.regplot(x=nominal_pvalues, y=perm_ranks,
+                                 xlabel="nominal p-values",
                                  ylabel="perm_ranks",
                                  log10=(log10[0], False),
                                  cutoff=(True, False),
-                                 filename="{}_real_pval_vs_perm_ranks".format(column))
-                    self.regplot(x=real_pvalues, y=emp_fdr,
+                                 filename="{}_nominal_pval_vs_perm_ranks".format(column),
+                                 outdir=outdir)
+                    self.regplot(x=nominal_pvalues, y=emp_fdr,
                                  xlabel="p-values",
                                  ylabel="EMP fdr-values",
                                  log10=log10,
-                                 filename="{}_real_pval_vs_emp_fdr".format(column))
+                                 filename="{}_nominal_pval_vs_emp_fdr".format(column),
+                                 outdir=outdir)
 
-                    self.regplot(x=real_pvalues, y=adj_pvalues,
-                                 xlabel="real p-values",
+                    self.regplot(x=nominal_pvalues, y=adj_pvalues,
+                                 xlabel="nominal p-values",
                                  ylabel="adj. p-values",
                                  log10=log10,
-                                 filename="{}_real_pval_vs_adj_pval".format(column))
+                                 filename="{}_nominal_pval_vs_adj_pval".format(column),
+                                 outdir=outdir)
                     self.regplot(x=adj_pvalues, y=qvalues,
                                  xlabel="adj. p-values",
                                  ylabel="q-values",
                                  log10=log10,
-                                 filename="{}_adj_pval_vs_qval".format(column))
-                    self.regplot(x=real_pvalues, y=qvalues,
+                                 filename="{}_adj_pval_vs_qval".format(column),
+                                 outdir=outdir)
+                    self.regplot(x=nominal_pvalues, y=qvalues,
                                  xlabel="p-values",
                                  ylabel="q-values",
                                  log10=log10,
-                                 filename="{}_real_pval_vs_qval".format(column))
+                                 filename="{}_nominal_pval_vs_qval".format(column),
+                                 outdir=outdir)
 
-                    self.regplot(x=real_pvalues, y=per_eqtl_adj_pvalues,
-                                 xlabel="real p-values",
+                    self.regplot(x=nominal_pvalues, y=per_eqtl_adj_pvalues,
+                                 xlabel="nominal p-values",
                                  ylabel="adj. p-values",
                                  log10=log10,
-                                 filename="{}_per_eqtl_real_pval_vs_adj_pval".format(column))
+                                 filename="{}_per_eqtl_nominal_pval_vs_adj_pval".format(column),
+                                 outdir=outdir)
                     self.regplot(x=per_eqtl_adj_pvalues, y=per_eqtl_qvalues,
                                  xlabel="adj. p-values",
                                  ylabel="q-values",
                                  log10=log10,
-                                 filename="{}_per_eqtl_adj_pval_vs_qval".format(column))
-                    self.regplot(x=real_pvalues, y=per_eqtl_qvalues,
+                                 filename="{}_per_eqtl_adj_pval_vs_qval".format(column),
+                                 outdir=outdir)
+                    self.regplot(x=nominal_pvalues, y=per_eqtl_qvalues,
                                  xlabel="p-values",
                                  ylabel="q-values",
                                  log10=log10,
-                                 filename="{}_per_eqtl_real_pval_vs_qval".format(column))
+                                 filename="{}_per_eqtl_nominal_pval_vs_qval".format(column),
+                                 outdir=outdir)
 
                     self.regplot(x=qvalues, y=bh_fdr,
                                  xlabel="q-values",
                                  ylabel="BH fdr-values",
                                  log10=log10,
-                                 filename="{}_qval_vs_bh_fdr".format(column))
+                                 filename="{}_qval_vs_bh_fdr".format(column),
+                                 outdir=outdir)
                     self.regplot(x=qvalues, y=emp_fdr,
                                  xlabel="q-values",
                                  ylabel="EMP fdr-values",
                                  log10=log10,
-                                 filename="{}_qval_vs_emp_fdr".format(column))
+                                 filename="{}_qval_vs_emp_fdr".format(column),
+                                 outdir=outdir)
                     self.regplot(x=qvalues, y=per_eqtl_qvalues,
                                  xlabel="q-values",
                                  ylabel="per eQTL qvalues",
                                  log10=log10,
-                                 filename="{}_qval_vs_per_eqtl_qval".format(column))
+                                 filename="{}_qval_vs_per_eqtl_qval".format(column),
+                                 outdir=outdir)
                     self.regplot(x=bh_fdr, y=emp_fdr,
                                  xlabel="BH fdr-values",
                                  ylabel="EMP fdr-values",
                                  log10=log10,
-                                 filename="{}_bh_fdr_vs_emp_fdr".format(column))
+                                 filename="{}_bh_fdr_vs_emp_fdr".format(column),
+                                 outdir=outdir)
                     self.regplot(x=bh_fdr, y=per_eqtl_qvalues,
                                  xlabel="BH fdr-values",
                                  ylabel="per eQTL qvalues",
                                  log10=log10,
-                                 filename="{}_bh_fdr_vs_per_eqtl_qval".format(column))
+                                 filename="{}_bh_fdr_vs_per_eqtl_qval".format(column),
+                                 outdir=outdir)
                     self.regplot(x=emp_fdr, y=per_eqtl_qvalues,
                                  xlabel="EMP fdr-values",
                                  ylabel="per eQTL qvalues",
                                  log10=log10,
-                                 filename="{}_emp_fdr_vs_per_eqtl_qval".format(column))
+                                 filename="{}_emp_fdr_vs_per_eqtl_qval".format(column),
+                                 outdir=outdir)
 
             # Saving results.
             bh_fdr_m[:, cov_index] = bh_fdr
@@ -355,6 +400,42 @@ class main():
     @staticmethod
     def natural_keys(text):
         return [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', text)]
+
+    def distplot(self, a, xlabel="", title="", filename="distribution"):
+        data = a.flatten()
+        data = data[~np.isnan(data)]
+
+
+        sns.set_style("ticks")
+        fig, ax = plt.subplots(figsize=(12, 12))
+
+        sns.despine(fig=fig, ax=ax)
+
+        sns.kdeplot(data, shade=True, color="#808080", ax=ax, cut=0, zorder=-1)
+        ax.axvline(np.mean(data), ls='--', color="#808080", zorder=-1)
+
+        ax.set_xlabel(xlabel,
+                      fontsize=14,
+                      fontweight='bold')
+        ax.set_ylabel("density",
+                      fontsize=14,
+                      fontweight='bold')
+        ax.set_title(title,
+                     fontsize=18,
+                     fontweight='bold')
+
+        ax.annotate(
+            'N = {:,}'.format(np.size(data)),
+            xy=(0.03, 0.94),
+            xycoords=ax.transAxes,
+            color="#000000",
+            fontsize=15,
+            fontweight='bold')
+
+        outpath = os.path.join(self.outdir, "{}.png".format(filename))
+        fig.savefig(outpath)
+        plt.close()
+        print("\t  Saved figure: {} ".format(os.path.basename(outpath)))
 
     @staticmethod
     def save_file(df, outpath, header=True, index=True, sep="\t"):
@@ -416,16 +497,16 @@ class main():
 
         print("", flush=True)
 
-    def histplot(self, real, permuted, lowest_permuted, beta_parameters, nit, nfev, filename="plot"):
+    def histplot(self, nominal, permuted, lowest_permuted, beta_parameters, nit, nfev, filename="plot"):
         sns.set(rc={'figure.figsize': (27, 12)})
         sns.set_style("ticks")
         fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3)
 
         for ax, data, log10_transform, add_beta_func, title in zip((ax1, ax2, ax3),
-                                                                   (real, permuted, lowest_permuted),
+                                                                   (nominal, permuted, lowest_permuted),
                                                                    (False, False, True),
                                                                    (False, False, True),
-                                                                   ("real", "permuted", "lowest + beta fit")):
+                                                                   ("nominal", "permuted", "lowest + beta fit")):
             sns.despine(fig=fig, ax=ax1)
 
             plot_data = np.copy(data)
@@ -506,7 +587,10 @@ class main():
         fig.savefig(os.path.join(self.outdir, "{}.png".format(filename)))
         plt.close()
 
-    def regplot(self, x, y, xlabel="", ylabel="", title="", filename="plot", log10=(True, True), cutoff=(True, True)):
+    def regplot(self, x, y, xlabel="", ylabel="", title="", filename="plot", log10=(True, True), cutoff=(True, True), outdir=None):
+        if outdir is None:
+            outdir = self.outdir
+
         offset = 2.2250738585072014e-308
 
         sns.set(rc={'figure.figsize': (12, 12)})
@@ -635,7 +719,7 @@ class main():
             if log10[1]:
                 file_appendix += "_yTrue"
 
-        outpath = os.path.join(self.outdir, "{}{}.png".format(filename, file_appendix))
+        outpath = os.path.join(outdir, "{}{}.png".format(filename, file_appendix))
         fig.savefig(outpath)
         plt.close()
         print("\tsaved plot: {}".format(outpath))
