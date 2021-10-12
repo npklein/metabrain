@@ -312,8 +312,8 @@ class main():
         sns.despine(fig=fig, ax=ax1)
         ax2.axis('off')
 
-        x = "CellMapNNLS_Neuron"
-        y = "CellMapNNLS_Astrocyte"
+        x = "Neuron"
+        y = "Astrocyte"
 
         coef, _ = stats.spearmanr(df[y], df[x])
 

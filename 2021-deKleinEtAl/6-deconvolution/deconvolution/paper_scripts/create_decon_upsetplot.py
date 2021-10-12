@@ -30,6 +30,7 @@ import os
 
 # Third party imports.
 import pandas as pd
+import numpy as np
 import matplotlib
 from statsmodels.stats import multitest
 matplotlib.use('Agg')
@@ -55,9 +56,11 @@ Syntax:
 
 ./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/output/deconvolutionResults.txt.gz -calc_fdr -e png
 
-./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5/deconvolutionResults.txt.gz -calc_fdr -n original -e png
+./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5-LimitedConfigs-OldProfile/deconvolutionResults.txt.gz -calc_fdr -n original -e png
 
-./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5-CNS7Profile/deconvolutionResults.txt.gz -calc_fdr -n CNS7 -e png
+./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5-LimitedConfigs-NewProfile/deconvolutionResults.txt.gz -calc_fdr -n CNS7 -e png
+
+./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5-LimitedConfigs-NewProfileNoPericytes/deconvolutionResults.txt.gz -calc_fdr -n CNS7_NoPericytes -e png
 """
 
 
@@ -149,12 +152,13 @@ class main():
 
         columns = [x for x in decon_df.columns if "pvalue" in x]
         decon_df = decon_df[columns]
-        # decon_df.columns = [x.split("_")[1] for x in decon_df.columns]
-        # print(decon_df)
 
+        variable = "p-value"
         if self.calc_fdr:
             print("Calculating FDR.")
             _, decon_df = self.bh_correct(decon_df)
+            variable = "FDR"
+        self.print_n_signif(df=decon_df, variable=variable)
 
         print("Preprocessing data.")
         data = self.parse_df(decon_df, self.alpha)
@@ -199,18 +203,27 @@ class main():
         tmp_df.reset_index(drop=False, inplace=True)
         tmp_df = tmp_df.melt(id_vars="index", var_name="CellType", value_name="FDR")
         tmp_df = tmp_df.loc[tmp_df["FDR"] < alpha, :]
-        # print(tmp_df)
-        # genes = set()
-        # for index in tmp_df["index"]:
-        #     genes.add(index.split("_")[0])
-        # print(genes)
-        # print(len(genes))
-        # exit()
 
         data = {}
         for ct in list(tmp_df["CellType"].unique()):
             data[ct] = set(tmp_df.loc[tmp_df["CellType"] == ct, "index"])
         return data
+
+    def print_n_signif(self, df, variable):
+        m = df.to_numpy()
+        colnames = df.columns.tolist()
+
+        print("\nN-interaction ({} < {}):".format(variable, self.alpha))
+        n_hits_a = (m < self.alpha).sum(axis=0)
+        n_hits_total = np.sum(n_hits_a)
+        cov_length = np.max([len(x) for x in colnames])
+        hits_length = np.max([len(str(x)) for x in n_hits_a] + [len(str(n_hits_total))])
+        for n_hits, cell_type in zip(n_hits_a, colnames):
+            print("\t{:{}s}  {:{}d}".format(cell_type, cov_length, n_hits, hits_length))
+        print("\t{}".format("".join(["-"] * cov_length)))
+        print("\t{:{}s}  {:{}d}".format("total", cov_length, n_hits_total, hits_length))
+
+        print("", flush=True)
 
     @staticmethod
     def count(input_data):

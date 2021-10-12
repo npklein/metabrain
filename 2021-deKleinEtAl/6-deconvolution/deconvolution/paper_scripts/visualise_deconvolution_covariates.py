@@ -72,12 +72,12 @@ class main():
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
 
-        self.abbreviations = {"CellMapNNLS_Neuron": "neuro",
-                              "CellMapNNLS_Oligodendrocyte": "oligo",
-                              "CellMapNNLS_EndothelialCell": "endo",
-                              "CellMapNNLS_Microglia": "micro",
-                              "CellMapNNLS_Macrophage": "macro",
-                              "CellMapNNLS_Astrocyte": "astro"}
+        self.abbreviations = {"Neuron": "neuro",
+                              "Oligodendrocyte": "oligo",
+                              "EndothelialCell": "endo",
+                              "Microglia": "micro",
+                              "Macrophage": "macro",
+                              "Astrocyte": "astro"}
 
     def create_argument_parser(self):
         parser = argparse.ArgumentParser(prog=__program__,

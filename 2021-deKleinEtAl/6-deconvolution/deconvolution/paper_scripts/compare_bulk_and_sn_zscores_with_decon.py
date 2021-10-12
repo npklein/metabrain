@@ -74,15 +74,15 @@ class main():
             self.eqtl_type)
         self.sn_filename = "eQTLsFDR-ProbeLevel.txt.gz"
         self.cell_types = [
-            ("AST", "CellMapNNLS_Astrocyte", "Astrocyte", "#D55E00"),
-            ("END", "CellMapNNLS_EndothelialCell", "Endothelial Cell",
+            ("AST", "Astrocyte", "Astrocyte", "#D55E00"),
+            ("END", "EndothelialCell", "Endothelial Cell",
              "#CC79A7"),
-            ("EX", "CellMapNNLS_Neuron", "Ex. Neuron VS Neuron", "#0072B2"),
-            ("IN", "CellMapNNLS_Neuron", "In. Neuron VS Neuron", "#0072B2"),
-            ("MIC", "CellMapNNLS_Macrophage", "Microglia VS Macrophage",
+            ("EX", "Neuron", "Ex. Neuron VS Neuron", "#0072B2"),
+            ("IN", "Neuron", "In. Neuron VS Neuron", "#0072B2"),
+            ("MIC", "Macrophage", "Microglia VS Macrophage",
              "#E69F00"),
             (
-                "OLI", "CellMapNNLS_Oligodendrocyte", "Oligodendrocyte",
+                "OLI", "Oligodendrocyte", "Oligodendrocyte",
                 "#009E73")]
         self.extensions = ["png", "pdf"]
 
