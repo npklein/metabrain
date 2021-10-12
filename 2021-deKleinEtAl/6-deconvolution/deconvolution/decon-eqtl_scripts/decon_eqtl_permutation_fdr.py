@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_permutation_fdr.py
 Created:      2021/06/07
-Last Changed: 2021/09/07
+Last Changed: 2021/10/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -209,7 +209,7 @@ class main():
             print("\t  Calculating q-values.")
             per_eqtl_qvalues = self.qvalues(p=per_eqtl_adj_pvalues)
 
-            if column.startswith("CellMapNNLS_Oligodendrocyte"):
+            if column.startswith("Oligodendrocyte"):
                 print("\tPlotting.")
                 for log10 in [(False, False), (True, True)]:
                     self.regplot(x=real_pvalues, y=bh_fdr,
