@@ -85,11 +85,11 @@ class main():
                 os.makedirs(tmp_outdir)
 
         self.colormap = {
-            "CellMapNNLS_Neuron": "#0072B2",
-            "CellMapNNLS_Oligodendrocyte": "#009E73",
-            "CellMapNNLS_EndothelialCell": "#CC79A7",
-            "CellMapNNLS_Macrophage": "#E69F00",
-            "CellMapNNLS_Astrocyte": "#D55E00"
+            "Neuron": "#0072B2",
+            "Oligodendrocyte": "#009E73",
+            "EndothelialCell": "#CC79A7",
+            "Macrophage": "#E69F00",
+            "Astrocyte": "#D55E00"
         }
 
     @staticmethod

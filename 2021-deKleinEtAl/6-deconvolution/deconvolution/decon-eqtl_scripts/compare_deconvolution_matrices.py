@@ -3,7 +3,7 @@
 """
 File:         compare_deconvolution_matrices.py
 Created:      2020/09/03
-Last Changed: 2021/09/29
+Last Changed: 2021/10/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -66,6 +66,8 @@ Syntax:
 ./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-WithPermutations-StaticInteractionShuffle/deconvolutionResults.txt.gz -n1 Original -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-HalfNormalizedMAF5/deconvolutionResults.txt.gz -n2 HalfNormalized -log10 -o original_vs_halfnormalized
 
 ./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5/deconvolutionResults.txt.gz -n1 OriginalProfile -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5-CNS7Profile/deconvolutionResults.txt.gz -n2 CNS7Profile -log10 -o originalProfile_vs_CNS7Profile
+
+./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5-LimitedConfigs-OldProfile/deconvolutionResults.txt.gz -n1 OriginalProfile -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5-LimitedConfigs-NewProfileNoPericytes/deconvolutionResults.txt.gz -n2 CNS7ProfileNoPericytes -log10 -o originalProfile_vs_CNS7ProfileNoPericytes
 
 ./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-NormalisedMAF5-LimitedConfigs/deconvolutionResults.txt.gz -n1 limited_configs -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-NormalisedMAF5-ALlConfigs/deconvolutionResults.txt.gz -n2 all_configs -log10 -o limited_vs_all_configurations
 
@@ -167,6 +169,9 @@ class main():
         decon1_df = self.load_file(self.decon1_path)
         decon2_df = self.load_file(self.decon2_path)
 
+        decon1_df.columns = [x.replace("CellMapNNLS_", "") for x in decon1_df.columns]
+        decon2_df.columns = [x.replace("CellMapNNLS_", "") for x in decon2_df.columns]
+
         print("Splitting categories")
         pval_df1, fdr_df1, intercept_beta_df1, ct_beta_df1, inter_beta_df1 = self.split_decon(df=decon1_df)
         pval_df2, fdr_df2, intercept_beta_df2, ct_beta_df2, inter_beta_df2 = self.split_decon(df=decon2_df)
@@ -186,7 +191,6 @@ class main():
                           xlabel=self.decon1_name,
                           ylabel=self.decon2_name,
                           filename="{}_replicating_in_{}".format(self.decon2_name, self.decon1_name))
-        exit()
 
         print("Plotting")
         for decon1_df, decon2_df, appendix, log10_transform, signif_lines in \
@@ -253,7 +257,7 @@ class main():
     def split_decon(df):
         # Get the p-values.
         pval_df = df.loc[:, [x for x in df.columns if x.endswith("_pvalue")]].copy()
-        pval_df.columns = [x.split("_")[1] for x in pval_df]
+        pval_df.columns = [x.split("_")[0] for x in pval_df]
 
         # Calculate the FDR.
         fdr_df = pd.DataFrame(np.nan, columns=pval_df.columns, index=pval_df.index)
@@ -268,11 +272,11 @@ class main():
 
         # Get the cell type beta's.
         ct_beta_df = df.loc[:, [x for x in df.columns if "Beta" in x and not ":GT" in x and not x in ["Beta1_Intercept", "Beta2_Genotype"]]]
-        ct_beta_df.columns = [x.split("_")[2] for x in ct_beta_df.columns]
+        ct_beta_df.columns = [x.split("_")[1] for x in ct_beta_df.columns]
 
         # Get the interaction beta's.
         interaction_beta_df = df.loc[:, [x for x in df.columns if "Beta" in x and ":GT" in x]]
-        interaction_beta_df.columns = [x.split("_")[2].split(":")[0] for x in interaction_beta_df.columns]
+        interaction_beta_df.columns = [x.split("_")[1].split(":")[0] for x in interaction_beta_df.columns]
 
         return pval_df, fdr_df, intercept_beta_df, ct_beta_df, interaction_beta_df
 

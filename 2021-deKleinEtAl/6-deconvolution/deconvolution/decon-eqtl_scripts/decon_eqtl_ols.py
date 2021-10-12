@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_ols.py
 Created:      2021/09/27
-Last Changed:
+Last Changed: 2021/10/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -573,7 +573,6 @@ class main():
         model = sm.OLS(y, X)
         try:
             results = model.fit()
-            print(results.summary())
             return results.params, results.resid
         except np.linalg.LinAlgError as e:
             print("\t\tError: {}".format(e))
