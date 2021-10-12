@@ -3,7 +3,7 @@
 """
 File:         cellmap_reference_profile.py
 Created:      2021/07/06
-Last Changed: 2021/09/03
+Last Changed: 2021/10/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -140,7 +140,7 @@ class main():
             adj_cell_type = cell_type
             if adj_cell_type in self.cell_type_dict:
                 adj_cell_type = self.cell_type_dict[cell_type]
-            ct_avg_expr.columns = ["CellMap_{}".format(adj_cell_type)]
+            ct_avg_expr.columns = adj_cell_type
 
             if avg_df is None:
                 avg_df = ct_avg_expr
