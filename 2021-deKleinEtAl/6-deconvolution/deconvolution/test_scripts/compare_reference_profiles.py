@@ -58,6 +58,8 @@ __description__ = "{} is a program developed and maintained by {}. " \
 """
 Syntax:
 ./compare_reference_profiles.py -p1 ../data/CellMap_brain_celltype_avgCPM.txt -n1 OLD -p2 ../data/CellMap_brain_CNS7_avgCPM.txt -n2 NEW -o OLD_vs_NEW
+
+./compare_reference_profiles.py -p1 ../data/CellMap_brain_CNS7_avgCPM.txt -n1 METABRAIN -p2 ../data/PyschENCODE_average_signature_df.txt.gz -n2 PsychENCODE -o METABRAIN_VS_PsycheENCODE
 """
 
 
@@ -138,6 +140,7 @@ class main():
         print("\tLoaded dataframe: {} "
               "with shape: {}".format(os.path.basename(self.profile1_path),
                                       profile1_df.shape))
+        profile1_df.columns = [x.split("_")[1] for x in profile1_df.columns]
         profile1_df = np.log2(profile1_df + 1)
         print(profile1_df)
 
@@ -147,14 +150,20 @@ class main():
               "with shape: {}".format(os.path.basename(self.profile2_path),
                                       profile2_df.shape))
         profile2_df = np.log2(profile2_df + 1)
+
+        # PsychENCODE stuff.
+        gene_trans_df = pd.read_csv("/groups/umcg-biogen/tmp01/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz", sep="\t", index_col=None)
+        print(gene_trans_df)
+        gene_trans_dict = dict(zip(gene_trans_df["Symbol"], [x.split(".")[0] for x in gene_trans_df["ArrayAddress"]]))
+        profile1_df.index = [gene_trans_dict[hgnc] if hgnc in gene_trans_dict else hgnc for hgnc in profile1_df.index]
+        profile2_df = profile2_df.loc[:, ['Adult-Ex1', 'Adult-Ex2', 'Adult-Ex3', 'Adult-Ex4', 'Adult-Ex5', 'Adult-Ex6', 'Adult-Ex7', 'Adult-Ex8', 'Adult-In1', 'Adult-In2', 'Adult-In3', 'Adult-In4', 'Adult-In5', 'Adult-In6', 'Adult-In7', 'Adult-In8', 'Adult-Astrocytes', 'Adult-Endothelial', 'Dev-Quiescent', 'Dev-Replicating', 'Adult-Microglia', 'Adult-OtherNeuron', 'Adult-OPC', 'Adult-Oligo']]
+        print(profile1_df)
         print(profile2_df)
 
         for profile_df, name in ((profile1_df, self.profile1_name), (profile2_df, self.profile2_name)):
             corr_df = self.correlate(index_df=profile_df,
                                      columns_df=profile_df,
                                      triangle=True)
-            corr_df.columns = [x.split("_")[1] for x in corr_df.columns]
-            corr_df.index = [x.split("_")[1] for x in corr_df.index]
             self.plot_heatmap(corr_df=corr_df, filename="{}_{}".format(self.outfile, name))
 
         print("Correlate profiles")
@@ -162,15 +171,16 @@ class main():
         print("\tN-overlap: {}".format(len(row_overlap)))
         overlap1_df = profile1_df.loc[row_overlap, :].copy()
         overlap2_df = profile2_df.loc[row_overlap, :].copy()
-        overlap1_df = overlap1_df.sort_index(axis=1)
-        overlap2_df = overlap2_df.sort_index(axis=1)
-        overlap1_df.columns = [x.split("_")[1] for x in overlap1_df.columns]
-        overlap2_df.columns = [x.split("_")[1] for x in overlap2_df.columns]
+        # overlap1_df = overlap1_df.sort_index(axis=1)
+        # overlap2_df = overlap2_df.sort_index(axis=1)
+        # overlap1_df.columns = [x.split("_")[1] for x in overlap1_df.columns]
+        # overlap2_df.columns = [x.split("_")[1] for x in overlap2_df.columns]
         corr_df = self.correlate(index_df=overlap1_df, columns_df=overlap2_df)
         print(corr_df)
 
         print("\tPlotting.")
         self.plot_heatmap(corr_df=corr_df, xlabel=self.profile2_name, ylabel=self.profile1_name, filename="{}_{}".format(self.outfile, "overlap"))
+        exit()
 
         print("Compare cell types")
         for profile_df, name in ((profile1_df, self.profile1_name), (profile2_df, self.profile2_name)):
