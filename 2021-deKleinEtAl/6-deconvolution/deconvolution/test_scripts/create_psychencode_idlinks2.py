@@ -24,6 +24,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 
 # Standard imports.
 from __future__ import print_function
+from pathlib import Path
 import glob
 import os
 
@@ -56,109 +57,94 @@ Syntax:
 
 class main():
     def __init__(self):
-        self.psychencode_cf_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/DER-24_Cell_fractions_Normalized.xlsx"
-        self.gte_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/"
-        self.tissues = ["Cortex", "Basalganglia", "Cerebellum", "Hippocampus", "Spinalcord"]
-        self.etnicities = ["EUR", "AFR", "EAS"]
-        self.expr_sample_link_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-25-samplelinks/all/links2-ExpressionSamplesLinked.txt"
+        self.basedir = os.path.join(str(Path(__file__).parent.parent), 'PsychENCODE')
+        self.link_file = "PsychENCODE_ID_links.txt.gz"
+        self.samplelinks_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-25-samplelinks/"
+        self.cortex_eur_std_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/OLD/ContainsDuplicateSamples/CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz"
 
     def start(self):
         print("Step 1: loading data")
-        psychencode_cf_df = self.load_file(path=self.psychencode_cf_path, sheet_name="Sheet1")
-
-        expr_sample_df = self.load_file(path=self.expr_sample_link_path, header=0, index_col=None, low_memory=False)
-        expr_sample_df = expr_sample_df.loc[:, ["RnaID", "GenotypeID", "MetaCohort", "RNADataset"]]
-        expr_sample_df.columns = ["rnaseq_id", "genotype_id", "meta_cohort", "rna_dataset"]
-        expr_sample_df["combined_id"] = (expr_sample_df["rnaseq_id"] + "|" + expr_sample_df["genotype_id"]).str.upper()
-        expr_sample_df["index"] = expr_sample_df.index
-        combined_ids = set(expr_sample_df["combined_id"])
-        expr_sample_df.set_index("combined_id", inplace=True)
-        print(expr_sample_df)
-
-        # Check if substrings in psychencode ids.
-        psychencode_ids = psychencode_cf_df.columns.tolist()
-        sample_substrings = {}
-        for sample1 in psychencode_ids:
-            substrings = []
-            for sample2 in psychencode_ids:
-                if (sample2 != sample1) and ((sample2 in sample1) or (sample1 in sample2)):
-                    substrings.append(sample2)
-
-            if len(substrings) > 0:
-                sample_substrings[sample1] = substrings
-
-        print("Step 3: Matching")
-        psychencode_matches = []
-        found_rnaseq_ids = set()
-        doubles = []
-        n_matched = 0
-        for psychencode_id in psychencode_cf_df.columns:
-            psychencode_id_str_upper = str(psychencode_id).upper()
-
-            match_info = [psychencode_id, None, None, None, None, None, None]
-            for combined_id in combined_ids:
-                if psychencode_id_str_upper in combined_id:
-                    # Check for substrings.
-                    skip = False
-                    if psychencode_id in sample_substrings:
-                        for sample_substring in sample_substrings[psychencode_id]:
-                            if sample_substring in combined_id:
-                                skip = True
-                                break
-
-                    if skip:
-                        continue
-
-                    rnaseq_id, genotype_id, meta_cohort, rna_dataset, index = expr_sample_df.loc[combined_id, :]
-                    rnaseq_id_str_upper = str(rnaseq_id).upper()
-                    genotype_id_str_upper = str(genotype_id).upper()
-
-                    found = False
-                    if psychencode_id_str_upper == rnaseq_id_str_upper:
-                        match_info[4] = "rnaseq_id"
-                        match_info[5] = rnaseq_id
-                        found = True
-                    elif psychencode_id_str_upper == genotype_id_str_upper:
-                        match_info[4] = "genotype_id"
-                        match_info[5] = genotype_id
-                        found = True
-                    else:
-                        pass
-
-                    if found:
-                        match_info[1:4] = ["{:.0f}".format(index), meta_cohort, rna_dataset]
-                        match_info[6] = rnaseq_id
-                        n_matched += 1
-                        break
-
-            if match_info[6] in found_rnaseq_ids:
-                doubles.append(match_info[6])
-
-            if match_info[6] is not None:
-                found_rnaseq_ids.add(match_info[6])
-
-            psychencode_matches.append(match_info)
-
-        link_df = pd.DataFrame(psychencode_matches, columns=["PsychENCODE ID", "Match index", "MetaCohort", "RNA dataset", "ID name", "ID value", "MetaBrain rnaseq_id"])
+        link_df = self.load_file(path=os.path.join(self.basedir, self.link_file), header=0, index_col=None)
         print(link_df)
-        print(link_df["ID name"].value_counts())
-        print("\tMetaBrain ID match {}/{} [{:.2f}%]".format(n_matched, psychencode_cf_df.shape[1], (100 / psychencode_cf_df.shape[1]) * n_matched))
 
-        # link_df.dropna(inplace=True)
-        self.save_file(df=link_df, outpath="PsychENCODE_ID_links.txt.gz", index=False)
+        gte_dfs = []
+        for file_path in glob.glob(os.path.join(self.samplelinks_path, "*.txt")):
+            tissue, _, etnicity, dataset, _ = [x.replace("-", "") for x in os.path.basename(file_path).split(".txt")]
+            df = self.load_file(path=file_path, header=None, index_col=None)
+            df.columns = ["genotype_id", "rnaseq_id"]
 
-        found_df = link_df.loc[~link_df["Match index"].isna(), ["PsychENCODE ID"]]
-        self.save_file(df=found_df, outpath="script2_found_df.txt.gz", index=False)
-        print(found_df)
-        missing_df = link_df.loc[link_df["Match index"].isna(), ["PsychENCODE ID"]]
-        self.save_file(df=missing_df, outpath="script2_missing_df.txt.gz", index=False)
+            df["tissue"] = tissue
+            df["etnicity"] = etnicity
+            df["dataset"] = dataset
+            gte_dfs.append(df)
+
+        gte_df = pd.concat(gte_dfs, axis=0, ignore_index=True)
+        print(gte_df)
+        self.save_file(df=gte_df, outpath=os.path.join(self.basedir, "gte_combined_df.txt.gz"), index=False)
+        gte_dict = dict(zip(gte_df["genotype_id"].astype(str), gte_df["rnaseq_id"].astype(str)))
+        etg_dict = dict(zip(gte_df["rnaseq_id"].astype(str), gte_df["genotype_id"].astype(str)))
+        metabrain_gte_matches = set(gte_df["genotype_id"].astype(str) + "+" + gte_df["rnaseq_id"].astype(str))
+
+        matches = []
+        for _, row in link_df.iterrows():
+
+            row_values = {}
+            for name in ["PsychENCODE ID", "rnaseq_id", "genotype_id", "sample_full"]:
+                value = row[name]
+                if value in row_values:
+                    names = row_values[value]
+                    names.append(name)
+                    row_values[value] = names
+                else:
+                    row_values[value] = [name]
+
+            for value, names in row_values.items():
+                value = str(value)
+                if value in gte_dict.keys():
+                    if value + "+" + gte_dict[value] not in metabrain_gte_matches:
+                        continue
+                    matches.append([row["PsychENCODE ID"], "/".join(names), "genotype_id", gte_dict[value], value])
+                if value in etg_dict.keys():
+                    if etg_dict[value] + "+" + value not in metabrain_gte_matches:
+                        continue
+                    matches.append([row["PsychENCODE ID"], "/".join(names), "rnaseq_id", value, etg_dict[value]])
+
+        match_df = pd.DataFrame(matches, columns=["psychencode_id", "match_name", "match_type", "rnaseq_id", "genotype_id"])
+        match_df["key"] = match_df["psychencode_id"].astype(str) + "+" + match_df["genotype_id"].astype(str) + "+" + match_df["rnaseq_id"].astype(str)
+        match_df = match_df.groupby("key").first()
+        match_df = match_df.merge(gte_df, on=["rnaseq_id", "genotype_id"], how="left")
+        self.save_file(df=match_df, outpath=os.path.join(self.basedir, "PsychENCODE_ID_links2.txt.gz"), index=False)
+        self.save_file(df=match_df[["psychencode_id", "rnaseq_id"]], outpath=os.path.join(self.basedir, "PsychENCODE-linkFile.txt.gz"), index=False)
+
+        for column in ["match_name", "match_type", "tissue", "etnicity", "dataset"]:
+            print(column)
+            print(match_df[column].value_counts())
+
+        found_samples = set(match_df["psychencode_id"])
+        missing_samples = []
+        for sample in link_df["PsychENCODE ID"].unique():
+            if sample not in found_samples:
+                missing_samples.append(sample)
+        missing_df = link_df.loc[link_df["PsychENCODE ID"].isin(missing_samples), :]
         print(missing_df)
+        self.save_file(df=link_df, outpath=os.path.join(self.basedir, "missing_PsychENCODE_IDs.txt.gz"), index=False)
+
+        cortex_eur_df = match_df.loc[(match_df["tissue"] == "cortex") & (match_df["etnicity"] == "EUR"), :]
+        cortex_eur_df_found_samples = set(cortex_eur_df["rnaseq_id"])
+        print(cortex_eur_df)
+        print(cortex_eur_df["dataset"].value_counts())
+
+        cortex_eur_std_df = self.load_file(path=os.path.join(self.basedir, self.cortex_eur_std_path), header=0, index_col=None)
+        cortex_eur_not_found = []
+        for index, (sample, dataset) in cortex_eur_std_df.iterrows():
+            if sample not in cortex_eur_df_found_samples:
+                cortex_eur_not_found.append([sample, dataset])
+
+        cortex_eur_not_found_df = pd.DataFrame(cortex_eur_not_found, columns=["sample", "dataset"])
+        print(cortex_eur_not_found_df["dataset"].value_counts())
+        self.save_file(df=cortex_eur_not_found_df, outpath=os.path.join(self.basedir, "cortex_eur_not_found.txt.gz"), index=False)
         exit()
 
-        for double in doubles:
-            print("Double: {}".format(double))
-            print(link_df.loc[link_df["MetaBrain rnaseq-id"] == double, :])
-            print("")
 
     @staticmethod
     def load_file(path, sep="\t", header=0, index_col=0, nrows=None,

@@ -1,7 +1,7 @@
 """
 File:         visualiser.py
 Created:      2020/06/29
-Last Changed: 2020/12/15
+Last Changed: 2021/10/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -70,7 +70,31 @@ class Visualiser:
             "Excitatory/Neuron": "#56B4E9",
             "Inhibitory/Neuron": "#0072B2",
             "Excitatory+Inhibitory/Neuron": "#BEBEBE",
-            "-": "#000000"
+            "-": "#000000",
+            'Adult-Ex1': '#56B4E9',
+            'Adult-Ex2': '#56B4E9',
+            'Adult-Ex3': '#56B4E9',
+            'Adult-Ex4': '#56B4E9',
+            'Adult-Ex5': '#56B4E9',
+            'Adult-Ex6': '#56B4E9',
+            'Adult-Ex7': '#56B4E9',
+            'Adult-Ex8': '#56B4E9',
+            'Adult-In1': '#0072B2',
+            'Adult-In2': '#0072B2',
+            'Adult-In3': '#0072B2',
+            'Adult-In4': '#0072B2',
+            'Adult-In5': '#0072B2',
+            'Adult-In6': '#0072B2',
+            'Adult-In7': '#0072B2',
+            'Adult-In8': '#0072B2',
+            'Adult-Microglia': '#E69F00',
+            'Adult-OPC': '#1b8569',
+            'Adult-Endothelial': '#CC79A7',
+            'Adult-Astrocytes': '#D55E00',
+            'Adult-Oligo': '#009E73',
+            'Adult-OtherNeuron': '#2690ce',
+            'Dev-Replicating': '#000000',
+            'Dev-Quiescent': '#808080'
         }
 
         # Set the right pdf font for exporting.
@@ -110,7 +134,7 @@ class Visualiser:
     def plot_profile_boxplot(self):
         df = self.signature.copy()
         dfm = df.melt()
-        self.create_boxplot(dfm, name='signature')
+        self.create_boxplot(dfm, name='signature', order=df.columns.tolist())
 
     def plot_deconvolution_clustermap(self):
         df = self.deconvolution.copy()
@@ -149,7 +173,7 @@ class Visualiser:
     def plot_deconvolution_boxplot(self):
         df = self.deconvolution.copy()
         dfm = df.melt()
-        self.create_boxplot(dfm, name='deconvolution')
+        self.create_boxplot(dfm, name='deconvolution', order=df.columns.tolist())
 
     def plot_ground_truth_distribution(self):
         if self.ground_truth is None:
@@ -165,8 +189,7 @@ class Visualiser:
 
         df = self.ground_truth.copy()
         dfm = df.melt()
-        exit()
-        self.create_boxplot(dfm, name='ground_truth')
+        self.create_boxplot(dfm, name='ground_truth', order=df.columns.tolist())
 
     def plot_prediction_comparison(self):
         if self.comparison is None:
@@ -353,7 +376,7 @@ class Visualiser:
                            row_cluster=row_cluster, col_cluster=col_cluster,
                            yticklabels=yticklabels, xticklabels=xticklabels,
                            vmin=vmin, vmax=vmax, annot=annot,
-                           annot_kws={"size": 16, "color": "#000000"},
+                           annot_kws={"size": 10},
                            dendrogram_ratio=(.1, .1),
                            figsize=(12, 12))
         if yticklabels:
@@ -380,19 +403,22 @@ class Visualiser:
         g.savefig(os.path.join(self.outdir, "{}_catplot.{}".format(name, self.extension)))
         plt.close()
 
-    def create_boxplot(self, df, xlabel="", ylabel="", name=""):
+    def create_boxplot(self, df, xlabel="", ylabel="", name="", order=None):
         sns.set(rc={'figure.figsize': (12, 9)})
         sns.set_style("ticks")
-        fig, ax = plt.subplots()
-        sns.despine(fig=fig, ax=ax)
-        sns.boxplot(x="variable", y="value", data=df, palette=self.palette, ax=ax)
-        ax.set_xlabel(xlabel,
-                      fontsize=14,
-                      fontweight='bold')
-        ax.set_ylabel(ylabel,
-                      fontsize=14,
-                      fontweight='bold')
-        plt.tight_layout()
+        fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, gridspec_kw={"height_ratios": [0.9, 0.1]})
+        sns.despine(fig=fig, ax=ax1)
+        ax2.set_axis_off()
+
+        sns.boxplot(x="variable", y="value", data=df, order=order,
+                    palette=self.palette, ax=ax1)
+        ax1.set_xticklabels(ax1.get_xticklabels(), rotation=90)
+        ax1.set_xlabel(xlabel,
+                       fontsize=14,
+                       fontweight='bold')
+        ax1.set_ylabel(ylabel,
+                       fontsize=14,
+                       fontweight='bold')
         fig.savefig(os.path.join(self.outdir, "{}_boxplot.{}".format(name, self.extension)))
         plt.close()
 
