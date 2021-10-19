@@ -1,7 +1,7 @@
 """
 File:         settings.py
 Created:      2020/06/29
-Last Changed: 2021/09/30
+Last Changed: 2021/10/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -183,7 +183,7 @@ class Settings:
 
         avg_recon_accuracy_str = ""
         if self.avg_recon_accuracy is not None:
-            avg_recon_accuracy_str = "{:.2f}".format(self.avg_recon_accuracy)
+            avg_recon_accuracy_str = "{:.0f}".format(self.avg_recon_accuracy * 100)
 
         rss_str = ""
         if self.comparison_rss is not None:

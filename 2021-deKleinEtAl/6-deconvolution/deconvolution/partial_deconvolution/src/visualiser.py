@@ -1,7 +1,7 @@
 """
 File:         visualiser.py
 Created:      2020/06/29
-Last Changed: 2021/10/15
+Last Changed: 2021/10/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -57,14 +57,17 @@ class Visualiser:
         self.order = order
         self.palette = {
             "Excitatory": "#56B4E9",
-            "Inhibitory": "#0072B2",
+            "Inhibitory": "#2690ce",
             "Neuron": "#0072B2",
+            'OtherNeuron': '#0072B2',
             "Oligodendrocyte": "#009E73",
             "OPC": "#009E73",
             "EndothelialCell": "#CC79A7",
+            "Endothelial": "#CC79A7",
             "Microglia": "#E69F00",
             "Macrophage": "#E69F00",
             "Astrocyte": "#D55E00",
+            "Astrocytes": "#D55E00",
             "Pericytes": "#808080",
             "Microglia/Macrophage": "#E69F00",
             "Excitatory/Neuron": "#56B4E9",
