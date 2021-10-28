@@ -3,7 +3,7 @@
 """
 File:         plot_df_per_column.py
 Created:      2021/10/26
-Last Changed:
+Last Changed: 2021/10/28
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -25,15 +25,10 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 from __future__ import print_function
 from pathlib import Path
 import argparse
-import time
-import glob
 import os
 
 # Third party imports.
-import numpy as np
 import pandas as pd
-import statsmodels.api as sm
-from sklearn.decomposition import PCA
 import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
@@ -60,9 +55,23 @@ __description__ = "{} is a program developed and maintained by {}. " \
 Syntax: 
 ./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2021-08-27-step5-remove-covariates-per-dataset/2020-05-25-covariatefiles/2021-10-19-Cortex-EUR-mergedMDS-RNAIDs.txt -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/OLD/ContainsDuplicateSamples/CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz
 
-./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/allchr-mds-noENA-dupsremoved.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/MetaBrain-allchr-mds-noENA-dupsremoved.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz
 
-./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/allchr-mds-noENA-dupsremoved-outlierremoved.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/MetaBrain-allchr-mds-noENA-dupsremoved-outlierremoved.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz
+
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/MetaBrain-allchr-mds-noENA-dupsremoved-outlierremoved-VariantFilter.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz
+
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/MetaBrain-allchr-mds-dupsremoved-VariantFilter.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz
+
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/BIOS-allchr-mds-VariantFilter_genotypeID.txt.gz -std /groups/umcg-bios/tmp01/projects/PICALO/2021-10-28-DataPreprocessing/data/BIOS_GenotypeToDataset.txt.gz
+
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2020-11-10-PICALO/preprocess_scripts/pre_process_metabrain_expression_matrix/MetaBrain-CortexEUR-cis/data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.PCAOverSamplesEigenvectors.txt.gz -std /groups/umcg-biogen/tmp01/output/2020-11-10-PICALO/preprocess_scripts/pre_process_metabrain_expression_matrix/MetaBrain-CortexEUR-cis/data/SampleToDataset.txt.gz -transpose -n 4 -o MetaBrain-CortexEUR-cis -e png pdf 
+
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2020-11-10-PICALO/preprocess_scripts/pre_process_metabrain_expression_matrix/MetaBrain-CortexEUR-cis/data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.CovariatesRemovedOLS.PCAOverSamplesEigenvectors.txt.gz -std /groups/umcg-biogen/tmp01/output/2020-11-10-PICALO/preprocess_scripts/pre_process_metabrain_expression_matrix/MetaBrain-CortexEUR-cis/data/SampleToDataset.txt.gz -transpose -n 4 -o MetaBrain-CortexEUR-cis-CovariatesRemovedOLS -e png pdf 
+
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2020-11-10-PICALO/preprocess_scripts/pre_process_metabrain_expression_matrix/MetaBrain-CortexEUR-cis-NoENA-NoMDSOutlier/data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.PCAOverSamplesEigenvectors.txt.gz -std /groups/umcg-biogen/tmp01/output/2020-11-10-PICALO/preprocess_scripts/pre_process_metabrain_expression_matrix/MetaBrain-CortexEUR-cis-NoENA-NoMDSOutlier/data/SampleToDataset.txt.gz -transpose -n 4 -o MetaBrain-CortexEUR-cis-NoENA-NoMDSOutlier -e png pdf 
+
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2020-11-10-PICALO/preprocess_scripts/pre_process_metabrain_expression_matrix/MetaBrain-CortexEUR-cis-NoENA-NoMDSOutlier/data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.CovariatesRemovedOLS.PCAOverSamplesEigenvectors.txt.gz -std /groups/umcg-biogen/tmp01/output/2020-11-10-PICALO/preprocess_scripts/pre_process_metabrain_expression_matrix/MetaBrain-CortexEUR-cis-NoENA-NoMDSOutlier/data/SampleToDataset.txt.gz -transpose -n 4 -o MetaBrain-CortexEUR-cis-NoENA-NoMDSOutlierCovariatesRemovedOLS -e png pdf 
 """
 
 
@@ -71,7 +80,11 @@ class main():
         # Get the command line arguments.
         arguments = self.create_argument_parser()
         self.data_path = getattr(arguments, 'data')
+        self.n_columns = getattr(arguments, 'n_columns')
         self.std_path = getattr(arguments, 'sample_to_dataset')
+        self.transpose = getattr(arguments, 'transpose')
+        self.extensions = getattr(arguments, 'extension')
+        self.output_filename = getattr(arguments, 'output')
 
         # Set variables.
         self.outdir = os.path.join(str(Path(__file__).parent.parent), 'plot')
@@ -95,7 +108,40 @@ class main():
            "GTE-EUR-CMC_HBCC_set3": "#0877b4",
            "GTE-EUR-UCLA_ASD": "#f36d2a",
            "GTE-EUR-CMC": "#eae453",
+           "GTE-EUR-CMC_HBCC_set1": "#eae453",
+            "LL": "#56B4E9",
+            "PAN": "#CC79A7",
+            "LLS_OmniExpr": "#F0E442",
+            "NTR_AFFY": "#0072B2",
+            "NTR_GONL": "#D55E00",
+            "CODAM": "#E69F00",
+            "RS": "#009E73",
+            "LLS_660Q": "#E8E8E8"
         }
+
+        self.dataset_to_cohort = {
+            "GTE-EUR-AMPAD-MAYO-V2": "MAYO",
+            "GTE-EUR-CMC_HBCC_set2": "CMC HBCC",
+            "GTE-EUR-GTEx": "GTEx",
+            "GTE-EUR-AMPAD-ROSMAP-V2": "ROSMAP",
+            "GTE-EUR-BrainGVEX-V2": "Brain GVEx",
+            "GTE-EUR-TargetALS": "Target ALS",
+            "GTE-EUR-AMPAD-MSBB-V2": "MSBB",
+            "GTE-EUR-NABEC-H610": "NABEC",
+            "GTE-EUR-LIBD_1M": "LIBD",
+            "GTE-EUR-ENA": "ENA",
+            "GTE-EUR-LIBD_h650": "LIBD",
+            "GTE-EUR-GVEX": "GVEX",
+            "GTE-EUR-NABEC-H550": "NABEC",
+            "GTE-EUR-CMC_HBCC_set3": "CMC HBCC",
+            "GTE-EUR-UCLA_ASD": "UCLA ASD",
+            "GTE-EUR-CMC": "CMC",
+            "GTE-EUR-CMC_HBCC_set1": "CMC HBCC"
+        }
+
+        # Set the right pdf font for exporting.
+        matplotlib.rcParams['pdf.fonttype'] = 42
+        matplotlib.rcParams['ps.fonttype'] = 42
 
     @staticmethod
     def create_argument_parser():
@@ -114,11 +160,33 @@ class main():
                             type=str,
                             required=True,
                             help="The path to the input data.")
+        parser.add_argument("-n",
+                            "--n_columns",
+                            type=int,
+                            default=None,
+                            help="The number of columns to plot.")
         parser.add_argument("-std",
                             "--sample_to_dataset",
                             type=str,
                             required=True,
                             help="The path to the sample-to-dataset matrix.")
+        parser.add_argument("-transpose",
+                            action='store_true',
+                            help="Combine the created files with force."
+                                 " Default: False.")
+        parser.add_argument("-e",
+                            "--extension",
+                            nargs="+",
+                            type=str,
+                            choices=["png", "pdf", "eps"],
+                            default=["png"],
+                            help="The figure file extension. "
+                                 "Default: 'png'.")
+        parser.add_argument("-o",
+                            "--output",
+                            type=str,
+                            default="PlotPerColumn_ColorByCohort",
+                            help="The name of the output file.")
 
         return parser.parse_args()
 
@@ -127,6 +195,10 @@ class main():
 
         print("Loading data.")
         df = self.load_file(self.data_path, header=0, index_col=0)
+        if self.transpose:
+            df = df.T
+        if self.n_columns is not None:
+            df = df.iloc[:, :self.n_columns]
         columns = list(df.columns)
 
         print("Loading sample to dataset")
@@ -147,7 +219,42 @@ class main():
                   columns=columns,
                   hue="dataset",
                   palette=self.palette,
-                  name=os.path.basename(self.data_path).split(".")[0])
+                  name=self.output_filename)
+        #
+        # pheno_df = self.load_file("../preprocess_scripts/preprocess_ampad_phenotype_file/ampad_phenotype_df.txt.gz", sep="\t", header=0, index_col=1)
+        # print(pheno_df)
+        # pheno_df = pheno_df.loc[:, [x for x in pheno_df.columns if x not in ["genotype_id", "dataset"]]]
+        # pheno_df.fillna("-", inplace=True)
+        #
+        # df = df.merge(pheno_df, left_index=True, right_index=True)
+        #
+        # colors = ["#E69F00", "#56B4E9", "#CC79A7", "#F0E442", "#0072B2",
+        #           "#D55E00", "#009E73", "#E8E8E8", "#D3D3D3", "#A9A9A9",
+        #           "#808080"]
+        # for hue in pheno_df.columns:
+        #     hue_groups = list(df[hue].unique())
+        #
+        #     if "-" in hue_groups and len(hue_groups) <= 2:
+        #         continue
+        #     if len(hue_groups) > len(colors):
+        #         continue
+        #
+        #     palette = {"-": "#000000"}
+        #     for i, hue_group in enumerate(hue_groups):
+        #         if hue_group == "-":
+        #             i -= 1
+        #             continue
+        #
+        #         palette[hue_group] = colors[i % len(colors)]
+        #     print(palette)
+        #
+        #     self.plot(df=df,
+        #               columns=columns,
+        #               hue=hue,
+        #               palette=palette,
+        #               name=os.path.basename(self.data_path).split(".")[0] + "_" + hue,
+        #               title=hue)
+
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
@@ -159,7 +266,7 @@ class main():
                                       df.shape))
         return df
 
-    def plot(self, df, columns, hue, palette, name):
+    def plot(self, df, columns, hue, palette, name, title=""):
         ncols = len(columns)
         nrows = len(columns)
 
@@ -180,9 +287,15 @@ class main():
                     if hue is not None and palette is not None:
                         groups_present = df[hue].unique()
                         handles = []
-                        for key, value in self.palette.items():
+                        added_handles = []
+                        for key, value in palette.items():
                             if key in groups_present:
-                                handles.append(mpatches.Patch(color=value, label=key))
+                                label = key
+                                if key in self.dataset_to_cohort:
+                                    label = self.dataset_to_cohort[key]
+                                if value + label not in added_handles:
+                                    handles.append(mpatches.Patch(color=value, label=label))
+                                    added_handles.append(value + label)
                         ax.legend(handles=handles, loc=4, fontsize=25)
 
                 elif i < j:
@@ -203,8 +316,19 @@ class main():
 
                     sns.scatterplot(x=x_col,
                                     y=y_col,
+                                    # hue=hue,
+                                    color="#000000",
+                                    alpha=0.2,
+                                    data=df.loc[df[hue] == "-", :],
+                                    s=100,
+                                    palette=palette,
+                                    linewidth=0,
+                                    legend=False,
+                                    ax=ax)
+                    sns.scatterplot(x=x_col,
+                                    y=y_col,
                                     hue=hue,
-                                    data=df,
+                                    data=df.loc[df[hue] != "-", :],
                                     s=100,
                                     palette=palette,
                                     linewidth=0,
@@ -218,13 +342,22 @@ class main():
                                   fontsize=20,
                                   fontweight='bold')
 
-        fig.savefig(os.path.join(self.outdir, "{}_PlotPerColumn_ColorByCohort.png".format(name)))
+        fig.suptitle(title,
+                     fontsize=40,
+                     fontweight='bold')
+
+        for extension in self.extensions:
+            fig.savefig(os.path.join(self.outdir, "{}.{}".format(name, extension)))
         plt.close()
 
     def print_arguments(self):
         print("Arguments:")
         print("  > Data path: {}".format(self.data_path))
+        print("  > N-columns: {}".format(self.n_columns))
         print("  > Sample-to-dataset path: {}".format(self.std_path))
+        print("  > Transpose: {}".format(self.transpose))
+        print("  > Extension: {}".format(self.extensions))
+        print("  > Output filename: {}".format(self.output_filename))
         print("  > Output directory {}".format(self.outdir))
         print("")
 

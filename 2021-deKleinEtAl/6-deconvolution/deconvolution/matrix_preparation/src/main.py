@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/10/08
-Last Changed: 2021/07/08
+Last Changed: 2021/10/28
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -165,21 +165,21 @@ class Main:
         cm.clear_variables()
         self.log.info("")
 
-        # Step5. Correct the gene expression for dataset effects.
-        self.log.info("### STEP5 ###")
-        self.log.info("")
-        cde = CorrectDatasetEffects(
-            settings=self.settings.get_setting('correct_dataset_effects'),
-            log=self.log,
-            dataset_file=cdm.get_dataset_file(),
-            dataset_df=cdm.get_dataset_df(),
-            sign_expr_file=cm.get_sign_expr_file(),
-            sign_expr_df=cm.get_sign_expr_df(),
-            force=self.force_dict['correct_dataset_effects'],
-            outdir=self.outdir)
-        cde.start()
-        cde.clear_variables()
-        self.log.info("")
+        # # Step5. Correct the gene expression for dataset effects.
+        # self.log.info("### STEP5 ###")
+        # self.log.info("")
+        # cde = CorrectDatasetEffects(
+        #     settings=self.settings.get_setting('correct_dataset_effects'),
+        #     log=self.log,
+        #     dataset_file=cdm.get_dataset_file(),
+        #     dataset_df=cdm.get_dataset_df(),
+        #     sign_expr_file=cm.get_sign_expr_file(),
+        #     sign_expr_df=cm.get_sign_expr_df(),
+        #     force=self.force_dict['correct_dataset_effects'],
+        #     outdir=self.outdir)
+        # cde.start()
+        # cde.clear_variables()
+        # self.log.info("")
 
         # Step6. Perform NNLS deconvolution.
         self.log.info("### STEP6 ###")
@@ -189,8 +189,8 @@ class Main:
             log=self.log,
             sign_file=cm.get_sign_file(),
             sign_df=cm.get_sign_df(),
-            sign_expr_file=cde.get_sign_expr_dc_file(),
-            sign_expr_df=cde.get_sign_expr_dc_df(),
+            sign_expr_file=cm.get_sign_expr_file(),
+            sign_expr_df=cm.get_sign_expr_df(),
             force=self.force_dict['perform_deconvolution'],
             outdir=self.outdir)
         pd.start()

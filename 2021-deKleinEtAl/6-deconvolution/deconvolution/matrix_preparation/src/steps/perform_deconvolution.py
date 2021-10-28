@@ -1,7 +1,7 @@
 """
 File:         perform_deconvolution.py
 Created:      2020/10/08
-Last Changed: 2020/11/20
+Last Changed: 2021/10/28
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -113,7 +113,7 @@ class PerformDeconvolution:
 
         decon_df = pd.DataFrame(decon_data,
                                 index=expr_df.columns,
-                                columns=["{}NNLS_{}".format(*x.split("_")) for x in sign_df.columns])
+                                columns=sign_df.columns)
         residuals_df = pd.Series(residuals_data, index=expr_df.columns)
 
         self.log.info("Estimated weights:")

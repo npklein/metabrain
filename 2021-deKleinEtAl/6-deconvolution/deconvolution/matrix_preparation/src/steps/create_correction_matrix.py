@@ -1,7 +1,7 @@
 """
 File:         create_correction_matrix.py
 Created:      2020/10/15
-Last Changed: 2021/07/28
+Last Changed: 2021/10/21
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -24,7 +24,7 @@ import os
 
 # Third party imports.
 import pandas as pd
-import sympy
+from functools import reduce
 
 # Local application imports.
 from utilities import prepare_output_dir, check_file_exists, load_dataframe, \
@@ -34,9 +34,8 @@ from utilities import prepare_output_dir, check_file_exists, load_dataframe, \
 class CreateCorrectionMatrix:
     def __init__(self, settings, log, dataset_file, dataset_df, sample_dict,
                  sample_order, force, outdir):
-        self.cov_file = settings["covariates_datafile"]
-        self.tech_covs = settings["technical_covariates"]
-        self.mds_covs = settings["MDS_covariates"]
+        self.cov_file = settings["tech_covariates_datafile"]
+        self.mds_file = settings["mds_datafile"]
         self.log = log
         self.dataset_file = dataset_file
         self.dataset_df = dataset_df
@@ -53,6 +52,8 @@ class CreateCorrectionMatrix:
 
         # Create empty variable.
         self.correction_df = None
+        self.n_tech_covs = 0
+        self.n_mds = 0
 
     def start(self):
         self.log.info("Starting creating technical covariate file.")
@@ -66,23 +67,41 @@ class CreateCorrectionMatrix:
             self.log.info("Skipping step.")
 
     def create_tech_covs_file(self):
-        # Load the sample info.
-        self.log.info("Loading covariates matrix.")
-        cov_df = load_dataframe(inpath=self.cov_file,
+        # Load the technical covariates.
+        self.log.info("Loading technical covariates matrix.")
+        tcov_df = load_dataframe(inpath=self.cov_file,
+                                 header=0,
+                                 index_col=0,
+                                 logger=self.log)
+
+        # Filter on samples and technical covariates.
+        self.log.info("Filtering on samples and technical covariates.")
+        tcov_df.index = [self.sample_dict[x] if x in self.sample_dict else x for x in tcov_df.index]
+        tcov_df = tcov_df.loc[self.sample_order, :].copy()
+        save_dataframe(df=tcov_df.T, outpath=os.path.join(self.outdir, "technical_covariates_table.txt.gz"),
+                       index=True, header=True, logger=self.log)
+
+        # Load the MDS components.
+        self.log.info("Loading MDS matrix.")
+        mds_df = load_dataframe(inpath=self.mds_file,
                                 header=0,
                                 index_col=0,
                                 logger=self.log)
 
         # Filter on samples and technical covariates.
         self.log.info("Filtering on samples and technical covariates.")
-        cov_df.index = [self.sample_dict[x] if x in self.sample_dict else x for
-                        x in cov_df.index]
-        correction_df = cov_df.loc[self.sample_order, :].copy()
-        del cov_df
-        self.log.info("\tNew shape: {}".format(correction_df.shape))
+        mds_df.index = [self.sample_dict[x] if x in self.sample_dict else x for x in mds_df.index]
+        mds_df = mds_df.loc[self.sample_order, :].copy()
 
-        # loading cohort matrix.
-        self.log.info("Loading cohort matrix.")
+        save_dataframe(df=mds_df.T, outpath=os.path.join(self.outdir, "mds_covariates_table.txt.gz"),
+                       index=True, header=True, logger=self.log)
+
+        tmp_combined_df = tcov_df.merge(mds_df, left_index=True, right_index=True)
+        save_dataframe(df=tmp_combined_df.T, outpath=os.path.join(self.outdir, "technical_and_mds_covariates_table.txt.gz"),
+                       index=True, header=True, logger=self.log)
+
+        # Loading cohort matrix.
+        self.log.info("Loading dataset matrix.")
         if self.dataset_df is None:
             self.dataset_df = load_dataframe(self.dataset_file,
                                              header=0,
@@ -91,9 +110,16 @@ class CreateCorrectionMatrix:
 
         # merge.
         self.log.info("Merging matrices.")
-        correction_df = pd.merge(correction_df, self.dataset_df, left_index=True, right_index=True)
+        correction_df = reduce(lambda left, right: pd.merge(left,
+                                                           right,
+                                                           left_index=True,
+                                                           right_index=True),
+                             [tcov_df,
+                              mds_df,
+                              self.dataset_df])
         correction_df = correction_df.T
         correction_df.index.name = "-"
+        self.log.info("\t Correction matrix shape: {}".format(correction_df.shape))
 
         # Validate sample order.
         if not correction_df.columns.equals(self.sample_order):
@@ -104,19 +130,11 @@ class CreateCorrectionMatrix:
     def save(self):
         save_dataframe(df=self.correction_df, outpath=self.outpath,
                        index=True, header=True, logger=self.log)
-        save_dataframe(df=self.correction_df.loc[self.tech_covs, :], outpath=os.path.join(self.outdir, "technical_covariates_table.txt.gz"),
-                       index=True, header=True, logger=self.log)
-        save_dataframe(df=self.correction_df.loc[self.mds_covs, :], outpath=os.path.join(self.outdir, "mds_covariates_table.txt.gz"),
-                       index=True, header=True, logger=self.log)
-        save_dataframe(df=self.correction_df.loc[self.tech_covs + self.mds_covs, :], outpath=os.path.join(self.outdir, "technical_and_mds_covariates_table.txt.gz"),
-                       index=True, header=True, logger=self.log)
 
     def clear_variables(self):
         self.dataset_file = None
         self.dataset_df = None
         self.cov_file = None
-        self.tech_covs = None
-        self.mds_covs = None
         self.force = None
 
     def get_correction_file(self):
@@ -128,8 +146,7 @@ class CreateCorrectionMatrix:
     def print_arguments(self):
         self.log.info("Arguments:")
         self.log.info("  > Covariates input file: {}".format(self.cov_file))
-        self.log.info("  > Technical Covarates: {}".format(self.tech_covs))
-        self.log.info("  > MDS Covarates: {}".format(self.mds_covs))
+        self.log.info("  > MDS input file: {}".format(self.mds_file))
         if self.dataset_df is not None:
             self.log.info("  > Cohort input shape: {}".format(self.dataset_df.shape))
         else:

@@ -1,7 +1,7 @@
 """
 File:         create_cov_matrices.py
 Created:      2020/10/08
-Last Changed: 2021/07/08
+Last Changed: 2021/10/21
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -33,13 +33,18 @@ class CreateCovsMatrix:
     def __init__(self, settings, log, decon_file, decon_df, sample_dict,
                  sample_order, force, outdir):
         self.eig_file = settings["eigenvectors_datafile"]
-        self.n_eigen = settings["num_eigenvectors"]
+        n_eigen = settings["num_eigenvectors"]
+        if not isinstance(n_eigen, list):
+            n_eigen = [n_eigen]
+        self.n_eigen = n_eigen
         self.log = log
         self.decon_file = decon_file
         self.decon_df = decon_df
         self.sample_dict = sample_dict
         self.sample_order = sample_order
         self.force = force
+
+
 
         # Prepare an output directories.
         self.outdir = os.path.join(outdir, 'create_covs_matrix')
@@ -63,12 +68,15 @@ class CreateCovsMatrix:
     def create_covs_file(self):
         # read the eigenvectors file.
         self.log.info("Loading eigenvectors matrix.")
-        eigen_df = load_dataframe(self.eig_file, header=0, index_col=0,
-                                  nrows=self.n_eigen, logger=self.log)
+        eigen_df = load_dataframe(self.eig_file, header=0, index_col=0, nrows=max(self.n_eigen), logger=self.log)
         if len(set(self.sample_order).intersection(set(eigen_df.columns))) == 0:
             eigen_df = eigen_df.T
         eigen_df.columns = [self.sample_dict[x] if x in self.sample_dict else x for x in eigen_df.columns]
         eigen_df = eigen_df.loc[:, self.sample_order]
+
+        for n_eigen in self.n_eigen:
+            save_dataframe(df=eigen_df.iloc[:n_eigen, :], outpath=os.path.join(self.outdir, "first{}PCComponents.txt.gz".format(n_eigen)),
+                           index=True, header=True, logger=self.log)
 
         # loading deconvolution matrix.
         self.log.info("Loading deconvolution matrix.")
@@ -96,8 +104,6 @@ class CreateCovsMatrix:
 
     def save(self):
         save_dataframe(df=self.covs_df, outpath=self.outpath,
-                       index=True, header=True, logger=self.log)
-        save_dataframe(df=self.covs_df.iloc[:25, :], outpath=os.path.join(self.outdir, "first25PCComponents.txt.gz"),
                        index=True, header=True, logger=self.log)
 
     def clear_variables(self):

@@ -50,9 +50,15 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax: 
-./preprocess_mds_file.py -d ../data/allchr-mds-noENA-dupsremoved.mds -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/OLD/ContainsDuplicateSamples/CortexEUR-cis/combine_gte_files/GTE_combined.txt.gz
+./preprocess_mds_file.py -d ../data/MetaBrain-allchr-mds-noENA-dupsremoved.mds -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/OLD/ContainsDuplicateSamples/CortexEUR-cis/combine_gte_files/GTE_combined.txt.gz
 
-./preprocess_mds_file.py -d ../data/allchr-mds-noENA-dupsremoved-outlierremoved.mds -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/OLD/ContainsDuplicateSamples/CortexEUR-cis/combine_gte_files/GTE_combined.txt.gz
+./preprocess_mds_file.py -d ../data/MetaBrain-allchr-mds-noENA-dupsremoved-outlierremoved.mds -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/OLD/ContainsDuplicateSamples/CortexEUR-cis/combine_gte_files/GTE_combined.txt.gz
+
+./preprocess_mds_file.py -d ../data/MetaBrain-allchr-mds-noENA-dupsremoved-outlierremoved-VariantFilter.mds -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/OLD/ContainsDuplicateSamples/CortexEUR-cis/combine_gte_files/GTE_combined.txt.gz
+
+./preprocess_mds_file.py -d ../data/MetaBrain-allchr-mds-dupsremoved-VariantFilter.mds -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/OLD/ContainsDuplicateSamples/CortexEUR-cis/combine_gte_files/GTE_combined.txt.gz
+
+./preprocess_mds_file.py -d /groups/umcg-bios/tmp01/resources/genotypes-hrc-imputed-vcf/2021-10-28-mds-all-VariantFilter/allchr-mds-VariantFilter.mds -gte /groups/umcg-bios/prm03/projects/BIOS_EGCUT_for_eQTLGen/BIOS_EGCUT/eqtlpipeline_bios_egcut_backup010517/GTE_LLDEEP_and_BIOS_last_related_removed_110417.txt -op BIOS-
 """
 
 
@@ -62,6 +68,7 @@ class main():
         arguments = self.create_argument_parser()
         self.data_path = getattr(arguments, 'data')
         self.gte_path = getattr(arguments, 'gene_to_exression')
+        self.output_prefix = getattr(arguments, 'output_prefix')
 
         self.outdir = os.path.join(str(Path(__file__).parent.parent), 'preprocess_mds_file')
         if not os.path.exists(self.outdir):
@@ -88,6 +95,12 @@ class main():
                             "--gene_to_exression",
                             type=str,
                             required=True,
+                            help="The path to the GtE file.")
+        parser.add_argument("-op",
+                            "--output_prefix",
+                            type=str,
+                            required=False,
+                            default="",
                             help="The path to the GtE file.")
 
         return parser.parse_args()
@@ -118,11 +131,21 @@ class main():
         df.set_index("IID", inplace=True)
         df.index.name = "-"
         df = df.loc[:, ["C1", "C2", "C3", "C4"]]
+
+        print("Saving file")
+        outpath = os.path.join(self.outdir, self.output_prefix + os.path.basename(self.data_path).split(".")[0] + "_genotypeID.txt.gz")
+        df.to_csv(outpath, compression="gzip", sep="\t", header=True, index=True)
+        print("\tSaved dataframe: {} "
+                    "with shape: {}".format(os.path.basename(outpath),
+                                            df.shape))
+
+        print("Tranlsating")
+
         df.index = [gte_dict[genotype_id] if genotype_id in gte_dict else genotype_id for genotype_id in df.index]
         print(df)
 
         print("Saving file")
-        outpath = os.path.join(self.outdir, os.path.basename(self.data_path).split(".")[0] + ".txt.gz")
+        outpath = os.path.join(self.outdir, self.output_prefix + os.path.basename(self.data_path).split(".")[0] + ".txt.gz")
         df.to_csv(outpath, compression="gzip", sep="\t", header=True, index=True)
         print("\tSaved dataframe: {} "
                     "with shape: {}".format(os.path.basename(outpath),
@@ -132,6 +155,7 @@ class main():
         print("Arguments:")
         print("  > Data: {}".format(self.data_path))
         print("  > GtE: {}".format(self.gte_path))
+        print("  > Output prefix: {}".format(self.output_prefix))
         print("")
 
 
