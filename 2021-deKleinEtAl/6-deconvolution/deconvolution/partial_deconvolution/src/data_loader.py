@@ -1,7 +1,7 @@
 """
 File:         data_loader.py
 Created:      2020/06/29
-Last Changed: 2021/10/13
+Last Changed: 2020/11/22
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -71,12 +71,15 @@ class DataLoader:
     def load(self):
         # Load the signature matrix.
         self.signature = self.load_signature(self.signature_path)
+        profile_genes = [gene.split(".")[0] for gene in self.signature.index]
 
         # Load the expression of the signature genes.
-        translate_dict = self.load_translate(self.translate_path)
-        self.expression = self.load_expression(self.data_path,
-                                               self.signature.index,
-                                               translate_dict)
+        translate_dict = None
+        if self.translate_path is not None:
+            translate_dict = self.load_translate(self.translate_path)
+        self.expression = self.load_expression(filepath=self.data_path,
+                                               profile_genes=profile_genes,
+                                               trans_dict=translate_dict)
 
     @staticmethod
     def load_signature(filepath):
@@ -91,7 +94,7 @@ class DataLoader:
         return dict(zip(df.loc[:, key], df.loc[:, value]))
 
     @staticmethod
-    def load_expression(filepath, profile_genes, trans_dict):
+    def load_expression(filepath, profile_genes, trans_dict=None):
         columns = []
         indices = []
         data_collection = []
@@ -107,13 +110,19 @@ class DataLoader:
                                                          len(profile_genes)))
 
                 splitted_line = np.array(line.decode().strip('\n').split('\t'))
-                index = splitted_line[0]
+                ensembl_id = splitted_line[0]
                 data = splitted_line[1:]
                 if i == 0:
                     columns = data
 
-                if index in trans_dict.keys() and trans_dict[index] in profile_genes and trans_dict[index] not in indices:
-                    indices.append(trans_dict[index])
+                if trans_dict is not None:
+                    ensembl_id = trans_dict[ensembl_id]
+
+                # Remove version.
+                ensembl_id = ensembl_id.split(".")[0]
+
+                if ensembl_id in profile_genes and ensembl_id not in indices:
+                    indices.append(ensembl_id)
                     data_collection.append([float(x) for x in data])
         f.close()
         print("\t\tfound {}/{} genes".format(len(data_collection), len(profile_genes)))

@@ -1,7 +1,7 @@
 """
 File:         settings.py
 Created:      2020/06/29
-Last Changed: 2021/10/19
+Last Changed: 2021/11/22
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -35,7 +35,7 @@ class Settings:
     def __init__(self, data_path, signature_path, translate_path,
                  ground_truth_path, sample_to_dataset_path, sample_filter_path,
                  dataset_filter, min_expr, dataset_correction, normalize, zscore,
-                 log2, decon_method, sum_to_one, extension):
+                 log2, decon_method, extension):
         self.data_path = data_path
         self.signature_path = signature_path
         self.translate_path = translate_path
@@ -51,7 +51,6 @@ class Settings:
         self.zscore = zscore
         self.log2 = log2
         self.decon_method = decon_method
-        self.sum_to_one = sum_to_one
         self.extension = extension
 
         self.outdir_path = None
@@ -112,9 +111,6 @@ class Settings:
 
     def get_decon_method(self):
         return self.decon_method
-
-    def get_sum_to_one(self):
-        return self.sum_to_one
 
     def get_extension(self):
         return self.extension
@@ -190,18 +186,16 @@ class Settings:
             rss_str = "{:.2f}".format(self.comparison_rss)
 
         return "min.expr.: {}, dataset corr.: {}, norm.: {}, z-score: {}, " \
-               "log2: {},\nsum-to-one: {}, avg.residuals: {}, " \
-               "avg.recon.accuracy.: {}% N: {}, " \
-               "RSS: {}".format(self.min_expr,
-                                self.dataset_correction,
-                                self.normalize,
-                                self.zscore,
-                                self.log2,
-                                self.sum_to_one,
-                                avg_resid_str,
-                                avg_recon_accuracy_str,
-                                self.comparison_n_samples,
-                                rss_str)
+               "log2: {},\navg.residuals: {}, avg.recon.accuracy.: {}%" \
+               " N: {}, RSS: {}".format(self.min_expr,
+                                        self.dataset_correction,
+                                        self.normalize,
+                                        self.zscore,
+                                        self.log2,
+                                        avg_resid_str,
+                                        avg_recon_accuracy_str,
+                                        self.comparison_n_samples,
+                                        rss_str)
 
     def save_data_settings(self):
         data = {"date time": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
@@ -231,7 +225,6 @@ class Settings:
                 "zscore": self.zscore,
                 "log2": self.log2,
                 "decon_method": self.decon_method,
-                "sum_to_one": self.sum_to_one,
                 "extension": self.extension,
                 "real_info_per_celltype": self.real_info_per_celltype,
                 "filter2_shape_diff": self.filter2_shape_diff,

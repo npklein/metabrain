@@ -1,7 +1,7 @@
 """
 File:         data_comparitor.py
 Created:      2020/06/30
-Last Changed: 2021/10/15
+Last Changed: 2020/11/22
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -57,24 +57,27 @@ class DataComparitor:
             print("Invalid order")
             exit()
 
-        # # Sum the Ex and Ih cell types.
-        # trans_dict = {
-        #     "Adult-Astrocytes": "Astrocyte",
-        #     "Adult-Endothelial": "EndothelialCell",
-        #     "Adult-Ex": "Neuron",
-        #     "Adult-In": "Neuron",
-        #     "Adult-Microglia": "Macrophage",
-        #     "Adult-OPC": "Oligodendrocyte",
-        #     "Adult-Oligo": "Oligodendrocyte",
-        #     "Adult-OtherNeuron": "Neuron",
-        #     "Dev-Quiescent": "Quiescent",
-        #     "Dev-Replicating": "Quiescent",
-        # }
-        # decon_df = decon_df.T
-        # decon_df["cell type"] = [trans_dict[y] for y in [''.join([i for i in x if not i.isdigit()]) for x in decon_df.index]]
-        # decon_df = decon_df.groupby("cell type").sum()
-        # decon_df = decon_df.T
-        # decon_df.columns.name = None
+        print(decon_df)
+        print(truth_df)
+
+        # Sum the Ex and Ih cell types.
+        trans_dict = {
+            "Adult-Astrocytes": "Astrocyte",
+            "Adult-Endothelial": "EndothelialCell",
+            "Adult-Ex": "Neuron",
+            "Adult-In": "Neuron",
+            "Adult-Microglia": "Macrophage",
+            "Adult-OPC": "Oligodendrocyte",
+            "Adult-Oligo": "Oligodendrocyte",
+            "Adult-OtherNeuron": "Neuron",
+            "Dev-Quiescent": "Quiescent",
+            "Dev-Replicating": "Quiescent",
+        }
+        decon_df = decon_df.T
+        decon_df["cell type"] = [trans_dict[y] for y in [''.join([i for i in x if not i.isdigit()]) for x in decon_df.index]]
+        decon_df = decon_df.groupby("cell type").sum()
+        decon_df = decon_df.T
+        decon_df.columns.name = None
 
         #
         # # cell_types = np.intersect1d(decon_df.columns, truth_df.columns)

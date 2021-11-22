@@ -35,11 +35,11 @@ import numpy as np
 class PerformDeconvolution:
     def __init__(self, settings, signature, expression):
         self.decon_method = settings.get_decon_method()
-        self.sum_to_one = settings.get_sum_to_one()
         self.outdir = settings.get_outsubdir_path()
         self.signature = signature
         self.expression = expression
 
+        self.deconvolution_raw = None
         self.deconvolution = None
         self.rss = None
         self.recon_accuracy = None
@@ -70,17 +70,17 @@ class PerformDeconvolution:
             rss_data.append(rnorm * rnorm)
             recon_accuracy_data.append(recon_accuracy)
 
-        deconvolution = pd.DataFrame(decon_data,
-                                     index=self.expression.columns,
-                                     columns=self.signature.columns)
+        deconvolution_raw = pd.DataFrame(decon_data,
+                                         index=self.expression.columns,
+                                         columns=self.signature.columns)
         rss = pd.Series(rss_data, index=self.expression.columns)
         recon_accuracy = pd.Series(recon_accuracy_data, index=self.expression.columns)
 
         # Make weights sum up to one.
-        if self.sum_to_one:
-            deconvolution = self.perform_sum_to_one(deconvolution)
+        deconvolution = self.perform_sum_to_one(deconvolution_raw)
 
         # Save.
+        self.deconvolution_raw = deconvolution_raw
         self.deconvolution = deconvolution
         self.rss = rss
         self.recon_accuracy = recon_accuracy
@@ -128,6 +128,14 @@ class PerformDeconvolution:
         return info
 
     def save(self):
+        self.deconvolution_raw.to_csv(os.path.join(self.outdir, 'deconvolution_raw.txt.gz'),
+                                      compression="gzip",
+                                      sep="\t",
+                                      header=True,
+                                      index=True)
+        print("\tsaved dataframe: deconvolution_raw.txt.gz "
+              "with shape: {}".format(self.deconvolution.shape))
+
         self.deconvolution.to_csv(os.path.join(self.outdir, 'deconvolution.txt.gz'),
                                   compression="gzip",
                                   sep="\t",

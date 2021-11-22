@@ -41,7 +41,9 @@ import matplotlib.patches as mpatches
 class Visualiser:
     def __init__(self, settings, signature, expression, deconvolution,
                  ground_truth, comparison):
-        self.outdir = settings.get_outsubdir_path()
+        self.outdir = os.path.join(settings.get_outsubdir_path(), "plot")
+        if not os.path.exists(self.outdir):
+            os.makedirs(self.outdir)
         self.extension = settings.get_extension()
         self.title = settings.get_title()
         self.subtitle = settings.get_subtitle()

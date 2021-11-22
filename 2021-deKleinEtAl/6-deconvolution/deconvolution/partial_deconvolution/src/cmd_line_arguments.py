@@ -1,7 +1,7 @@
 """
 File:         cmd_line_arguments.py
 Created:      2020/06/29
-Last Changed: 2020/08/04
+Last Changed: 2020/11/22
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -64,7 +64,8 @@ class CommandLineArguments:
         parser.add_argument("-t",
                             "--translate",
                             type=str,
-                            required=True,
+                            required=False,
+                            default=None,
                             help="The path to the gene to ensembl ID translate "
                                  "file.")
         parser.add_argument("-g",
@@ -130,10 +131,6 @@ class CommandLineArguments:
         parser.add_argument("-log2",
                             action='store_true',
                             help="Log2 transform the profile values."
-                                 " Default: False.")
-        parser.add_argument("-sum_to_one",
-                            action='store_true',
-                            help="Sum-to-one the deconvolution weights."
                                  " Default: False.")
         parser.add_argument("-dm",
                             "--decon_method",
