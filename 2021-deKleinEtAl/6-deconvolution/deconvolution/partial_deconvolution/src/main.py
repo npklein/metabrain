@@ -68,19 +68,25 @@ class Main:
 
         # Filter the samples.
         print("### Filtering")
-        df = DataFilter(settings=self.settings,
-                        raw_expression=dl.get_expression())
-        df.work()
-        df.print_info()
-        self.settings.set_filter1_shape_diff(df.get_shape_diff())
-        self.settings.set_reference_dataset(df.get_reference_dataset())
+        filtered_expression = dl.get_expression()
+        datasets = None
+        if self.settings.sample_to_dataset_path is not None:
+            df = DataFilter(settings=self.settings,
+                            raw_expression=filtered_expression)
+            df.work()
+            df.print_info()
+            self.settings.set_filter1_shape_diff(df.get_shape_diff())
+            self.settings.set_reference_dataset(df.get_reference_dataset())
+
+            filtered_expression = df.get_filtered_expression()
+            datasets = df.get_datasets()
 
         # Preprocessing.
         print("### Preprocessing")
         dp = DataPreprocessor(settings=self.settings,
                               raw_signature=dl.get_signature(),
-                              raw_expression=df.get_filtered_expression(),
-                              datasets=df.get_datasets())
+                              raw_expression=filtered_expression,
+                              datasets=datasets)
         dp.work()
         dp.print_info()
 

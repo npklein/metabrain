@@ -59,6 +59,8 @@ __description__ = "{} is a program developed and maintained by {}. " \
 Syntax:
 ./compare_cf_predictions.py -cf1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/partial_deconvolution/PSYCHENCODE_PROFILE_CORTEX_EUR_TMM_LOG2/IHC_0CPM_LOG2/deconvolution_raw.txt.gz -transpose1 -n1 MetaBrain -cf2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/PsychENCODE/Cell_fractions_Raw.txt.gz -n2 PsychENCODE_MyPredictions -o MetaBrain_vs_PsychENCODE_MyPredictions_CellFraction_comparison
 
+./compare_cf_predictions.py -cf1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/partial_deconvolution/PSYCHENCODE_PROFILE_CORTEX_EUR_TPM_LOG2/NoENA_IHC_0CPM_LOG2/deconvolution_raw.txt.gz -transpose1 -n1 MetaBrain_TPM_NoENA -cf2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/PsychENCODE/Cell_fractions_Raw.txt.gz -n2 PsychENCODE_MyPredictions -o MetaBrain_TPM_NoENA_vs_PsychENCODE_MyPredictions_CellFraction_comparison
+
 """
 
 

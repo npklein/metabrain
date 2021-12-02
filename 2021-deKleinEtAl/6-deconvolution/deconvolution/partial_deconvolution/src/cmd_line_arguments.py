@@ -84,7 +84,7 @@ class CommandLineArguments:
         parser.add_argument("-std",
                             "--sample_to_dataset",
                             type=str,
-                            required=True,
+                            required=False,
                             help="The path to the sample-to-dataset matrix.")
         parser.add_argument("-sf",
                             "--sample_filter",
