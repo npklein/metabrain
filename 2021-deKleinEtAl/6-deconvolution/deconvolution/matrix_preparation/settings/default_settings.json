@@ -11,7 +11,7 @@
     "in_filename": "",
     "iterations": 1
   },
-  "create_cohort_matrix": {
+  "create_dataset_matrix": {
   },
   "create_matrices": {
     "genotype_datafile": "",
@@ -24,15 +24,15 @@
     },
     "deconvolution_expr_datafile": ""
   },
-  "correct_cohort_effects": {
+  "correct_dataset_effects": {
 
   },
   "perform_deconvolution": {
     "min_expr_cutoff": 0
   },
-  "create_tech_covs_matrix": {
-    "covariate_datafile": "",
-    "technical_covariates": []
+  "create_correction_matrix": {
+    "tech_covariates_datafile": "",
+    "mds_datafile": ""
   },
   "create_covs_matrix": {
     "eigenvectors_datafile": "",

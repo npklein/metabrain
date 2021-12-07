@@ -69,6 +69,10 @@ Syntax:
 ./pre_process_decon_expression_matrix.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz -t /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-05-26-step5-remove-covariates-per-dataset/2020-05-25-covariatefiles/2020-02-17-freeze2dot1.TMM.Covariates.withBrainRegion-noncategorical-variable.top20correlated-cortex-withMDS.txt.gz -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR -p GTE-EUR- -of CortexEUR-cis-Normalised
 
 ./pre_process_decon_expression_matrix.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-04-step5-center-scale/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz -t /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-05-26-step5-remove-covariates-per-dataset/2020-05-25-covariatefiles/2020-02-17-freeze2dot1.TMM.Covariates.withBrainRegion-noncategorical-variable.top20correlated-cortex-withMDS.txt.gz -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-AFR -p GTE-AFR- -of CortexAFR-cis-Normalised
+
+### NEW ###
+
+./pre_process_decon_expression_matrix.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2021-08-27-step5-remove-covariates-per-dataset/output-PCATitration-MDSCorrectedPerDsCovarOverall-cortex-EUR/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz -ra /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis/create_correction_matrix/technical_covariates_table_top20.txt.gz -m /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis/create_correction_matrix/mds_covariates_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz -of 2021-12-07-CortexEUR-cis-Normalised
 """
 
 
@@ -77,11 +81,11 @@ class main():
         # Get the command line arguments.
         arguments = self.create_argument_parser()
         self.data_path = getattr(arguments, 'data')
-        self.tcov_path = getattr(arguments, 'technical_covariates')
-        self.gte_path = getattr(arguments, 'gene_to_expression')
-        self.gte_prefix = getattr(arguments, 'gte_prefix')
-        self.gte_exclude = getattr(arguments, 'gte_exclude')
-        self.sample_exclude_path = getattr(arguments, 'sample_exclude')
+        self.rna_alignment_path = getattr(arguments, 'rna_alignment')
+        self.sex_path = getattr(arguments, 'sex')
+        self.mds_path = getattr(arguments, 'mds')
+        self.expression_pcs_path = getattr(arguments, 'expression_pcs')
+        self.std_path = getattr(arguments, 'sample_to_dataset')
         outdir = getattr(arguments, 'outdir')
         outfolder = getattr(arguments, 'outfolder')
 
@@ -94,41 +98,29 @@ class main():
             if not os.path.exists(outdir):
                 os.makedirs(outdir)
 
-        self.file_cohort_dict = {
-            "AMPAD-MAYO-V2": "MAYO",
-            "CMC_HBCC_set2": "CMC HBCC",
-            "GTEx": "GTEx",
-            "AMPAD-ROSMAP-V2": "ROSMAP",
-            "BrainGVEX-V2": "Brain GVEx",
-            "TargetALS": "Target ALS",
-            "AMPAD-MSBB-V2": "MSBB",
-            "NABEC-H610": "NABEC",
-            "LIBD_1M": "LIBD",
-            "ENA": "ENA",
-            "LIBD_h650": "LIBD",
-            "GVEX": "GVEX",
-            "NABEC-H550": "NABEC",
-            "CMC_HBCC_set3": "CMC HBCC",
-            "UCLA_ASD": "UCLA ASD",
-            "CMC": "CMC",
-            "CMC_HBCC_set1": "CMC HBCC"
-        }
-
         self.palette = {
-            "MAYO": "#9c9fa0",
-            "CMC HBCC": "#0877b4",
-            "GTEx": "#0fa67d",
-            "ROSMAP": "#6950a1",
-            "Brain GVEx": "#48b2e5",
-            "Target ALS": "#d5c77a",
-            "MSBB": "#5cc5bf",
-            "NABEC": "#6d743a",
-            "LIBD": "#e49d26",
-            "ENA": "#d46727",
-            "GVEX": "#000000",
-            "UCLA ASD": "#f36d2a",
-            "CMC": "#eae453",
-            "NA": "#808080"
+            "AMPAD-MAYO-V2": "#9C9FA0",
+            "CMC_HBCC_set2": "#0877B4",
+            "GTEx": "#0FA67D",
+            "AMPAD-ROSMAP-V2": "#6950A1",
+            "BrainGVEX-V2": "#48B2E5",
+            "TargetALS": "#D5C77A",
+            "AMPAD-MSBB-V2": "#5CC5BF",
+            "NABEC-H610": "#6D743A",
+            "LIBD_1M": "#808080",
+            "LIBD_5M": "#808080",
+            "ENA": "#D46727",
+            "LIBD_h650": "#808080",
+            "GVEX": "#48B2E5",
+            "NABEC-H550": "#6D743A",
+            "CMC_HBCC_set3": "#0877B4",
+            "UCLA_ASD": "#F36D2A",
+            "CMC": "#EAE453",
+            "CMC_HBCC_set1": "#0877B4",
+            "Braineac": "#E49D26",
+            "Bipseq_1M": "#000000",
+            "Bipseq_h650": "#000000",
+            "Brainseq": "#C778A6"
         }
 
     @staticmethod
@@ -148,32 +140,36 @@ class main():
                             type=str,
                             required=True,
                             help="The path to the data matrix.")
-        parser.add_argument("-t",
-                            "--technical_covariates",
+        parser.add_argument("-ra",
+                            "--rna_alignment",
                             type=str,
-                            required=True,
-                            help="The path to the technical covariates matrix.")
-        parser.add_argument("-gte",
-                            "--gene_to_expression",
-                            type=str,
-                            required=True,
-                            help="The path to the gene-expression link files.")
-        parser.add_argument("-p",
-                            "--gte_prefix",
-                            type=str,
-                            required=True,
-                            help="The gene-expression link file prefix.")
-        parser.add_argument("-ge",
-                            "--gte_exclude",
-                            nargs="*",
-                            type=str,
-                            default=[],
-                            help="The gene-expression link files to exclude.")
-        parser.add_argument("-se",
-                            "--sample_exclude",
-                            type=str,
+                            required=False,
                             default=None,
-                            help="The samples to exclude. Default: None.")
+                            help="The path to the RNAseq alignment metrics"
+                                 " matrix.")
+        parser.add_argument("-s",
+                            "--sex",
+                            type=str,
+                            required=False,
+                            default=None,
+                            help="The path to the sex matrix.")
+        parser.add_argument("-m",
+                            "--mds",
+                            type=str,
+                            required=False,
+                            default=None,
+                            help="The path to the mds matrix.")
+        parser.add_argument("-ep",
+                            "--expression_pcs",
+                            type=str,
+                            required=False,
+                            default=None,
+                            help="The path to the expression pcs matrix.")
+        parser.add_argument("-std",
+                            "--sample_to_dataset",
+                            type=str,
+                            required=True,
+                            help="The path to the sample-to-dataset matrix.")
         parser.add_argument("-od",
                             "--outdir",
                             type=str,
@@ -195,58 +191,23 @@ class main():
         # Construct the output filename.
         filename = os.path.basename(self.data_path).replace(".gz", "").replace(".txt", "")
 
-        # Loading samples.
-        print("Loading samples.")
-        gte_combined_df = None
-        dataset_to_sample_dict = {}
-        for infile in glob.glob(os.path.join(self.gte_path, "{}*.txt".format(self.gte_prefix))):
-            file = os.path.basename(infile).replace(".txt", "").replace(self.gte_prefix, "")
-            if file in self.gte_exclude:
-                continue
-            gte_df = self.load_file(infile, header=None, index_col=None)
-            gte_df["file"] = file
-            if gte_combined_df is None:
-                gte_combined_df = gte_df
-            else:
-                gte_combined_df = pd.concat([gte_combined_df, gte_df], axis=0, ignore_index=True)
+        # Load sample-dataset file.
+        print("Loading sample-to-dataset.")
+        std_df = self.load_file(self.std_path, header=0, index_col=None)
+        # Pre-process data.
+        print("Pre-processing samples-to-dataset.")
+        samples = std_df.iloc[:, 0].values.tolist()
+        sample_to_dataset = dict(zip(std_df.iloc[:, 0], std_df.iloc[:, 1]))
 
-            dataset_to_sample_dict[file] = set(gte_df.iloc[:, 1].values)
-        gte_combined_df["cohort"] = gte_combined_df.iloc[:, 2].map(self.file_cohort_dict)
-        sample_to_cohort = dict(zip(gte_combined_df.iloc[:, 1], gte_combined_df.iloc[:, 3]))
-        samples = gte_combined_df.iloc[:, 1].values.tolist()
-        print("\tN samples: {}".format(len(samples)))
-
-        # Remove samples to exclude.
-        if self.sample_exclude_path is not None:
-            sample_exclude_df = self.load_file(self.sample_exclude_path, header=None, index_col=None)
-            sample_to_exclude = sample_exclude_df.iloc[:, 0].tolist()
-            print("\tRemoving N samples: {}".format(len(sample_to_exclude)))
-
-            gte_combined_df = gte_combined_df.loc[~gte_combined_df.iloc[:, 1].isin(sample_to_exclude), :]
-            samples = gte_combined_df.iloc[:, 1].values.tolist()
-            print("\tN samples: {}".format(len(samples)))
-
-        # Safe sample cohort data frame.
-        sample_cohort_df = gte_combined_df.iloc[:, [1, 3]]
-        sample_cohort_df.columns = ["sample", "cohort"]
-        self.save_file(sample_cohort_df, outpath=os.path.join(self.file_outdir, "SampleToCohort.txt.gz"), index=False)
-        sample_dataset_df = gte_combined_df.iloc[:, [1, 2]]
-        sample_dataset_df.columns = ["sample", "dataset"]
-        self.save_file(sample_dataset_df, outpath=os.path.join(self.file_outdir, "SampleToDataset.txt.gz"), index=False)
-
-        # Create cohort matrix.
-        dataset_sample_counts = list(zip(*np.unique(gte_combined_df["file"], return_counts=True)))
+        dataset_sample_counts = list(zip(*np.unique(std_df.iloc[:, 1], return_counts=True)))
         dataset_sample_counts.sort(key=lambda x: -x[1])
         datasets = [csc[0] for csc in dataset_sample_counts]
         print("\tDatasets: {} [N = {}]".format(", ".join(datasets), len(datasets)))
 
-        dataset_df = pd.DataFrame(0, index=samples, columns=datasets)
-        samples_set = set(samples)
-        for dataset in datasets:
-            dataset_samples = dataset_to_sample_dict[dataset]
-            dataset_samples = dataset_samples.intersection(samples_set)
-            dataset_df.loc[dataset_samples, dataset] = 1
-        dataset_df.index.name = "-"
+        dataset_s = std_df.copy()
+        dataset_s.set_index(std_df.columns[0], inplace=True)
+        dataset_df = pd.get_dummies(dataset_s, prefix="", prefix_sep="")
+        dataset_df = dataset_df.loc[:, datasets]
 
         # Load data.
         print("Loading data.")
@@ -270,25 +231,46 @@ class main():
 
         print("Step 4: PCA analysis.")
         self.pca(df=df,
-                 sample_to_cohort=sample_to_cohort,
+                 sample_to_dataset=sample_to_dataset,
                  plot_appendix="_1_Log2Transformed")
 
-        # print("Step 5: save mean and std per gene.")
-        # mean = df.mean(axis=1)
-        # std = df.std(axis=1)
+        print("Step 6: Construct correction matrix.")
+        ram_df = None
+        if self.rna_alignment_path is not None:
+            ram_df = self.load_file(self.rna_alignment_path, header=0, index_col=0)
+            ram_df = ram_df.loc[:, samples].T
 
-        print("Step 6: Construct technical covariate matrix.")
-        tcov_df = self.load_file(self.tcov_path, header=0, index_col=0)
-        tcov_df = self.prepare_technical_covariates_matrix(tcov_df=tcov_df.loc[samples, :], dataset_df=dataset_df)
+        sex_df = None
+        if self.sex_path is not None:
+            sex_df = self.load_file(self.sex_path, header=0, index_col=0)
+            sex_df = sex_df.loc[:, samples].T
+
+        mds_df = None
+        if self.mds_path is not None:
+            mds_df = self.load_file(self.mds_path, header=0, index_col=0)
+            mds_df = mds_df.loc[:, samples].T
+
+        expr_pcs_df = None
+        if self.expression_pcs_path is not None:
+            expr_pcs_df = self.load_file(self.expression_pcs_path, header=0, index_col=0)
+            expr_pcs_df = expr_pcs_df.loc[:, samples].T
+
+        correction_df = self.prepare_correction_matrix(ram_df=ram_df,
+                                                       sex_df=sex_df,
+                                                       mds_df=mds_df,
+                                                       expr_pcs_df=expr_pcs_df,
+                                                       dataset_df=dataset_df)
+
+        print("\tSaving file.")
+        self.save_file(df=correction_df, outpath=os.path.join(self.file_outdir, "correction_matrix1.txt.gz"))
 
         print("Step 7: remove technical covariates OLS.")
-        corrected_df = self.calculate_residuals(df=df, tcov_df=tcov_df)
+        corrected_df = self.calculate_residuals(df=df, correction_df=correction_df)
         self.save_file(df=corrected_df, outpath=os.path.join(self.file_outdir, "{}.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.txt.gz".format(filename)))
-        # corrected_df = self.load_file(os.path.join(self.file_outdir, "{}.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.txt.gz".format(filename)), header=0, index_col=0)
 
         print("Step 8: PCA analysis.")
         self.pca(df=corrected_df,
-                 sample_to_cohort=sample_to_cohort,
+                 sample_to_dataset=sample_to_dataset,
                  plot_appendix="_2_Log2Transformed_CovariatesRemovedOLS")
 
         print("Step 9: force normalise.")
@@ -296,16 +278,8 @@ class main():
 
         print("Step 10: PCA analysis.")
         self.pca(df=normal_df,
-                 sample_to_cohort=sample_to_cohort,
+                 sample_to_dataset=sample_to_dataset,
                  plot_appendix="_3_Log2Transformed_CovariatesRemovedOLS_ForceNormalised")
-
-        # print("Step 11: return distribution shape and location.")
-        # normal_df = normal_df.subtract(normal_df.mean(axis=1), axis=0).mul(std / normal_df.std(axis=1), axis=0).add(mean, axis=0)
-
-        print("Step 12: PCA analysis.")
-        self.pca(df=normal_df,
-                 sample_to_cohort=sample_to_cohort,
-                 plot_appendix="_4_Log2Transformed_CovariatesRemovedOLS_ForceNormalised_ScaleAndLocReturned")
 
         print("Step 13: exp added.")
         decon_df = np.power(2, normal_df)
@@ -314,8 +288,8 @@ class main():
 
         print("Step 14: PCA analysis.")
         self.pca(df=decon_df,
-                 sample_to_cohort=sample_to_cohort,
-                 plot_appendix="_5_Log2Transformed_CovariatesRemovedOLS_ForceNormalised_ExpAdded")
+                 sample_to_dataset=sample_to_dataset,
+                 plot_appendix="_4_Log2Transformed_CovariatesRemovedOLS_ForceNormalised_ExpAdded")
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
@@ -357,64 +331,50 @@ class main():
 
         return out_dict
 
-    def prepare_technical_covariates_matrix(self, tcov_df, dataset_df):
-        df = tcov_df.copy()
+    def prepare_correction_matrix(self, ram_df, sex_df, mds_df, expr_pcs_df, dataset_df):
+        ram_df_subset_df = None
+        if ram_df is not None:
+            # Remove columns without variance and filter the RNAseq alignment
+            # metrics on VIF.
+            ram_df_subset_df = ram_df.copy()
+            ram_df_subset_df = self.remove_multicollinearity(ram_df_subset_df.loc[:, ram_df_subset_df.std(axis=0) != 0])
 
-        # Remove columns without variance.
-        df = df.loc[:, df.std(axis=0) != 0]
+        # Merge the RNAseq alignment metrics with the sex and genotype
+        # MDS components.
+        correction_df = None
+        if ram_df is not None:
+            correction_df = ram_df
 
-        # Split the technical covariates matrix into technical covariates,
-        # MDS components and cohort dummy variables.
-        tech_cov_mask = np.zeros(df.shape[1], dtype=bool)
-        mds_mask = np.zeros(df.shape[1], dtype=bool)
-        cohort_mask = np.zeros(df.shape[1], dtype=bool)
-        for i, col in enumerate(df.columns):
-            if "MDS" in col:
-                mds_mask[i] = True
-            elif set(df[col].unique()) == {0, 1}:
-                cohort_mask[i] = True
+        if sex_df is not None:
+            if correction_df is not None:
+                correction_df = ram_df_subset_df.merge(sex_df, left_index=True, right_index=True)
             else:
-                tech_cov_mask[i] = True
-        print("\tColumn in input file:")
-        print("\t  > N-technical covariates: {}".format(np.sum(tech_cov_mask)))
-        print("\t  > N-MDS components: {}".format(np.sum(mds_mask)))
-        print("\t  > N-cohort dummy variables: {}".format(np.sum(cohort_mask)))
+                correction_df = sex_df
 
-        # Create an intercept data frame.
-        intecept_df = pd.DataFrame(1, index=df.index, columns=["INTERCEPT"])
+        if mds_df is not None:
+            if correction_df is not None:
+                correction_df = correction_df.merge(mds_df, left_index=True, right_index=True)
+            else:
+                correction_df = mds_df
 
-        # filter the technical covariates on VIF.
-        tech_cov_df = self.remove_multicollinearity(df.loc[:, tech_cov_mask].copy())
+        if expr_pcs_df is not None:
+            if correction_df is not None:
+                correction_df = correction_df.merge(expr_pcs_df, left_index=True, right_index=True)
+            else:
+                correction_df = expr_pcs_df
 
-        # split the MDS components per cohort.
-        mds_columns = df.columns[mds_mask]
-        mds_df = pd.DataFrame(0, index=df.index, columns=["{}_{}".format(a, b) for a in dataset_df.columns for b in mds_columns])
-        for cohort in dataset_df.columns:
-            mask = dataset_df.loc[:, cohort] == 1
-            for mds_col in mds_columns:
-                col = "{}_{}".format(cohort, mds_col)
-                mds_df.loc[mask, col] = df.loc[mask, mds_col]
+        # Add the dataset dummies but exclude the dataset with the highest
+        # number of samples.
+        if correction_df is not None:
+            correction_df = correction_df.merge(dataset_df.iloc[:, 1:], left_index=True, right_index=True)
+        else:
+            correction_df = dataset_df.iloc[:, 1:]
 
-        # replace cohort variables with the complete set defined by the GTE
-        # file. Don't include the cohort with the most samples.
-        tmp_dataset_df = dataset_df.iloc[:, 1:]
+        # Add intercept.
+        correction_df.insert(0, "INTERCEPT", 1)
+        correction_df.index.name = "-"
 
-        # construct the complete technical covariates matrix. Start with an
-        # intercept. Don't include the cohort with the most samples.
-        new_tcov_df = reduce(lambda left, right: pd.merge(left,
-                                                          right,
-                                                          left_index=True,
-                                                          right_index=True),
-                             [intecept_df, tech_cov_df, mds_df, tmp_dataset_df])
-        new_tcov_df.index.name = "-"
-
-        print("\tColumn in technical covariates matrix:")
-        print("\t  > N-intercept: {}".format(intecept_df.shape[1]))
-        print("\t  > N-technical covariates: {}".format(tech_cov_df.shape[1]))
-        print("\t  > N-MDS components: {}".format(mds_df.shape[1]))
-        print("\t  > N-cohort dummy variables: {}".format(tmp_dataset_df.shape[1]))
-
-        return new_tcov_df
+        return correction_df
 
     def remove_multicollinearity(self, df, threshold=0.9999):
         indices = np.arange(df.shape[1])
@@ -434,8 +394,8 @@ class main():
         return OLS(df.iloc[:, idx], df.loc[:, np.arange(df.shape[1]) != idx]).fit().rsquared
 
     @staticmethod
-    def calculate_residuals(df, tcov_df):
-        corrected_m = np.empty_like(df, dtype=np.float64)
+    def calculate_residuals(df, correction_df):
+        corrected_m = np.empty(df.shape, dtype=np.float64)
         last_print_time = None
         n_tests = df.shape[0]
         for i in range(n_tests):
@@ -444,7 +404,7 @@ class main():
                 last_print_time = now_time
                 print("\t{}/{} ieQTLs analysed [{:.2f}%]".format((i + 1), n_tests, (100 / n_tests) * (i + 1)))
 
-            ols = OLS(df.iloc[i, :], tcov_df)
+            ols = OLS(df.iloc[i, :], correction_df)
             results = ols.fit()
             # print(results.summary())
             corrected_m[i, :] = results.resid
@@ -455,7 +415,7 @@ class main():
     def force_normalise(df):
         return pd.DataFrame(stats.norm.ppf((df.rank(axis=1, ascending=True) - 0.5) / df.shape[1]), index=df.index, columns=df.columns)
 
-    def pca(self, df, sample_to_cohort, plot_appendix=""):
+    def pca(self, df, sample_to_dataset, plot_appendix=""):
         # samples should be on the columns and genes on the rows.
         zscores = (df - df.mean(axis=0)) / df.std(axis=0)
         pca = PCA(n_components=2)
@@ -467,9 +427,12 @@ class main():
 
         print("\tPlotting PCA")
         plot_df = components_df.T
-        plot_df["cohort"] = plot_df.index.map(sample_to_cohort)
-        plot_df["cohort"] = plot_df["cohort"].fillna('NA')
-        self.plot(df=plot_df, x="Comp1", y="Comp2", hue="cohort", palette=self.palette,
+        plot_df["hue"] = plot_df.index.map(sample_to_dataset)
+        self.plot(df=plot_df,
+                  x="Comp1",
+                  y="Comp2",
+                  hue="hue",
+                  palette=self.palette,
                   xlabel="PC1 [{:.2f}%]".format(expl_variance["PC1"]),
                   ylabel="PC2 [{:.2f}%]".format(expl_variance["PC2"]),
                   title="PCA - eigenvectors",
@@ -522,13 +485,13 @@ class main():
     def print_arguments(self):
         print("Arguments:")
         print("  > Data: {}".format(self.data_path))
-        print("  > Technical covariates: {}".format(self.tcov_path))
-        print("  > GtE path: {}".format(self.gte_path))
-        print("  >   GtE prefix: {}".format(self.gte_prefix))
-        print("  >   Exclude: {}".format(self.gte_prefix))
-        print("  > Sample exclude path: {}".format(self.sample_exclude_path))
-        print("  > Plot output directory {}".format(self.plot_outdir))
-        print("  > File output directory {}".format(self.file_outdir))
+        print("  > RNAseq alignment metrics: {}".format(self.rna_alignment_path))
+        print("  > Sex: {}".format(self.sex_path))
+        print("  > MDS: {}".format(self.mds_path))
+        print("  > Expression PCs: {}".format(self.expression_pcs_path))
+        print("  > Sample-to-dataset path: {}".format(self.std_path))
+        print("  > Plot output directory: {}".format(self.plot_outdir))
+        print("  > File output directory: {}".format(self.file_outdir))
         print("")
 
 

@@ -1,7 +1,7 @@
 """
 File:         perform_deconvolution.py
 Created:      2020/10/08
-Last Changed: 2021/10/28
+Last Changed: 2021/12/07
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -90,7 +90,7 @@ class PerformDeconvolution:
         sign_df = self.perform_log2_transform(sign_df)
 
         # Shift the data to be positive.
-        self.log.info("Shifting data to be positive")
+        self.log.info("Shifting data to be positive if required")
         if sign_df.values.min() < 0:
             self.log.warning("\tSignature matrix is shifted.")
             sign_df = self.perform_shift(sign_df)

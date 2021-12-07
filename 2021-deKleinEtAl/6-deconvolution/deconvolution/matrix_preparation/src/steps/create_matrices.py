@@ -1,7 +1,7 @@
 """
 File:         create_matrices.py
 Created:      2020/10/08
-Last Changed: 2021/07/08
+Last Changed: 2021/12/07
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -111,12 +111,19 @@ class CreateMatrices:
 
             if not check_file_exists(self.expr_outpath) or self.force:
                 self.log.info("Parsing expression data.")
-                self.expr_df, self.sign_expr_df = self.parse_expression_file(self.expr_file, signature_genes, gene_trans_dict, include_decon=self.decon_expr_file is None)
+                self.expr_df, self.sign_expr_df = self.parse_expression_file(self.expr_file,
+                                                                             signature_genes,
+                                                                             gene_trans_dict,
+                                                                             include_decon=self.decon_expr_file is None)
 
             if (not check_file_exists(self.sign_expr_outpath) or self.force) and (check_file_exists(self.decon_expr_file)):
                 self.log.info("Parsing deconvolution expression data.")
                 self.log.warning("Using different expresion file for deconvolution.")
-                _, self.sign_expr_df = self.parse_expression_file(self.decon_expr_file, signature_genes, gene_trans_dict, include_expr=False)
+                _, self.sign_expr_df = self.parse_expression_file(self.decon_expr_file,
+                                                                  signature_genes,
+                                                                  gene_trans_dict,
+                                                                  include_expr=False,
+                                                                  remove_ens_version=True)
 
             self.log.info("Reorder, Filter, and save.")
             if self.expr_df is not None:
@@ -181,7 +188,7 @@ class CreateMatrices:
         return alleles_df, genotype_df
 
     def parse_expression_file(self, filepath, signature_genes, gene_trans_dict,
-                              include_expr=True, include_decon=True):
+                              include_expr=True, include_decon=True, remove_ens_version=False):
         if not include_expr and not include_decon:
             return None, None
 
@@ -203,21 +210,26 @@ class CreateMatrices:
 
                 splitted_line = np.array(line.decode().strip('\n').split('\t'))
                 index = splitted_line[0]
+                if remove_ens_version:
+                    index = index.split(".")[0]
                 data = splitted_line[1:]
                 if i == 0:
                     columns = [self.sample_dict[x] if x in self.sample_dict else x for x in data]
                 else:
-                    hgnc_symbol = None
-                    if index in gene_trans_dict.keys():
-                        hgnc_symbol = gene_trans_dict[index]
+                    # hgnc_symbol = None
+                    # if index in gene_trans_dict.keys():
+                    #     hgnc_symbol = gene_trans_dict[index]
 
                     if include_expr:
                         if index in expression_interest and index not in expression_indices:
                             expression_indices.append(index)
                             expression_data_collection.append([float(x) for x in data])
                     if include_decon:
-                        if hgnc_symbol in signature_genes and hgnc_symbol not in sign_expr_indices:
-                            sign_expr_indices.append(hgnc_symbol)
+                        # if hgnc_symbol in signature_genes and hgnc_symbol not in sign_expr_indices:
+                        #     sign_expr_indices.append(hgnc_symbol)
+                        #     sign_expr_data_collection.append([float(x) for x in data])
+                        if index in signature_genes and index not in sign_expr_indices:
+                            sign_expr_indices.append(index)
                             sign_expr_data_collection.append([float(x) for x in data])
         f.close()
         process_str = "\tprocessed all lines"
