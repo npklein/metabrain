@@ -58,6 +58,10 @@ Syntax:
 ./visualise_cell_fractions.py -cf ../matrix_preparation/CortexEUR-cis-Uncorrected/perform_deconvolution/deconvolution_table.txt.gz -e png pdf -o CortexEUR-cis-Uncorrected-PsychENCODEProfile
 
 ./visualise_cell_fractions.py -cf ../matrix_preparation/CortexEUR-cis-Uncorrected-NoENA-NoMDSOutlier/perform_deconvolution/deconvolution_table.txt.gz -e png pdf -o CortexEUR-cis-Uncorrected-NoENA-NoMDSOutlier-PsychENCODEProfile
+
+./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/perform_deconvolution/deconvolution_table.txt.gz -e png pdf -o 2021-12-07-CortexEUR-PsychENCODEProfileSummedNoDev
+
+./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/perform_deconvolution/deconvolution_table_NoInhibitory.txt.gz -e png pdf -o 2021-12-07-CortexEUR-PsychENCODEProfileSummedNoDevNoInhibitory
 """
 
 
@@ -95,7 +99,14 @@ class main():
             'Adult-Oligo': '#009E73',
             'Adult-OtherNeuron': '#2690ce',
             'Dev-Replicating': '#000000',
-            'Dev-Quiescent': '#808080'
+            'Dev-Quiescent': '#808080',
+            "Excitatory": "#56B4E9",
+            "Inhibitory": "#2690ce",
+            'OtherNeuron': '#0072B2',
+            "Oligodendrocyte": "#009E73",
+            "EndothelialCell": "#CC79A7",
+            "Microglia": "#E69F00",
+            "Astrocyte": "#D55E00"
         }
 
         if not os.path.exists(self.outdir):
@@ -150,7 +161,12 @@ class main():
         print(cc_dfm)
 
         print("Plotting.")
-        self.create_boxplot(df=cc_dfm, order=order, palette=self.palette, name=self.output_filename)
+        self.create_boxplot(df=cc_dfm,
+                            hue="variable",
+                            order=order,
+                            palette=self.palette,
+                            ylabel="cell fraction %",
+                            name=self.output_filename)
 
     @staticmethod
     def load_file(path, sep="\t", header=0, index_col=0, nrows=None,
@@ -162,22 +178,45 @@ class main():
                                       df.shape))
         return df
 
-    def create_boxplot(self, df, xlabel="", ylabel="", name="", order=None, palette=None):
+    def create_boxplot(self, df, x="variable", y="value", hue=None, xlabel="",
+                       ylabel="", name="", order=None, palette=None):
         sns.set(rc={'figure.figsize': (12, 9)})
         sns.set_style("ticks")
-        fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, gridspec_kw={"height_ratios": [0.9, 0.1]})
-        sns.despine(fig=fig, ax=ax1)
-        ax2.set_axis_off()
+        fig, ax = plt.subplots()
+        sns.despine(fig=fig, ax=ax)
 
-        sns.boxplot(x="variable", y="value", data=df, order=order,
-                    palette=palette, ax=ax1)
-        ax1.set_xticklabels(ax1.get_xticklabels(), rotation=90)
-        ax1.set_xlabel(xlabel,
-                       fontsize=14,
-                       fontweight='bold')
-        ax1.set_ylabel(ylabel,
-                       fontsize=14,
-                       fontweight='bold')
+        sns.violinplot(x=x,
+                       y=y,
+                       hue=hue,
+                       data=df,
+                       order=order,
+                       palette=palette,
+                       cut=0,
+                       dodge=False,
+                       ax=ax)
+
+        plt.setp(ax.collections, alpha=.75)
+
+        sns.boxplot(x=x,
+                    y=y,
+                    hue=hue,
+                    data=df,
+                    order=order,
+                    whis=np.inf,
+                    color="white",
+                    dodge=False,
+                    ax=ax)
+
+        if ax.get_legend() is not None:
+            ax.get_legend().remove()
+
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
+        ax.set_xlabel(xlabel,
+                      fontsize=14,
+                      fontweight='bold')
+        ax.set_ylabel(ylabel,
+                      fontsize=14,
+                      fontweight='bold')
 
         for extension in self.extensions:
             fig.savefig(os.path.join(self.outdir, "{}_boxplot.{}".format(name, extension)))

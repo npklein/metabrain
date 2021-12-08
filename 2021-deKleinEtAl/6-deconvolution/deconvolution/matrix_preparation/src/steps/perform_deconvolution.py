@@ -35,6 +35,7 @@ class PerformDeconvolution:
     def __init__(self, settings, log, sign_file, sign_df, sign_expr_file,
                  sign_expr_df, force, outdir):
         self.min_expr_cutoff = settings["min_expr_cutoff"]
+        self.cell_type_groups = settings["cell_type_groups"]
         self.log = log
         self.sign_file = sign_file
         self.sign_df = sign_df
@@ -119,6 +120,9 @@ class PerformDeconvolution:
         self.log.info("Estimated weights:")
         self.log.info(decon_df.mean(axis=0))
 
+        save_dataframe(df=decon_df, outpath=os.path.join(self.outdir, "NNLS_betas.txt.gz"),
+                       index=True, header=True, logger=self.log)
+
         # Make the weights sum up to 1.
         decon_df = self.sum_to_one(decon_df)
         self.log.info("Estimated proportions:")
@@ -126,6 +130,20 @@ class PerformDeconvolution:
 
         # Calculate the average residuals.
         self.log.info("Average residual: {:.2f}".format(residuals_df.mean()))
+
+        save_dataframe(df=decon_df, outpath=os.path.join(self.outdir, "deconvolution_table_complete.txt.gz"),
+                       index=True, header=True, logger=self.log)
+
+        if self.cell_type_groups is not None:
+            self.log.info("Summing cell types.")
+            cell_type_group = np.array([self.cell_type_groups[ct] if ct in self.cell_type_groups else ct for ct in decon_df.columns], dtype=object)
+            cell_types = list(set(cell_type_group))
+            cell_types.sort()
+            summed_decon_df = pd.DataFrame(np.nan, index=decon_df.index, columns=cell_types)
+            for ct_group in cell_types:
+                summed_decon_df.loc[:, ct_group] = decon_df.loc[:, cell_type_group == ct_group].sum(axis=1)
+
+            decon_df = summed_decon_df
 
         return decon_df
 
@@ -197,6 +215,7 @@ class PerformDeconvolution:
             self.log.info("  > Signature expression: {}".format(self.sign_expr_df.shape))
         else:
             self.log.info("  > Signature input path: {}".format(self.sign_expr_file))
+        self.log.info("  > Cell type groups: {}".format(self.cell_type_groups))
         self.log.info("  > Deconvolution output file: {}".format(self.outpath))
         self.log.info("  > Force: {}".format(self.force))
         self.log.info("")

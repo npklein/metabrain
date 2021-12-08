@@ -194,6 +194,7 @@ class main():
         # Load sample-dataset file.
         print("Loading sample-to-dataset.")
         std_df = self.load_file(self.std_path, header=0, index_col=None)
+
         # Pre-process data.
         print("Pre-processing samples-to-dataset.")
         samples = std_df.iloc[:, 0].values.tolist()
@@ -266,7 +267,6 @@ class main():
 
         print("Step 7: remove technical covariates OLS.")
         corrected_df = self.calculate_residuals(df=df, correction_df=correction_df)
-        self.save_file(df=corrected_df, outpath=os.path.join(self.file_outdir, "{}.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.txt.gz".format(filename)))
 
         print("Step 8: PCA analysis.")
         self.pca(df=corrected_df,
