@@ -55,15 +55,29 @@ __description__ = "{} is a program developed and maintained by {}. " \
 Syntax: 
 ./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2021-08-27-step5-remove-covariates-per-dataset/2020-05-25-covariatefiles/2021-10-19-Cortex-EUR-mergedMDS-RNAIDs.txt -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/OLD/ContainsDuplicateSamples/CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz
 
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/MetaBrain-allchr-mds-dupsremoved-VariantFilter.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz
+
 ./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/MetaBrain-allchr-mds-noENA-dupsremoved.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz
 
 ./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/MetaBrain-allchr-mds-noENA-dupsremoved-outlierremoved.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz
 
-./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/MetaBrain-allchr-mds-noENA-dupsremoved-outlierremoved-VariantFilter.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/MetaBrain-allchr-mds-noENA-dupsremoved-outlierremoved-VariantFilter.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz -o MetaBrain-allchr-mds-noENA-dupsremoved-outlierremoved-VariantFilter -e png pdf
 
-./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/MetaBrain-allchr-mds-dupsremoved-VariantFilter.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/MetaBrain-allchr-mds-dupsremoved-VariantFilter.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz -o MetaBrain-allchr-mds-dupsremoved-VariantFilter -e png pdf
 
-./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/BIOS-allchr-mds-VariantFilter_genotypeID.txt.gz -std /groups/umcg-bios/tmp01/projects/PICALO/2021-10-28-DataPreprocessing/data/BIOS_GenotypeToDataset.txt.gz
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/BIOS-allchr-mds-NoGONL-VariantFilter_genotypeID.txt.gz -std /groups/umcg-bios/tmp01/projects/PICALO/2021-10-28-DataPreprocessing/BIOS_GTESubset/1000G_harmonized_BIOS_GenotypeToDataset.txt.gz -o BIOS-allchr-mds-NoGONL-VariantFilter -e png pdf
+
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/BIOS-allchr-mds-BIOS-GTESubset-VariantFilter_genotypeID.txt.gz -std /groups/umcg-bios/tmp01/projects/PICALO/2021-10-28-DataPreprocessing/BIOS_GTESubset/1000G_harmonized_BIOS_GenotypeToDataset.txt.gz -o BIOS-allchr-mds-BIOS-GTESubset-VariantFilter -e png pdf
+
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/BIOS-allchr-mds-BIOS-GTESubset-VariantSubsetFilter_genotypeID.txt.gz -std /groups/umcg-bios/tmp01/projects/PICALO/2021-10-28-DataPreprocessing/BIOS_GTESubset/1000G_harmonized_BIOS_GenotypeToDataset.txt.gz -o BIOS-allchr-mds-BIOS-GTESubset-VariantSubsetFilter -e png pdf
+
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/BIOS-allchr-mds-BIOS-GTESubset-noOutlier-VariantSubsetFilter_genotypeID.txt.gz -std /groups/umcg-bios/tmp01/projects/PICALO/2021-10-28-DataPreprocessing/BIOS_GTESubset/1000G_harmonized_BIOS_GenotypeToDataset.txt.gz -o BIOS-allchr-mds-BIOS-GTESubset-noOutlier-VariantSubsetFilter -e png pdf
+
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/BIOS-allchr-mds-BIOS-GTESubset-noRNAPhenoNA-VariantSubsetFilter_genotypeID.txt.gz -std /groups/umcg-bios/tmp01/projects/PICALO/2021-10-28-DataPreprocessing/BIOS_GTESubset/1000G_harmonized_BIOS_GenotypeToDataset.txt.gz -o BIOS-allchr-mds-BIOS-GTESubset-noRNAPhenoNA-VariantSubsetFilter -e png pdf
+
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/preprocess_mds_file/BIOS-allchr-mds-BIOS-GTESubset-noRNAPhenoNA-noOutliers-VariantSubsetFilter_genotypeID.txt.gz -std /groups/umcg-bios/tmp01/projects/PICALO/2021-10-28-DataPreprocessing/BIOS_GTESubset/1000G_harmonized_BIOS_GenotypeToDataset.txt.gz -o BIOS-allchr-mds-BIOS-GTESubset-noRNAPhenoNA-noOutliers-VariantSubsetFilter -e png pdf
+
+./plot_df_per_column.py -d /groups/umcg-bios/tmp01/projects/PICALO/preprocess_scripts/preprocess_mds_file/BIOS-allchr-mds-BIOS-GTESubset-noRNAPhenoNA-VariantSubsetFilter_genotypeID.txt.gz -std /groups/umcg-bios/tmp01/projects/PICALO/data/BIOS_STD.txt.gz -o test -e png pdf
 
 ./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2020-11-10-PICALO/preprocess_scripts/pre_process_metabrain_expression_matrix/MetaBrain-CortexEUR-cis/data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.PCAOverSamplesEigenvectors.txt.gz -std /groups/umcg-biogen/tmp01/output/2020-11-10-PICALO/preprocess_scripts/pre_process_metabrain_expression_matrix/MetaBrain-CortexEUR-cis/data/SampleToDataset.txt.gz -transpose -n 4 -o MetaBrain-CortexEUR-cis -e png pdf 
 
@@ -72,6 +86,10 @@ Syntax:
 ./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2020-11-10-PICALO/preprocess_scripts/pre_process_metabrain_expression_matrix/MetaBrain-CortexEUR-cis-NoENA-NoMDSOutlier/data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.PCAOverSamplesEigenvectors.txt.gz -std /groups/umcg-biogen/tmp01/output/2020-11-10-PICALO/preprocess_scripts/pre_process_metabrain_expression_matrix/MetaBrain-CortexEUR-cis-NoENA-NoMDSOutlier/data/SampleToDataset.txt.gz -transpose -n 4 -o MetaBrain-CortexEUR-cis-NoENA-NoMDSOutlier -e png pdf 
 
 ./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2020-11-10-PICALO/preprocess_scripts/pre_process_metabrain_expression_matrix/MetaBrain-CortexEUR-cis-NoENA-NoMDSOutlier/data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.CovariatesRemovedOLS.PCAOverSamplesEigenvectors.txt.gz -std /groups/umcg-biogen/tmp01/output/2020-11-10-PICALO/preprocess_scripts/pre_process_metabrain_expression_matrix/MetaBrain-CortexEUR-cis-NoENA-NoMDSOutlier/data/SampleToDataset.txt.gz -transpose -n 4 -o MetaBrain-CortexEUR-cis-NoENA-NoMDSOutlierCovariatesRemovedOLS -e png pdf 
+
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2020-11-10-PICALO/output/MetaBrain-CortexEUR-cis-Uncorrected-NoENA-NoMDSOutlier-MAF5/components.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis-Uncorrected-NoENA-NoMDSOutlier/combine_gte_files/SampleToDataset.txt.gz -transpose -o MetaBrain-CortexEUR-cis-NoENA-NoMDSOutlier-MAF5-PICs -e png pdf 
+
+./plot_df_per_column.py -d /groups/umcg-biogen/tmp01/output/2020-11-10-PICALO/output/MetaBrain-CortexEUR-cis-Uncorrected-NoENA-NoMDSOutlier-MAF10/components.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis-Uncorrected-NoENA-NoMDSOutlier/combine_gte_files/SampleToDataset.txt.gz -transpose -o MetaBrain-CortexEUR-cis-NoENA-NoMDSOutlier-MAF10-PICs -e png pdf 
 """
 
 
@@ -109,14 +127,15 @@ class main():
            "GTE-EUR-UCLA_ASD": "#f36d2a",
            "GTE-EUR-CMC": "#eae453",
            "GTE-EUR-CMC_HBCC_set1": "#eae453",
-            "LL": "#56B4E9",
-            "PAN": "#CC79A7",
-            "LLS_OmniExpr": "#F0E442",
-            "NTR_AFFY": "#0072B2",
-            "NTR_GONL": "#D55E00",
-            "CODAM": "#E69F00",
-            "RS": "#009E73",
-            "LLS_660Q": "#E8E8E8"
+            "LL": "#9c9fa0",
+            "PAN": "#0877b4",
+            "LLS_OmniExpr": "#0fa67d",
+            "NTR_AFFY": "#6950a1",
+            "NTR_GONL": "#48b2e5",
+            "CODAM": "#6d743a",
+            "RS": "#d46727",
+            "LLS_660Q": "#000000",
+            "GONL": "#eae453"
         }
 
         self.dataset_to_cohort = {
@@ -212,14 +231,43 @@ class main():
             exit()
         df["dataset"] = df.index.map(std_dict)
 
-        # print(df.loc["SRR1102055", :])
-
         print("\tPlotting")
         self.plot(df=df,
                   columns=columns,
                   hue="dataset",
                   palette=self.palette,
                   name=self.output_filename)
+
+        print("\tAdding z-score color")
+        for name in columns:
+            df["{} z-score".format(name)] = (df[name] - df[name].mean()) / df[name].std()
+        print(df)
+        df["outlier"] = "False"
+        sd = 3
+        df.loc[(df["{} z-score".format(columns[0])].abs() > sd) | (df["{} z-score".format(columns[1])].abs() > sd) | (df["{} z-score".format(columns[2])].abs() > sd) | (df["{} z-score".format(columns[3])].abs() > sd), "outlier"] = "True"
+        print(df)
+        outlier_df = df.loc[df["outlier"] == "True", :].copy()
+        print(outlier_df)
+        print(df.loc[df["outlier"] == "True", "dataset"].value_counts())
+
+        outlier_df.reset_index(inplace=True, drop=False)
+        outlier_df = outlier_df.loc[:, ["-"]]
+        print(outlier_df)
+        outlier_df.to_csv(os.path.join(self.outdir, self.output_filename + "_outliers.txt.gz"), compression="gzip", sep="\t", header=False, index=False)
+        exit()
+
+        df["outlier"] = "False"
+        df.loc[['1_LLDeep_0096', '1_LLDeep_0987', '1_LLDeep_0978', '1_LLDeep_0306', '1_LLDeep_1192', '1_LLDeep_0173', '1_LLDeep_0665', '1_LLDeep_1206', '1_LLDeep_1331', '1_LLDeep_0200', '1_LLDeep_1142'], "outlier"] = "True"
+
+        print("\tPlotting")
+        self.plot(df=df,
+                  columns=columns,
+                  hue="outlier",
+                  palette={"True": "#b22222", "False": "#000000"},
+                  name=self.output_filename + "_Outlier")
+
+
+        #
         #
         # pheno_df = self.load_file("../preprocess_scripts/preprocess_ampad_phenotype_file/ampad_phenotype_df.txt.gz", sep="\t", header=0, index_col=1)
         # print(pheno_df)
@@ -316,19 +364,8 @@ class main():
 
                     sns.scatterplot(x=x_col,
                                     y=y_col,
-                                    # hue=hue,
-                                    color="#000000",
-                                    alpha=0.2,
-                                    data=df.loc[df[hue] == "-", :],
-                                    s=100,
-                                    palette=palette,
-                                    linewidth=0,
-                                    legend=False,
-                                    ax=ax)
-                    sns.scatterplot(x=x_col,
-                                    y=y_col,
                                     hue=hue,
-                                    data=df.loc[df[hue] != "-", :],
+                                    data=df,
                                     s=100,
                                     palette=palette,
                                     linewidth=0,

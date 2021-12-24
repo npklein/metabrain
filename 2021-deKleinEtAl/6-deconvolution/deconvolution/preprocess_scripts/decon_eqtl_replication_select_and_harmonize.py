@@ -53,6 +53,10 @@ Syntax:
 ./decon_eqtl_replication_select_and_harmonize.py -re /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-AFR/replicateCortex-EUR/eQTLProbesFDR0.05-ProbeLevel.txt.gz -da /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_alleles.txt.gz -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/create_matrices/genotype_table.txt.gz -al /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/create_matrices/genotype_alleles.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexAFR-cis/data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ExpAdded.txt.gz -of CortexAFR-cis-Replication-EUR
 
 ./decon_eqtl_replication_select_and_harmonize.py -re /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-AFR/replicateCortex-EUR/eQTLProbesFDR0.05-ProbeLevel.txt.gz -da /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexEUR-cis/create_matrices/genotype_alleles.txt.gz -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/create_matrices/genotype_table.txt.gz -al /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/CortexAFR-cis-Replication-EUR/create_matrices/genotype_alleles.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/CortexAFR-cis-Normalised/data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt.gz -of CortexAFR-cis-Replication-EUR-Normalised
+
+### Cortex AFR Replication ###
+
+./decon_eqtl_replication_select_and_harmonize.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemoved -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_decon_expression_matrix/2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemoved/data/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt.gz -da /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/create_matrices/genotype_alleles.txt.gz -of 2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemoved 
 """
 
 
@@ -60,11 +64,9 @@ class main():
     def __init__(self):
         # Get the command line arguments.
         arguments = self.create_argument_parser()
-        self.replication_eqtl_path = getattr(arguments, 'replication_eqtl')
-        self.discovery_alleles_path = getattr(arguments, 'discovery_alleles')
-        self.geno_path = getattr(arguments, 'genotype')
-        self.alleles_path = getattr(arguments, 'alleles')
+        self.data_dir = getattr(arguments, 'data')
         self.expr_path = getattr(arguments, 'expression')
+        self.discovery_alleles_path = getattr(arguments, 'discovery_alleles')
         outdir = getattr(arguments, 'outdir')
         outfolder = getattr(arguments, 'outfolder')
 
@@ -87,26 +89,16 @@ class main():
                             version="{} {}".format(__program__,
                                                    __version__),
                             help="show program's version number and exit.")
-        parser.add_argument("-re",
-                            "--replication_eqtl",
-                            type=str,
-                            required=True,
-                            help="The path to the replication eQTLs")
         parser.add_argument("-da",
                             "--discovery_alleles",
                             type=str,
                             required=True,
                             help="The path to the discovery alleles matrix")
-        parser.add_argument("-ge",
-                            "--genotype",
+        parser.add_argument("-d",
+                            "--data",
                             type=str,
                             required=True,
-                            help="The path to the genotype matrix")
-        parser.add_argument("-al",
-                            "--alleles",
-                            type=str,
-                            required=True,
-                            help="The path to the expression matrix")
+                            help="The path to Matrix Preparation input dir.")
         parser.add_argument("-ex",
                             "--expression",
                             type=str,
@@ -130,65 +122,71 @@ class main():
     def start(self):
         self.print_arguments()
 
-        print("Loading eQTLs data.")
-        eqtl_df = self.load_file(self.replication_eqtl_path, header=0, index_col=None)
-        snps_of_interest = eqtl_df["SNPName"]
-        genes_of_interest = eqtl_df["ProbeName"]
+        print("Loading eQTL file.")
+        eqtl_df = self.load_file(os.path.join(self.data_dir, "combine_eqtlprobes", "eQTLprobes_combined.txt.gz"), header=0, index_col=None)
 
-        print(len(snps_of_interest))
+        print("Loading genotype data files")
+        geno_df = self.load_file(os.path.join(self.data_dir, "create_matrices", "genotype_table.txt.gz"), header=0, index_col=0)
+        allele_df = self.load_file(os.path.join(self.data_dir, "create_matrices", "genotype_alleles.txt.gz"), header=0, index_col=0)
 
-        print("Loading the allele assessed files.")
-        replication_alleles_df = self.load_file(self.alleles_path, header=0, index_col=0)
+        print("\tChecking order")
+        if eqtl_df["SNPName"].tolist() != list(geno_df.index):
+            print("Genotype matrix does not match eQTL matrix.")
+            exit()
+        if eqtl_df["SNPName"].tolist() != list(allele_df.index):
+            print("Alleles matrix does not match eQTL matrix.")
+            exit()
+
+        print("Preprocessing expression matrix")
+        expr_df = self.load_file(inpath=self.expr_path, header=0, index_col=0)
+        expr_df = expr_df.groupby(expr_df.index).first()
+        for probe_name in eqtl_df["ProbeName"]:
+            if probe_name not in expr_df.index:
+                expr_df.loc[probe_name, :] = np.nan
+        expr_df = expr_df.loc[eqtl_df["ProbeName"], :]
+        expr_df.index.name = None
+
+        print("\tChecking order")
+        if eqtl_df["ProbeName"].tolist() != list(expr_df.index):
+            print("Expression matrix does not match eQTL matrix.")
+            exit()
+
+        print("Filter eQTL file on present data.")
+        geno_df[geno_df == -1] = np.nan
+        geno_available_mask = np.logical_and(~geno_df.isnull().all(1).to_numpy(dtype=bool), ~allele_df.isnull().all(1).to_numpy(dtype=bool))
+        expr_available_mask = ~expr_df.isnull().all(1).to_numpy(dtype=bool)
+        mask = np.logical_and(geno_available_mask, expr_available_mask)
+
+        eqtl_df = eqtl_df.loc[mask, :]
+        geno_df = geno_df.loc[mask, :]
+        allele_df = allele_df.loc[mask, :]
+        expr_df = expr_df.loc[mask, :]
+
+        print("Creating flip mask.")
         discovery_alleles_df = self.load_file(self.discovery_alleles_path, header=0, index_col=0)
-        alleles_df = replication_alleles_df[["MinorAllele"]].merge(discovery_alleles_df[["MinorAllele"]], left_index=True, right_index=True)
-        alleles_df = alleles_df.groupby(alleles_df.index).first()
-        alleles_df["flip"] = alleles_df.iloc[:, 0] != alleles_df.iloc[:, 1]
-        alleles_df = alleles_df.groupby(alleles_df.index).first()
-        alleles_df = alleles_df.loc[snps_of_interest, :]
-        flip_mask = alleles_df["flip"].to_numpy(dtype=bool)
-        del replication_alleles_df, discovery_alleles_df, alleles_df
+        discovery_alleles_df = discovery_alleles_df.groupby(discovery_alleles_df.index).first()
+        replication_alleles_df = allele_df.groupby(allele_df.index).first()
+        ma_df = replication_alleles_df[["MinorAllele"]].merge(discovery_alleles_df[["MinorAllele"]], left_index=True, right_index=True)
+        ma_df["flip"] = ma_df.iloc[:, 0] != ma_df.iloc[:, 1]
+        ma_df = ma_df.loc[eqtl_df["SNPName"], :]
+        flip_mask = ma_df["flip"].to_numpy(dtype=bool)
+        del ma_df, replication_alleles_df
 
-        print("Processing genotype file.")
-        geno_df = self.load_file(inpath=self.geno_path, header=0, index_col=0)
-        geno_df = geno_df.groupby(geno_df.index).first()
-        geno_df = geno_df.loc[snps_of_interest, :]
+        print("Flipping genotype encoding.")
+        allele_df = discovery_alleles_df.loc[allele_df.index, :]
 
-        # Flip genotypes.
-        geno_m = geno_df.to_numpy()
+        geno_m = geno_df.to_numpy(dtype=np.float64)
         missing_mask = geno_m == -1
         geno_m[flip_mask, :] = 2 - geno_m[flip_mask, :]
         geno_m[missing_mask] = -1
         geno_df = pd.DataFrame(geno_m, index=geno_df.index, columns=geno_df.columns)
         geno_df.index.name = None
-        del geno_m
+        del geno_m, missing_mask
 
-        # Delete rows with all NaN.
-        mask = geno_df.isnull().all(1).to_numpy()
-        geno_df = geno_df.loc[~mask, :]
-
-        print("\tSaving output file.")
-        self.save_file(df=geno_df,
-                       outpath=os.path.join(self.outdir, os.path.basename(self.geno_path).replace(".gz", "")))
-        del geno_df
-
-        print("Processing expression file.")
-        expr_df = self.load_file(inpath=self.expr_path, header=0, index_col=0)
-        expr_df = expr_df.groupby(expr_df.index).first()
-        expr_df = expr_df.loc[genes_of_interest, :]
-        expr_df.index.name = None
-        expr_df = expr_df.loc[~mask, :]
-
-        print("\tSaving output file.")
-        self.save_file(df=expr_df,
-                       outpath=os.path.join(self.outdir, os.path.basename(self.expr_path).replace(".gz", "")))
-        del expr_df
-
-        print("Processing SnpsToTest file.")
-        snps_to_test_df = eqtl_df[["ProbeName", "SNPName"]].copy()
-        snps_to_test_df = snps_to_test_df.loc[~mask, :]
-        self.save_file(df=snps_to_test_df,
-                       outpath=os.path.join(self.outdir, "snp_gene_list.txt"),
-                       index=False)
+        self.save_file(df=eqtl_df, outpath=os.path.join(self.outdir, "eQTLprobes_combined.txt.gz"), index=False)
+        self.save_file(df=geno_df, outpath=os.path.join(self.outdir, "genotype_table.txt.gz"))
+        self.save_file(df=allele_df, outpath=os.path.join(self.outdir, "genotype_alleles.txt.gz"))
+        self.save_file(df=expr_df, outpath=os.path.join(self.outdir, "expression_table.txt.gz"))
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
@@ -214,11 +212,9 @@ class main():
 
     def print_arguments(self):
         print("Arguments:")
-        print("  > Replication eQTL path: {}".format(self.replication_eqtl_path))
-        print("  > Discovery alleles path: {}".format(self.discovery_alleles_path))
-        print("  > Genotype path: {}".format(self.geno_path))
-        print("  > Alleles path: {}".format(self.alleles_path))
+        print("  > Data directory: {}".format(self.data_dir))
         print("  > Expression path: {}".format(self.expr_path))
+        print("  > Discovery alleles path: {}".format(self.discovery_alleles_path))
         print("  > Output directory: {}".format(self.outdir))
         print("")
 

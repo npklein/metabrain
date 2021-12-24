@@ -53,7 +53,9 @@ __description__ = "{} is a program developed and maintained by {}. " \
 Syntax: 
 ./correlate_align_metrics_with_genes.py -h
 
-./correlate_align_metrics_with_genes.py -am /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis/create_correction_matrix/technical_covariates_table.txt.gz -e /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2021-08-27-step5-remove-covariates-per-dataset/output-PCATitration-MDSCorrectedPerDsCovarOverall-cortex-EUR/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.txt.gz -o 2021-12-07-CortexEUR-cis-round3
+./correlate_align_metrics_with_genes.py -am /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis/create_correction_matrix/technical_covariates_table.txt.gz -e /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2021-08-27-step5-remove-covariates-per-dataset/output-PCATitration-MDSCorrectedPerDsCovarOverall-cortex-EUR/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.txt.gz -o 2021-12-07-CortexEUR-cis-round1
+
+./correlate_align_metrics_with_genes.py -am /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemoved/create_correction_matrix/technical_covariates_table.txt.gz -e /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2021-08-27-step5-remove-covariates-per-dataset/output-PCATitration-MDSCorrectedPerDsCovarOverall-cortex-AFR/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.txt.gz -o 2021-12-07-CortexAFR-cis-round3
 """
 
 
@@ -125,7 +127,9 @@ class main():
         # Remove columns that are a linear combination of others.
         am_df = self.remove_multicollinearity(am_df.T).T
 
-        print("Correcting gene expression data.")
+        # print("Correcting gene expression data.")
+
+        ### EUR ###
         # correction_df = am_df.loc[["PCT_MRNA_BASES",
         #                            "PCT_INTRONIC_BASES",
         #                            "PCT_USABLE_BASES",
@@ -158,6 +162,40 @@ class main():
         #                            "PF_HQ_ERROR_RATE",
         #                            "PF_MISMATCH_RATE"
         #                            ], :].T
+
+        ### AFR  ###
+        # correction_df = am_df.loc[["PCT_INTRONIC_BASES",
+        #                            "PCT_MRNA_BASES",
+        #                            "PCT_INTERGENIC_BASES",
+        #                            "PCT_USABLE_BASES",
+        #                            "PCT_CODING_BASES",
+        #                            "MEDIAN_3PRIME_BIAS",
+        #                            "PCT_UTR_BASES",
+        #                            "X.GC_R1",
+        #                            "X.GC_R2",
+        #                            "deletion_length"
+        #                            ], :].T
+        # correction_df = am_df.loc[["PCT_INTRONIC_BASES",
+        #                            "PCT_MRNA_BASES",
+        #                            "PCT_INTERGENIC_BASES",
+        #                            "PCT_USABLE_BASES",
+        #                            "PCT_CODING_BASES",
+        #                            "MEDIAN_3PRIME_BIAS",
+        #                            "PCT_UTR_BASES",
+        #                            "X.GC_R1",
+        #                            "X.GC_R2",
+        #                            "deletion_length",
+        #                            "MEDIAN_5PRIME_BIAS",
+        #                            "PF_MISMATCH_RATE",
+        #                            "PF_HQ_ERROR_RATE",
+        #                            "PCT_CHIMERAS",
+        #                            "PCT_R2_TRANSCRIPT_STRAND_READS",
+        #                            "PCT_R1_TRANSCRIPT_STRAND_READS",
+        #                            "avg_sequence_length_R1",
+        #                            "PCT_PF_READS_IMPROPER_PAIRS",
+        #                            "PCT_READS_ALIGNED_IN_PAIRS",
+        #                            "MEAN_READ_LENGTH"
+        #                            ], :].T
         # expr_df = self.calculate_residuals(df=expr_df, correction_df=correction_df)
 
         # Safe the indices.
@@ -168,6 +206,9 @@ class main():
         am_m = am_df.to_numpy()
         expr_m = expr_df.to_numpy()
         del am_df, expr_df
+
+        print(am_m.shape)
+        print(expr_m.shape)
 
         print("Correlating.")
         corr_m = np.corrcoef(am_m, expr_m)[:am_m.shape[0], am_m.shape[0]:]

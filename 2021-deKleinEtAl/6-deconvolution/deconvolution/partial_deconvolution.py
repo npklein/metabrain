@@ -67,6 +67,10 @@ Syntax:
 
 ./partial_deconvolution.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_TPM_expression_matrix/MetaBrain/data/geneCounts.TPM.Log2Transformed.txt.gz -s /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/PsychENCODE/DER-20_Single_cell_expression_processed_TPM_MGFIltered_AvgPerCT.txt.gz -g /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/AMP-AD/single_cell_counts_all_celltypes.txt.gz -o PSYCHENCODE_PROFILE_CORTEX_EUR_TPM_LOG2 -os SC_0CPM_LOG2 -log2 -visualise -e png
 
+./partial_deconvolution.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_TPM_expression_matrix/MetaBrainAndPsychENCODE/data/geneCounts.TPM.MergedExonLength.Log2Transformed.txt.gz -s /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/PsychENCODE/DER-20_Single_cell_expression_processed_TPM_MGFIltered_AvgPerCT.txt.gz -g /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/AMP-AD/IHC_counts.txt.gz -o PSYCHENCODE_PROFILE_METABRAIN_AND_PSYCHENCODE_EXON_TPM_LOG2 -os IHC_0CPM_LOG2 -log2 -visualise -e png
+
+./partial_deconvolution.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_TPM_expression_matrix/MetaBrainAndPsychENCODE/data/geneCounts.TPM.MergedExonLength.Log2Transformed.txt.gz -s /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/PsychENCODE/DER-20_Single_cell_expression_processed_TPM_MGFIltered_AvgPerCT_NoDev.txt.gz -g /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/AMP-AD/IHC_counts.txt.gz -o PSYCHENCODE_PROFILE_METABRAIN_AND_PSYCHENCODE_EXON_TPM_LOG2_NODEV -os IHC_0CPM_LOG2 -log2 -visualise -e png
+
 
 ### PSYCHENCODE ###
 

@@ -53,7 +53,7 @@ class main():
         self.eqtl_type = getattr(arguments, 'eqtl_type')
 
         # Set the other arguments.
-        self.infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/{}_100Perm".format(self.eqtl_type)
+        self.infolder = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2021-12-23-ROSMAP-scRNAseq/{}_100Perm_ieQTLs/".format(self.eqtl_type)
         self.cell_types = ["AST", "END", "EX", "IN", "MIC", "OLI", "OPC", "PER"]
         self.result_files = ["eQTLProbesFDR0.05-ProbeLevel.txt.gz",
                              "eQTLSNPsFDR0.05-ProbeLevel.txt.gz",

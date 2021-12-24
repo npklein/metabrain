@@ -62,6 +62,10 @@ Syntax:
 ./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/perform_deconvolution/deconvolution_table.txt.gz -e png pdf -o 2021-12-07-CortexEUR-PsychENCODEProfileSummedNoDev
 
 ./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/perform_deconvolution/deconvolution_table_NoInhibitory.txt.gz -e png pdf -o 2021-12-07-CortexEUR-PsychENCODEProfileSummedNoDevNoInhibitory
+
+./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/perform_deconvolution/deconvolution_table_InhibitorySummedWithOtherNeuron.txt.gz -e png pdf -o 2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved-deconvolutionTable-InhibitorySummedWithOtherNeuron
+
+./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemoved/perform_deconvolution/deconvolution_table.txt.gz -e png pdf -o 2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemove-InhibitorySummedWithOtherNeuron
 """
 
 

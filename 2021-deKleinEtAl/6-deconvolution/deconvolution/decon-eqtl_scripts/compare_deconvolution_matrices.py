@@ -72,6 +72,8 @@ Syntax:
 ./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-NormalisedMAF5-LimitedConfigs/deconvolutionResults.txt.gz -n1 limited_configs -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/CortexEUR-cis-NormalisedMAF5-ALlConfigs/deconvolutionResults.txt.gz -n2 all_configs -log10 -o limited_vs_all_configurations
 
 ./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/test/deconvolutionResults.txt.gz -n1 NNLS -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_ols/test/deconvolutionResults.txt.gz -n2 OLS -log10 -o nnls_vs_ols
+
+./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5-LimitedConfigs-OldProfile/deconvolutionResults.txt.gz -n1 OriginalProfile -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2021-12-07-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDevNoInhibitoryCT/deconvolutionResults.txt.gz -n2 PsychENCODEProfile_NoDevNoInhibitory -log10 -o originalProfile_vs_PsychENCODEProfile_NoDevNoInhibitory
 """
 
 
@@ -95,20 +97,21 @@ class main():
 
         self.accent_colormap = {
             "Intercept": "#000000",
-            "Excitatory": "#56B4E9",
-            "Inhibitory": "#0072B2",
             "Neuron": "#0072B2",
-            "Oligodendrocyte": "#009E73",
             "OPC": "#009E73",
-            "EndothelialCell": "#CC79A7",
-            "Microglia": "#E69F00",
             "Macrophage": "#E69F00",
-            "Astrocyte": "#D55E00",
             "Pericytes": "#808080",
             "Microglia/Macrophage": "#E69F00",
             "Excitatory/Neuron": "#56B4E9",
             "Inhibitory/Neuron": "#0072B2",
-            "Excitatory+Inhibitory/Neuron": "#BEBEBE"
+            "Excitatory+Inhibitory/Neuron": "#BEBEBE",
+            "Excitatory": "#56B4E9",
+            "Inhibitory": "#2690ce",
+            "OtherNeuron": "#0072B2",
+            "Oligodendrocyte": "#009E73",
+            "EndothelialCell": "#CC79A7",
+            "Microglia": "#E69F00",
+            "Astrocyte": "#D55E00"
         }
         self.point_colormap = {
             "no signif": "#808080",
@@ -178,6 +181,21 @@ class main():
 
         # inter_beta_df1 = np.abs(inter_beta_df1)
         # inter_beta_df2 = np.abs(inter_beta_df2)
+
+        # eqtl_df1 = pd.read_csv("/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/OLD/2021-09-22/CortexEUR-cis/combine_eqtlprobes/eQTLprobes_combined.txt.gz", sep="\t", header=0, index_col=None)
+        # eqtl_df1 = eqtl_df1.loc[eqtl_df1["Iteration"] == 1, :]
+        # eqtl_df1.index = eqtl_df1["ProbeName"] + "_" + eqtl_df1["SNPName"]
+        # eqtl_df1_overlap = set(eqtl_df1.index).intersection(set(fdr_df1.index))
+        # fdr_df1 = fdr_df1.loc[eqtl_df1_overlap, :]
+        #
+        # eqtl_df2 = pd.read_csv("/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis/combine_eqtlprobes/eQTLprobes_combined.txt.gz", sep="\t", header=0, index_col=None)
+        # eqtl_df2 = eqtl_df2.loc[eqtl_df2["Iteration"] == 1, :]
+        # eqtl_df2.index = eqtl_df2["ProbeName"] + "_" + eqtl_df2["SNPName"]
+        # eqtl_df2_overlap = set(eqtl_df2.index).intersection(set(fdr_df2.index))
+        # fdr_df2 = fdr_df2.loc[eqtl_df2_overlap, :]
+        #
+        # print(fdr_df1)
+        # print(fdr_df2)
 
         print("Comparing")
         df1_df2_replication_df = self.create_replication_df(df1=fdr_df1, df2=fdr_df2)
@@ -306,7 +324,12 @@ class main():
             ct1_df = df2_subset.loc[df1_subset.loc[:, ct1] < 0.05, :]
             for ct2 in df2_subset.columns:
                 replication_df.loc[ct1, ct2] = (ct1_df.loc[:, ct2] < 0.05).sum() / ct1_df.shape[0]
-        #replication_df = replication_df.divide(replication_df.sum(axis=1), axis=0)
+
+        df1_n_signif = (df1_subset < 0.05).sum(axis=0)
+        df2_n_signif = (df2_subset < 0.05).sum(axis=0)
+
+        replication_df.index = ["{} [n={}]".format(ct, df1_n_signif.loc[ct]) for ct in df1_subset.columns]
+        replication_df.columns = ["{} [n={}]".format(ct, df2_n_signif.loc[ct]) for ct in df2_subset.columns]
 
         return replication_df
 

@@ -63,27 +63,22 @@ class main():
         self.eqtl_type = getattr(arguments, 'type')
         self.extensions = getattr(arguments, 'extension')
 
-        # Declare input files.
-        self.bulk_eqtl_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_{}/combine_eqtlprobes/eQTLprobes_combined.txt.gz".format(
-            self.eqtl_type)
-        self.bulk_alleles_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/matrix_preparation/cortex_eur_{}/create_matrices/genotype_alleles.txt.gz".format(
-            self.eqtl_type)
-        self.decon_infile = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution_gav/2020-11-20-decon-QTL/{}/cortex/decon_out/deconvolutionResults.csv".format(
-            self.eqtl_type)
-        self.sn_infolder = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/{}_100Perm/".format(
-            self.eqtl_type)
+        if self.eqtl_type == "cis":
+            self.bulk_eqtl_infile = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/combine_eqtlprobes/eQTLprobes_combined_withFDRCol.txt.gz"
+            self.bulk_alleles_infile = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/create_matrices/genotype_alleles.txt.gz"
+            self.decon_infile = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2021-12-22-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron/deconvolutionResults.txt.gz"
+            self.sn_infolder = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2021-12-23-ROSMAP-scRNAseq/cis_100Perm_ieQTLs/"
+        else:
+            exit()
         self.sn_filename = "eQTLsFDR-ProbeLevel.txt.gz"
         self.cell_types = [
             ("AST", "Astrocyte", "Astrocyte", "#D55E00"),
-            ("END", "EndothelialCell", "Endothelial Cell",
-             "#CC79A7"),
-            ("EX", "Neuron", "Ex. Neuron VS Neuron", "#0072B2"),
-            ("IN", "Neuron", "In. Neuron VS Neuron", "#0072B2"),
-            ("MIC", "Macrophage", "Microglia VS Macrophage",
-             "#E69F00"),
-            (
-                "OLI", "Oligodendrocyte", "Oligodendrocyte",
-                "#009E73")]
+            ("END", "EndothelialCell", "Endothelial Cell", "#CC79A7"),
+            ("EX", "Excitatory", "Excitatory Neuron", "#0072B2"),
+            ("EX", "OtherNeuron", "Ex. Neuron VS Neuron", "#0072B2"),
+            ("IN", "OtherNeuron", "In. Neuron VS Neuron", "#0072B2"),
+            ("MIC", "Microglia", "Microglia", "#E69F00"),
+            ("OLI", "Oligodendrocyte", "Oligodendrocyte", "#009E73")]
         self.extensions = ["png", "pdf"]
 
         self.outdir = os.path.join(str(Path(__file__).parent.parent),
@@ -133,6 +128,7 @@ class main():
                                    sep="\t",
                                    header=0,
                                    index_col=None)
+        bulk_eqtl_df.columns = [col if col != "MetaPZ" else "OverallZScore" for col in bulk_eqtl_df.columns]
         bulk_eqtl_df.reset_index(drop=False, inplace=True)
         print("\tBulk eQTL data frame: {}".format(bulk_eqtl_df.shape))
         print(bulk_eqtl_df)
@@ -143,8 +139,7 @@ class main():
                                       index_col=None,
                                       nrows=bulk_eqtl_df.shape[0])
         bulk_alleles_df.columns = ["SNPName", "Alleles", "MinorAllele"]
-        bulk_alleles_df["DeconAllele"] = [x.split("/")[1] for x in
-                                          bulk_alleles_df["Alleles"]]
+        bulk_alleles_df["DeconAllele"] = [x.split("/")[1] for x in bulk_alleles_df["Alleles"]]
         bulk_alleles_df.reset_index(drop=False, inplace=True)
         print("\tBulk alleles data frame: {}".format(bulk_alleles_df.shape))
         print(bulk_alleles_df)
@@ -162,10 +157,7 @@ class main():
         for col in decon_df.columns:
             if col.endswith("_pvalue"):
                 new_colname = col.replace("_pvalue", "_FDR")
-                decon_df[new_colname] = \
-                    multitest.multipletests(decon_df.loc[:, col],
-                                            method='fdr_bh')[
-                        1]
+                decon_df[new_colname] = multitest.multipletests(decon_df.loc[:, col],method='fdr_bh')[1]
                 print(col, decon_df[decon_df[new_colname] < 0.05].shape[0])
 
         print("Preprocessing deconvolution data frame")
@@ -184,8 +176,7 @@ class main():
                                       left_on=["SNPName", "ProbeName"],
                                       right_on=["SNPName", "ProbeName"])
         del bulk_df
-        bulk_decon_df.index = bulk_decon_df["SNPName"] + "_" + bulk_decon_df[
-            "ProbeName"]
+        bulk_decon_df.index = bulk_decon_df["SNPName"] + "_" + bulk_decon_df["ProbeName"]
         print(bulk_decon_df)
 
         print("Visualizing")
@@ -195,8 +186,7 @@ class main():
         fig, axes = plt.subplots(nrows=5, ncols=len(self.cell_types),
                                  sharex='col', sharey='row')
 
-        for col_index, (sn_ct, b_ct, title, color) in enumerate(
-                self.cell_types):
+        for col_index, (sn_ct, b_ct, title, color) in enumerate(self.cell_types):
             sn_df = pd.read_csv(
                 os.path.join(self.sn_infolder, sn_ct, self.sn_filename),
                 sep="\t",
@@ -215,26 +205,17 @@ class main():
                                             right_index=True,
                                             suffixes=["_bulk", "_sn"])
 
-            merged_df["eQTLFlipMask"] = (
-                    merged_df["AlleleAssessed_sn"] == merged_df[
-                "AlleleAssessed_bulk"]).replace({0: -1, 1: 1})
-            merged_df["DeconFlipMask"] = (
-                    merged_df["AlleleAssessed_sn"] == merged_df[
-                "DeconAllele"]).replace({0: -1, 1: 1})
+            merged_df["eQTLFlipMask"] = (merged_df["AlleleAssessed_sn"] == merged_df["AlleleAssessed_bulk"]).replace({False: -1, True: 1})
+            merged_df["DeconFlipMask"] = (merged_df["AlleleAssessed_sn"] == merged_df["DeconAllele"]).replace({False: -1, True: 1})
 
             beta_col = None
             for col in merged_df.columns:
-                if col.startswith("Beta") and col.endswith(
-                        "_{}:GT".format(b_ct)):
+                if col.startswith("Beta") and col.endswith("_{}:GT".format(b_ct)):
                     beta_col = col
                     break
 
-            merged_df["OverallZScore_bulk_flipped"] = merged_df[
-                                                          "OverallZScore_bulk"] * \
-                                                      merged_df["eQTLFlipMask"]
-            merged_df[
-                "log_{}_flipped".format(beta_col)] = self.log_modulus_beta(
-                merged_df[beta_col]) * merged_df["DeconFlipMask"]
+            merged_df["OverallZScore_bulk_flipped"] = merged_df["OverallZScore_bulk"] * merged_df["eQTLFlipMask"]
+            merged_df["log_{}_flipped".format(beta_col)] = self.log_modulus_beta(merged_df[beta_col]) * merged_df["DeconFlipMask"]
 
             print("\tPrepare plot df.")
             plot_df = merged_df[["HGNCName_bulk", "OverallZScore_sn", "FDR_sn",
@@ -243,8 +224,7 @@ class main():
                                  "{}_FDR".format(b_ct)]].copy()
             del merged_df
             plot_df["hue"] = "#808080"
-            plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (
-                    plot_df["{}_FDR".format(b_ct)] < 0.05), "hue"] = color
+            plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (plot_df["{}_FDR".format(b_ct)] < 0.05), "hue"] = color
 
             # plot_df.sort_values(by="FDR_sn", inplace=True)
             # print(plot_df.iloc[0:50, :])
@@ -321,12 +301,12 @@ class main():
                       include_ylabel=include_ylabel)
             self.update_limits(xlim, ylim, 4, col_index)
 
-            test = plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (
-                    plot_df["{}_FDR".format(b_ct)] < 0.05), :]
-            with pd.option_context('display.max_rows', None,
-                                   'display.max_columns',
-                                   None):
-                print(test)
+            # test = plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (
+            #         plot_df["{}_FDR_bulk".format(b_ct)] < 0.05), :]
+            # with pd.option_context('display.max_rows', None,
+            #                        'display.max_columns',
+            #                        None):
+            #     print(test)
 
             print("")
 

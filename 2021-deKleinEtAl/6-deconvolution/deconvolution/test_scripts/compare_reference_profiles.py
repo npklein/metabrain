@@ -42,7 +42,7 @@ from statsmodels.stats import multitest
 # Local application imports.
 
 # Metadata
-__program__ = "Compare Reference Profil"
+__program__ = "Compare Reference Profiles"
 __author__ = "Martijn Vochteloo"
 __maintainer__ = "Martijn Vochteloo"
 __email__ = "m.vochteloo@st.hanze.nl"
@@ -60,6 +60,8 @@ Syntax:
 ./compare_reference_profiles.py -p1 ../data/CellMap_brain_celltype_avgCPM.txt -n1 OLD -p2 ../data/CellMap_brain_CNS7_avgCPM.txt -n2 NEW -o OLD_vs_NEW
 
 ./compare_reference_profiles.py -p1 ../data/CellMap_brain_CNS7_avgCPM.txt -n1 METABRAIN -p2 ../data/PyschENCODE_average_signature_df.txt.gz -n2 PsychENCODE -o METABRAIN_VS_PsycheENCODE
+
+./compare_reference_profiles.py -p1 ../data/CellMap_brain_CNS7_avgCPM.txt -n1 METABRAIN -p2 ../data/PsychENCODE_ref_profile_unique_avg.txt.gz -n2 PsychENCODE -o METABRAIN_VS_PsycheENCODE
 """
 
 
@@ -140,7 +142,7 @@ class main():
         print("\tLoaded dataframe: {} "
               "with shape: {}".format(os.path.basename(self.profile1_path),
                                       profile1_df.shape))
-        profile1_df.columns = [x.split("_")[1] for x in profile1_df.columns]
+        # profile1_df.columns = [x.split("_")[1] for x in profile1_df.columns]
         profile1_df = np.log2(profile1_df + 1)
         print(profile1_df)
 
@@ -152,10 +154,11 @@ class main():
         profile2_df = np.log2(profile2_df + 1)
 
         # PsychENCODE stuff.
-        gene_trans_df = pd.read_csv("/groups/umcg-biogen/tmp01/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz", sep="\t", index_col=None)
+        gene_trans_df = pd.read_csv("../data/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.PsychENCODEGenesExtended.txt.gz", sep="\t", index_col=None)
         print(gene_trans_df)
         gene_trans_dict = dict(zip(gene_trans_df["Symbol"], [x.split(".")[0] for x in gene_trans_df["ArrayAddress"]]))
         profile1_df.index = [gene_trans_dict[hgnc] if hgnc in gene_trans_dict else hgnc for hgnc in profile1_df.index]
+        profile2_df.index = [gene_trans_dict[hgnc] if hgnc in gene_trans_dict else hgnc for hgnc in profile2_df.index]
         profile2_df = profile2_df.loc[:, ['Adult-Ex1', 'Adult-Ex2', 'Adult-Ex3', 'Adult-Ex4', 'Adult-Ex5', 'Adult-Ex6', 'Adult-Ex7', 'Adult-Ex8', 'Adult-In1', 'Adult-In2', 'Adult-In3', 'Adult-In4', 'Adult-In5', 'Adult-In6', 'Adult-In7', 'Adult-In8', 'Adult-Astrocytes', 'Adult-Endothelial', 'Dev-Quiescent', 'Dev-Replicating', 'Adult-Microglia', 'Adult-OtherNeuron', 'Adult-OPC', 'Adult-Oligo']]
         print(profile1_df)
         print(profile2_df)

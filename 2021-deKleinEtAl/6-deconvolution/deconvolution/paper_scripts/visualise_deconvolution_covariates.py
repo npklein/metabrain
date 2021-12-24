@@ -56,6 +56,8 @@ __description__ = "{} is a program developed and maintained by {}. " \
 """
 Syntax:
 ./visualise_deconvolution_covariates.py -lt ../matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt -ut ../matrix_preparation/cerebellum_eur_cis/perform_deconvolution/deconvolution_table.txt -e png pdf
+
+./visualise_deconvolution_covariates.py -lt /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/perform_deconvolution/deconvolution_table_InhibitorySummedWithOtherNeuron.txt.gz -e png
 """
 
 
@@ -77,7 +79,11 @@ class main():
                               "EndothelialCell": "endo",
                               "Microglia": "micro",
                               "Macrophage": "macro",
-                              "Astrocyte": "astro"}
+                              "Astrocyte": "astro",
+                              "OtherNeuron": "neuro",
+                              "Excitatory": "ex",
+                              "Inhibitory": "in"
+                              }
 
     def create_argument_parser(self):
         parser = argparse.ArgumentParser(prog=__program__,
@@ -99,7 +105,8 @@ class main():
         parser.add_argument("-ut",
                             "--upper_triangle",
                             type=str,
-                            required=True,
+                            required=False,
+                            default=None,
                             help="The path to the samples for the"
                                  "upper triangle.")
         parser.add_argument("-e",
@@ -121,12 +128,14 @@ class main():
                                       lt_df.shape))
         print(lt_df)
 
-        print("Loading upper triangle matrix.")
-        ut_df = pd.read_csv(self.ut_path, sep="\t", header=0, index_col=0)
-        print("\tLoaded dataframe: {} "
-              "with shape: {}".format(os.path.basename(self.ut_path),
-                                      ut_df.shape))
-        print(ut_df)
+        ut_df = None
+        if self.ut_path is not None:
+            print("Loading upper triangle matrix.")
+            ut_df = pd.read_csv(self.ut_path, sep="\t", header=0, index_col=0)
+            print("\tLoaded dataframe: {} "
+                  "with shape: {}".format(os.path.basename(self.ut_path),
+                                          ut_df.shape))
+            print(ut_df)
 
         # Correlate and merge.
         data_df, annot_df = self.correlate(lt_df, ut_df)
@@ -136,26 +145,23 @@ class main():
 
     @staticmethod
     def correlate(lower_df, upper_df):
-        if not lower_df.columns.equals(upper_df.columns):
-            raise ValueError("Dataframes are not identical.")
-
         corr_df = pd.DataFrame(np.nan, index=lower_df.columns, columns=lower_df.columns)
         pval_df = pd.DataFrame("", index=lower_df.columns, columns=lower_df.columns)
         mask_df = pd.DataFrame("", index=lower_df.columns, columns=lower_df.columns)
         for i, col1 in enumerate(lower_df.columns):
             for j, col2 in enumerate(lower_df.columns):
                 if i < j:
-                    x = upper_df.loc[:, col1]
-                    y = upper_df.loc[:, col2]
-                    mask = "upper"
+                    if upper_df is None:
+                        continue
+                    coef, p = stats.spearmanr(upper_df.loc[:, col1], upper_df.loc[:, col2])
+                    corr_df.loc[col1, col2] = coef
+                    pval_df.loc[col1, col2] = "{:.2e}".format(p)
+                    mask_df.loc[col1, col2] = "upper"
                 else:
-                    x = lower_df.loc[:, col1]
-                    y = lower_df.loc[:, col2]
-                    mask = "lower"
-                coef, p = stats.spearmanr(x, y)
-                corr_df.loc[col1, col2] = coef
-                pval_df.loc[col1, col2] = "{:.2e}".format(p)
-                mask_df.loc[col1, col2] = mask
+                    coef, p = stats.spearmanr(lower_df.loc[:, col1], lower_df.loc[:, col2])
+                    corr_df.loc[col1, col2] = coef
+                    pval_df.loc[col1, col2] = "{:.2e}".format(p)
+                    mask_df.loc[col1, col2] = "lower"
 
         print(mask_df)
 
