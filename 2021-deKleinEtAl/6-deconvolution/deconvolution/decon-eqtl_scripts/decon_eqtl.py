@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl.py
 Created:      2021/07/12
-Last Changed: 2021/12/22
+Last Changed: 2022/01/17
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -189,7 +189,7 @@ class main():
         parser.add_argument("-std",
                             "--sample_to_dataset",
                             type=str,
-                            required=True,
+                            default=None,
                             help="The path to the sample-to-dataset matrix.")
         parser.add_argument("-na",
                             "--genotype_na",
@@ -279,11 +279,17 @@ class main():
         print("### STEP 1 ###")
         print("Loading genotype data and dataset info.")
         geno_df = self.load_file(self.geno_path, header=0, index_col=0, nrows=self.nrows)
-        std_df = self.load_file(self.std_path, header=0, index_col=None)
 
-        # Validate that the input data matches.
-        self.validate_data(std_df=std_df,
-                           geno_df=geno_df)
+        if self.std_path is not None:
+            std_df = self.load_file(self.std_path, header=0, index_col=None)
+
+            # Validate that the input data matches.
+            self.validate_data(std_df=std_df,
+                               geno_df=geno_df)
+        else:
+            # Create sample-to-dataset file with all the samples having the
+            # same dataset.
+            std_df = pd.DataFrame({"sample": geno_df.columns, "dataset": "None"})
 
         print("Checking dataset sample sizes")
         dataset_sample_counts = list(zip(*np.unique(std_df.iloc[:, 1], return_counts=True)))
@@ -307,7 +313,11 @@ class main():
                   "values due to call rate threshold ".format(call_rate_n_skipped))
 
         print("Calculating genotype stats for inclusing criteria")
-        geno_stats_df = self.calculate_genotype_stats(df=geno_df)
+        cr_keep_mask = ~(geno_df == self.genotype_na).all(axis=1).to_numpy(dtype=bool)
+        geno_stats_df = pd.DataFrame(np.nan, index=geno_df.index, columns=["N", "NaN", "0", "1", "2", "min GS", "HW pval", "allele1", "allele2", "MA", "MAF"])
+        geno_stats_df["N"] = 0
+        geno_stats_df["NaN"] = geno_df.shape[1]
+        geno_stats_df.loc[cr_keep_mask, :] = self.calculate_genotype_stats(df=geno_df.loc[cr_keep_mask, :])
 
         # Checking which eQTLs pass the requirements
         n_keep_mask = (geno_stats_df.loc[:, "N"] >= 6).to_numpy()
