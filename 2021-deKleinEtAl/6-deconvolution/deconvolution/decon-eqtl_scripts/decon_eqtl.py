@@ -438,8 +438,8 @@ class main():
 
         # Create a list of possible genotype encoding configuration. True means
         # we change the encoding by 2 - value. False means we do nothing.
-        alt_model_configs = self.create_model_configs(n=n_covariates, type=self.allele_configs)
-        null_model_configs = self.create_model_configs(n=n_covariates - 1, type=self.allele_configs)
+        alt_model_configs = self.create_model_configs(n=n_covariates + 1, type=self.allele_configs)
+        null_model_configs = self.create_model_configs(n=n_covariates, type=self.allele_configs)
 
         # Calculate and print some info about the analyses to be performed.
         n_configurations_alt = len(alt_model_configs)
@@ -452,11 +452,11 @@ class main():
 
         # Initializing output matrices / arrays.
         real_pvalues_m = np.empty((n_eqtls, n_covariates), dtype=np.float64)
-        betas_alt_m = np.empty((n_eqtls, n_covariates * 2), dtype=np.float64)
+        betas_alt_m = np.empty((n_eqtls, (n_covariates * 2) + 1), dtype=np.float64)
         rss_null_m = np.empty((n_eqtls, n_covariates), dtype=np.float64)
 
         # Save the degrees of freedom the alternative model.
-        df = n_covariates * 2
+        df = (n_covariates * 2) + 1
 
         # Start loop.
         start_time = int(time.time())
@@ -538,9 +538,9 @@ class main():
 
             decon_df = pd.DataFrame(np.hstack((real_pvalues_m, betas_alt_m)),
                                     index=eqtl_indices,
-                                    columns=["{}_pvalue".format(x) for x in cell_types_indices] +
-                                            ["Beta{}_{}".format(i+1, x) for i, x in enumerate(cell_types_indices)] +
-                                            ["Beta{}_{}:GT".format(len(cell_types_indices) + i + 1, x) for i, x in enumerate(cell_types_indices)])
+                                    columns=["{}_pvalue".format(x) for x in cell_types_indices] + ["Beta0"] +
+                                            ["Beta{}_{}".format(i + 1, x) for i, x in enumerate(cell_types_indices)] +
+                                            ["Beta{}_{}:GT".format(len(cell_types_indices) + i + 2, x) for i, x in enumerate(cell_types_indices)])
             print(decon_df)
 
             if self.n_permutations == 0:
@@ -990,46 +990,62 @@ class main():
                   "are required if shuffle index is set.")
             exit()
 
-        n_columns = n_covariates * 2
+        n_columns = (n_covariates * 2) + 1
         if exclude is not None:
             n_columns -= 1
 
         # Create the model matrix. Leave the interaction columns blank for now.
         X = np.empty((n_samples, n_columns), dtype=np.float64)
         for cov_index in range(n_covariates):
-            X[:, cov_index] = cell_fractions[cov_index, :]
+            # print("X[:, {}] = cell_fractions[{}, :]".format(cov_index + 1, cov_index))
+            X[:, cov_index + 1] = cell_fractions[cov_index, :]
 
         # Try different configurations for the genotype encoding.
         top_config = None
         top_betas = None
         top_rss = np.inf
         for config in configs:
+            # print(config)
             # Fill in the alternative matrix with the right configuration
             # of allele encoding.
-            for cov_index, flip in enumerate(config):
-                # If we exclude an interaction term we still have that cell
-                # type fraction in the matrix. Therefore, when matching
-                # interaction column position with cell fraction column
-                # (cc_index) position we need to increment with 1 for all
-                # cell fractions > exclude column.
-                cc_index = cov_index
-                if exclude is not None and cc_index >= exclude:
-                    cc_index += 1
-
-                # Use a shuffled genotype vector if we are doing a permutation
-                # analysis.
-                if cov_index == shuffle_index:
+            for conf_index, flip in enumerate(config):
+                if conf_index == 0:
                     if flip:
-                        X[:, n_covariates + cov_index] = shuffle_inter_flipped
+                        # print("X[:, 0] = (2 - genotype)")
+                        X[:, 0] = (2 - genotype)
                     else:
-                        X[:, n_covariates + cov_index] = shuffle_inter
+                        # print("X[:, 0] = genotype")
+                        X[:, 0] = genotype
                 else:
-                    # Calculate genotype * cell fraction. If flip is true we
-                    # change the allele encoding (0 = 2, 1 = 1, 2 = 0).
-                    if flip:
-                        X[:, n_covariates + cov_index] = (2 - genotype) * X[:, cc_index]
+                    cov_index = conf_index - 1
+
+                    # If we exclude an interaction term we still have that cell
+                    # type fraction in the matrix. Therefore, when matching
+                    # interaction column position with cell fraction column
+                    # (cc_index) position we need to increment with 1 for all
+                    # cell fractions > exclude column.
+                    cc_index = cov_index
+                    if exclude is not None and cc_index >= exclude:
+                        cc_index += 1
+
+                    # Use a shuffled genotype vector if we are doing a permutation
+                    # analysis.
+                    if cov_index == shuffle_index:
+                        if flip:
+                            # print("X[:, {}] = shuffle_inter_flipped".format(n_covariates + cov_index + 1))
+                            X[:, n_covariates + cov_index + 1] = shuffle_inter_flipped
+                        else:
+                            # print("X[:, {}] = shuffle_inter".format(n_covariates + cov_index + 1))
+                            X[:, n_covariates + cov_index + 1] = shuffle_inter
                     else:
-                        X[:, n_covariates + cov_index] = genotype * X[:, cc_index]
+                        # Calculate genotype * cell fraction. If flip is true we
+                        # change the allele encoding (0 = 2, 1 = 1, 2 = 0).
+                        if flip:
+                            # print("X[:, {}] = (2 - genotype) * X[:, {}]".format(n_covariates + cov_index + 1, cc_index + 1))
+                            X[:, n_covariates + cov_index + 1] = (2 - genotype) * X[:, cc_index + 1]
+                        else:
+                            # print("X[:, {}] = genotype * X[:, {}]".format(n_covariates + cov_index + 1, cc_index + 1))
+                            X[:, n_covariates + cov_index + 1] = genotype * X[:, cc_index + 1]
 
             # Check if all values are positive.
             if np.min(X) < 0:
@@ -1052,7 +1068,10 @@ class main():
         # The beta's of the interaction terms are flipped if we
         # flipped the allele encoding. This makes it possible that some
         # betas are negative even though we use NNLS.
-        flip_array = np.hstack((np.ones(n_covariates), np.vectorize({True: -1, False: 1}.get)(top_config)))
+        flip_array = np.ones_like(top_betas)
+        top_config_encoded = np.vectorize({True: -1, False: 1}.get)(top_config)
+        flip_array[0] = top_config_encoded[0]
+        flip_array[(n_covariates + 1):] = top_config_encoded[1:]
         top_betas = top_betas * flip_array
 
         # Insert NaN in betas if we excluded an interaction term.
