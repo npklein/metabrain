@@ -61,6 +61,14 @@ Syntax:
 
 ./compare_cf_predictions.py -cf1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/partial_deconvolution/PSYCHENCODE_PROFILE_CORTEX_EUR_TPM_LOG2/NoENA_IHC_0CPM_LOG2/deconvolution_raw.txt.gz -transpose1 -n1 MetaBrain_TPM_NoENA -cf2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/PsychENCODE/Cell_fractions_Raw.txt.gz -n2 PsychENCODE_MyPredictions -o MetaBrain_TPM_NoENA_vs_PsychENCODE_MyPredictions_CellFraction_comparison
 
+./compare_cf_predictions.py -cf1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/perform_deconvolution/deconvolution_table.txt.gz -transpose1 -n1 TPMLog2 -cf2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-19-CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -transpose2 -n2 TMMLog2CovariatesRemovedOLS -o MetaBrain_CortexEUR_cis_TPM_Log2_CovariatesRemovedOrNot
+
+./compare_cf_predictions.py -cf1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/perform_deconvolution/deconvolution_table.txt.gz -transpose1 -n1 TPMLog2 -cf2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-19-CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -transpose2 -n2 TMMLog2CovariatesRemovedOLS -o MetaBrain_CortexEUR_cis_TPM_Log2_CovariatesRemovedOrNot
+
+./compare_cf_predictions.py -cf1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-19-CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -transpose1 -n1 NegativeToZero -cf2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-20-CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -transpose2 -n2 ShiftedPositive -o MetaBrain_CortexEUR_cis_NegativeToZero_vs_ShiftedPositive
+
+./compare_cf_predictions.py -cf1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-20-CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -transpose1 -n1 WithIntercept -cf2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-20-CortexEUR-cis-NoIntercept/perform_deconvolution/deconvolution_table.txt.gz -transpose2 -n2 WithoutIntercept -o MetaBrain_CortexEUR_cis_ShiftedPositive_WithOrWithoutIntercept
+
 """
 
 
@@ -80,6 +88,20 @@ class main():
         self.outdir = os.path.join(str(Path(__file__).parent.parent), 'plot')
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
+
+        self.colormap = {
+            "Excitatory": "#56B4E9",
+            "Inhibitory": "#0072B2",
+            "Neuron": "#0072B2",
+            "Oligodendrocyte": "#009E73",
+            "OPC": "#009E73",
+            "EndothelialCell": "#CC79A7",
+            "Microglia": "#E69F00",
+            "Macrophage": "#E69F00",
+            "Astrocyte": "#D55E00",
+            "Pericytes": "#808080",
+            "OtherNeuron": "#0072B2"
+        }
 
     def create_argument_parser(self):
         parser = argparse.ArgumentParser(prog=__program__,
@@ -148,11 +170,13 @@ class main():
                                       cf2_df.shape))
         print(cf2_df)
 
-        print("Subset overlap in samples")
+        print("Subset overlap in samples and cell types")
         col_overlap = set(cf1_df.columns).intersection(set(cf2_df.columns))
-        print("\tN-overlap: {}".format(len(col_overlap)))
-        cf1_df = cf1_df.loc[:, col_overlap].copy()
-        cf2_df = cf2_df.loc[:, col_overlap].copy()
+        row_overlap = set(cf1_df.index).intersection(set(cf2_df.index))
+        print("\tN col-overlap: {}".format(len(col_overlap)))
+        print("\tN row-overlap: {}".format(len(row_overlap)))
+        cf1_df = cf1_df.loc[row_overlap, col_overlap].copy()
+        cf2_df = cf2_df.loc[row_overlap, col_overlap].copy()
 
         print("Correlating.")
         corr_df, pvalue_df = self.correlate(index_df=cf1_df.T, columns_df=cf2_df.T)
@@ -162,17 +186,26 @@ class main():
                           xlabel=self.name2,
                           ylabel=self.name1)
 
-        print("Plotting.")
-        cell_types = set(cf1_df.index).intersection(set(cf2_df.index))
-        for ct in cell_types:
-            plot_df = cf1_df.loc[[ct], :].T.merge(cf2_df.loc[[ct], :].T, left_index=True, right_index=True)
-            plot_df.columns = ["x", "y"]
+        print("Merge")
+        cf1_df = cf1_df.T
+        cf1_df.reset_index(drop=False, inplace=True)
+        cf1_dfm = cf1_df.melt(id_vars="index")
+        cf1_dfm.columns = ["sample", "cell type", "x"]
 
-            self.plot_regplot(df=plot_df,
-                              xlabel=self.name1,
-                              ylabel=self.name2,
-                              title=ct,
-                              filename="{}_{}".format(self.outfile, ct))
+        cf2_df = cf2_df.T
+        cf2_df.reset_index(drop=False, inplace=True)
+        cf2_dfm = cf2_df.melt(id_vars="index")
+        cf2_dfm.columns = ["sample", "cell type", "y"]
+
+        cf_dfm = cf1_dfm.merge(cf2_dfm, on=["sample", "cell type"])
+
+        print("Plotting.")
+        self.plot_regplot(
+            df=cf_dfm,
+            group_column="cell type",
+            xlabel=self.name1,
+            ylabel=self.name2,
+            palette=self.colormap)
 
     @staticmethod
     def correlate(index_df, columns_df, triangle=False):
@@ -254,60 +287,118 @@ class main():
         fig.savefig(os.path.join(self.outdir, "{}_corr_heatmap_Pearson.png".format(self.outfile)))
         plt.close()
 
-    def plot_regplot(self, df, x="x", y="y", xlabel="", ylabel="", title="",
-                     filename="plot"):
+    def plot_regplot(self, df, group_column, x="x", y="y", xlabel="",
+                     ylabel="", palette=None, filename=""):
 
-        sns.set(rc={'figure.figsize': (12, 9)})
+        if df.shape[0] <= 2:
+            return
+
+        group_counts = list(zip(*np.unique(df[group_column].to_numpy(), return_counts=True)))
+        group_counts.sort(key=lambda x: -x[1])
+        groups = [x[0] for x in group_counts]
+        groups.sort()
+
+        nplots = len(groups)
+        ncols = math.ceil(np.sqrt(nplots))
+        nrows = math.ceil(nplots / ncols)
+
         sns.set_style("ticks")
-        fig, ax = plt.subplots()
-        sns.despine(fig=fig, ax=ax)
+        fig, axes = plt.subplots(nrows=nrows,
+                                 ncols=ncols,
+                                 figsize=(12 * ncols, 12 * nrows))
+        sns.set(color_codes=True)
 
-        # Plot.
-        sns.regplot(x=x, y=y, data=df, ci=95,
-                    scatter_kws={'facecolors': "#000000",
-                                 'linewidth': 0,
-                                 'alpha': 0.75},
-                    line_kws={"color": "#b22222"},
-                    ax=ax
-                    )
+        row_index = 0
+        col_index = 0
+        for i in range(ncols * nrows):
+            if nrows == 1 and ncols == 1:
+                ax = axes
+            elif nrows == 1 and ncols > 1:
+                ax = axes[col_index]
+            elif nrows > 1 and ncols == 1:
+                ax = axes[row_index]
+            else:
+                ax = axes[row_index, col_index]
 
-        # Regression.
-        coef_str = "NA"
-        if np.std(df[y]) != 0 and np.std(df[x]) != 0:
-            coef, _ = stats.pearsonr(df[y], df[x])
-            coef_str = "{:.2f}".format(coef)
+            if i < nplots:
+                plot_df = df.loc[df[group_column] == groups[i], :]
 
-        # Add the text.
-        ax.annotate(
-            'N = {:,}'.format(df.shape[0]),
-            xy=(0.03, 0.94),
-            xycoords=ax.transAxes,
-            color="#000000",
-            alpha=0.75,
-            fontsize=14,
-            fontweight='bold')
-        ax.annotate(
-            'r = {}'.format(coef_str),
-            xy=(0.03, 0.9),
-            xycoords=ax.transAxes,
-            color="#000000",
-            alpha=0.75,
-            fontsize=14,
-            fontweight='bold')
+                sns.despine(fig=fig, ax=ax)
 
-        ax.set_title(title,
-                     fontsize=18,
-                     fontweight='bold')
-        ax.set_ylabel(ylabel,
-                      fontsize=14,
-                      fontweight='bold')
-        ax.set_xlabel(xlabel,
-                      fontsize=14,
-                      fontweight='bold')
+                lower_quadrant = plot_df.loc[(plot_df[x] < 0) & (plot_df[y] < 0), :]
+                upper_quadrant = plot_df.loc[(plot_df[x] > 0) & (plot_df[y] > 0), :]
+                concordance = (100 / plot_df.shape[0]) * (lower_quadrant.shape[0] + upper_quadrant.shape[0])
 
-        fig.savefig(os.path.join(self.outdir, "{}_regplot.png".format(filename)))
-        print("\tSaved '{}'".format(filename))
+                coef, _ = stats.spearmanr(plot_df[y], plot_df[x])
+
+                accent_color = "#b22222"
+                if palette is not None:
+                    accent_color = palette[groups[i]]
+
+                sns.regplot(x=x, y=y, data=plot_df, ci=None,
+                            scatter_kws={'facecolors': "#000000",
+                                         'linewidth': 0,
+                                         'alpha': 0.75},
+                            line_kws={"color": accent_color,
+                                      'linewidth': 5},
+                            ax=ax)
+
+                ax.annotate(
+                    'N = {}'.format(plot_df.shape[0]),
+                    xy=(0.03, 0.94),
+                    xycoords=ax.transAxes,
+                    color=accent_color,
+                    alpha=1,
+                    fontsize=18,
+                    fontweight='bold')
+                ax.annotate(
+                    'r = {:.2f}'.format(coef),
+                    xy=(0.03, 0.90),
+                    xycoords=ax.transAxes,
+                    color=accent_color,
+                    alpha=1,
+                    fontsize=18,
+                    fontweight='bold')
+                ax.annotate(
+                    'concordance = {:.0f}%'.format(concordance),
+                    xy=(0.03, 0.86),
+                    xycoords=ax.transAxes,
+                    color=accent_color,
+                    alpha=1,
+                    fontsize=18,
+                    fontweight='bold')
+
+                ax.axhline(0, ls='--', color="#000000", zorder=-1)
+                ax.axvline(0, ls='--', color="#000000", zorder=-1)
+
+                tmp_xlabel = ""
+                if row_index == (nrows - 1):
+                    tmp_xlabel = xlabel
+                ax.set_xlabel(tmp_xlabel,
+                              fontsize=20,
+                              fontweight='bold')
+                tmp_ylabel = ""
+                if col_index == 0:
+                    tmp_ylabel = ylabel
+                ax.set_ylabel(tmp_ylabel,
+                              fontsize=20,
+                              fontweight='bold')
+
+                ax.set_title(groups[i],
+                             fontsize=25,
+                             fontweight='bold')
+            else:
+                ax.set_axis_off()
+
+            col_index += 1
+            if col_index > (ncols - 1):
+                col_index = 0
+                row_index += 1
+
+        outpath = os.path.join(self.outdir, "{}_regplot.png".format(self.outfile))
+        fig.savefig(outpath)
         plt.close()
+        print("\tSaved: {}".format(outpath))
 
 
 if __name__ == '__main__':

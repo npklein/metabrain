@@ -1,7 +1,7 @@
 """
 File:         create_correction_matrix.py
 Created:      2020/10/15
-Last Changed: 2021/10/21
+Last Changed: 2022/01/19
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -36,6 +36,7 @@ class CreateCorrectionMatrix:
                  sample_order, force, outdir):
         self.cov_file = settings["tech_covariates_datafile"]
         self.mds_file = settings["mds_datafile"]
+        self.technical_covariates = settings["technical_covariates"]
         self.log = log
         self.dataset_file = dataset_file
         self.dataset_df = dataset_df
@@ -80,6 +81,10 @@ class CreateCorrectionMatrix:
         tcov_df = tcov_df.loc[self.sample_order, :].copy()
         save_dataframe(df=tcov_df.T, outpath=os.path.join(self.outdir, "technical_covariates_table.txt.gz"),
                        index=True, header=True, logger=self.log)
+        if self.technical_covariates:
+            save_dataframe(df=tcov_df.loc[:, self.technical_covariates].T,
+                           outpath=os.path.join(self.outdir, "technical_covariates_table_subset.txt.gz"),
+                           index=True, header=True, logger=self.log)
 
         # Load the MDS components.
         self.log.info("Loading MDS matrix.")
@@ -151,6 +156,7 @@ class CreateCorrectionMatrix:
             self.log.info("  > Cohort input shape: {}".format(self.dataset_df.shape))
         else:
             self.log.info("  > Cohort input file: {}".format(self.dataset_file))
+        self.log.info("  > Technical covariates: {}".format(self.technical_covariates))
         self.log.info("  > Output path: {}".format(self.outpath))
         self.log.info("  > Force: {}".format(self.force))
         self.log.info("")

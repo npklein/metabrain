@@ -404,7 +404,7 @@ class main():
             now_time = int(time.time())
             if last_print_time is None or (now_time - last_print_time) >= 10 or (i + 1) == n_tests:
                 last_print_time = now_time
-                print("\t{}/{} ieQTLs analysed [{:.2f}%]".format((i + 1), n_tests, (100 / n_tests) * (i + 1)))
+                print("\t{}/{} genes corrected [{:.2f}%]".format((i + 1), n_tests, (100 / n_tests) * (i + 1)))
 
             ols = OLS(df.iloc[i, :], correction_df)
             results = ols.fit()

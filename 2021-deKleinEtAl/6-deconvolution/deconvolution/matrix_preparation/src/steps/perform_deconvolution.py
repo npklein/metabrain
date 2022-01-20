@@ -100,6 +100,9 @@ class PerformDeconvolution:
             self.log.warning("\tExpression matrix is shifted.")
             expr_df = self.perform_shift(expr_df)
 
+        # Add intercept.
+        sign_df.insert(0, "INTERCEPT", 1)
+
         self.log.info("Signature shape: {}".format(sign_df.shape))
         self.log.info("Expression shape: {}".format(expr_df.shape))
 
@@ -109,12 +112,12 @@ class PerformDeconvolution:
         residuals_data = []
         for _, sample in expr_df.T.iterrows():
             proportions, rnorm = self.nnls(sign_df, sample)
-            decon_data.append(proportions)
+            decon_data.append(proportions[1:])
             residuals_data.append(rnorm)
 
         decon_df = pd.DataFrame(decon_data,
                                 index=expr_df.columns,
-                                columns=sign_df.columns)
+                                columns=sign_df.columns[1:])
         residuals_df = pd.Series(residuals_data, index=expr_df.columns)
 
         self.log.info("Estimated weights:")

@@ -25,23 +25,21 @@
     "deconvolution_expr_datafile": ""
   },
   "correct_dataset_effects": {
-
   },
   "perform_deconvolution": {
     "min_expr_cutoff": 0
   },
   "create_correction_matrix": {
     "tech_covariates_datafile": "",
-    "mds_datafile": ""
+    "mds_datafile": "",
+    "technical_covariates": []
   },
   "create_covs_matrix": {
     "eigenvectors_datafile": "",
     "num_eigenvectors": 50
   },
   "create_extra_covs_matrix": {
-
   },
   "normal_transform_matrix": {
-
   }
 }

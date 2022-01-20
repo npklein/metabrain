@@ -66,6 +66,12 @@ Syntax:
 ./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/perform_deconvolution/deconvolution_table_InhibitorySummedWithOtherNeuron.txt.gz -e png pdf -o 2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved-deconvolutionTable-InhibitorySummedWithOtherNeuron
 
 ./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemoved/perform_deconvolution/deconvolution_table.txt.gz -e png pdf -o 2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemove-InhibitorySummedWithOtherNeuron
+
+./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/perform_deconvolution/deconvolution_table_InhibitorySummedWithOtherNeuron_DatasetNormalised.txt.gz -e png pdf -o 2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved-deconvolutionTable-InhibitorySummedWithOtherNeuron-NNLSBetasDatasetNormnalised
+
+./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-19-CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -e png pdf -o 2022-01-19-CortexEUR-cis-deconvolutionTable
+
+./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-20-CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -e png pdf -o 2022-01-20-CortexEUR-cis-deconvolutionTable
 """
 
 

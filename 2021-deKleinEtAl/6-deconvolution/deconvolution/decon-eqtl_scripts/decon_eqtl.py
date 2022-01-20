@@ -75,7 +75,7 @@ Syntax:
     -maf 0.05 \
     -ac limited \
     -of 2021-12-07-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDevCT
-    
+
 ./decon_eqtl.py \
     -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/create_matrices/genotype_table.txt.gz \
     -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/2021-12-07-CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt \
@@ -84,10 +84,10 @@ Syntax:
     -maf 0.05 \
     -ac limited \
     -of 2021-12-07-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDevNoInhibitoryCT
-    
+
 
 ### Cortex EUR ###
-    
+
 ./decon_eqtl.py \
     -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/create_matrices/genotype_table.txt.gz \
     -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/2021-12-07-CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt \
@@ -97,6 +97,24 @@ Syntax:
     -ac limited \
     -of 2021-12-07-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron
     
+./decon_eqtl.py \
+    -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-19-CortexEUR-cis/create_matrices/genotype_table.txt.gz \
+    -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/2021-12-07-CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt \
+    -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-19-CortexEUR-cis/perform_deconvolution/deconvolution_table_InhibitorySummedWithOtherNeuron.txt.gz \
+    -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-19-CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz \
+    -maf 0.05 \
+    -ac limited \
+    -of 2022-01-19-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron-ExprMatrixCovariatesRemovedOLS-NegativeToZero
+    
+./decon_eqtl.py \
+    -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-20-CortexEUR-cis/create_matrices/genotype_table.txt.gz \
+    -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/2021-12-07-CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt \
+    -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-20-CortexEUR-cis/perform_deconvolution/deconvolution_table_InhibitorySummedWithOtherNeuron.txt.gz \
+    -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-20-CortexEUR-cis/combine_gte_files/SampleToDataset.txt.gz \
+    -maf 0.05 \
+    -ac limited \
+    -of 2022-01-20-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron-ExprMatrixCovariatesRemovedOLS-ShiftedPositive
+
 ### Cortex AFR Replication of EUR ###    
 
 ./decon_eqtl.py \
@@ -414,7 +432,7 @@ class main():
             cell_fractions = cc_m.T
 
             # Calculate the z-scores over the cell fractions.
-            zscores = (cell_fractions - np.mean(cell_fractions,axis=0)) / np.std(cell_fractions, axis=0)
+            zscores = (cell_fractions - np.mean(cell_fractions, axis=0)) / np.std(cell_fractions, axis=0)
             zscore_mask = np.max(np.abs(zscores), axis=1) < self.zscore_cutoff
             print("\t {:,} samples removed.".format(np.size(zscore_mask) - np.sum(zscore_mask)))
 
@@ -438,8 +456,8 @@ class main():
 
         # Create a list of possible genotype encoding configuration. True means
         # we change the encoding by 2 - value. False means we do nothing.
-        alt_model_configs = self.create_model_configs(n=n_covariates + 1, type=self.allele_configs)
-        null_model_configs = self.create_model_configs(n=n_covariates, type=self.allele_configs)
+        alt_model_configs = self.create_model_configs(n=n_covariates, type=self.allele_configs)
+        null_model_configs = self.create_model_configs(n=n_covariates - 1, type=self.allele_configs)
 
         # Calculate and print some info about the analyses to be performed.
         n_configurations_alt = len(alt_model_configs)
@@ -452,11 +470,11 @@ class main():
 
         # Initializing output matrices / arrays.
         real_pvalues_m = np.empty((n_eqtls, n_covariates), dtype=np.float64)
-        betas_alt_m = np.empty((n_eqtls, (n_covariates * 2) + 1), dtype=np.float64)
+        betas_alt_m = np.empty((n_eqtls, n_covariates * 2), dtype=np.float64)
         rss_null_m = np.empty((n_eqtls, n_covariates), dtype=np.float64)
 
         # Save the degrees of freedom the alternative model.
-        df = (n_covariates * 2) + 1
+        df = n_covariates * 2
 
         # Start loop.
         start_time = int(time.time())
@@ -538,9 +556,9 @@ class main():
 
             decon_df = pd.DataFrame(np.hstack((real_pvalues_m, betas_alt_m)),
                                     index=eqtl_indices,
-                                    columns=["{}_pvalue".format(x) for x in cell_types_indices] + ["Beta0"] +
+                                    columns=["{}_pvalue".format(x) for x in cell_types_indices] +
                                             ["Beta{}_{}".format(i + 1, x) for i, x in enumerate(cell_types_indices)] +
-                                            ["Beta{}_{}:GT".format(len(cell_types_indices) + i + 2, x) for i, x in enumerate(cell_types_indices)])
+                                            ["Beta{}_{}:GT".format(len(cell_types_indices) + i + 1, x) for i, x in enumerate(cell_types_indices)])
             print(decon_df)
 
             if self.n_permutations == 0:
@@ -576,23 +594,26 @@ class main():
         print("")
 
         # Create the permutation orders.
-        perm_order_m = self.create_perm_orders(n_permutations=self.n_permutations,
-                                               n_samples=n_samples,
-                                               datasets=datasets,
-                                               std_m=std_m,
-                                               seed_offset=self.permutation_index_offset)
+        perm_order_m = self.create_perm_orders(
+            n_permutations=self.n_permutations,
+            n_samples=n_samples,
+            datasets=datasets,
+            std_m=std_m,
+            seed_offset=self.permutation_index_offset)
 
         # Calculate the overlap between the genotype matrices
-        perm_overlap_m = self.check_permutation_overlap(geno_m=geno_m, perm_order_m=perm_order_m)
+        perm_overlap_m = self.check_permutation_overlap(geno_m=geno_m,
+                                                        perm_order_m=perm_order_m)
 
         geno_nan_mask = np.isnan(geno_m)
         nanfilled_geno_m = np.copy(geno_m)
         if np.sum(geno_nan_mask) > 0:
             # Calculate the dataset genotype means per eQTL and fill nan values
             # with the dataset mean.
-            geno_dataset_mean_m = self.calculate_geno_mean_per_dataset(geno_m=geno_m,
-                                                                       datasets=datasets,
-                                                                       std_m=std_m)
+            geno_dataset_mean_m = self.calculate_geno_mean_per_dataset(
+                geno_m=geno_m,
+                datasets=datasets,
+                std_m=std_m)
             nanfilled_geno_m[geno_nan_mask] = geno_dataset_mean_m[geno_nan_mask]
 
         # Initializing output matrices / arrays.
@@ -697,11 +718,18 @@ class main():
         print("### STEP 8 ###")
         print("Saving results.")
 
-        file_suffix = "{}{}_until_{}{}".format("0" * self.leading_zeros, self.permutation_index_offset, "0" * self.leading_zeros, self.permutation_index_offset + self.n_permutations - 1)
-        self.save_matrix(m=perm_order_m, outpath=os.path.join(self.outdir, "perm_orders_{}.npy".format(file_suffix)))
-        self.save_matrix(m=perm_overlap_m, outpath=os.path.join(self.outdir, "perm_order_overlap_{}.npy".format(file_suffix)))
-        self.save_matrix(m=perm_pvalues_m, outpath=os.path.join(self.outdir, "permutation_pvalues_{}.npy".format(file_suffix)))
-        self.save_matrix(m=perm_betas_alt_m, outpath=os.path.join(self.outdir, "permutation_betas_alternative_model_{}.npy".format(file_suffix)))
+        file_suffix = "{}{}_until_{}{}".format("0" * self.leading_zeros,
+                                               self.permutation_index_offset,
+                                               "0" * self.leading_zeros,
+                                               self.permutation_index_offset + self.n_permutations - 1)
+        self.save_matrix(m=perm_order_m, outpath=os.path.join(self.outdir,
+                                                              "perm_orders_{}.npy".format(file_suffix)))
+        self.save_matrix(m=perm_overlap_m, outpath=os.path.join(self.outdir,
+                                                                "perm_order_overlap_{}.npy".format(file_suffix)))
+        self.save_matrix(m=perm_pvalues_m, outpath=os.path.join(self.outdir,
+                                                                "permutation_pvalues_{}.npy".format(file_suffix)))
+        self.save_matrix(m=perm_betas_alt_m, outpath=os.path.join(self.outdir,
+                                                                  "permutation_betas_alternative_model_{}.npy".format(file_suffix)))
 
         lowest_pvalues_m = np.transpose(np.min(perm_pvalues_m, axis=0))
         lowest_pvalues_df = pd.DataFrame(lowest_pvalues_m,
@@ -728,19 +756,19 @@ class main():
     def validate_data(std_df, geno_df=None, expr_df=None, cc_df=None):
         samples = std_df.iloc[:, 0].values.tolist()
         if geno_df is not None and geno_df.columns.tolist() != samples:
-                print("\tThe genotype file header does not match "
-                      "the sample-to-dataset link file")
-                exit()
+            print("\tThe genotype file header does not match "
+                  "the sample-to-dataset link file")
+            exit()
 
         if expr_df is not None and expr_df.columns.tolist() != samples:
-                print("\tThe expression file header does not match "
-                      "the sample-to-dataset link file")
-                exit()
+            print("\tThe expression file header does not match "
+                  "the sample-to-dataset link file")
+            exit()
 
         if cc_df is not None and cc_df.columns.tolist() != samples:
-                print("\tThe cell count file header does not match "
-                      "the sample-to-dataset link file")
-                exit()
+            print("\tThe cell count file header does not match "
+                  "the sample-to-dataset link file")
+            exit()
 
     def calculate_call_rate(self, geno_df, std_df, datasets):
         """
@@ -910,7 +938,8 @@ class main():
             return None
 
     @staticmethod
-    def create_perm_orders(n_permutations, n_samples, datasets, std_m, seed_offset):
+    def create_perm_orders(n_permutations, n_samples, datasets, std_m,
+                           seed_offset):
         """
         Shuffles an array of size n_samples into a random order (with seed)
         N times. However, this function only shuffles samples within the same
@@ -990,62 +1019,46 @@ class main():
                   "are required if shuffle index is set.")
             exit()
 
-        n_columns = (n_covariates * 2) + 1
+        n_columns = n_covariates * 2
         if exclude is not None:
             n_columns -= 1
 
         # Create the model matrix. Leave the interaction columns blank for now.
         X = np.empty((n_samples, n_columns), dtype=np.float64)
         for cov_index in range(n_covariates):
-            # print("X[:, {}] = cell_fractions[{}, :]".format(cov_index + 1, cov_index))
-            X[:, cov_index + 1] = cell_fractions[cov_index, :]
+            X[:, cov_index] = cell_fractions[cov_index, :]
 
         # Try different configurations for the genotype encoding.
         top_config = None
         top_betas = None
         top_rss = np.inf
         for config in configs:
-            # print(config)
             # Fill in the alternative matrix with the right configuration
             # of allele encoding.
-            for conf_index, flip in enumerate(config):
-                if conf_index == 0:
+            for cov_index, flip in enumerate(config):
+                # If we exclude an interaction term we still have that cell
+                # type fraction in the matrix. Therefore, when matching
+                # interaction column position with cell fraction column
+                # (cc_index) position we need to increment with 1 for all
+                # cell fractions > exclude column.
+                cc_index = cov_index
+                if exclude is not None and cc_index >= exclude:
+                    cc_index += 1
+
+                # Use a shuffled genotype vector if we are doing a permutation
+                # analysis.
+                if cov_index == shuffle_index:
                     if flip:
-                        # print("X[:, 0] = (2 - genotype)")
-                        X[:, 0] = (2 - genotype)
+                        X[:, n_covariates + cov_index] = shuffle_inter_flipped
                     else:
-                        # print("X[:, 0] = genotype")
-                        X[:, 0] = genotype
+                        X[:, n_covariates + cov_index] = shuffle_inter
                 else:
-                    cov_index = conf_index - 1
-
-                    # If we exclude an interaction term we still have that cell
-                    # type fraction in the matrix. Therefore, when matching
-                    # interaction column position with cell fraction column
-                    # (cc_index) position we need to increment with 1 for all
-                    # cell fractions > exclude column.
-                    cc_index = cov_index
-                    if exclude is not None and cc_index >= exclude:
-                        cc_index += 1
-
-                    # Use a shuffled genotype vector if we are doing a permutation
-                    # analysis.
-                    if cov_index == shuffle_index:
-                        if flip:
-                            # print("X[:, {}] = shuffle_inter_flipped".format(n_covariates + cov_index + 1))
-                            X[:, n_covariates + cov_index + 1] = shuffle_inter_flipped
-                        else:
-                            # print("X[:, {}] = shuffle_inter".format(n_covariates + cov_index + 1))
-                            X[:, n_covariates + cov_index + 1] = shuffle_inter
+                    # Calculate genotype * cell fraction. If flip is true we
+                    # change the allele encoding (0 = 2, 1 = 1, 2 = 0).
+                    if flip:
+                        X[:, n_covariates + cov_index] = (2 - genotype) * X[:, cc_index]
                     else:
-                        # Calculate genotype * cell fraction. If flip is true we
-                        # change the allele encoding (0 = 2, 1 = 1, 2 = 0).
-                        if flip:
-                            # print("X[:, {}] = (2 - genotype) * X[:, {}]".format(n_covariates + cov_index + 1, cc_index + 1))
-                            X[:, n_covariates + cov_index + 1] = (2 - genotype) * X[:, cc_index + 1]
-                        else:
-                            # print("X[:, {}] = genotype * X[:, {}]".format(n_covariates + cov_index + 1, cc_index + 1))
-                            X[:, n_covariates + cov_index + 1] = genotype * X[:, cc_index + 1]
+                        X[:, n_covariates + cov_index] = genotype * X[:, cc_index]
 
             # Check if all values are positive.
             if np.min(X) < 0:
@@ -1068,10 +1081,7 @@ class main():
         # The beta's of the interaction terms are flipped if we
         # flipped the allele encoding. This makes it possible that some
         # betas are negative even though we use NNLS.
-        flip_array = np.ones_like(top_betas)
-        top_config_encoded = np.vectorize({True: -1, False: 1}.get)(top_config)
-        flip_array[0] = top_config_encoded[0]
-        flip_array[(n_covariates + 1):] = top_config_encoded[1:]
+        flip_array = np.hstack((np.ones(n_covariates), np.vectorize({True: -1, False: 1}.get)(top_config)))
         top_betas = top_betas * flip_array
 
         # Insert NaN in betas if we excluded an interaction term.
