@@ -44,6 +44,10 @@ import matplotlib.patches as mpatches
 """
 Syntax:
 ./julienbryois2021_replication_plot2.py -dd /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2021-12-22-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron/deconvolutionResults.txt.gz -da /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/create_matrices/genotype_alleles.txt.gz -dn MetaBrain_Decon-eQTL
+
+./julienbryois2021_replication_plot2.py -dd /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-19-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron-ExprMatrixCovariatesRemovedOLS-NegativeToZero/deconvolutionResults.txt.gz -da /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/create_matrices/genotype_alleles.txt.gz -dn MetaBrain_Decon-eQTL
+
+./julienbryois2021_replication_plot2.py -dd /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-20-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron-ExprMatrixCovariatesRemovedOLS-ShiftedPositive/deconvolutionResults.txt.gz -da /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/create_matrices/genotype_alleles.txt.gz -dn MetaBrain_Decon-eQTL
 """
 
 # Metadata
@@ -134,31 +138,23 @@ class main():
         self.print_arguments()
 
         print("Loading data")
-        discovery_data_df = self.load_file(self.discovery_data_path, header=0, index_col=None)
-        discovery_cell_types = [x.replace("_pvalue", "") for x in discovery_data_df if x.endswith("_pvalue")]
+        discovery_df = self.load_file(self.discovery_data_path, header=0, index_col=None)
+        discovery_df["SNPName"] = ["_".join(x.split("_")[1:]) for x in discovery_df.iloc[:, 0]]
+        discovery_cell_types = [x.replace("_pvalue", "") for x in discovery_df if x.endswith("_pvalue")]
+
         discovery_alleles_df = self.load_file(self.discovery_alleles_path, header=0, index_col=None)
         discovery_alleles_df.columns = ["SNPName", "Alleles", "MinorAllele"]
         discovery_alleles_df["DeconAllele"] = [x.split("/")[1] for x in discovery_alleles_df["Alleles"]]
-        discovery_data_df["SNPName"] = ["_".join(x.split("_")[1:]) for x in discovery_data_df.iloc[:, 0]]
-        discovery_df = discovery_data_df.merge(discovery_alleles_df[["SNPName", "DeconAllele"]], on="SNPName")
+        snp_to_da_dict = dict(zip(discovery_alleles_df["SNPName"], discovery_alleles_df["DeconAllele"]))
+
+        discovery_df["DeconAllele"] = discovery_df["SNPName"].map(snp_to_da_dict)
         discovery_df.index = ["{}_{}".format(x.split(".")[0], x.split(":")[2]) for x in discovery_df.iloc[:, 0]]
         discovery_df = discovery_df.iloc[:, 1:]
         discovery_df.reset_index(drop=False, inplace=True)
-        print(discovery_df)
-
-        cell_type_trans_dict = {"Astrocytes": "Astrocyte",
-                                "EndothelialCells": "EndothelialCell",
-                                "ExcitatoryNeurons": "Excitatory",
-                                "InhibitoryNeurons": "Inhibitory",
-                                "Microglia": "Microglia",
-                                "Oligodendrocytes": "Oligodendrocyte",
-                                "OPCsCOPs": "OPCs...COPs",
-                                "Pericytes": "Pericytes"}
 
         replication_df = self.load_file(os.path.join(self.replication_path, "JulienBryois2021SummaryStats.txt.gz"), header=0, index_col=0, nrows=None)
         replication_cell_types = [x.replace(" p-value", "") for x in replication_df if x.endswith(" p-value")]
         replication_df.reset_index(drop=False, inplace=True)
-        print(replication_df)
 
         for discovery_ct in discovery_cell_types:
             discovery_fdr_column = "{}_FDR".format(discovery_ct)
@@ -225,10 +221,9 @@ class main():
                 replication_subset_df = replication_df.loc[replication_df["{} p-value".format(groups[i])] < 0.05, ["index", "{} beta".format(groups[i]), "effect_allele"]].copy()
                 replication_subset_df.columns = ["index", "replication beta", "replication allele"]
                 replication_subset_df.dropna(inplace=True)
-
                 plot_df = discovery_df.merge(replication_subset_df, on=["index"])
                 plot_df["flip"] = (plot_df["discovery allele"] == plot_df["replication allele"]).replace({False: -1, True: 1})
-                plot_df["replication beta flipped"] = plot_df["replication beta"] * plot_df["flip"]
+                plot_df["replication beta"] = plot_df["replication beta"] * plot_df["flip"]
                 plot_df = self.log_transform(plot_df)
 
                 sns.despine(fig=fig, ax=ax)

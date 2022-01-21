@@ -100,9 +100,6 @@ class PerformDeconvolution:
             self.log.warning("\tExpression matrix is shifted.")
             expr_df = self.perform_shift(expr_df)
 
-        # Add intercept.
-        sign_df.insert(0, "INTERCEPT", 1)
-
         self.log.info("Signature shape: {}".format(sign_df.shape))
         self.log.info("Expression shape: {}".format(expr_df.shape))
 
@@ -110,18 +107,30 @@ class PerformDeconvolution:
         self.log.info("Performing partial deconvolution.")
         decon_data = []
         residuals_data = []
+        recon_accuracy_data = []
         for _, sample in expr_df.T.iterrows():
+            # Model.
             proportions, rnorm = self.nnls(sign_df, sample)
-            decon_data.append(proportions[1:])
+
+            # Calculate reconstruction accuracy.
+            recon_accuracy = self.calc_reconstruction_accuracy(y=sample,
+                                                               X=sign_df,
+                                                               betas=proportions)
+
+            # Save.
+            decon_data.append(proportions)
             residuals_data.append(rnorm)
+            recon_accuracy_data.append(recon_accuracy)
 
         decon_df = pd.DataFrame(decon_data,
                                 index=expr_df.columns,
-                                columns=sign_df.columns[1:])
+                                columns=sign_df.columns)
         residuals_df = pd.Series(residuals_data, index=expr_df.columns)
+        recon_accuracy = pd.Series(recon_accuracy_data, index=expr_df.columns)
 
         self.log.info("Estimated weights:")
         self.log.info(decon_df.mean(axis=0))
+        self.log.info("Average reconstruction accuracy: {:.2f} [SD: {:.2f}]".format(recon_accuracy.mean(), recon_accuracy.std()))
 
         save_dataframe(df=decon_df, outpath=os.path.join(self.outdir, "NNLS_betas.txt.gz"),
                        index=True, header=True, logger=self.log)
@@ -185,6 +194,14 @@ class PerformDeconvolution:
     @staticmethod
     def nnls(A, b):
         return nnls(A, b)
+
+    @staticmethod
+    def calc_reconstruction_accuracy(y, X, betas):
+        y_hat = np.dot(X, betas)
+        residuals = y - y_hat
+        residuals_norm = np.linalg.norm(residuals)
+        y_hat_norm = np.linalg.norm(y)
+        return 1 - (residuals_norm * residuals_norm) / (y_hat_norm * y_hat_norm)
 
     @staticmethod
     def sum_to_one(X):

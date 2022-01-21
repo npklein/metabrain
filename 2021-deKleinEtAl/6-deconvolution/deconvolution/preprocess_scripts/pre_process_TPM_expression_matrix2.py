@@ -356,6 +356,8 @@ class main():
         correction_df = self.prepare_correction_matrix(dataset_df=dataset_df,
                                                        ram_df=ram_df)
 
+        # correction_df = self.prepare_correction_matrix2(ram_df=ram_df)
+
         print("\tSaving file.")
         self.save_file(df=correction_df, outpath=os.path.join(self.file_outdir, "correction_matrix.txt.gz"))
 
@@ -397,19 +399,19 @@ class main():
                  sample_to_dataset=sample_to_dataset,
                  plot_appendix="_5_TPM_Log2Transformed_CovariatesRemovedOLS_ScaleAndColReturned")
 
-        print("Step 15: Shift positive.")
+        print("Step 15: Replace negative with zero.")
         min_value = tpm_corrected_df.values.min()
         if min_value < 0:
             print("\tLowest value before: {}".format(min_value))
-            tpm_corrected_df = tpm_corrected_df + abs(tpm_corrected_df.values.min())
+            tpm_corrected_df[tpm_corrected_df < 0] = 0
             print("\tLowest value after: {}".format(tpm_corrected_df.values.min()))
 
         self.plot_scatterplot(df=tpm_corrected_df.T,
                               sa_df=std_df,
                               columns=tpm_df.index[:5],
-                              filename="_4_TPM_Log2Transformed_CovariatesRemovedOLS_ScaleAndLocReturned_ShiftedPositive")
+                              filename="_4_TPM_Log2Transformed_CovariatesRemovedOLS_ScaleAndLocReturned_NegativeToZero")
 
-        self.save_file(df=tpm_corrected_df, outpath=os.path.join(self.file_outdir, "geneCounts.TPM.MergedExonLength.Log2Transformed.MarkerGenes.CovariatesRemovedOLS.ScaleAndLocReturned.ShiftedPositive.txt.gz"))
+        self.save_file(df=tpm_corrected_df, outpath=os.path.join(self.file_outdir, "geneCounts.TPM.MergedExonLength.Log2Transformed.MarkerGenes.CovariatesRemovedOLS.ScaleAndLocReturned.NegativeToZero.txt.gz"))
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
@@ -433,7 +435,7 @@ class main():
               "with shape: {}".format(os.path.basename(outpath),
                                       df.shape))
 
-    def prepare_correction_matrix(self, dataset_df, ram_df):
+    def prepare_correction_matrix(self, dataset_df, ram_df=None):
         correction_df = dataset_df.iloc[:, 1:]
         if ram_df is not None:
             # Remove columns without variance and filter the RNAseq alignment
@@ -443,6 +445,18 @@ class main():
 
             # Merge with correction data frame.
             correction_df = ram_df_subset_df.merge(ram_df_subset_df, left_index=True, right_index=True)
+
+        # Add intercept.
+        correction_df.insert(0, "INTERCEPT", 1)
+        correction_df.index.name = "-"
+
+        return correction_df
+
+    def prepare_correction_matrix2(self, ram_df):
+        # Remove columns without variance and filter the RNAseq alignment
+        # metrics on VIF.
+        correction_df = ram_df.copy()
+        correction_df = self.remove_multicollinearity(correction_df.loc[:, correction_df.std(axis=0) != 0])
 
         # Add intercept.
         correction_df.insert(0, "INTERCEPT", 1)

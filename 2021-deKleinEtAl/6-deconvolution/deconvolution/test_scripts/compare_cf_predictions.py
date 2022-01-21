@@ -69,6 +69,8 @@ Syntax:
 
 ./compare_cf_predictions.py -cf1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-20-CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -transpose1 -n1 WithIntercept -cf2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-20-CortexEUR-cis-NoIntercept/perform_deconvolution/deconvolution_table.txt.gz -transpose2 -n2 WithoutIntercept -o MetaBrain_CortexEUR_cis_ShiftedPositive_WithOrWithoutIntercept
 
+./compare_cf_predictions.py -cf1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-RAMCorrected/perform_deconvolution/deconvolution_table.txt.gz -transpose1 -n1 NoDatasetCorrection -cf2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table.txt.gz -transpose2 -n2 DatasetCorrection -o 2022-01-21-CortexEUR-cis-NegativeToZero-RAMCorrected-DatasetCorrectedOrNot
+
 """
 
 
