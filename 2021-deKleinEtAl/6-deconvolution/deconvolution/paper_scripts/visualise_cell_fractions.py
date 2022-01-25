@@ -55,25 +55,13 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./visualise_cell_fractions.py -cf ../matrix_preparation/CortexEUR-cis-Uncorrected/perform_deconvolution/deconvolution_table.txt.gz -e png pdf -o CortexEUR-cis-Uncorrected-PsychENCODEProfile
 
-./visualise_cell_fractions.py -cf ../matrix_preparation/CortexEUR-cis-Uncorrected-NoENA-NoMDSOutlier/perform_deconvolution/deconvolution_table.txt.gz -e png pdf -o CortexEUR-cis-Uncorrected-NoENA-NoMDSOutlier-PsychENCODEProfile
+./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table_complete.txt.gz -o 2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected-Complete -e png pdf
 
-./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/perform_deconvolution/deconvolution_table.txt.gz -e png pdf -o 2021-12-07-CortexEUR-PsychENCODEProfileSummedNoDev
+./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table.txt.gz -o 2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected -e png pdf
 
-./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/perform_deconvolution/deconvolution_table_NoInhibitory.txt.gz -e png pdf -o 2021-12-07-CortexEUR-PsychENCODEProfileSummedNoDevNoInhibitory
+./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table_InhibitorySummedWithOtherNeuron.txt.gz -o 2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron -e png pdf
 
-./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/perform_deconvolution/deconvolution_table_InhibitorySummedWithOtherNeuron.txt.gz -e png pdf -o 2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved-deconvolutionTable-InhibitorySummedWithOtherNeuron
-
-./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemoved/perform_deconvolution/deconvolution_table.txt.gz -e png pdf -o 2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemove-InhibitorySummedWithOtherNeuron
-
-./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/perform_deconvolution/deconvolution_table_InhibitorySummedWithOtherNeuron_DatasetNormalised.txt.gz -e png pdf -o 2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved-deconvolutionTable-InhibitorySummedWithOtherNeuron-NNLSBetasDatasetNormnalised
-
-./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-19-CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -e png pdf -o 2022-01-19-CortexEUR-cis-deconvolutionTable
-
-./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-20-CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -e png pdf -o 2022-01-20-CortexEUR-cis-deconvolutionTable
-
-./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -e png pdf -o 2022-01-21-CortexEUR-cis-deconvolutionTable
 """
 
 
@@ -82,11 +70,18 @@ class main():
         # Get the command line arguments.
         arguments = self.create_argument_parser()
         self.cf_path = getattr(arguments, 'cell_fractions')
-        self.extensions = getattr(arguments, 'extension')
-        self.output_filename = getattr(arguments, 'output')
+        self.outfile = getattr(arguments, 'outfile')
+        self.extensions = getattr(arguments, 'extensions')
 
         # Set variables.
         self.outdir = os.path.join(str(Path(__file__).parent.parent), 'visualise_cell_fractions')
+        if not os.path.exists(self.outdir):
+            os.makedirs(self.outdir)
+
+        # Set the right pdf font for exporting.
+        matplotlib.rcParams['pdf.fonttype'] = 42
+        matplotlib.rcParams['ps.fonttype'] = 42
+
         self.palette = {
             'Adult-Ex1': '#56B4E9',
             'Adult-Ex2': '#56B4E9',
@@ -121,13 +116,6 @@ class main():
             "Astrocyte": "#D55E00"
         }
 
-        if not os.path.exists(self.outdir):
-            os.makedirs(self.outdir)
-
-        # Set the right pdf font for exporting.
-        matplotlib.rcParams['pdf.fonttype'] = 42
-        matplotlib.rcParams['ps.fonttype'] = 42
-
     @staticmethod
     def create_argument_parser():
         parser = argparse.ArgumentParser(prog=__program__,
@@ -145,19 +133,18 @@ class main():
                             type=str,
                             required=True,
                             help="The path to the cell fractions matrix.")
-        parser.add_argument("-e",
-                            "--extension",
-                            nargs="+",
-                            type=str,
-                            choices=["png", "pdf", "eps"],
-                            default=["png"],
-                            help="The figure file extension. "
-                                 "Default: 'png'.")
         parser.add_argument("-o",
-                            "--output",
+                            "--outfile",
                             type=str,
                             required=True,
-                            help="The name of the output image.")
+                            help="The name of the output file")
+        parser.add_argument("-e",
+                            "--extensions",
+                            type=str,
+                            nargs="+",
+                            default=["png"],
+                            choices=["eps", "pdf", "pgf", "png", "ps", "raw", "rgba", "svg", "svgz"],
+                            help="The output file format(s), default: ['png']")
 
         return parser.parse_args()
 
@@ -178,7 +165,7 @@ class main():
                             order=order,
                             palette=self.palette,
                             ylabel="cell fraction %",
-                            name=self.output_filename)
+                            name=self.outfile)
 
     @staticmethod
     def load_file(path, sep="\t", header=0, index_col=0, nrows=None,
@@ -230,14 +217,16 @@ class main():
                       fontsize=14,
                       fontweight='bold')
 
+        plt.tight_layout()
         for extension in self.extensions:
             fig.savefig(os.path.join(self.outdir, "{}_boxplot.{}".format(name, extension)))
         plt.close()
 
     def print_arguments(self):
         print("Arguments:")
-        print("  > Cell fractions path: {}".format(self.cf_path))
-        print("  > Output filename: {}".format(self.output_filename))
+        print("  > Cell fraction file: {}".format(self.cf_path))
+        print("  > Outfile: {}".format(self.outfile))
+        print("  > Extensions: {}".format(self.extensions))
         print("  > Output directory: {}".format(self.outdir))
         print("")
 

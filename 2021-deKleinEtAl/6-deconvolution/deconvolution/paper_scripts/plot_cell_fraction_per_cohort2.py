@@ -56,17 +56,11 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./plot_cell_fraction_per_cohort2.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/partial_deconvolution/PSYCHENCODE_PROFILE_TPM_LOG2/IHC_0CPM_LOG2/deconvolution.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/MetaBrain_STD_cortex_EUR.txt.gz -o MetaBrain_cortex_EUR
 
-./plot_cell_fraction_per_cohort2.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/partial_deconvolution/PSYCHENCODE_PROFILE_TPM_LOG2/IHC_0CPM_LOG2/deconvolution.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/MetaBrain_STD_cortex_AFR.txt.gz -o MetaBrain_cortex_AFR
 
-./plot_cell_fraction_per_cohort2.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/partial_deconvolution/PSYCHENCODE_PROFILE_TPM_LOG2/IHC_0CPM_LOG2/deconvolution.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/MetaBrain_STD_cortex.txt.gz -h ethnicity -o MetaBrain_cortex
+./plot_cell_fraction_per_cohort2.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/MetaBrain_STD_cortex_EUR.txt.gz -h dataset -o 2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected -e png pdf
 
-./plot_cell_fraction_per_cohort2.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/partial_deconvolution/PSYCHENCODE_PROFILE_METABRAIN_AND_PSYCHENCODE_EXON_TPM_LOG2_NODEV/IHC_0CPM_LOG2/deconvolution.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/MetaBrain_STD_cortex_EUR.txt.gz -o MetaBrain_cortex_EUR_NoDev
-
-./plot_cell_fraction_per_cohort2.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-20-CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/MetaBrain_STD_cortex_EUR.txt.gz -o 2022-01-20-CortexEUR-cis-deconvolution_table
-
-./plot_cell_fraction_per_cohort2.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis/perform_deconvolution/deconvolution_table.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/MetaBrain_STD_cortex_EUR.txt.gz -o 2022-01-21-CortexEUR-cis-deconvolution_table
+./plot_cell_fraction_per_cohort2.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table_complete.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/MetaBrain_STD_cortex_EUR.txt.gz -h dataset -o 2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected-Complete -e png pdf
 """
 
 
@@ -114,31 +108,6 @@ class main():
             "EAS": "#d46727",
             "AMR": "#e49d26",
             "SAS": "#6950A1"
-        }
-
-        self.ct_group_dict = {
-            'Adult-Ex1': 'Excitatory',
-            'Adult-Ex2': 'Excitatory',
-            'Adult-Ex3': 'Excitatory',
-            'Adult-Ex4': 'Excitatory',
-            'Adult-Ex5': 'Excitatory',
-            'Adult-Ex6': 'Excitatory',
-            'Adult-Ex7': 'Excitatory',
-            'Adult-Ex8': 'Excitatory',
-            'Adult-In1': 'Inhibitory',
-            'Adult-In2': 'Inhibitory',
-            'Adult-In3': 'Inhibitory',
-            'Adult-In4': 'Inhibitory',
-            'Adult-In5': 'Inhibitory',
-            'Adult-In6': 'Inhibitory',
-            'Adult-In7': 'Inhibitory',
-            'Adult-In8': 'Inhibitory',
-            'Adult-Microglia': 'Microglia',
-            'Adult-OPC': 'Oligodendrocyte',
-            'Adult-Endothelial': 'EndothelialCell',
-            'Adult-Astrocytes': 'Astrocyte',
-            'Adult-Oligo': 'Oligodendrocyte',
-            'Adult-OtherNeuron': 'OtherNeuron',
         }
 
         # Set the right pdf font for exporting.
@@ -230,41 +199,6 @@ class main():
                           col_order=col_order,
                           hue_counts=hue_sample_counts,
                           ylabel="cell fraction %")
-        del col_order, plot_df_m
-
-        print("### Step4 ###")
-        print("Summing cell types.")
-        cell_type_group = np.array([self.ct_group_dict[ct] if ct in self.ct_group_dict else ct for ct in cf_df.columns], dtype=object)
-        cell_types = list(set(cell_type_group))
-        cell_types.sort()
-        sum_cf_df = pd.DataFrame(np.nan, index=cf_df.index, columns=cell_types)
-        for ct_group in cell_types:
-            sum_cf_df.loc[:, ct_group] = cf_df.loc[:, cell_type_group == ct_group].sum(axis=1)
-
-        # Merge.
-        plot_df = sum_cf_df.merge(std_df, left_index=True, right_on="rnaseq_id", how="inner")
-
-        # Get stats.
-        averages = plot_df.loc[:, cell_types].mean(axis=0)
-        averages.sort_values(inplace=True, ascending=False)
-        col_order = [index for index, _ in averages.iteritems()]
-
-        # Melt.
-        plot_df_m = plot_df.melt(id_vars=[self.hue], value_vars=cell_types)
-        del plot_df
-
-        print("### Step4 ###")
-        print("Plotting data.")
-        self.plot_boxplot(df_m=plot_df_m,
-                          x=self.hue,
-                          col="variable",
-                          palette=self.palette,
-                          cut=0,
-                          x_order=x_order,
-                          col_order=col_order,
-                          hue_counts=hue_sample_counts,
-                          ylabel="cell fraction %",
-                          filename="_Summed")
 
     @staticmethod
     def load_file(path, sep="\t", header=None, index_col=None, nrows=None, low_memory=True):

@@ -56,6 +56,8 @@ __description__ = "{} is a program developed and maintained by {}. " \
 """
 Syntax:
 ./plot_decon_results_per_dataset.py -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/combine_gte_files/SampleToDataset.txt.gz -of 2021-12-07-CortexEUR-cis-InhibitorySummedWithOtherNeuron
+
+./plot_decon_results_per_dataset.py -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset.txt.gz -of 2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron
 """
 
 
@@ -145,6 +147,7 @@ class main():
         colormap = {}
         for dataset, sample_size in dataset_sample_counts:
             dataset_result_path = os.path.join("decon_eqtl", self.outfolder + "-" + dataset, "deconvolutionResults.txt.gz")
+            print(dataset_result_path)
 
             if os.path.exists(dataset_result_path):
                 dataset_str = "{} [N={}]".format(dataset, sample_size)
@@ -175,11 +178,11 @@ class main():
                     else:
                         pvalue_data[ct] = [pvalue_df]
 
-                # counts = {}
-                # for column in decon_fdr_df.columns:
-                #     counts[column] = set(decon_fdr_df.loc[decon_fdr_df[column] == 1, :].index)
-                # self.plot_upsetplot(data=counts,
-                #                     filename="{}_ieQTLs_upsetplot_{}".format(self.outfolder, dataset))
+                counts = {}
+                for column in decon_fdr_df.columns:
+                    counts[column] = set(decon_fdr_df.loc[decon_fdr_df[column] == 1, :].index)
+                self.plot_upsetplot(data=counts,
+                                    filename="{}_ieQTLs_upsetplot_{}".format(self.outfolder, dataset))
 
                 decon_beta_df = decon_df.loc[:, [x for x in decon_df.columns if x.endswith(":GT")]]
                 decon_beta_df.columns = [x.split("_")[0].replace(":GT", "") for x in decon_beta_df.columns]
@@ -196,21 +199,21 @@ class main():
         #     print(df)
         #     exit()
 
-        for ct, df_list in pvalue_data.items():
-            print("\t {}".format(ct))
+        # for ct, df_list in pvalue_data.items():
+        #     print("\t {}".format(ct))
+        #
+        #     df = pd.concat(df_list, axis=1)
+        #     df.to_excel("{}_{}.xlsx".format(self.outfolder, ct))
+        #     exit()
 
-            df = pd.concat(df_list, axis=1)
-            df.to_excel("{}_{}.xlsx".format(self.outfolder, ct))
-            exit()
-
-        print("PLotting upsetplots.")
+        print("Plotting upsetplots.")
         signif_df_list = []
         for ct, df_list in fdr_data.items():
             print("\t {}".format(ct))
 
             df = pd.concat(df_list, axis=1)
-            df.to_excel("{}_{}.xlsx".format(self.outfolder, ct))
-            continue
+            # df.to_excel("{}_{}.xlsx".format(self.outfolder, ct))
+            # continue
 
             counts = {}
             for column in df.columns:
@@ -224,7 +227,7 @@ class main():
             signif_df["dataset"] = signif_df.index
             signif_df["cell type"] = ct
             signif_df_list.append(signif_df)
-        exit()
+        # exit()
 
         signif_df = pd.concat(signif_df_list, axis=0)
         print(signif_df)

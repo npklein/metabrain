@@ -46,6 +46,13 @@ Syntax:
     -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/perform_deconvolution/deconvolution_table_InhibitorySummedWithOtherNeuron.txt.gz \
     -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/combine_gte_files/SampleToDataset.txt.gz \
     -of 2021-12-07-CortexEUR-cis-InhibitorySummedWithOtherNeuron
+    
+./split_per_dataset.py \
+    -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_table.txt.gz \
+    -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/select_and_reorder_matrix/2021-12-07-CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt \
+    -cc /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table_InhibitorySummedWithOtherNeuron.txt.gz \
+    -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset.txt.gz \
+    -of 2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron
 """
 
 # Metadata
@@ -177,16 +184,16 @@ class main():
         self.print_arguments()
 
         print("Loading data.")
-        # geno_df = self.load_file(self.geno_path, header=0, index_col=0)
-        # expr_df = self.load_file(self.expr_path, header=0, index_col=0)
+        geno_df = self.load_file(self.geno_path, header=0, index_col=0)
+        expr_df = self.load_file(self.expr_path, header=0, index_col=0)
         cc_df = self.load_file(self.cc_path, header=0, index_col=0)
         std_df = self.load_file(self.std_path, header=0, index_col=None)
 
-        # print("Validating input.")
-        # self.validate_data(std_df=std_df,
-        #                    geno_df=geno_df,
-        #                    expr_df=expr_df,
-        #                    cc_df=cc_df)
+        print("Validating input.")
+        self.validate_data(std_df=std_df,
+                           geno_df=geno_df,
+                           expr_df=expr_df,
+                           cc_df=cc_df)
 
         print("Subsetting dataset")
         cc_dfm_list = []
@@ -202,16 +209,16 @@ class main():
             expr_path = os.path.join(dataset_outdir, "expression_table.txt.gz")
             cc_path = os.path.join(dataset_outdir, "cell_count_table.txt.gz")
 
-            # self.save_file(df=geno_df.loc[:, mask], outpath=geno_path)
-            # self.save_file(df=expr_df.loc[:, mask], outpath=expr_path)
-            # self.save_file(df=cc_df.loc[mask, :], outpath=cc_path)
+            self.save_file(df=geno_df.loc[:, mask], outpath=geno_path)
+            self.save_file(df=expr_df.loc[:, mask], outpath=expr_path)
+            self.save_file(df=cc_df.loc[mask, :], outpath=cc_path)
 
-            # corr_df = self.correlate(df=cc_df.loc[mask, :])
-            # self.plot_heatmap(df=corr_df,
-            #                   annot_df=corr_df.round(2),
-            #                   xlabel=dataset,
-            #                   ylabel=dataset,
-            #                   name=dataset)
+            corr_df = self.correlate(df=cc_df.loc[mask, :])
+            self.plot_heatmap(df=corr_df,
+                              annot_df=corr_df.round(2),
+                              xlabel=dataset,
+                              ylabel=dataset,
+                              name=dataset)
 
             if dataset in ["AMPAD-ROSMAP-V2", "CMC"]:
                 cc_dfm = cc_df.loc[mask, :].melt()
