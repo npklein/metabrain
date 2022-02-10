@@ -3,7 +3,7 @@
 """
 File:         pre_process_TPM_expression_matrix.py
 Created:      2021/11/23
-Last Changed:
+Last Changed: 2022/02/09
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -61,7 +61,19 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax: 
-./pre_process_TPM_expression_matrix2.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-01-31-raw-count-tables/ -ra /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis/create_correction_matrix/technical_covariates_table_top20.txt.gz -gi /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/gencode.v32.primary_assembly.annotation-genelengths.txt.gz -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/MetaBrain_STD_cortex_EUR.txt.gz -o 2022-01-19-MetaBrain_CortexEUR
+./pre_process_TPM_expression_matrix2.py \
+    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-01-31-raw-count-tables/ \
+    -ra /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis/create_correction_matrix/technical_covariates_table_top20.txt.gz \
+    -gi /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/gencode.v32.primary_assembly.annotation-genelengths.txt.gz \
+    -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/MetaBrain_STD_cortex_EUR.txt.gz \
+    -o 2022-01-19-MetaBrain-CortexEUR-NegativeToZero-DatasetAndRAMCorrected
+    
+./pre_process_TPM_expression_matrix2.py \
+    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-01-31-raw-count-tables/ \
+    -ra /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemoved/create_correction_matrix/technical_covariates_table_top20.txt.gz \
+    -gi /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/gencode.v32.primary_assembly.annotation-genelengths.txt.gz \
+    -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/MetaBrain_STD_cortex_AFR.txt.gz \
+    -o 2022-02-09-MetaBrain-CortexAFR-NegativeToZero-DatasetAndRAMCorrected
 """
 
 
@@ -174,168 +186,165 @@ class main():
         dataset_s.set_index(std_df.columns[0], inplace=True)
         dataset_df = pd.get_dummies(dataset_s, prefix="", prefix_sep="")
         dataset_df = dataset_df.loc[:, datasets]
-        #
-        # print("Loading data.")
-        # counts_df_list = []
-        # stats_df_list = []
-        # found_samples = set()
-        # special_samples_trans_dict = {"AN11864_ba41-42-22": "AN11864_ba41.42.22",
-        #                               "UMB1376_ba41-42-22": "UMB1376_ba41.42.22"}
-        # for filepath in glob.glob(os.path.join(self.data_path, "*.txt.gz")):
-        #     df = self.load_file(filepath, header=0, index_col=0)
-        #     df.dropna(how="all", inplace=True)
-        #
-        #     filename = os.path.basename(filepath)
-        #     if "TargetALS" in filename:
-        #         df.columns = [re.sub("-", "_", colname) for colname in df.columns]
-        #         df.columns = [re.sub("\\.", "_", colname) for colname in df.columns]
-        #         df.columns = [re.search(".*(HRA_[0-9]+)", colname).group(1) for colname in df.columns]
-        #     elif "Braineac" in filename:
-        #         df.columns = [re.search(".*(A653.*)", colname).group(1) for colname in df.columns]
-        #     elif "GTEx" in filename:
-        #         df.columns = [re.search("(.*)_.*", colname).group(1) for colname in df.columns]
-        #     elif "NABEC" in filename:
-        #         df.columns = [re.search(".*_(.*)", colname).group(1) for colname in df.columns]
-        #     elif "ENA" in filename:
-        #         df.columns = [re.search(".*_(.*)", colname).group(1) for colname in df.columns]
-        #     elif "BrainGVEx" in filename:
-        #         df.columns = [re.sub("_", "-", colname) for colname in df.columns]
-        #         df.columns = [re.sub("\\.", "-", colname) for colname in df.columns]
-        #         df.columns = [re.sub("^X", "", colname) for colname in df.columns]
-        #         df.columns = [re.search("^([0-9]+-[0-9]+)-[0-9]+-[0-9]+", colname).group(1) for colname in df.columns]
-        #     elif "BipSeq" in filename:
-        #         df.columns = [re.search("Br[0-9]+_(R[0-9]+)", colname).group(1) for colname in df.columns]
-        #     elif "UCLA_ASD" in filename:
-        #         df.columns = [re.search("[aA-zZ]+[0-9]+_(.+)", colname).group(1) for colname in df.columns]
-        #         df.columns = [special_samples_trans_dict[colname] if colname in special_samples_trans_dict else colname for colname in df.columns]
-        #     elif "CMC_HBCC" in filename:
-        #         df.columns = [re.search("individualID.*_specimenID.(.*)", colname).group(1) for colname in df.columns]
-        #     elif "CMC" in filename:
-        #         df.columns = [re.search("^CMC_[aA-zZ]+_[0-9]+_(.*)", colname).group(1) for colname in df.columns]
-        #     elif "MSBB" in filename:
-        #         df.columns = [re.sub(".accepted_hits.sort.coordReadsPerGene.out.tab", "", colname) for colname in df.columns]
-        #         df.columns = [re.search("AMPAD_MSSM_[0-9]+_(.*)", colname).group(1) for colname in df.columns]
-        #     elif "ROSMAP" in filename:
-        #         df.columns = [re.sub("^X", "", colname) for colname in df.columns]
-        #         df.columns = [re.sub("ReadsPerGene.out.tab", "", colname) for colname in df.columns]
-        #         df.columns = [re.search(".*_.*_(.*_.*)", colname).group(1) for colname in df.columns]
-        #     elif "MayoCBE" in filename:
-        #         df.columns = [re.sub("^X", "", colname) for colname in df.columns]
-        #         df.columns = [re.search("[0-9]+_CER", colname).group(0) for colname in df.columns]
-        #     elif "MayoTCX" in filename:
-        #         df.columns = [re.sub("^X", "", colname) for colname in df.columns]
-        #         df.columns = [re.search("[0-9]+_TCX", colname).group(0) for colname in df.columns]
-        #     elif "Brainseq" in filename:
-        #         # these did not get adjusted in the other talbes, so keep the same
-        #         pass
-        #     else:
-        #         print("Unexpected input file.")
-        #         exit()
-        #
-        #     found_samples.update(set(df.columns))
-        #
-        #     if "ENA" in filename:
-        #         # Ends with
-        #         # __no_feature
-        #         # __ambiguous
-        #         # __too_low_aQual
-        #         # __not_aligned
-        #         # __alignment_not_unique
-        #         stats_df = df.iloc[(df.shape[0] - 5):, :]
-        #         stats_df.index = ["N_noFeature", "N_ambiguous", "N_too_low_aQual", "N_unmapped", "N_multimapping"]
-        #
-        #         counts_df_list.append(df.iloc[:(df.shape[0] - 5), :])
-        #         stats_df_list.append(stats_df)
-        #     else:
-        #         # Starts with
-        #         # N_unmapped
-        #         # N_multimapping
-        #         # N_noFeature
-        #         # N_ambiguous
-        #         stats_df_list.append(df.iloc[:4, :])
-        #         counts_df_list.append(df.iloc[4:, :])
-        #
-        # missing_samples = [sample for sample in samples if sample not in found_samples]
-        # print("\t  Missing MetaBrain samples [N={}]: {}".format(len(missing_samples), ", ".join(missing_samples)))
-        #
-        # counts_df = pd.concat(counts_df_list, axis=1)
-        # counts_df.fillna(0, inplace=True)
-        # print(counts_df)
-        #
-        # print("Step 1: sample selection.")
-        # print("\tUsing {}/{} samples.".format(len(samples), counts_df.shape[1]))
-        # counts_df = counts_df.loc[:, samples]
-        #
-        # print("Step 2: remove probes with zero variance.")
-        # mask = counts_df.std(axis=1) != 0
-        # print("\tUsing {}/{} probes.".format(np.sum(mask), np.size(mask)))
-        # counts_df = counts_df.loc[mask, :]
-        #
-        # print("Step 3: remove samples with zero counts / variance.")
-        # mask = (counts_df.std(axis=0) != 0) & (counts_df.sum(axis=0) != 0)
-        # print("\tUsing {}/{} samples.".format(np.sum(mask), np.size(mask)))
-        # counts_df = counts_df.loc[:, mask]
-        #
-        # print("\tSaving data")
-        # self.save_file(df=counts_df, outpath=os.path.join(self.file_outdir,"geneCounts.txt.gz"))
-        # # counts_df = self.load_file(os.path.join(self.file_outdir, "geneCounts.txt.gz"), header=0, index_col=0)
-        #
-        # print("Step 4: PCA analysis.")
-        # self.pca(df=counts_df,
-        #          sample_to_dataset=sample_to_dataset,
-        #          plot_appendix="_1_geneCounts")
-        #
-        # print("Loading gene length data")
-        # gene_info_df = self.load_file(self.gene_info_path, header=0, index_col=0)
-        # missing_genes = [gene for gene in counts_df.index if gene not in gene_info_df.index]
-        # if len(missing_genes) > 0:
-        #     print("Warning: missing gene info for {} genes".format(len(missing_genes)))
-        #     print(missing_genes)
-        #
-        # # Subset genes for which we have info.
-        # gene_overlap = set(counts_df.index).intersection(set(gene_info_df.index))
-        # counts_df = counts_df.loc[gene_overlap, :]
-        #
-        # print("Step 5: Calculating TPM values")
-        # # https://btep.ccr.cancer.gov/question/faq/what-is-the-difference-between-rpkm-fpkm-and-tpm/
-        # # Divide the read counts by the length of each gene in kilobases. This
-        # # gives you reads per kilobase (RPK).
-        # kilo_bases_s = gene_info_df.loc[gene_overlap, "MergedExonLength"] / 1e3
-        # rpk_df = counts_df.divide(kilo_bases_s, axis=0)
-        #
-        # # Count up all the RPK values in a sample and divide this number by
-        # # 1,000,000. This is your “per million” scaling factor.
-        # pm_scaling_factor = rpk_df.sum(axis=0) / 1e6
-        #
-        # # Divide the RPK values by the “per million” scaling factor.
-        # # This gives you TPM.
-        # tpm_df = rpk_df.divide(pm_scaling_factor, axis=1)
-        # del counts_df, kilo_bases_s, rpk_df, pm_scaling_factor
-        #
-        # print("\tSaving data")
-        # self.save_file(df=tpm_df, outpath=os.path.join(self.file_outdir,"geneCounts.TPM.MergedExonLength.txt.gz"))
-        # # tpm_df = self.load_file(os.path.join(self.file_outdir,"geneCounts.TPM.MergedExonLength.txt.gz"), header=0, index_col=0)
-        #
-        # print("Step 6: PCA analysis.")
-        # self.pca(df=tpm_df,
-        #          sample_to_dataset=sample_to_dataset,
-        #          plot_appendix="2_TPM")
-        #
-        # print("Step 7: log2 transform.")
-        # min_value = tpm_df.min(axis=1).min()
-        # if min_value <= 0:
-        #     tpm_df = np.log2(tpm_df - min_value + 1)
-        # else:
-        #     tpm_df = np.log2(tpm_df + 1)
-        #
-        # print("\tSaving data")
-        # self.save_file(df=tpm_df, outpath=os.path.join(self.file_outdir,"geneCounts.TPM.MergedExonLength.Log2Transformed.txt.gz"))
+
+        print("Loading data.")
+        counts_df_list = []
+        stats_df_list = []
+        found_samples = set()
+        special_samples_trans_dict = {"AN11864_ba41-42-22": "AN11864_ba41.42.22",
+                                      "UMB1376_ba41-42-22": "UMB1376_ba41.42.22"}
+        for filepath in glob.glob(os.path.join(self.data_path, "*.txt.gz")):
+            df = self.load_file(filepath, header=0, index_col=0)
+            df.dropna(how="all", inplace=True)
+
+            filename = os.path.basename(filepath)
+            if "TargetALS" in filename:
+                df.columns = [re.sub("-", "_", colname) for colname in df.columns]
+                df.columns = [re.sub("\\.", "_", colname) for colname in df.columns]
+                df.columns = [re.search(".*(HRA_[0-9]+)", colname).group(1) for colname in df.columns]
+            elif "Braineac" in filename:
+                df.columns = [re.search(".*(A653.*)", colname).group(1) for colname in df.columns]
+            elif "GTEx" in filename:
+                df.columns = [re.search("(.*)_.*", colname).group(1) for colname in df.columns]
+            elif "NABEC" in filename:
+                df.columns = [re.search(".*_(.*)", colname).group(1) for colname in df.columns]
+            elif "ENA" in filename:
+                df.columns = [re.search(".*_(.*)", colname).group(1) for colname in df.columns]
+            elif "BrainGVEx" in filename:
+                df.columns = [re.sub("_", "-", colname) for colname in df.columns]
+                df.columns = [re.sub("\\.", "-", colname) for colname in df.columns]
+                df.columns = [re.sub("^X", "", colname) for colname in df.columns]
+                df.columns = [re.search("^([0-9]+-[0-9]+)-[0-9]+-[0-9]+", colname).group(1) for colname in df.columns]
+            elif "BipSeq" in filename:
+                df.columns = [re.search("Br[0-9]+_(R[0-9]+)", colname).group(1) for colname in df.columns]
+            elif "UCLA_ASD" in filename:
+                df.columns = [re.search("[aA-zZ]+[0-9]+_(.+)", colname).group(1) for colname in df.columns]
+                df.columns = [special_samples_trans_dict[colname] if colname in special_samples_trans_dict else colname for colname in df.columns]
+            elif "CMC_HBCC" in filename:
+                df.columns = [re.search("individualID.*_specimenID.(.*)", colname).group(1) for colname in df.columns]
+            elif "CMC" in filename:
+                df.columns = [re.search("^CMC_[aA-zZ]+_[0-9]+_(.*)", colname).group(1) for colname in df.columns]
+            elif "MSBB" in filename:
+                df.columns = [re.sub(".accepted_hits.sort.coordReadsPerGene.out.tab", "", colname) for colname in df.columns]
+                df.columns = [re.search("AMPAD_MSSM_[0-9]+_(.*)", colname).group(1) for colname in df.columns]
+            elif "ROSMAP" in filename:
+                df.columns = [re.sub("^X", "", colname) for colname in df.columns]
+                df.columns = [re.sub("ReadsPerGene.out.tab", "", colname) for colname in df.columns]
+                df.columns = [re.search(".*_.*_(.*_.*)", colname).group(1) for colname in df.columns]
+            elif "MayoCBE" in filename:
+                df.columns = [re.sub("^X", "", colname) for colname in df.columns]
+                df.columns = [re.search("[0-9]+_CER", colname).group(0) for colname in df.columns]
+            elif "MayoTCX" in filename:
+                df.columns = [re.sub("^X", "", colname) for colname in df.columns]
+                df.columns = [re.search("[0-9]+_TCX", colname).group(0) for colname in df.columns]
+            elif "Brainseq" in filename:
+                # these did not get adjusted in the other talbes, so keep the same
+                pass
+            else:
+                print("Unexpected input file.")
+                exit()
+
+            found_samples.update(set(df.columns))
+
+            if "ENA" in filename:
+                # Ends with
+                # __no_feature
+                # __ambiguous
+                # __too_low_aQual
+                # __not_aligned
+                # __alignment_not_unique
+                stats_df = df.iloc[(df.shape[0] - 5):, :]
+                stats_df.index = ["N_noFeature", "N_ambiguous", "N_too_low_aQual", "N_unmapped", "N_multimapping"]
+
+                counts_df_list.append(df.iloc[:(df.shape[0] - 5), :])
+                stats_df_list.append(stats_df)
+            else:
+                # Starts with
+                # N_unmapped
+                # N_multimapping
+                # N_noFeature
+                # N_ambiguous
+                stats_df_list.append(df.iloc[:4, :])
+                counts_df_list.append(df.iloc[4:, :])
+
+        missing_samples = [sample for sample in samples if sample not in found_samples]
+        print("\t  Missing MetaBrain samples [N={}]: {}".format(len(missing_samples), ", ".join(missing_samples)))
+
+        counts_df = pd.concat(counts_df_list, axis=1)
+        counts_df.fillna(0, inplace=True)
+        print(counts_df)
+
+        print("Step 1: sample selection.")
+        print("\tUsing {}/{} samples.".format(len(samples), counts_df.shape[1]))
+        counts_df = counts_df.loc[:, samples]
+
+        print("Step 2: remove probes with zero variance.")
+        mask = counts_df.std(axis=1) != 0
+        print("\tUsing {}/{} probes.".format(np.sum(mask), np.size(mask)))
+        counts_df = counts_df.loc[mask, :]
+
+        print("Step 3: remove samples with zero counts / variance.")
+        mask = (counts_df.std(axis=0) != 0) & (counts_df.sum(axis=0) != 0)
+        print("\tUsing {}/{} samples.".format(np.sum(mask), np.size(mask)))
+        counts_df = counts_df.loc[:, mask]
+
+        print("\tSaving data")
+        self.save_file(df=counts_df, outpath=os.path.join(self.file_outdir,"geneCounts.txt.gz"))
+        # counts_df = self.load_file(os.path.join(self.file_outdir, "geneCounts.txt.gz"), header=0, index_col=0)
+
+        print("Step 4: PCA analysis.")
+        self.pca(df=counts_df,
+                 filename="GeneCounts",
+                 sample_to_dataset=sample_to_dataset,
+                 plot_appendix="_1_geneCounts")
+
+        print("Loading gene length data")
+        gene_info_df = self.load_file(self.gene_info_path, header=0, index_col=0)
+        missing_genes = [gene for gene in counts_df.index if gene not in gene_info_df.index]
+        if len(missing_genes) > 0:
+            print("Warning: missing gene info for {} genes".format(len(missing_genes)))
+            print(missing_genes)
+
+        # Subset genes for which we have info.
+        gene_overlap = set(counts_df.index).intersection(set(gene_info_df.index))
+        counts_df = counts_df.loc[gene_overlap, :]
+
+        print("Step 5: Calculating TPM values")
+        # https://btep.ccr.cancer.gov/question/faq/what-is-the-difference-between-rpkm-fpkm-and-tpm/
+        # Divide the read counts by the length of each gene in kilobases. This
+        # gives you reads per kilobase (RPK).
+        kilo_bases_s = gene_info_df.loc[gene_overlap, "MergedExonLength"] / 1e3
+        rpk_df = counts_df.divide(kilo_bases_s, axis=0)
+
+        # Count up all the RPK values in a sample and divide this number by
+        # 1,000,000. This is your “per million” scaling factor.
+        pm_scaling_factor = rpk_df.sum(axis=0) / 1e6
+
+        # Divide the RPK values by the “per million” scaling factor.
+        # This gives you TPM.
+        tpm_df = rpk_df.divide(pm_scaling_factor, axis=1)
+        del counts_df, kilo_bases_s, rpk_df, pm_scaling_factor
+
+        print("\tSaving data")
+        self.save_file(df=tpm_df, outpath=os.path.join(self.file_outdir,"geneCounts.TPM.MergedExonLength.txt.gz"))
+        # tpm_df = self.load_file(os.path.join(self.file_outdir,"geneCounts.TPM.MergedExonLength.txt.gz"), header=0, index_col=0)
+
+        print("Step 6: PCA analysis.")
+        self.pca(df=tpm_df,
+                 filename="geneCounts.TPM.MergedExonLength",
+                 sample_to_dataset=sample_to_dataset,
+                 plot_appendix="_2_TPM")
+
+        print("Step 7: log2 transform.")
+        min_value = tpm_df.min(axis=1).min()
+        if min_value <= 0:
+            tpm_df = np.log2(tpm_df - min_value + 1)
+        else:
+            tpm_df = np.log2(tpm_df + 1)
+
+        print("\tSaving data")
+        self.save_file(df=tpm_df, outpath=os.path.join(self.file_outdir,"geneCounts.TPM.MergedExonLength.Log2Transformed.txt.gz"))
         # tpm_df = self.load_file(os.path.join(self.file_outdir, "geneCounts.TPM.MergedExonLength.Log2Transformed.txt.gz"), header=0, index_col=0)
-        # tpm_df.index = [x.split(".")[0] for x in tpm_df.index]
-        # tpm_df = tpm_df.loc[self.marker_genes, :]
-        # self.save_file(df=tpm_df, outpath=os.path.join(self.file_outdir, "geneCounts.TPM.MergedExonLength.Log2Transformed.MarkerGenes.txt.gz"))
-        # exit()
-        tpm_df = self.load_file(os.path.join(self.file_outdir, "geneCounts.TPM.MergedExonLength.Log2Transformed.MarkerGenes.txt.gz"), header=0, index_col=0)
 
         print("Step 8: save mean and std per gene.")
         mean = tpm_df.mean(axis=1)
@@ -343,6 +352,7 @@ class main():
 
         print("Step 9: PCA analysis.")
         self.pca(df=tpm_df,
+                 filename="geneCounts.TPM.MergedExonLength.Log2Transformed",
                  sample_to_dataset=sample_to_dataset,
                  plot_appendix="_3_TPM_Log2Transformed")
 
@@ -371,10 +381,11 @@ class main():
                                                     correction_df=correction_df)
 
         print("\tSaving data")
-        self.save_file(df=tpm_corrected_df, outpath=os.path.join(self.file_outdir,"geneCounts.TPM.MergedExonLength.Log2Transformed.MarkerGenes.CovariatesRemovedOLS.txt.gz"))
+        self.save_file(df=tpm_corrected_df, outpath=os.path.join(self.file_outdir,"geneCounts.TPM.MergedExonLength.Log2Transformed.CovariatesRemovedOLS.txt.gz"))
 
         print("Step 12: PCA analysis.")
         self.pca(df=tpm_corrected_df,
+                 filename="geneCounts.TPM.MergedExonLength.Log2Transformed.CovariatesRemovedOLS",
                  sample_to_dataset=sample_to_dataset,
                  plot_appendix="_4_TPM_Log2Transformed_CovariatesRemovedOLS")
 
@@ -392,10 +403,11 @@ class main():
                               filename="_3_TPM_Log2Transformed_CovariatesRemovedOLS_ScaleAndLocReturned")
 
         print("\tSaving data")
-        self.save_file(df=tpm_corrected_df, outpath=os.path.join(self.file_outdir,"geneCounts.TPM.MergedExonLength.Log2Transformed.MarkerGenes.CovariatesRemovedOLS.ScaleAndLocReturned.txt.gz"))
+        self.save_file(df=tpm_corrected_df, outpath=os.path.join(self.file_outdir,"geneCounts.TPM.MergedExonLength.Log2Transformed.CovariatesRemovedOLS.ScaleAndLocReturned.txt.gz"))
 
         print("Step 14: PCA analysis.")
         self.pca(df=tpm_corrected_df,
+                 filename="geneCounts.TPM.MergedExonLength.Log2Transformed.CovariatesRemovedOLS.ScaleAndLocReturned",
                  sample_to_dataset=sample_to_dataset,
                  plot_appendix="_5_TPM_Log2Transformed_CovariatesRemovedOLS_ScaleAndColReturned")
 
@@ -411,7 +423,14 @@ class main():
                               columns=tpm_df.index[:5],
                               filename="_4_TPM_Log2Transformed_CovariatesRemovedOLS_ScaleAndLocReturned_NegativeToZero")
 
-        self.save_file(df=tpm_corrected_df, outpath=os.path.join(self.file_outdir, "geneCounts.TPM.MergedExonLength.Log2Transformed.MarkerGenes.CovariatesRemovedOLS.ScaleAndLocReturned.NegativeToZero.txt.gz"))
+        self.save_file(df=tpm_corrected_df, outpath=os.path.join(self.file_outdir, "geneCounts.TPM.MergedExonLength.Log2Transformed.CovariatesRemovedOLS.ScaleAndLocReturned.NegativeToZero.txt.gz"))
+        # tpm_corrected_df = self.load_file(os.path.join(self.file_outdir, "geneCounts.TPM.MergedExonLength.Log2Transformed.CovariatesRemovedOLS.ScaleAndLocReturned.NegativeToZero.txt.gz"), header=0, index_col=0)
+
+        print("Step 14: PCA analysis.")
+        self.pca(df=tpm_corrected_df,
+                 filename="geneCounts.TPM.MergedExonLength.Log2Transformed.CovariatesRemovedOLS.ScaleAndLocReturned.NegativeToZero",
+                 sample_to_dataset=sample_to_dataset,
+                 plot_appendix="_6_TPM_Log2Transformed_CovariatesRemovedOLS_ScaleAndColReturned_NegativeToZero")
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
@@ -499,22 +518,24 @@ class main():
 
         return pd.DataFrame(corrected_m, index=df.index, columns=df.columns)
 
-    def pca(self, df, sample_to_dataset, plot_appendix=""):
+    def pca(self, df, filename, sample_to_dataset, plot_appendix=""):
         # samples should be on the columns and genes on the rows.
         zscores = (df - df.mean(axis=0)) / df.std(axis=0)
-        pca = PCA(n_components=2)
+        pca = PCA(n_components=25)
         pca.fit(zscores)
-        expl_variance = {"PC{}".format(i+1): pca.explained_variance_ratio_[i] * 100 for i in range(2)}
         components_df = pd.DataFrame(pca.components_)
         components_df.index = ["Comp{}".format(i + 1) for i, _ in enumerate(components_df.index)]
         components_df.columns = df.columns
+
+        print("\tSaving file.")
+        self.save_file(df=components_df, outpath=os.path.join(self.file_outdir, "{}.PCAOverSamplesEigenvectors.txt.gz".format(filename)))
 
         print("\tPlotting PCA")
         plot_df = components_df.T
         plot_df["cohort"] = plot_df.index.map(sample_to_dataset)
         self.plot(df=plot_df, x="Comp1", y="Comp2", hue="cohort", palette=self.palette,
-                  xlabel="PC1 [{:.2f}%]".format(expl_variance["PC1"]),
-                  ylabel="PC2 [{:.2f}%]".format(expl_variance["PC2"]),
+                  xlabel="PC1 [{:.2f}%]".format(pca.explained_variance_ratio_[0] * 100),
+                  ylabel="PC2 [{:.2f}%]".format(pca.explained_variance_ratio_[1] * 100),
                   title="PCA - eigenvectors",
                   filename="eigenvectors_plot{}".format(plot_appendix))
 
@@ -606,9 +627,9 @@ class main():
                 hue = None
                 palette = None
                 if sa_df is not None:
-                    hue = sa_df.columns[1]
+                    hue = sa_df.columns[0]
                     palette = self.palette
-                    plot_df = plot_df.merge(std_df, left_index=True, right_index=True)
+                    plot_df = plot_df.merge(sa_df, left_index=True, right_index=True)
 
                 # set order.
                 plot_df["x"] = df[pi].argsort()
