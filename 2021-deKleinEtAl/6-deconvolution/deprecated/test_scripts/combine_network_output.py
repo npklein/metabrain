@@ -3,7 +3,7 @@
 """
 File:         combine_network_output.py
 Created:      2020/05/19
-Last Changed:
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -65,7 +65,7 @@ class main():
             (network, _, covariate, group, info) = filename.split(".")[0].split("-")
 
             data = pd.read_csv(fpath, sep="\t", skiprows=12, header=0)
-            data = data.loc[data["p-value"] < 0.05, :]
+            data = data.loc[data["p-value"] <= 0.05, :]
             gsn_values = list(data["gene_set_name"].values)
 
             if covariate not in covariate_data.keys():

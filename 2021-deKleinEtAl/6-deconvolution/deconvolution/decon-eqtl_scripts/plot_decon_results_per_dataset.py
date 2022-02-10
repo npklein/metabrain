@@ -3,7 +3,7 @@
 """
 File:         plot_decon_results_per_dataset.py
 Created:      2022/01/17
-Last Changed:
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -158,7 +158,7 @@ class main():
                 decon_df = self.load_file(dataset_result_path)
                 decon_fdr_df = decon_df.loc[:, [x for x in decon_df.columns if x.endswith("_FDR")]]
 
-                decon_fdr_df = (decon_fdr_df < 0.05).astype(int)
+                decon_fdr_df = (decon_fdr_df <= 0.05).astype(int)
                 decon_fdr_df.columns = [x.split("_")[0] for x in decon_fdr_df.columns]
                 for ct in decon_fdr_df.columns:
                     fdr_df = decon_fdr_df.loc[:, [ct]]

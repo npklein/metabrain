@@ -1,7 +1,7 @@
 """
 File:         combiner.py
 Created:      2020/10/15
-Last Changed: 2020/10/28
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -164,7 +164,7 @@ class Combine:
         dfm = pvalue_df.melt(id_vars=["index"])
         dfm.columns = ["covariate", "SNP", "pvalue"]
         dfm["rank"] = dfm.loc[:, "pvalue"].rank(ascending=True)
-        n_signif = dfm[dfm["pvalue"] < self.alpha].shape[0]
+        n_signif = dfm[dfm["pvalue"] <= self.alpha].shape[0]
         n_total = dfm.shape[0]
         print("\t{}/{} [{:.2f}%] of pvalues < {}".format(n_signif, n_total, (100/n_total)*n_signif, self.alpha), flush=True)
 
@@ -184,7 +184,7 @@ class Combine:
                 prev_bh_fdr = bh_fdr
             else:
                 dfm.loc[i, "BH-FDR"] = prev_bh_fdr
-        n_signif = dfm[dfm["BH-FDR"] < self.alpha].shape[0]
+        n_signif = dfm[dfm["BH-FDR"] <= self.alpha].shape[0]
         print("\t{}/{} [{:.2f}%] of BH-FDR values < {}".format(n_signif, n_total, (100/n_total)*n_signif, self.alpha), flush=True)
         self.pivot_and_save(dfm, "BH-FDR", pvalue_df_indices, pvalue_df_columns)
 

@@ -3,7 +3,7 @@
 """
 File:         filter_interaction_eqtls.py
 Created:      2020/09/25
-Last Changed: 2020/09/29
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -165,7 +165,7 @@ class main():
 
         pre_shape = df.shape
 
-        df = df.loc[df["FDR"] < alpha, :]
+        df = df.loc[df["FDR"] <= alpha, :]
         df = df.sort_values(by="FDR", ascending=True)
         df.reset_index(drop=True, inplace=True)
         print(df)
@@ -177,7 +177,7 @@ class main():
     @staticmethod
     def print_data(df, pre_shape, post_shape, alpha, interest):
         print("")
-        print("{}/{} tests where significant (FDR < {}) [{:.2f}%]".format(post_shape[0], pre_shape[0], alpha, (100 / pre_shape[0]) * post_shape[0]))
+        print("{}/{} tests where significant (FDR <= {}) [{:.2f}%]".format(post_shape[0], pre_shape[0], alpha, (100 / pre_shape[0]) * post_shape[0]))
         print("")
 
         print("Top 10 hits:")

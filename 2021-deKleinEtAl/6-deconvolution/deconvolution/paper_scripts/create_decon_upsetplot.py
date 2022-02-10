@@ -3,7 +3,7 @@
 """
 File:         create_decon_upsetplot.py
 Created:      2020/11/24
-Last Changed:
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -41,38 +41,7 @@ import matplotlib.pyplot as plt
 
 """
 Syntax:
-./create_decon_upsetplot.py -d ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -e pdf
-
-./create_decon_upsetplot.py -d ../2020-11-20-decon-QTL/trans/cortex/decon_out/deconvolutionResults.csv -e pdf
-
-
-./create_decon_upsetplot.py -d decon_eqtl_permutation_per_cohort/deconvolutionResults_1000perm_perIeQTLFDR.txt.gz -e png
-
-./create_decon_upsetplot.py -d decon_eqtl_permutation_per_cohort/deconvolutionResults_1000perm_CombinedPermFDR.txt.gz -e png
-
-./create_decon_upsetplot.py -d decon_eqtl_permutation/decon_output/real/deconvolutionResults.csv -e png
-
-./create_decon_upsetplot.py -d ../2021-06-24-decon-QTL/cortex_eur_cis_NoENA_NoGVEX/decon_cis_cortex_eur_noENA_noGVEX_out/deconvolutionResults.csv -calc_fdr -e png
-
-./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl_with_permutation_fdr/output/deconvolutionResults.txt.gz -calc_fdr -e png
-
-./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5-LimitedConfigs-OldProfile/deconvolutionResults.txt.gz -calc_fdr -n original -e png
-
-./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5-LimitedConfigs-NewProfile/deconvolutionResults.txt.gz -calc_fdr -n CNS7 -e png
-
-./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5-LimitedConfigs-NewProfileNoPericytes/deconvolutionResults.txt.gz -calc_fdr -n CNS7_NoPericytes -e png
-
-./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl/2021-12-07-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDevCT/deconvolutionResults.txt.gz -calc_fdr -n 2021-12-07-Cortex-EUR-PsychENCODEProfile-NoDev -e png
-
-./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl/2021-12-07-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDevNoInhibitoryCT/deconvolutionResults.txt.gz -calc_fdr -n 2021-12-07-Cortex-EUR-PsychENCODEProfile-NoDevNoInhibitory -e png
-
-./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl/2021-12-07-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron/deconvolutionResults.txt.gz -calc_fdr -n 2021-12-07-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron  -e png
-
-./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl/2021-12-22-CortexAFR-replicationOfCortexEUR20211207-ProbesWithZeroVarianceRemoved-InhibitorySummedWithOtherNeuron/deconvolutionResults.txt.gz -calc_fdr -n 2021-12-22-CortexAFR-replicationOfCortexEUR20211207-ProbesWithZeroVarianceRemoved-InhibitorySummedWithOtherNeuron -e png
-
-./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl/2022-01-19-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron-ExprMatrixCovariatesRemovedOLS/deconvolutionResults.txt.gz -calc_fdr -n 2022-01-19-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron-ExprMatrixCovariatesRemovedOLS -e png
-
-./create_decon_upsetplot.py -d ../decon-eqtl_scripts/decon_eqtl/2022-01-20-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron-ExprMatrixCovariatesRemovedOLS-ShiftedPositive/deconvolutionResults.txt.gz -calc_fdr -n 2022-01-20-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron-ExprMatrixCovariatesRemovedOLS-ShiftedPositive -e png
+./create_decon_upsetplot.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron/deconvolutionResults.txt.gz -calc_fdr -n 2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron -e png pdf
 """
 
 
@@ -214,7 +183,7 @@ class main():
         tmp_df = df.copy()
         tmp_df.reset_index(drop=False, inplace=True)
         tmp_df = tmp_df.melt(id_vars="index", var_name="CellType", value_name="FDR")
-        tmp_df = tmp_df.loc[tmp_df["FDR"] < alpha, :]
+        tmp_df = tmp_df.loc[tmp_df["FDR"] <= alpha, :]
 
         data = {}
         for ct in list(tmp_df["CellType"].unique()):
@@ -225,8 +194,8 @@ class main():
         m = df.to_numpy()
         colnames = df.columns.tolist()
 
-        print("\nN-interaction ({} < {}):".format(variable, self.alpha))
-        n_hits_a = (m < self.alpha).sum(axis=0)
+        print("\nN-interaction ({} <= {}):".format(variable, self.alpha))
+        n_hits_a = (m <= self.alpha).sum(axis=0)
         n_hits_total = np.sum(n_hits_a)
         cov_length = np.max([len(x) for x in colnames])
         hits_length = np.max([len(str(x)) for x in n_hits_a] + [len(str(n_hits_total))])

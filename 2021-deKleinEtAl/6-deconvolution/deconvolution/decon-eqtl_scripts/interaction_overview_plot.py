@@ -3,7 +3,7 @@
 """
 File:         interaction_overview_plot.py
 Created:      2021/10/25
-Last Changed:
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -122,7 +122,7 @@ class main():
 
         print("Preprocessing data.")
         # Convert to booleans.
-        df = (df < 0.05).astype(int)
+        df = (df <= 0.05).astype(int)
 
         # Split data.
         no_interaction_df = df.loc[df.sum(axis=1) == 0, :]
@@ -181,8 +181,8 @@ class main():
         m = df.to_numpy()
         colnames = df.columns.tolist()
 
-        print("\nN-interaction ({} < 0.05):".format(variable))
-        n_hits_a = (m < 0.05).sum(axis=0)
+        print("\nN-interaction ({} <= 0.05):".format(variable))
+        n_hits_a = (m <= 0.05).sum(axis=0)
         n_hits_total = np.sum(n_hits_a)
         cov_length = np.max([len(x) for x in colnames])
         hits_length = np.max([len(str(x)) for x in n_hits_a] + [len(str(n_hits_total))])

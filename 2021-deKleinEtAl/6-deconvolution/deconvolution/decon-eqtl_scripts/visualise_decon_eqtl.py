@@ -3,7 +3,7 @@
 """
 File:         visualise_decon_eqtl.py
 Created:      2021/12/20
-Last Changed:
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -119,7 +119,7 @@ class main():
         print("Calculating FDR.")
         decon_fdr_df = self.bh_correct(decon_pval_df)
         print(decon_fdr_df)
-        print(decon_fdr_df.loc[decon_fdr_df["EndothelialCell"] < 0.05, :])
+        print(decon_fdr_df.loc[decon_fdr_df["EndothelialCell"] <= 0.05, :])
         exit()
 
         print("Plotting")
@@ -129,7 +129,7 @@ class main():
         for col in decon_pval_df.columns:
             compare_df = decon_pval_df[[col]].merge(decon_fdr_df[[col]], left_index=True, right_index=True)
             compare_df.columns = ["p-value", "FDR"]
-            signif_compare_df = compare_df.loc[compare_df["FDR"] < 0.05, :]
+            signif_compare_df = compare_df.loc[compare_df["FDR"] <= 0.05, :]
             print("\t{}: {:.2e}".format(col, signif_compare_df["p-value"].max()))
 
         # print("Calculating the avg missingess per ieQTL")
@@ -142,7 +142,7 @@ class main():
         ct_geno_stats_max = []
         ct_geno_stats_mean = []
         for col in decon_fdr_df.columns:
-            mask = (decon_fdr_df[col] < 0.05).to_numpy(dtype=bool)
+            mask = (decon_fdr_df[col] <= 0.05).to_numpy(dtype=bool)
             ct_geno_stats_min.append(geno_stats_copy_df.loc[mask, :].min())
             ct_geno_stats_max.append(geno_stats_copy_df.loc[mask, :].max())
             ct_geno_stats_mean.append(geno_stats_copy_df.loc[mask, :].mean())
@@ -170,7 +170,7 @@ class main():
         for col in decon_fdr_df.columns:
             plot_df = eqtl_df[["qval"]].merge(decon_fdr_df[[col]], left_index=True, right_index=True)
             plot_df.columns = ["x", "y"]
-            plot_df = plot_df.loc[plot_df["y"] < 0.05, :]
+            plot_df = plot_df.loc[plot_df["y"] <= 0.05, :]
             plot_df = np.log10(plot_df) * -1
             self.single_regplot(df=plot_df,
                                 xlabel="-log10 eQTL q-value",

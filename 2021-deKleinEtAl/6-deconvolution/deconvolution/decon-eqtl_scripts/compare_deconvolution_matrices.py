@@ -3,7 +3,7 @@
 """
 File:         compare_deconvolution_matrices.py
 Created:      2020/09/03
-Last Changed: 2021/10/13
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -74,6 +74,18 @@ Syntax:
 ./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/test/deconvolutionResults.txt.gz -n1 NNLS -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl_ols/test/deconvolutionResults.txt.gz -n2 OLS -log10 -o nnls_vs_ols
 
 ./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/CortexEUR-cis-NormalisedMAF5-LimitedConfigs-OldProfile/deconvolutionResults.txt.gz -n1 OriginalProfile -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2021-12-07-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDevNoInhibitoryCT/deconvolutionResults.txt.gz -n2 PsychENCODEProfile_NoDevNoInhibitory -log10 -o originalProfile_vs_PsychENCODEProfile_NoDevNoInhibitory
+
+./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-25-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-NegativeToZero-DatasetAndRAMCorrected/deconvolutionResults.txt.gz -n1 Inhibitory -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-25-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron/deconvolutionResults.txt.gz -n2 InhibToNeurpn -log10 -o 2022-01-25-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySeperateOrNot
+
+./compare_deconvolution_matrices.py -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron/BH_FDR.txt.gz -n1 BH -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron/EMP_FDR.txt.gz -n2 EMP -log10 -o 2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron_BH_vs_EMP
+
+./compare_deconvolution_matrices.py \
+    -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-27-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron/deconvolutionResults.txt.gz \
+    -n1 Default \
+    -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-02-09-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron-DFMinOne/deconvolutionResults.txt.gz \
+    -n2 DFMinOne \
+    -log10 \
+    -o 2022-02-09-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron_Default_vs_DFMinOne
 """
 
 
@@ -171,6 +183,8 @@ class main():
         print("Loading data")
         decon1_df = self.load_file(self.decon1_path)
         decon2_df = self.load_file(self.decon2_path)
+        # fdr_df1 = self.load_file(self.decon1_path)
+        # fdr_df2 = self.load_file(self.decon2_path)
 
         decon1_df.columns = [x.replace("CellMapNNLS_", "") for x in decon1_df.columns]
         decon2_df.columns = [x.replace("CellMapNNLS_", "") for x in decon2_df.columns]
@@ -211,13 +225,14 @@ class main():
                           filename="{}_replicating_in_{}".format(self.decon2_name, self.decon1_name))
 
         print("Plotting")
-        for decon1_df, decon2_df, appendix, log10_transform, signif_lines in \
-                ([intercept_beta_df1, intercept_beta_df2, "InterceptBeta", False, False],
-                 [ct_beta_df1, ct_beta_df2, "CellTypeBeta", False, False],
-                 [inter_beta_df1, inter_beta_df2, "IteractionBeta", False, False],
-                 [pval_df1, pval_df2, "pvalue", self.log10_transform, True],
-                 [fdr_df1, fdr_df2, "FDR", self.log10_transform, True]):
-            if decon1_df is None and decon2_df is None:
+        for decon1_df, decon2_df, appendix, log10_transform, signif_lines in (
+                        [intercept_beta_df1, intercept_beta_df2, "InterceptBeta", False, False],
+                        [ct_beta_df1, ct_beta_df2, "CellTypeBeta", False, False],
+                        [inter_beta_df1, inter_beta_df2, "IteractionBeta", False, False],
+                        [pval_df1, pval_df2, "pvalue", self.log10_transform, True],
+                        [fdr_df1, fdr_df2, "FDR", self.log10_transform, True],
+        ):
+            if decon1_df is None or decon2_df is None:
                 continue
 
             print("Plotting {}".format(appendix))
@@ -299,8 +314,8 @@ class main():
         return pval_df, fdr_df, intercept_beta_df, ct_beta_df, interaction_beta_df
 
     def print_n_signif(self, df, type):
-        print("\nN-interaction ({} < {}):".format(type, self.alpha))
-        n_hits_s = (df < self.alpha).sum(axis=0)
+        print("\nN-interaction ({} <= {}):".format(type, self.alpha))
+        n_hits_s = (df <= self.alpha).sum(axis=0)
         n_hits_total = n_hits_s.sum()
         cov_length = np.max([len(x) for x in df.columns])
         hits_length = np.max([len(str(x)) for x in n_hits_s] + [len(str(n_hits_total))])
@@ -321,12 +336,12 @@ class main():
                                       index=df1_subset.columns,
                                       columns=df2_subset.columns)
         for ct1 in df1_subset.columns:
-            ct1_df = df2_subset.loc[df1_subset.loc[:, ct1] < 0.05, :]
+            ct1_df = df2_subset.loc[df1_subset.loc[:, ct1] <= 0.05, :]
             for ct2 in df2_subset.columns:
-                replication_df.loc[ct1, ct2] = (ct1_df.loc[:, ct2] < 0.05).sum() / ct1_df.shape[0]
+                replication_df.loc[ct1, ct2] = (ct1_df.loc[:, ct2] <= 0.05).sum() / ct1_df.shape[0]
 
-        df1_n_signif = (df1_subset < 0.05).sum(axis=0)
-        df2_n_signif = (df2_subset < 0.05).sum(axis=0)
+        df1_n_signif = (df1_subset <= 0.05).sum(axis=0)
+        df2_n_signif = (df2_subset <= 0.05).sum(axis=0)
 
         replication_df.index = ["{} [n={}]".format(ct, df1_n_signif.loc[ct]) for ct in df1_subset.columns]
         replication_df.columns = ["{} [n={}]".format(ct, df2_n_signif.loc[ct]) for ct in df2_subset.columns]
@@ -451,9 +466,9 @@ class main():
 
             # Add color
             df["hue"] = self.point_colormap["no signif"]
-            df.loc[(df[x_signif_col] < 0.05) & (df[y_signif_col] >= 0.05), "hue"] = self.point_colormap["x signif"]
-            df.loc[(df[x_signif_col] >= 0.05) & (df[y_signif_col] < 0.05), "hue"] = self.point_colormap["y signif"]
-            df.loc[(df[x_signif_col] < 0.05) & (df[y_signif_col] < 0.05), "hue"] = self.point_colormap["both signif"]
+            df.loc[(df[x_signif_col] <= 0.05) & (df[y_signif_col] > 0.05), "hue"] = self.point_colormap["x signif"]
+            df.loc[(df[x_signif_col] > 0.05) & (df[y_signif_col] <= 0.05), "hue"] = self.point_colormap["y signif"]
+            df.loc[(df[x_signif_col] <= 0.05) & (df[y_signif_col] <= 0.05), "hue"] = self.point_colormap["both signif"]
 
             counts = df["hue"].value_counts()
             for value in self.point_colormap.values():

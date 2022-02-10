@@ -56,6 +56,15 @@ Syntax:
 ### 2021-12-23 ###
 
 ./decon_eqtl_replication_plot.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2021-12-22-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron/deconvolutionResults.txt.gz -dn EUR -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2021-12-22-CortexAFR-replicationOfCortexEUR20211207-ProbesWithZeroVarianceRemoved-InhibitorySummedWithOtherNeuron/deconvolutionResults.txt.gz -rn AFR
+
+
+### 2022-02-08 ###
+
+./decon_eqtl_replication_plot.py \
+    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron/deconvolutionResults_EMP_FDR.txt.gz \
+    -dn EUR \
+    -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-02-09-CortexAFR-cis-replicationOfCortexEUR-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron/deconvolutionResults.txt.gz \
+    -rn AFR
 """
 
 # Metadata
@@ -177,9 +186,9 @@ class main():
                           filename="")
         del discovery_beta_df_m, replication_beta_df_m
 
-        print("Calculating BH-FDR for discovery")
-        discovery_df = self.add_fdr_columns(discovery_df)
-        print(discovery_df)
+        # print("Calculating BH-FDR for discovery")
+        # discovery_df = self.add_fdr_columns(discovery_df)
+        # print(discovery_df)
 
         print("Merging")
         combined_df = None
@@ -209,10 +218,10 @@ class main():
 
             # Adding the replication FDR.
             ct_df["replication FDR"] = np.nan
-            mask = (ct_df["discovery FDR"] < 0.05).to_numpy()
+            mask = (ct_df["discovery FDR"] <= 0.05).to_numpy()
             print("\t  Discovery N-ieqtls: {}".format(np.sum(mask)))
             ct_df.loc[mask, "replication FDR"] = multitest.multipletests(ct_df.loc[mask, "replication p-value"], method='fdr_bh')[1]
-            print("\t  Replication N-ieqtls: {}".format(ct_df.loc[ct_df["replication FDR"] < 0.05, :].shape[0]))
+            print("\t  Replication N-ieqtls: {}".format(ct_df.loc[ct_df["replication FDR"] <= 0.05, :].shape[0]))
 
             if combined_df is None:
                 combined_df = ct_df
@@ -224,7 +233,7 @@ class main():
         print("Saving")
         print(combined_df)
         self.save_file(df=combined_df, outpath=os.path.join(self.data_outdir, "replication_table.txt.gz"))
-        opposite_df = combined_df.loc[(combined_df["discovery FDR"] < 0.05) & (combined_df["replication FDR"] < 0.05) & (((combined_df["discovery beta"] < 0) & (combined_df["replication beta"] > 0)) | ((combined_df["discovery beta"] > 0) & (combined_df["replication beta"] < 0))), :]
+        opposite_df = combined_df.loc[(combined_df["discovery FDR"] <= 0.05) & (combined_df["replication FDR"] <= 0.05) & (((combined_df["discovery beta"] < 0) & (combined_df["replication beta"] > 0)) | ((combined_df["discovery beta"] > 0) & (combined_df["replication beta"] < 0))), :]
         print(opposite_df)
         self.save_file(df=opposite_df, outpath=os.path.join(self.data_outdir, "replication_opposite_efects_table.txt.gz"))
 
@@ -240,7 +249,7 @@ class main():
             filename="{}_vs_{}_all".format(self.discovery_name, self.replication_name)
         )
         self.plot_scatterplot(
-            df=combined_df.loc[combined_df["discovery FDR"] < 0.05, :],
+            df=combined_df.loc[combined_df["discovery FDR"] <= 0.05, :],
             group_column="cell type",
             x="discovery beta",
             y="replication beta",
@@ -251,7 +260,7 @@ class main():
                                               self.replication_name)
             )
         self.plot_scatterplot(
-            df=combined_df.loc[combined_df["replication FDR"] < 0.05, :],
+            df=combined_df.loc[combined_df["replication FDR"] <= 0.05, :],
             group_column="cell type",
             x="discovery beta",
             y="replication beta",
@@ -262,7 +271,7 @@ class main():
                                               self.replication_name)
             )
         self.plot_scatterplot(
-            df=combined_df.loc[(combined_df["discovery FDR"] < 0.05) & (combined_df["replication FDR"] < 0.05), :],
+            df=combined_df.loc[(combined_df["discovery FDR"] <= 0.05) & (combined_df["replication FDR"] <= 0.05), :],
             group_column="cell type",
             x="discovery beta",
             y="replication beta",

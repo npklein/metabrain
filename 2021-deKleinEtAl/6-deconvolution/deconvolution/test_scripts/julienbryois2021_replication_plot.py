@@ -3,7 +3,7 @@
 """
 File:         julienbryois2021_replication_plot.py
 Created:      2022/01/12
-Last Changed:
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -48,6 +48,8 @@ Syntax:
 ./julienbryois2021_replication_plot.py -dd /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-19-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron-ExprMatrixCovariatesRemovedOLS-NegativeToZero/deconvolutionResults.txt.gz -da /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/create_matrices/genotype_alleles.txt.gz -dn MetaBrain_Decon-eQTL
 
 ./julienbryois2021_replication_plot.py -dd /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-20-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron-ExprMatrixCovariatesRemovedOLS-ShiftedPositive/deconvolutionResults.txt.gz -da /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/create_matrices/genotype_alleles.txt.gz -dn MetaBrain_Decon-eQTL
+
+./julienbryois2021_replication_plot.py -dd /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2021-12-22-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron-GT4SD/deconvolutionResults.txt.gz -da /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz -dn MetaBrain_Decon-eQTL
 """
 
 # Metadata
@@ -213,7 +215,7 @@ class main():
             filename="{}_vs_{}_all".format(self.discovery_name, self.replication_name)
         )
         self.plot_scatterplot(
-            df=df.loc[df["discovery fdr"] < 0.05, :],
+            df=df.loc[df["discovery fdr"] <= 0.05, :],
             group_column="cell type",
             x="discovery beta",
             y="replication beta flipped",
@@ -224,7 +226,7 @@ class main():
                                               self.replication_name)
             )
         self.plot_scatterplot(
-            df=df.loc[df["replication pvalue"] < 0.05, :],
+            df=df.loc[df["replication pvalue"] <= 0.05, :],
             group_column="cell type",
             x="discovery beta",
             y="replication beta flipped",
@@ -235,7 +237,7 @@ class main():
                                               self.replication_name)
             )
         self.plot_scatterplot(
-            df=df.loc[(df["discovery fdr"] < 0.05) & (df["replication pvalue"] < 0.05), :],
+            df=df.loc[(df["discovery fdr"] <= 0.05) & (df["replication pvalue"] <= 0.05), :],
             group_column="cell type",
             x="discovery beta",
             y="replication beta flipped",

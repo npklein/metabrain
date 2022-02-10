@@ -3,7 +3,7 @@
 """
 File:         plot_decon_results_per_zscore.py
 Created:      2022/01/24
-Last Changed:
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -112,7 +112,7 @@ class main():
                 decon_fdr_df.columns = [x.split("_")[0] for x in decon_fdr_df.columns]
 
                 for ct in decon_fdr_df.columns:
-                    n_ieqtls = decon_fdr_df.loc[decon_fdr_df[ct] < 0.05, :].shape[0]
+                    n_ieqtls = decon_fdr_df.loc[decon_fdr_df[ct] <= 0.05, :].shape[0]
                     data.append([label, ct, n_ieqtls])
 
         df = pd.DataFrame(data, columns=["variable", "group", "value"])

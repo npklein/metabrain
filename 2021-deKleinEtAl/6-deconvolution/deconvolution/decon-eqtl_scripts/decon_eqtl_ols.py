@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_ols.py
 Created:      2021/09/27
-Last Changed: 2021/10/13
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -602,8 +602,8 @@ class main():
         return p_value
 
     def print_n_signif(self, m, colnames, type):
-        print("\nN-interaction ({} < {}):".format(type, self.alpha))
-        n_hits_a = (m < self.alpha).sum(axis=0)
+        print("\nN-interaction ({} <= {}):".format(type, self.alpha))
+        n_hits_a = (m <= self.alpha).sum(axis=0)
         n_hits_total = np.sum(n_hits_a)
         cov_length = np.max([len(x) for x in colnames])
         hits_length = np.max([len(str(x)) for x in n_hits_a] + [len(str(n_hits_total))])

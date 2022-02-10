@@ -3,7 +3,7 @@
 """
 File:         visualise_inter_eqtl.py
 Created:      2020/10/27
-Last Changed:
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -317,7 +317,7 @@ class main():
             print("\tIterating over eQTLs.")
             count = 0
             for index, (inter_pvalue, ) in interest_pvalues.iterrows():
-                if inter_pvalue >= self.alpha:
+                if inter_pvalue > self.alpha:
                     continue
                 if count > 5:
                     break

@@ -3,7 +3,7 @@
 """
 File:         compare_fim_vs_decon_eqtl.py
 Created:      2021/12/21
-Last Changed:
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -211,9 +211,9 @@ class main():
 
                 # Add color
                 df["hue"] = self.point_colormap["no signif"]
-                df.loc[(df["x"] < 0.05) & (df["y"] >= 0.05), "hue"] = self.point_colormap["x signif"]
-                df.loc[(df["x"] >= 0.05) & (df["y"] < 0.05), "hue"] = self.point_colormap["y signif"]
-                df.loc[(df["x"] < 0.05) & (df["y"] < 0.05), "hue"] = self.point_colormap["both signif"]
+                df.loc[(df["x"] <= 0.05) & (df["y"] > 0.05), "hue"] = self.point_colormap["x signif"]
+                df.loc[(df["x"] > 0.05) & (df["y"] <= 0.05), "hue"] = self.point_colormap["y signif"]
+                df.loc[(df["x"] <= 0.05) & (df["y"] <= 0.05), "hue"] = self.point_colormap["both signif"]
 
                 counts = df["hue"].value_counts()
                 for value in self.point_colormap.values():

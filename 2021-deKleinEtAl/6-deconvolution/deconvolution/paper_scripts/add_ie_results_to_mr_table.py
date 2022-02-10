@@ -3,7 +3,7 @@
 """
 File:         add_ie_results_to_mr_table.py
 Created:      2021/02/026
-Last Changed:
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -159,7 +159,7 @@ class main():
                     beta_values = beta_values * -1
 
                 fdr_values = decon_data.loc[indices["FDR"]]
-                n_signif = fdr_values[fdr_values < 0.05].count()
+                n_signif = fdr_values[fdr_values <= 0.05].count()
 
                 merge_data.append([decon_data["SNP"], 1] + list(beta_values.values) + list(fdr_values.values) + [n_signif])
                 filled += 1
@@ -192,7 +192,7 @@ class main():
                             beta_values = beta_values * -1
 
                         fdr_values = decon_data.loc[indices["FDR"]]
-                        n_signif = fdr_values[fdr_values < 0.05].count()
+                        n_signif = fdr_values[fdr_values <= 0.05].count()
 
                         merge_data.append([decon_data["SNP"], best_match["R2"]] + list(beta_values.values) + list(fdr_values.values) + [
                                               n_signif])

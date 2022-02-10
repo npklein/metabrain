@@ -3,7 +3,7 @@
 """
 File:         print_mr_and_decon_table.py
 Created:      2021/02/16
-Last Changed:
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -111,7 +111,7 @@ class main():
                 trait_df = trait_df.loc[~trait_df[self.cell_types].isnull().any(axis=1)]
                 n_tested = trait_df.shape[0]
 
-                trait_df = trait_df.loc[trait_df[self.cell_types].min(axis=1) < 0.05, :]
+                trait_df = trait_df.loc[trait_df[self.cell_types].min(axis=1) <= 0.05, :]
                 n_hits = trait_df.shape[0]
 
                 decon_df = trait_df[self.cell_types].copy()
@@ -124,7 +124,7 @@ class main():
 
                 del trait_df
 
-                result_df = decon_df[decon_df < 0.05].count().to_frame()
+                result_df = decon_df[decon_df <= 0.05].count().to_frame()
                 result_df.columns = [trait]
 
                 stats_data.append([n_total, n_tested, n_hits])
@@ -175,7 +175,7 @@ class main():
             decon_order = [x.lower() + "s" for x in list(decon_df.columns)]
             for index, row in decon_df.iterrows():
                 gene = index.split("_")[1]
-                signif_cell_types = " and ".join([x.lower() + "s" for x in list(row[row < 0.05].index.values)])
+                signif_cell_types = " and ".join([x.lower() + "s" for x in list(row[row <= 0.05].index.values)])
                 if signif_cell_types in decon_hits:
                     genes = decon_hits[signif_cell_types]
                     genes.append(gene)

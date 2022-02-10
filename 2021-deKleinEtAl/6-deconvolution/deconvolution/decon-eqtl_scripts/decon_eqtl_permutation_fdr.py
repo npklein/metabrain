@@ -3,7 +3,7 @@
 """
 File:         decon_eqtl_permutation_fdr.py
 Created:      2021/06/07
-Last Changed: 2021/10/13
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -48,9 +48,7 @@ from venn import venn
 
 """
 Syntax:
-./decon_eqtl_permutation_fdr.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-NormalisedMAF5-LimitedConfigs-NewProfile
-
-./decon_eqtl_permutation_fdr.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if CortexEUR-cis-NormalisedMAF5-LimitedConfigs-OldProfile
+./decon_eqtl_permutation_fdr.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if 2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron
 """
 
 # Metadata
@@ -120,7 +118,6 @@ class main():
         colnames = [x.replace("_pvalue", "") for x in pvalue_columns]
         del nominal_pvalues_df
         print("\tShape: {}".format(nominal_pvalues_m.shape))
-        print("")
 
         # Plotting.
         for i in range(nominal_pvalues_m.shape[1]):
@@ -128,6 +125,7 @@ class main():
                           xlabel="nominal p-value",
                           title=colnames[i],
                           filename="{}_nominal_pval_distribution".format(colnames[i].lower()))
+        print("")
 
         ########################################################################
 
@@ -141,7 +139,6 @@ class main():
         n_permutations = perm_pvalues_m.shape[2]
         del perm_pvalues_m_list
         print("\tShape: {}".format(perm_pvalues_m.shape))
-        print("")
 
         # Plotting.
         for i in range(perm_pvalues_m.shape[1]):
@@ -149,6 +146,7 @@ class main():
                           xlabel="permuted p-value",
                           title=colnames[i],
                           filename="{}_permuted_pval_distribution".format(colnames[i].lower()))
+        print("")
 
         ########################################################################
 
@@ -158,7 +156,6 @@ class main():
             for perm_index in range(perm_pvalues_m.shape[2]):
                 lowest_perm_pvalues_m[perm_index, cov_index] = np.min(perm_pvalues_m[:, cov_index, perm_index])
         print("\tShape: {}".format(lowest_perm_pvalues_m.shape))
-        print("")
 
         # Plotting.
         for i in range(lowest_perm_pvalues_m.shape[1]):
@@ -166,6 +163,7 @@ class main():
                           xlabel="permuted p-value",
                           title=colnames[i],
                           filename="{}_lowest_permuted_pval_distribution".format(colnames[i].lower()))
+        print("")
 
         ########################################################################
 
@@ -175,9 +173,9 @@ class main():
         qvalues_m = np.empty_like(nominal_pvalues_m, dtype=np.float64)
         per_eqtl_qvalues_m = np.empty_like(nominal_pvalues_m, dtype=np.float64)
         for cov_index in range(nominal_pvalues_m.shape[1]):
+            stats_m = np.empty((nominal_pvalues_m.shape[0], 9), dtype=np.float64)
+
             column = colnames[cov_index]
-            if column != "Excitatory":
-                continue
             print("  Analyzing: {}".format(column))
 
             # Extract the data.
@@ -200,6 +198,7 @@ class main():
             print("\tMethod 3: Fast-QTL style FDR")
             print("\t  Fitting beta function.")
             (a, b), nfev, nit = self.fit_beta_distribution(p=lowest_perm_pvalues)
+            print(a, b, nfev, nit)
 
             # Plotting distributions.
             self.histplot(nominal=nominal_pvalues,
@@ -219,14 +218,17 @@ class main():
 
             print("\tMethod 4: per eQTL FDR")
             print("\t  Calculating adjusted p-values.")
+            per_eqtl_ranks = np.empty(nominal_pvalues_m.shape[0], dtype=np.float64)
             per_eqtl_adj_pvalues = np.empty(nominal_pvalues_m.shape[0], dtype=np.float64)
             for eqtl_index in range(nominal_pvalues_m.shape[0]):
                 nominal_pvalue = nominal_pvalues_m[eqtl_index, cov_index]
                 perm_pvalues = perm_pvalues_m[eqtl_index, cov_index].flatten()
-                adj_pvalue = (np.sum(perm_pvalues <= nominal_pvalue) + 0.5) / (n_permutations + 1)
+                rank = np.sum(perm_pvalues <= nominal_pvalue)
+                adj_pvalue = (rank + 0.5) / (n_permutations + 1)
                 # if adj_pvalue < nominal_pvalue:
                 #     adj_pvalue = nominal_pvalue
 
+                per_eqtl_ranks[eqtl_index] = rank
                 per_eqtl_adj_pvalues[eqtl_index] = adj_pvalue
 
             print("\t  Calculating q-values.")
@@ -350,23 +352,31 @@ class main():
             qvalues_m[:, cov_index] = qvalues
             per_eqtl_qvalues_m[:, cov_index] = per_eqtl_qvalues
 
-        # bh_fdr_df = self.load_file(os.path.join(self.indir, "BH_FDR.txt.gz"), header=0, index_col=0)
-        # emp_fdr_df = self.load_file(os.path.join(self.indir, "EMP_FDR.txt.gz"), header=0, index_col=0)
-        # qvalues_df = self.load_file(os.path.join(self.indir, "qvalues.txt.gz"), header=0, index_col=0)
-        #
-        # colnames = bh_fdr_df.columns.tolist()
-        # rownames = bh_fdr_df.index.tolist()
-        #
-        # bh_fdr_m = bh_fdr_df.to_numpy()
-        # emp_fdr_m = emp_fdr_df.to_numpy()
-        # qvalues_m = qvalues_df.to_numpy()
+            # Saving stats.
+            stats_m[:, 0] = nominal_pvalues
+            stats_m[:, 1] = ranks
+            stats_m[:, 2] = perm_ranks
+            stats_m[:, 3] = emp_fdr
+            stats_m[:, 4] = adj_pvalues
+            stats_m[:, 5] = qvalues
+            stats_m[:, 6] = per_eqtl_ranks
+            stats_m[:, 7] = per_eqtl_adj_pvalues
+            stats_m[:, 8] = per_eqtl_qvalues
+
+            # Save thats data frame.
+            stats_df = pd.DataFrame(stats_m, index=rownames, columns=["nominal p-value", "rank", "permutation rank", "EMP-FDR", "adj. p-value", "q-value", "permutation rank (per eQTL)", "adj. p-value (per eQTL)", "q-value (per eQTL)"])
+            self.save_file(df=stats_df, outpath=os.path.join(self.indir, "{}_stats_df.txt.gz".format(column)))
+            del stats_m, stats_df
+        print("")
+
+        ########################################################################
 
         print("Creating VENN diagram")
         venn_dict = {}
         for m, name in zip([bh_fdr_m, emp_fdr_m, qvalues_m, per_eqtl_qvalues_m], ["BH_FDR", "EMP_FDR", "qvalues", "per_eQTL"]):
             signif_hits = set()
             for j, colname in enumerate(colnames):
-                signif_hits.update(set(["{}_{}".format(rownames[i], colname) for i in range(len(rownames)) if m[i, j] < 0.05]))
+                signif_hits.update(set(["{}_{}".format(rownames[i], colname) for i in range(len(rownames)) if m[i, j] <= 0.05]))
             venn_dict["{} [N = {:,}]".format(name, len(signif_hits))] = signif_hits
 
         self.vennplot(data=venn_dict,
@@ -485,8 +495,8 @@ class main():
         return np.array(qobj.rx2('qvalues'))
 
     def print_n_signif(self, m, colnames, type):
-        print("\nN-interaction ({} < {}):".format(type, self.alpha))
-        n_hits_a = (m < self.alpha).sum(axis=0)
+        print("\nN-interaction ({} <= {}):".format(type, self.alpha))
+        n_hits_a = (m <= self.alpha).sum(axis=0)
         n_hits_total = np.sum(n_hits_a)
         cov_length = np.max([len(x) for x in colnames])
         hits_length = np.max([len(str(x)) for x in n_hits_a] + [len(str(n_hits_total))])

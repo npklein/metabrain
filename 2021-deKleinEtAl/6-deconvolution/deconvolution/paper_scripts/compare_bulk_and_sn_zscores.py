@@ -3,7 +3,7 @@
 """
 File:         compare_bulk_and_sn_zscores.py
 Created:      2020/11/04
-Last Changed: 2020/12/16
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -195,7 +195,7 @@ class main():
             self.update_limits(xlim, ylim, 0, col_index)
 
             print("\tPlotting row 2.")
-            xlim, ylim = self.plot(df=plot_df.loc[plot_df["FDR_sn"] < 0.05, :],
+            xlim, ylim = self.plot(df=plot_df.loc[plot_df["FDR_sn"] <= 0.05, :],
                       fig=fig,
                       ax=axes[1, col_index],
                       x="OverallZScore_sn",

@@ -3,7 +3,7 @@
 """
 File:         compare_bulk_and_sn_zscores_with_decon.py
 Created:      2020/11/04
-Last Changed: 2020/12/16
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -64,9 +64,9 @@ class main():
         self.extensions = getattr(arguments, 'extension')
 
         if self.eqtl_type == "cis":
-            self.bulk_eqtl_infile = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/combine_eqtlprobes/eQTLprobes_combined_withFDRCol.txt.gz"
-            self.bulk_alleles_infile = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/create_matrices/genotype_alleles.txt.gz"
-            self.decon_infile = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2021-12-22-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron/deconvolutionResults.txt.gz"
+            self.bulk_eqtl_infile = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined_withFDRCol.txt.gz"
+            self.bulk_alleles_infile = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz"
+            self.decon_infile = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron/deconvolutionResults_EMP_FDR.txt.gz"
             self.sn_infolder = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2021-12-23-ROSMAP-scRNAseq/cis_100Perm_ieQTLs/"
         else:
             exit()
@@ -75,8 +75,6 @@ class main():
             ("AST", "Astrocyte", "Astrocyte", "#D55E00"),
             ("END", "EndothelialCell", "Endothelial Cell", "#CC79A7"),
             ("EX", "Excitatory", "Excitatory Neuron", "#0072B2"),
-            ("EX", "OtherNeuron", "Ex. Neuron VS Neuron", "#0072B2"),
-            ("IN", "OtherNeuron", "In. Neuron VS Neuron", "#0072B2"),
             ("MIC", "Microglia", "Microglia", "#E69F00"),
             ("OLI", "Oligodendrocyte", "Oligodendrocyte", "#009E73")]
         self.extensions = ["png", "pdf"]
@@ -154,11 +152,11 @@ class main():
                                header=0,
                                index_col=0)
         print("\tDeconvolution results data frame: {}".format(decon_df.shape))
-        for col in decon_df.columns:
-            if col.endswith("_pvalue"):
-                new_colname = col.replace("_pvalue", "_FDR")
-                decon_df[new_colname] = multitest.multipletests(decon_df.loc[:, col],method='fdr_bh')[1]
-                print(col, decon_df[decon_df[new_colname] < 0.05].shape[0])
+        # for col in decon_df.columns:
+        #     if col.endswith("_pvalue"):
+        #         new_colname = col.replace("_pvalue", "_FDR")
+        #         decon_df[new_colname] = multitest.multipletests(decon_df.loc[:, col],method='fdr_bh')[1]
+        #         print(col, decon_df[decon_df[new_colname] <= 0.05].shape[0])
 
         print("Preprocessing deconvolution data frame")
         probe_names = []
@@ -224,7 +222,7 @@ class main():
                                  "{}_FDR".format(b_ct)]].copy()
             del merged_df
             plot_df["hue"] = "#808080"
-            plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (plot_df["{}_FDR".format(b_ct)] < 0.05), "hue"] = color
+            plot_df.loc[(plot_df["FDR_sn"] <= 0.05) & (plot_df["{}_FDR".format(b_ct)] <= 0.05), "hue"] = color
 
             # plot_df.sort_values(by="FDR_sn", inplace=True)
             # print(plot_df.iloc[0:50, :])
@@ -247,7 +245,7 @@ class main():
             self.update_limits(xlim, ylim, 0, col_index)
 
             print("\tPlotting row 2.")
-            xlim, ylim = self.plot(df=plot_df.loc[plot_df["{}_FDR".format(b_ct)] < 0.05, :],
+            xlim, ylim = self.plot(df=plot_df.loc[plot_df["{}_FDR".format(b_ct)] <= 0.05, :],
                       fig=fig,
                       ax=axes[1, col_index],
                       x="OverallZScore_sn",
@@ -260,7 +258,7 @@ class main():
             self.update_limits(xlim, ylim, 1, col_index)
 
             print("\tPlotting row 3.")
-            xlim, ylim = self.plot(df=plot_df.loc[plot_df["{}_FDR".format(b_ct)] < 0.05, :],
+            xlim, ylim = self.plot(df=plot_df.loc[plot_df["{}_FDR".format(b_ct)] <= 0.05, :],
                       fig=fig,
                       ax=axes[2, col_index],
                       x="OverallZScore_sn",
@@ -273,7 +271,7 @@ class main():
             self.update_limits(xlim, ylim, 2, col_index)
 
             print("\tPlotting row 4.")
-            xlim, ylim = self.plot(df=plot_df.loc[plot_df["FDR_sn"] < 0.05, :],
+            xlim, ylim = self.plot(df=plot_df.loc[plot_df["FDR_sn"] <= 0.05, :],
                       fig=fig,
                       ax=axes[3, col_index],
                       x="OverallZScore_sn",
@@ -287,7 +285,7 @@ class main():
             self.update_limits(xlim, ylim, 3, col_index)
 
             print("\tPlotting row 5.")
-            xlim, ylim = self.plot(df=plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (plot_df["{}_FDR".format(b_ct)] < 0.05), :],
+            xlim, ylim = self.plot(df=plot_df.loc[(plot_df["FDR_sn"] <= 0.05) & (plot_df["{}_FDR".format(b_ct)] <= 0.05), :],
                       fig=fig,
                       ax=axes[4, col_index],
                       x="OverallZScore_sn",
@@ -301,8 +299,8 @@ class main():
                       include_ylabel=include_ylabel)
             self.update_limits(xlim, ylim, 4, col_index)
 
-            # test = plot_df.loc[(plot_df["FDR_sn"] < 0.05) & (
-            #         plot_df["{}_FDR_bulk".format(b_ct)] < 0.05), :]
+            # test = plot_df.loc[(plot_df["FDR_sn"] <= 0.05) & (
+            #         plot_df["{}_FDR_bulk".format(b_ct)] <= 0.05), :]
             # with pd.option_context('display.max_rows', None,
             #                        'display.max_columns',
             #                        None):

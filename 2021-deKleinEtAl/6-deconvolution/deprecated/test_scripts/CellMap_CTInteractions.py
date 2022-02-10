@@ -3,7 +3,7 @@
 """
 File:         CellMap_CTInteractions.py
 Created:      2020/09/16
-Last Changed:
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -90,12 +90,12 @@ class main():
         decon_df = decon_df.groupby(decon_df["Symbol"], group_keys=False).apply(lambda x: x.loc[x["FDR"].idxmin()])
         decon_df.reset_index(drop=True, inplace=True)
         print(decon_df)
-        print("Signif. interaction: {}, No signif. interaction: {}".format(decon_df.loc[decon_df["FDR"] < 0.05, :].shape[0], decon_df.loc[decon_df["FDR"] >= 0.05, :].shape[0]))
+        print("Signif. interaction: {}, No signif. interaction: {}".format(decon_df.loc[decon_df["FDR"] <= 0.05, :].shape[0], decon_df.loc[decon_df["FDR"] > 0.05, :].shape[0]))
 
         df = cellmap_df.merge(decon_df, left_on="Symbol", right_on="Symbol")
         print(df)
 
-        tmp = df.loc[(df["CellType"] == "Neuron") & (df["FDR"] < 0.05), :].copy()
+        tmp = df.loc[(df["CellType"] == "Neuron") & (df["FDR"] <= 0.05), :].copy()
         tmp.sort_values(by="FDR", ascending=True, inplace=True)
         print(tmp)
         tmp.to_csv(
@@ -103,8 +103,8 @@ class main():
             header=True, index=True, compression="gzip")
 
         size = df.loc[:, "CellType"].value_counts()
-        interaction = df.loc[df["FDR"] < 0.05, "CellType"].value_counts()
-        no_interaction = df.loc[df["FDR"] >= 0.05, "CellType"].value_counts()
+        interaction = df.loc[df["FDR"] <= 0.05, "CellType"].value_counts()
+        no_interaction = df.loc[df["FDR"] > 0.05, "CellType"].value_counts()
         celltypes = list(df["CellType"].unique())
 
         total_inter = interaction.sum()
@@ -142,7 +142,7 @@ class main():
                                           "out-of-group no interaction",
                                           "oddsratio", "pvalue"],
                                  index=indices)
-        result_df["signif."] = result_df["oddsratio"] < 0.05
+        result_df["signif."] = result_df["oddsratio"] <= 0.05
         result_df.sort_index(inplace=True)
         print(result_df)
 

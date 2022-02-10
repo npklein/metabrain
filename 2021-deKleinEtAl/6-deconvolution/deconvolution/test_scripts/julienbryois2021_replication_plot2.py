@@ -3,7 +3,7 @@
 """
 File:         julienbryois2021_replication_plot2.py
 Created:      2022/01/12
-Last Changed:
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -50,6 +50,8 @@ Syntax:
 ./julienbryois2021_replication_plot2.py -dd /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-20-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron-ExprMatrixCovariatesRemovedOLS-ShiftedPositive/deconvolutionResults.txt.gz -da /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/create_matrices/genotype_alleles.txt.gz -dn MetaBrain_Decon-eQTL
 
 ./julienbryois2021_replication_plot2.py -dd /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-19-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron-ExprMatrixCovariatesRemovedOLS-NegativeToZero/deconvolutionResults.txt.gz -da /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis-ProbesWithZeroVarianceRemoved/create_matrices/genotype_alleles.txt.gz -dn MetaBrain_Decon-eQTL
+
+./julienbryois2021_replication_plot2.py -dd /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2021-12-22-CortexEUR-cis-NormalisedMAF5-LimitedConfigs-PsychENCODEProfile-NoDev-InhibitorySummedWithOtherNeuron-GT4SD/deconvolutionResults.txt.gz -da /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz -dn MetaBrain_Decon-eQTL
 """
 
 # Metadata
@@ -167,7 +169,7 @@ class main():
                     break
 
             # Select the ieQTLs.
-            discovery_subset_df = discovery_df.loc[discovery_df[discovery_fdr_column] < 0.05, ["index", discovery_beta_column, "DeconAllele"]].copy()
+            discovery_subset_df = discovery_df.loc[discovery_df[discovery_fdr_column] <= 0.05, ["index", discovery_beta_column, "DeconAllele"]].copy()
             discovery_subset_df.columns = ["index", "discovery beta", "discovery allele"]
 
             print("Plotting")
@@ -220,7 +222,7 @@ class main():
                 ax = axes[row_index, col_index]
 
             if i < nplots:
-                replication_subset_df = replication_df.loc[replication_df["{} p-value".format(groups[i])] < 0.05, ["index", "{} beta".format(groups[i]), "effect_allele"]].copy()
+                replication_subset_df = replication_df.loc[replication_df["{} p-value".format(groups[i])] <= 0.05, ["index", "{} beta".format(groups[i]), "effect_allele"]].copy()
                 replication_subset_df.columns = ["index", "replication beta", "replication allele"]
                 replication_subset_df.dropna(inplace=True)
                 plot_df = discovery_df.merge(replication_subset_df, on=["index"])

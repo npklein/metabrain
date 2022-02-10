@@ -3,7 +3,7 @@
 """
 File:         create_cf_correlation_heatmap.py
 Created:      2022/01/25
-Last Changed:
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -167,7 +167,7 @@ class main():
         signif_df = df.copy()
         for i in range(signif_df.shape[0]):
             for j in range(signif_df.shape[1]):
-                if np.isnan(pvalue_df.iloc[i, j]) or pvalue_df.iloc[i, j] >= a:
+                if np.isnan(pvalue_df.iloc[i, j]) or pvalue_df.iloc[i, j] > a:
                     signif_df.iloc[i, j] = 0
 
         return signif_df

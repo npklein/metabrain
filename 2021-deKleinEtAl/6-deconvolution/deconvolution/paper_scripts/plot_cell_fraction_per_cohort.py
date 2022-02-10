@@ -3,7 +3,7 @@
 """
 File:         plot_cell_fraction_per_cohort.py
 Created:      2021/02/06
-Last Changed:
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -228,7 +228,7 @@ class main():
                     t2, p2 = stats.ttest_ind(cohort1_data, cohort2_data)
 
                     n_total += 1
-                    if p2 < 0.05:
+                    if p2 <= 0.05:
                         n_signif_cohort_count += 1
                         n_signif += 1
                         print("\tSign. differnce between {} [{:.2f}] versus {} [{:.2f}]:\t{:.2f} {:.2e}".format(cohort1, means[celltype][cohort1], cohort2, means[celltype][cohort2], t2, p2))

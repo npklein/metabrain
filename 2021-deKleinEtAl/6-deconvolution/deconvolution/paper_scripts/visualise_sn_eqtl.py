@@ -3,7 +3,7 @@
 """
 File:         visualise_sn_eqtl.py
 Created:      2021/01/28
-Last Changed: 2021/02/22
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -352,7 +352,7 @@ class main():
                 data["value_hue"] = data["round_geno"].map(self.value_color_map)
                 data["group_hue"] = data["group"].map(self.group_color_map)
 
-                if fdr_value < self.alpha:
+                if fdr_value <= self.alpha:
                     print("\t\tPlotting: {}\t{}\t{}".format(snp_name, probe_name, hgnc_name))
                     self.plot_simple_eqtl(i, ct, fdr_value, snp_name, probe_name,
                                           hgnc_name, eqtl_type, data,
