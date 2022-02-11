@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 """
-File:         sn_replication.py
-Created:      2022/02/10
+File:         bryois_replication.py
+Created:      2022/02/11
 Last Changed:
 Author:       M.Vochteloo
 
@@ -29,26 +29,28 @@ import os
 # Third party imports.
 import numpy as np
 import pandas as pd
+from statsmodels.stats import multitest
 import rpy2.robjects as robjects
 from rpy2.robjects.packages import importr
+from scipy import stats
 import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from scipy import stats
 from adjustText import adjust_text
 
 # Local application imports.
 
 """
 Syntax:
-./sn_replication.py \
+./bryois_replication.py \
     -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron/merged_decon_results.txt.gz \
-    -e png pdf
+    -e png
+    
 """
 
 # Metadata
-__program__ = "Decon-eQTL Single-Nucleus replication"
+__program__ = "Decon-eQTL Bryois Replication Plot"
 __author__ = "Martijn Vochteloo"
 __maintainer__ = "Martijn Vochteloo"
 __email__ = "m.vochteloo@rug.nl"
@@ -64,41 +66,41 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 class main():
     def __init__(self):
+        # Get the command line arguments.
         arguments = self.create_argument_parser()
         self.discovery_path = getattr(arguments, 'discovery_path')
         self.extensions = getattr(arguments, 'extension')
 
-        # Define the replication data.
-        self.sn_eqtl_infolder = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2021-12-23-ROSMAP-scRNAseq/cis_100Perm_ieQTLs/"
-        self.sn_celltypes = [
-            ("AST", "Astrocyte"),
-            ("END", "EndothelialCell"),
-            ("EX", "Excitatory"),
-            ("IN", "Inhibitory"),
-            ("MIC", "Microglia"),
-            ("OLI", "Oligodendrocyte"),
-            ("OPC", "OPC"),
-            ("PER", "Pericytes")
-        ]
-        self.sn_eqtl_filename = "eQTLsFDR-ProbeLevel.txt.gz"
+        self.bryois_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/julienbryois2021/JulienBryois2021SummaryStats.txt.gz"
+        self.bryois_n = 196
 
         # Set variables.
-        self.outdir = os.path.join(str(os.path.dirname(os.path.abspath(__file__))), 'sn_replication')
+        self.outdir = os.path.join(str(os.path.dirname(os.path.abspath(__file__))), 'bryois_replication')
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
+
+        self.bryois_ct_trans = {
+            "Astrocytes": "Astrocyte",
+            "EndothelialCells": "EndothelialCell",
+            "ExcitatoryNeurons": "Excitatory",
+            "InhibitoryNeurons": "Inhibitory",
+            "Microglia": "Microglia",
+            "Oligodendrocytes": "Oligodendrocyte",
+            "OPCsCOPs": "OPCsCOPs",
+            "Pericytes": "Pericyte"
+        }
 
         self.palette = {
             "Astrocyte": "#D55E00",
             "EndothelialCell": "#CC79A7",
             "Excitatory": "#56B4E9",
             "Microglia": "#E69F00",
-            "Oligodendrocyte": "#009E73"
+            "Oligodendrocyte": "#009E73",
+            "OtherNeuron": "#0072B2"
         }
 
         self.shared_xlim = None
         self.shared_ylim = None
-
-        matplotlib.rcParams['pdf.fonttype'] = 42
 
     @staticmethod
     def create_argument_parser():
@@ -130,113 +132,113 @@ class main():
         return parser.parse_args()
 
     def start(self):
-        print("Loading discovery data")
+        self.print_arguments()
+
+        print("Loading data")
         discovery_df = self.load_file(self.discovery_path, header=0, index_col=None)
-        discovery_df.index = discovery_df["Gene"] + "_" + discovery_df["SNP"]
+        replication_df = self.load_file(self.bryois_path, header=0, index_col=0)
+
+        print(discovery_df)
+        print(replication_df)
+
+        print("Pre-process the discovery data.")
+        discovery_df.index = discovery_df["Gene"].str.split(".", expand=True)[0] + "_" + discovery_df["SNP"].str.split(":", expand=True)[2]
+        discovery_cell_types = [x.split(" ")[0] for x in discovery_df.columns if "pvalue" in x]
+        discovery_aa_dict = dict(zip(discovery_df.index, discovery_df["Allele assessed"]))
+
+        discovery_index_columns = ["Gene", "Gene symbol", "SNP", "Alleles", "Allele assessed"]
+        discovery_df.columns = ["MetaBrain " + col if col not in discovery_index_columns else col for col in discovery_df.columns]
         print(discovery_df)
 
-        # Select columns
-        columns_of_interest = ["Gene", "Gene symbol", "SNP", "Alleles", "Allele assessed", "N", "HW pval", "Minor allele", "MAF", "Overall z-score"]
-        colnames = columns_of_interest.copy()
-        cell_types = [x.split(" ")[0] for x in discovery_df.columns if "pvalue" in x]
-        exclude_in_excel = ["N", "HW pval", "Minor allele", "MAF", "Overall z-score"]
-        for ct in cell_types:
-            columns_of_interest.append("{} pvalue".format(ct))
-            colnames.append("Bulk {} pvalue".format(ct))
+        print("Pre-process the replication data.")
+        # Translate the cell types.
+        colnames = []
+        for col in replication_df.columns:
+            found = False
+            for bryois_ct, metabrain_ct in self.bryois_ct_trans.items():
+                if found:
+                    break
 
-            columns_of_interest.append("{} BH-FDR".format(ct))
-            colnames.append("Bulk {} FDR".format(ct))
+                if bryois_ct in col:
+                    colnames.append(col.replace(bryois_ct, metabrain_ct))
+                    found = True
 
-            columns_of_interest.append("{} interaction beta".format(ct))
-            colnames.append("Bulk {} interaction beta".format(ct))
+            if not found:
+                colnames.append(col)
+        replication_df.columns = colnames
 
-            exclude_in_excel.append("Bulk {} pvalue".format(ct))
-        discovery_df = discovery_df.loc[:, columns_of_interest].copy()
-        discovery_df.columns = colnames
-        print(discovery_df)
+        # Add the discovery affect allele.
+        replication_df["discovery_aa"] = replication_df.index.map(discovery_aa_dict)
 
-        # Create a bulk aa translate dict.
-        bulk_aa_dict = dict(zip(discovery_df.index, discovery_df["Allele assessed"]))
+        # Flipping the beta's
+        replication_df["flip"] = replication_df["effect_allele"] != replication_df["discovery_aa"]
+        replication_cell_types = [x.replace(" p-value", "") for x in replication_df if x.endswith(" p-value")]
+        for ct in replication_cell_types:
+            replication_df.loc[:, "{} beta".format(ct)] = replication_df["{} beta".format(ct)] * replication_df["flip"].map({True: -1, False: 1})
 
-        print("Loading replication data")
-        replication_df_list = []
-        for (abbreviation, full_name) in self.sn_celltypes:
-            replication_ct_df = self.load_file(os.path.join(self.sn_eqtl_infolder, abbreviation, self.sn_eqtl_filename),
-                                               header=0,
-                                               index_col=None)
+        # Remove unwanted columns.
+        replication_df.drop(["flip", "SNP", "effect_allele", "discovery_aa"], axis=1, inplace=True)
 
-            # Split the meta beta column.
-            beta_values = []
-            se_values = []
-            for _, row in replication_ct_df.iterrows():
-                value = row["Meta-Beta (SE)"]
-                beta_values.append(float(value.split(" (")[0]))
-                se_values.append(float(value.split(" (")[1].replace(")", "")))
-            replication_ct_df["Meta-Beta"] = beta_values
-            replication_ct_df["Meta-SE"] = se_values
+        # Change the column names.
+        replication_df.columns = ["Bryois " + col for col in replication_df.columns]
+        print(replication_df)
 
-            # Select the columns of interest.
-            replication_ct_df = replication_ct_df[["ProbeName",
-                                                   "SNPName",
-                                                   "AlleleAssessed",
-                                                   "PValue",
-                                                   "FDR",
-                                                   "OverallZScore",
-                                                   "Meta-Beta",
-                                                   "Meta-SE"]]
-            replication_ct_df.columns = ["ProbeName",
-                                         "SNPName",
-                                         "replication_aa",
-                                         "SN {} eQTL pvalue".format(full_name),
-                                         "SN {} eQTL FDR".format(full_name),
-                                         "SN {} eQTL z-score".format(full_name),
-                                         "SN {} eQTL beta".format(full_name),
-                                         "SN {} eQTL se".format(full_name)]
-            replication_ct_df.index = replication_ct_df["ProbeName"] + "_" + replication_ct_df["SNPName"]
+        # Add the sample size.
+        replication_df["Bryois N"] = self.bryois_n
 
-            # Flip the z-scores.
-            replication_ct_df["discovery_aa"] = replication_ct_df.index.map(bulk_aa_dict)
-            replication_ct_df.dropna(inplace=True)
-
-            replication_ct_df["flip"] = replication_ct_df["replication_aa"] != replication_ct_df["discovery_aa"]
-            replication_ct_df.loc[:, "SN {} eQTL z-score".format(full_name)] = replication_ct_df["SN {} eQTL z-score".format(full_name)] * replication_ct_df["flip"].map({True: -1, False: 1})
-            replication_ct_df.loc[:, "SN {} eQTL beta".format(full_name)] = replication_ct_df["SN {} eQTL beta".format(full_name)] * replication_ct_df["flip"].map({True: -1, False: 1})
-
-            # save.
-            replication_df_list.append(replication_ct_df.loc[:, ["SN {} eQTL pvalue".format(full_name),
-                                                                 "SN {} eQTL FDR".format(full_name),
-                                                                 "SN {} eQTL z-score".format(full_name),
-                                                                 "SN {} eQTL beta".format(full_name),
-                                                                 "SN {} eQTL se".format(full_name)]].copy())
-            exclude_in_excel.append("SN {} eQTL pvalue".format(full_name))
-            exclude_in_excel.append("SN {} eQTL beta".format(full_name))
-            exclude_in_excel.append("SN {} eQTL se".format(full_name))
-
-        replication_df = pd.concat(replication_df_list, axis=1)
-
-        print("Merging tables")
+        print("Merging data.")
         df = discovery_df.merge(replication_df, left_index=True, right_index=True, how="left")
         print(df)
 
+        print("Adding BH-FDR for the replication.")
+        overlap_ct = list(set(discovery_cell_types).intersection(set(replication_cell_types)))
+        overlap_ct.sort()
+        for ct in overlap_ct:
+            print("\t{}".format(ct))
+            df["Bryois {} BH-FDR".format(ct)] = np.nan
+            discovery_mask = (df["MetaBrain {} BH-FDR".format(ct)] <= 0.05).to_numpy()
+            print("\t  Discovery N-ieqtls: {:,}".format(np.sum(discovery_mask)))
+            replication_mask = (~df["Bryois {} p-value".format(ct)].isna()).to_numpy()
+            mask = np.logical_and(discovery_mask, replication_mask)
+            n_overlap = np.sum(mask)
+            if n_overlap > 1:
+                df.loc[mask, "Bryois {} BH-FDR".format(ct)] = multitest.multipletests(df.loc[mask, "Bryois {} p-value".format(ct)], method='fdr_bh')[1]
+            n_replicating = df.loc[df["Bryois {} BH-FDR".format(ct)] <= 0.05, :].shape[0]
+            print("\t  Replication N-ieqtls: {:,} / {:,} [{:.2f}%]".format(n_replicating, n_overlap, (100 / n_overlap) * n_replicating))
+
+        print("Reordering columns")
+        columns_of_interest = discovery_index_columns.copy() + ["MetaBrain N", "MetaBrain HW pval", "MetaBrain Minor allele", "MetaBrain MAF", "Bryois N"]
+        for ct in overlap_ct:
+            columns_of_interest.append("MetaBrain {} pvalue".format(ct))
+            columns_of_interest.append("MetaBrain {} BH-FDR".format(ct))
+            columns_of_interest.append("MetaBrain {} interaction beta".format(ct))
+        colnames = columns_of_interest.copy()
+        for ct in replication_cell_types:
+            columns_of_interest.append("Bryois {} p-value".format(ct))
+            colnames.append("Bryois {} pvalue".format(ct))
+
+            if ct in overlap_ct:
+                columns_of_interest.append("Bryois {} BH-FDR".format(ct))
+                colnames.append("Bryois {} BH-FDR".format(ct))
+
+            columns_of_interest.append("Bryois {} beta".format(ct))
+            colnames.append("Bryois {} eQTL beta".format(ct))
+        df = df.loc[:, columns_of_interest].copy()
+        df.columns = colnames
+        print(df)
+        print(list(df.columns))
+
         print("Saving output")
+        exclude_in_excel = ["MetaBrain N", "MetaBrain HW pval", "MetaBrain Minor allele", "MetaBrain MAF", "MetaBrain Overall z-score", "Bryois N"]
         self.save_file(df=df,
-                       outpath=os.path.join(self.outdir, "single_nucleus_replication.txt.gz"),
+                       outpath=os.path.join(self.outdir, "bryois_replication.txt.gz"),
                        index=False)
         self.save_file(df=df.loc[:, [col for col in df.columns if col not in exclude_in_excel]],
-                       outpath=os.path.join(self.outdir, "single_nucleus_replication.xlsx"),
+                       outpath=os.path.join(self.outdir, "bryois_replication.xlsx"),
                        index=False,
-                       sheet_name="ROSMAP Single-Nucleus")
-
-        # df = self.load_file(os.path.join(self.outdir, "single_nucleus_replication.txt.gz"),
-        #                     header=0,
-        #                     index_col=False)
+                       sheet_name="Bryois et al. 2021")
 
         print("Visualizing")
-        discovery_ct = set([x.split(" ")[1] for x in df.columns if "Bulk" in x and "FDR" in x])
-        replication_ct = set([x.split(" ")[1] for x in df.columns if "SN" in x and "FDR" in x])
-        overlap_ct = list(discovery_ct.intersection(replication_ct))
-        overlap_ct.sort()
-
         self.plot(df=df,
                   cell_types=overlap_ct)
 
@@ -271,7 +273,7 @@ class main():
                                       df.shape))
 
     def plot(self, df, cell_types):
-        nrows = 5
+        nrows = 3
         ncols = len(cell_types)
 
         self.shared_ylim = {i: (0, 1) for i in range(nrows)}
@@ -289,45 +291,44 @@ class main():
 
             # Select the required columns.
             plot_df = df.loc[:, ["Gene symbol",
-                                 "N",
-                                 "MAF",
-                                 "Overall z-score",
-                                 "Bulk {} pvalue".format(ct),
-                                 "Bulk {} FDR".format(ct),
-                                 "Bulk {} interaction beta".format(ct),
-                                 "SN {} eQTL pvalue".format(ct),
-                                 "SN {} eQTL FDR".format(ct),
-                                 "SN {} eQTL z-score".format(ct),
-                                 "SN {} eQTL beta".format(ct),
-                                 "SN {} eQTL se".format(ct)]].copy()
+                                 "MetaBrain N",
+                                 "MetaBrain MAF",
+                                 "MetaBrain {} pvalue".format(ct),
+                                 "MetaBrain {} BH-FDR".format(ct),
+                                 "MetaBrain {} interaction beta".format(ct),
+                                 "Bryois N",
+                                 "Bryois {} pvalue".format(ct),
+                                 "Bryois {} BH-FDR".format(ct),
+                                 "Bryois {} eQTL beta".format(ct)
+                                 ]].copy()
             plot_df.columns = ["Gene symbol",
-                               "bulk N",
-                               "bulk MAF",
-                               "bulk z-score",
-                               "bulk pvalue",
-                               "bulk FDR",
-                               "bulk interaction beta",
-                               "SN pvalue",
-                               "SN FDR",
-                               "SN z-score",
-                               "SN beta",
-                               "SN se"]
-            plot_df.dropna(inplace=True)
-            plot_df.sort_values(by="bulk pvalue", inplace=True)
+                               "MetaBrain N",
+                               "MetaBrain MAF",
+                               "MetaBrain pvalue",
+                               "MetaBrain FDR",
+                               "MetaBrain interaction beta",
+                               "Bryois N",
+                               "Bryois pvalue",
+                               "Bryois FDR",
+                               "Bryois eQTL beta"]
+            plot_df = plot_df.loc[~plot_df["Bryois pvalue"].isna(), :]
+            plot_df.sort_values(by="MetaBrain pvalue", inplace=True)
 
             # Calculate the discovery standard error.
-            self.zscore_to_beta(df=plot_df,
-                                z_col="bulk z-score",
-                                maf_col="bulk MAF",
-                                n_col="bulk N",
-                                prefix="bulk zscore-to-")
+            for prefix, beta_col in zip(["MetaBrain", "Bryois"], ["interaction beta", "eQTL beta"]):
+                self.pvalue_to_zscore(df=plot_df,
+                                      beta_col="{} {}".format(prefix, beta_col),
+                                      p_col="{} pvalue".format(prefix),
+                                      prefix="{} ".format(prefix))
+                self.zscore_to_beta(df=plot_df,
+                                    z_col="{} z-score".format(prefix),
+                                    maf_col="MetaBrain MAF",
+                                    n_col="{} N".format(prefix),
+                                    prefix="{} zscore-to-".format(prefix))
 
             # Convert the interaction beta to log scale.
-            plot_df["log bulk interaction beta"] = self.log_modulus_beta(plot_df["bulk interaction beta"])
-
-            # Add the hue for the significant replicating ieQTLs.
-            plot_df["hue"] = "#808080"
-            plot_df.loc[(plot_df["bulk FDR"] <= 0.05) & (plot_df["SN FDR"] <= 0.05), "hue"] = self.palette[ct]
+            plot_df["MetaBrain interaction beta"] = self.log_modulus_beta(plot_df["MetaBrain interaction beta"])
+            plot_df["Bryois eQTL beta"] = self.log_modulus_beta(plot_df["Bryois eQTL beta"])
             print(plot_df)
 
             include_ylabel = False
@@ -339,10 +340,10 @@ class main():
                 df=plot_df,
                 fig=fig,
                 ax=axes[0, col_index],
-                x="SN z-score",
-                y="bulk z-score",
+                x="Bryois eQTL beta",
+                y="MetaBrain interaction beta",
                 xlabel="",
-                ylabel="cortex eQTL z-score",
+                ylabel="MetaBrain interaction beta",
                 title=ct,
                 color=self.palette[ct],
                 include_ylabel=include_ylabel
@@ -351,68 +352,36 @@ class main():
 
             print("\tPlotting row 2.")
             xlim, ylim = self.scatterplot(
-                df=plot_df.loc[plot_df["bulk FDR"] <= 0.05, :],
+                df=plot_df.loc[plot_df["MetaBrain FDR"] <= 0.05, :],
                 fig=fig,
                 ax=axes[1, col_index],
-                x="SN z-score",
-                y="bulk z-score",
+                x="Bryois eQTL beta",
+                y="MetaBrain interaction beta",
                 xlabel="",
-                ylabel="cortex eQTL z-score",
+                ylabel="MetaBrain interaction beta",
                 title="",
                 color=self.palette[ct],
                 include_ylabel=include_ylabel,
-                pi1_column="SN pvalue",
-                rb_columns=[("bulk zscore-to-beta", "bulk zscore-to-se"), ("SN beta", "SN se")]
+                pi1_column="Bryois pvalue",
+                rb_columns=[("MetaBrain zscore-to-beta", "MetaBrain zscore-to-se"), ("Bryois zscore-to-beta", "Bryois zscore-to-se")]
             )
             self.update_limits(xlim, ylim, 1, col_index)
 
             print("\tPlotting row 3.")
             xlim, ylim = self.scatterplot(
-                df=plot_df.loc[plot_df["bulk FDR"] <= 0.05, :],
+                df=plot_df.loc[plot_df["Bryois FDR"] <= 0.05, :],
                 fig=fig,
                 ax=axes[2, col_index],
-                x="SN z-score",
-                y="log bulk interaction beta",
-                xlabel="",
-                ylabel="log deconvolution beta",
+                x="Bryois eQTL beta",
+                y="MetaBrain interaction beta",
+                label="Gene symbol",
+                xlabel="Bryois log eQTL beta",
+                ylabel="MetaBrain log interaction beta",
                 title="",
                 color=self.palette[ct],
                 include_ylabel=include_ylabel
             )
             self.update_limits(xlim, ylim, 2, col_index)
-
-            print("\tPlotting row 4.")
-            xlim, ylim = self.scatterplot(
-                df=plot_df.loc[plot_df["SN FDR"] <= 0.05, :],
-                fig=fig,
-                ax=axes[3, col_index],
-                x="SN z-score",
-                y="bulk z-score",
-                facecolors="hue",
-                xlabel="",
-                ylabel="cortex eQTL z-score",
-                title="",
-                color=self.palette[ct],
-                include_ylabel=include_ylabel
-            )
-            self.update_limits(xlim, ylim, 3, col_index)
-
-            print("\tPlotting row 5.")
-            xlim, ylim = self.scatterplot(
-                df=plot_df.loc[(plot_df["SN FDR"] <= 0.05) & (plot_df["bulk FDR"] <= 0.05), :],
-                fig=fig,
-                ax=axes[4, col_index],
-                x="SN z-score",
-                y="log bulk interaction beta",
-                label="Gene symbol",
-                xlabel="single-nucleus z-score",
-                ylabel="log interaction beta",
-                title="",
-                color=self.palette[ct],
-                ci=None,
-                include_ylabel=include_ylabel
-            )
-            self.update_limits(xlim, ylim, 4, col_index)
             print("")
 
         for (m, n), ax in np.ndenumerate(axes):
@@ -422,12 +391,22 @@ class main():
             xmargin = (xmax - xmin) * 0.05
             ymargin = (ymax - ymin) * 0.05
 
-            ax.set_xlim(xmin - xmargin - 2, xmax + xmargin)
+            ax.set_xlim(xmin - xmargin - 0.5, xmax + xmargin)
             ax.set_ylim(ymin - ymargin, ymax + ymargin)
 
         for extension in self.extensions:
-            fig.savefig(os.path.join(self.outdir, "sn_replication_plot.{}".format(extension)))
+            fig.savefig(os.path.join(self.outdir, "bryois_replication_plot.{}".format(extension)))
         plt.close()
+
+    @staticmethod
+    def pvalue_to_zscore(df, beta_col, p_col, prefix=""):
+        p_values = df[p_col].to_numpy()
+        zscores = stats.norm.ppf(p_values / 2)
+        mask = np.ones_like(p_values)
+        mask[df[beta_col] > 0] = -1
+        df["{}z-score".format(prefix)] = zscores * mask
+        df.loc[df[p_col] == 1, "{}z-score".format(prefix)] = 0
+        df.loc[df[p_col] == 0, "{}z-score".format(prefix)] = -40.
 
     @staticmethod
     def zscore_to_beta(df, z_col, maf_col, n_col, prefix=""):
@@ -616,9 +595,8 @@ class main():
         print("  > Discovery:")
         print("    > File path: {}".format(self.discovery_path))
         print("  > Replication:")
-        print("    > Input folder: {}".format(self.sn_eqtl_infolder))
-        print("    > Cell types: {}".format(", ".join([x[0] for x in self.sn_celltypes])))
-        print("    > Input filename: {}".format(self.sn_eqtl_filename))
+        print("    > File path: {}".format(self.bryois_path))
+        print("    > N: {}".format(self.bryois_n))
         print("  > Output directory: {}".format(self.outdir))
         print("  > Extensions: {}".format(self.extensions))
         print("")

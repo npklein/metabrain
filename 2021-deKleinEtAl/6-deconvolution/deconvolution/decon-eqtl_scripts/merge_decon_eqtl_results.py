@@ -39,6 +39,11 @@ Syntax:
     -e /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined.txt.gz \
     -a /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz
     
+./merge_decon_eqtl_results.py \
+    -w /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-02-09-CortexAFR-cis-replicationOfCortexEUR-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron \
+    -e /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-02-09-CortexAFR-cis-replicationOfCortexEUR-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined.txt.gz \
+    -a /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemoved/genotype_alleles.txt.gz
+    
 """
 
 # Metadata
@@ -93,25 +98,27 @@ class main():
 
         print("Load data.")
         decon_df = self.load_file(os.path.join(self.work_dir, "deconvolutionResults.txt.gz"), header=0, index_col=0)
-        bh_fdr_df = self.load_file(os.path.join(self.work_dir, "BH_FDR.txt.gz"), header=0, index_col=0)
-        emp_fdr_df = self.load_file(os.path.join(self.work_dir, "EMP_FDR.txt.gz"), header=0, index_col=0)
         geno_stats_df = self.load_file(os.path.join(self.work_dir, "geno_stats.txt.gz"), header=0, index_col=0)
         eqtl_df = self.load_file(self.eqtl_path, header=0, index_col=None)
         alleles_df = self.load_file(self.alleles_path, header=0, index_col=0)
 
         print(decon_df)
-        print(bh_fdr_df)
-        print(emp_fdr_df)
         print(geno_stats_df)
         print(eqtl_df)
         print(alleles_df)
 
         print("Merge FDR with decon results.")
-        bh_fdr_df.columns = ["{} BH-FDR".format(col) for col in bh_fdr_df.columns]
-        decon_df = decon_df.merge(bh_fdr_df, left_index=True, right_index=True)
+        decon_df = decon_df.loc[:, [col for col in decon_df.columns if not col.endswith("_FDR")]]
 
-        emp_fdr_df.columns = ["{} Perm-FDR".format(col) for col in emp_fdr_df.columns]
-        decon_df = decon_df.merge(emp_fdr_df, left_index=True, right_index=True)
+        if os.path.exists(os.path.join(self.work_dir, "BH_FDR.txt.gz")):
+            bh_fdr_df = self.load_file(os.path.join(self.work_dir, "BH_FDR.txt.gz"), header=0, index_col=0)
+            bh_fdr_df.columns = ["{} BH-FDR".format(col) for col in bh_fdr_df.columns]
+            decon_df = decon_df.merge(bh_fdr_df, left_index=True, right_index=True)
+
+        if os.path.exists(os.path.join(self.work_dir, "EMP_FDR.txt.gz")):
+            emp_fdr_df = self.load_file( os.path.join(self.work_dir, "EMP_FDR.txt.gz"), header=0, index_col=0)
+            emp_fdr_df.columns = ["{} Perm-FDR".format(col) for col in emp_fdr_df.columns]
+            decon_df = decon_df.merge(emp_fdr_df, left_index=True, right_index=True)
         print(decon_df)
 
         print("Pre-process")

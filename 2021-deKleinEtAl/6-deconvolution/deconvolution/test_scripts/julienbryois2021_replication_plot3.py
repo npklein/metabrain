@@ -3,7 +3,7 @@
 """
 File:         julienbryois2021_replication_plot3.py
 Created:      2022/01/24
-Last Changed: 2022/02/10
+Last Changed: 2022/02/11
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -51,13 +51,6 @@ Syntax:
     -da /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz \
     -dn MetaBrain_Decon-eQTL_BH \
     -o 2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron-BH_FDR
-    
-./julienbryois2021_replication_plot3.py \
-    -dd /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron/deconvolutionResults_EMP_FDR.txt.gz \
-    -dg /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron/geno_stats.txt.gz \
-    -da /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz \
-    -dn MetaBrain_Decon-eQTL_EMP \
-    -o 2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron-EMP_FDR
 
 """
 
@@ -85,6 +78,8 @@ class main():
         self.discovery_alleles_path = getattr(arguments, 'discovery_alleles_path')
         self.discovery_name = getattr(arguments, 'discovery_name')
         self.out_filename = getattr(arguments, 'outfile')
+        self.extensions = getattr(arguments, 'extension')
+
         self.replication_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/julienbryois2021"
         self.replication_name = "JulienBryois2021"
 
@@ -164,6 +159,14 @@ class main():
                             type=str,
                             required=True,
                             help="The name of the outfile.")
+        parser.add_argument("-e",
+                            "--extension",
+                            nargs="+",
+                            type=str,
+                            choices=["png", "pdf", "eps"],
+                            default=["png"],
+                            help="The figure file extension. "
+                                 "Default: 'png'.")
 
         return parser.parse_args()
 
@@ -224,8 +227,8 @@ class main():
                     break
 
             # Select the discovery ieQTLs.
-            ieqtls = list(discovery_unique_ieqtls_df.loc[discovery_unique_ieqtls_df[discovery_fdr_column] == 1, :].index)
-            # ieqtls = list(discovery_df.loc[discovery_df[discovery_fdr_column] <= 0.05, :].index)
+            # ieqtls = list(discovery_unique_ieqtls_df.loc[discovery_unique_ieqtls_df[discovery_fdr_column] == 1, :].index)
+            ieqtls = list(discovery_df.loc[discovery_df[discovery_fdr_column] <= 0.05, :].index)
             discovery_subset_df = discovery_df.loc[ieqtls, ["index", discovery_pvalue_column, discovery_beta_column, "DeconAllele", "N", "MAF"]].copy()
             discovery_subset_df.columns = ["index", "discovery p-value", "discovery beta", "discovery allele", "discovery n", "discovery MAF"]
 
@@ -256,25 +259,26 @@ class main():
                     replication_subset_df = replication_df.loc[:, ["index", "{} p-value".format(replication_ct), "{} beta".format(replication_ct), "effect_allele", "N", "MAF"]].copy()
                     replication_subset_df.columns = ["index", "replication p-value", "replication beta", "replication allele", "replication n", "replication MAF"]
                     replication_subset_df.dropna(inplace=True)
-                    self.pvalue_to_zscore(df=replication_subset_df,
-                                          beta_col="replication beta",
-                                          p_col="replication p-value",
-                                          prefix="replication ")
-                    # self.zscore_to_maf(df=replication_subset_df,
-                    #                    z_col="replication z-score",
-                    #                    beta_col="replication beta",
-                    #                    n_col="replication n",
-                    #                    prefix="replication ")
-                    self.zscore_to_beta(df=replication_subset_df,
-                                        z_col="replication z-score",
-                                        maf_col="replication MAF",
-                                        n_col="replication n",
-                                        prefix="replication zscore-to-beta ")
 
                     if replication_subset_df.shape[0] > 0:
                         # Merge together.
                         subset_df = discovery_subset_df.merge(replication_subset_df, on=["index"], how="inner")
                         n_overlap = subset_df.shape[0]
+
+                        # Flip direction.
+                        subset_df["flip"] = (subset_df["discovery allele"] == subset_df["replication allele"]).replace({False: -1, True: 1})
+                        subset_df["replication beta"] = subset_df["replication beta"] * subset_df["flip"]
+
+                        # Calculate se.
+                        self.pvalue_to_zscore(df=subset_df,
+                                              beta_col="replication beta",
+                                              p_col="replication p-value",
+                                              prefix="replication ")
+                        self.zscore_to_beta(df=subset_df,
+                                            z_col="replication z-score",
+                                            maf_col="replication MAF",
+                                            n_col="replication n",
+                                            prefix="replication zscore-to-beta ")
 
                         # Calculate the p1.
                         subset_df.sort_values(by="discovery p-value", inplace=True)
@@ -297,10 +301,6 @@ class main():
                         concordance = np.nan
                         replication_rate = 0
                         if n_replicating > 0:
-                            # Flip direction.
-                            subset_df["flip"] = (subset_df["discovery allele"] == subset_df["replication allele"]).replace({False: -1, True: 1})
-                            subset_df["replication beta"] = subset_df["replication beta"] * subset_df["flip"]
-
                             # Calculate concordance.
                             lower_quadrant = subset_df.loc[(subset_df["discovery beta"] < 0) & (subset_df["replication beta"] < 0), :]
                             upper_quadrant = subset_df.loc[(subset_df["discovery beta"] > 0) & (subset_df["replication beta"] > 0), :]
@@ -416,7 +416,8 @@ class main():
                 row_index += 1
 
         plt.tight_layout()
-        fig.savefig(os.path.join(self.outdir, "{}_corr_heatmap{}.png".format(self.out_filename, appendix)))
+        for extension in self.extensions:
+            fig.savefig(os.path.join(self.outdir, "{}_corr_heatmap{}.{}".format(self.out_filename, appendix, extension)))
         plt.close()
 
     def print_arguments(self):
@@ -431,6 +432,7 @@ class main():
         print("    > Name: {}".format(self.replication_name))
         print("  > Output filename: {}".format(self.out_filename))
         print("  > Outpath {}".format(self.outdir))
+        print("  > Extensions: {}".format(self.extensions))
         print("")
 
 
