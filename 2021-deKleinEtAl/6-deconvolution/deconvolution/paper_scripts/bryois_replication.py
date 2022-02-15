@@ -3,7 +3,7 @@
 """
 File:         bryois_replication.py
 Created:      2022/02/11
-Last Changed:
+Last Changed: 2022/02/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -238,9 +238,23 @@ class main():
                        index=False,
                        sheet_name="Bryois et al. 2021")
 
+        # df = self.load_file(os.path.join(self.outdir, "bryois_replication.txt.gz"),
+        #                     header=0,
+        #                     index_col=None)
+
         print("Visualizing")
-        self.plot(df=df,
-                  cell_types=overlap_ct)
+        discovery_ct = set([x.split(" ")[1] for x in df.columns if "MetaBrain" in x and "FDR" in x])
+        replication_ct = set([x.split(" ")[1] for x in df.columns if "Bryois" in x and "FDR" in x])
+        overlap_ct = list(discovery_ct.intersection(replication_ct))
+        overlap_ct.sort()
+
+        replication_stats_df = self.plot(df=df, cell_types=overlap_ct)
+        print(replication_stats_df)
+        print(replication_stats_df.mean(axis=0))
+
+        self.save_file(df=replication_stats_df,
+                       outpath=os.path.join(self.outdir,
+                                            "replication_stats.txt.gz"))
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
@@ -278,6 +292,8 @@ class main():
 
         self.shared_ylim = {i: (0, 1) for i in range(nrows)}
         self.shared_xlim = {i: (0, 1) for i in range(ncols)}
+
+        replication_stats = np.empty((ncols, 5))
 
         sns.set(rc={'figure.figsize': (ncols * 8, nrows * 6)})
         sns.set_style("ticks")
@@ -336,14 +352,14 @@ class main():
                 include_ylabel = True
 
             print("\tPlotting row 1.")
-            xlim, ylim = self.scatterplot(
+            xlim, ylim, _ = self.scatterplot(
                 df=plot_df,
                 fig=fig,
                 ax=axes[0, col_index],
-                x="Bryois eQTL beta",
-                y="MetaBrain interaction beta",
+                x="MetaBrain interaction beta",
+                y="Bryois eQTL beta",
                 xlabel="",
-                ylabel="MetaBrain interaction beta",
+                ylabel="Bryois log eQTL beta",
                 title=ct,
                 color=self.palette[ct],
                 include_ylabel=include_ylabel
@@ -351,14 +367,14 @@ class main():
             self.update_limits(xlim, ylim, 0, col_index)
 
             print("\tPlotting row 2.")
-            xlim, ylim = self.scatterplot(
+            xlim, ylim, stats = self.scatterplot(
                 df=plot_df.loc[plot_df["MetaBrain FDR"] <= 0.05, :],
                 fig=fig,
                 ax=axes[1, col_index],
-                x="Bryois eQTL beta",
-                y="MetaBrain interaction beta",
+                x="MetaBrain interaction beta",
+                y="Bryois eQTL beta",
                 xlabel="",
-                ylabel="MetaBrain interaction beta",
+                ylabel="Bryois log eQTL beta",
                 title="",
                 color=self.palette[ct],
                 include_ylabel=include_ylabel,
@@ -368,21 +384,23 @@ class main():
             self.update_limits(xlim, ylim, 1, col_index)
 
             print("\tPlotting row 3.")
-            xlim, ylim = self.scatterplot(
+            xlim, ylim, _ = self.scatterplot(
                 df=plot_df.loc[plot_df["Bryois FDR"] <= 0.05, :],
                 fig=fig,
                 ax=axes[2, col_index],
-                x="Bryois eQTL beta",
-                y="MetaBrain interaction beta",
+                x="MetaBrain interaction beta",
+                y="Bryois eQTL beta",
                 label="Gene symbol",
-                xlabel="Bryois log eQTL beta",
-                ylabel="MetaBrain log interaction beta",
+                xlabel="MetaBrain log interaction beta",
+                ylabel="Bryois log eQTL beta",
                 title="",
                 color=self.palette[ct],
                 include_ylabel=include_ylabel
             )
             self.update_limits(xlim, ylim, 2, col_index)
             print("")
+
+            replication_stats[col_index, :] = stats
 
         for (m, n), ax in np.ndenumerate(axes):
             (xmin, xmax) = self.shared_xlim[n]
@@ -391,12 +409,20 @@ class main():
             xmargin = (xmax - xmin) * 0.05
             ymargin = (ymax - ymin) * 0.05
 
-            ax.set_xlim(xmin - xmargin - 0.5, xmax + xmargin)
+            ax.set_xlim(xmin - xmargin - 1, xmax + xmargin)
             ax.set_ylim(ymin - ymargin, ymax + ymargin)
+
+        # Add the main title.
+        fig.suptitle("ieQTL replication in Bryois et al. 2021",
+                     fontsize=40,
+                     color="#000000",
+                     weight='bold')
 
         for extension in self.extensions:
             fig.savefig(os.path.join(self.outdir, "bryois_replication_plot.{}".format(extension)))
         plt.close()
+
+        return pd.DataFrame(replication_stats, index=cell_types, columns=["n", "concordance", "coef", "pi1", "rb"])
 
     @staticmethod
     def pvalue_to_zscore(df, beta_col, p_col, prefix=""):
@@ -426,7 +452,7 @@ class main():
         return new_df
 
     def scatterplot(self, df, fig, ax, x="x", y="y", facecolors=None,
-                    label=None, max_labels=20, xlabel="", ylabel="", title="",
+                    label=None, max_labels=15, xlabel="", ylabel="", title="",
                     color="#000000", ci=95, include_ylabel=True,
                     pi1_column=None, rb_columns=None):
         sns.despine(fig=fig, ax=ax)
@@ -480,10 +506,17 @@ class main():
                     texts.append(ax.text(point[x],
                                          point[y],
                                          str(point[label]),
-                                         ha='center',
-                                         va='center',
                                          color=color))
-                adjust_text(texts, ax=ax, arrowprops=dict(arrowstyle='-', color='#808080'))
+
+                adjust_text(texts,
+                            ax=ax,
+                            only_move={'points': 'x',
+                                       'text': 'xy',
+                                       'objects': 'x'},
+                            autoalign='x',
+                            expand_text=(1., 1.),
+                            expand_points=(1., 1.),
+                            arrowprops=dict(arrowstyle='-', color='#808080'))
 
         ax.axhline(0, ls='--', color="#D7191C", alpha=0.3, zorder=-1)
         ax.axvline(0, ls='--', color="#D7191C", alpha=0.3, zorder=-1)
@@ -554,7 +587,7 @@ class main():
                       fontsize=14,
                       fontweight='bold')
 
-        return (df[x].min(), df[x].max()), (df[y].min(), df[y].max())
+        return (df[x].min(), df[x].max()), (df[y].min(), df[y].max()), np.array([n, concordance, coef, pi1, rb])
 
     def update_limits(self, xlim, ylim, row, col):
         row_ylim = self.shared_ylim[row]

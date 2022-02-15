@@ -3,7 +3,7 @@
 """
 File:         sn_replication.py
 Created:      2022/02/10
-Last Changed:
+Last Changed: 2022/02/15
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -130,6 +130,8 @@ class main():
         return parser.parse_args()
 
     def start(self):
+        self.print_arguments()
+
         print("Loading discovery data")
         discovery_df = self.load_file(self.discovery_path, header=0, index_col=None)
         discovery_df.index = discovery_df["Gene"] + "_" + discovery_df["SNP"]
@@ -237,8 +239,13 @@ class main():
         overlap_ct = list(discovery_ct.intersection(replication_ct))
         overlap_ct.sort()
 
-        self.plot(df=df,
-                  cell_types=overlap_ct)
+        replication_stats_df = self.plot(df=df, cell_types=overlap_ct)
+        print(replication_stats_df)
+        print(replication_stats_df.mean(axis=0))
+
+        self.save_file(df=replication_stats_df,
+                       outpath=os.path.join(self.outdir,
+                                            "replication_stats.txt.gz"))
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
@@ -271,11 +278,13 @@ class main():
                                       df.shape))
 
     def plot(self, df, cell_types):
-        nrows = 5
+        nrows = 3
         ncols = len(cell_types)
 
         self.shared_ylim = {i: (0, 1) for i in range(nrows)}
         self.shared_xlim = {i: (0, 1) for i in range(ncols)}
+
+        replication_stats = np.empty((ncols, 5))
 
         sns.set(rc={'figure.figsize': (ncols * 8, nrows * 6)})
         sns.set_style("ticks")
@@ -324,6 +333,7 @@ class main():
 
             # Convert the interaction beta to log scale.
             plot_df["log bulk interaction beta"] = self.log_modulus_beta(plot_df["bulk interaction beta"])
+            plot_df["log SN eqtl beta"] = self.log_modulus_beta(plot_df["SN beta"])
 
             # Add the hue for the significant replicating ieQTLs.
             plot_df["hue"] = "#808080"
@@ -335,14 +345,14 @@ class main():
                 include_ylabel = True
 
             print("\tPlotting row 1.")
-            xlim, ylim = self.scatterplot(
+            xlim, ylim, _ = self.scatterplot(
                 df=plot_df,
                 fig=fig,
                 ax=axes[0, col_index],
-                x="SN z-score",
-                y="bulk z-score",
+                x="log bulk interaction beta",
+                y="log SN eqtl beta",
                 xlabel="",
-                ylabel="cortex eQTL z-score",
+                ylabel="ROSMAP SN log eqtl beta",
                 title=ct,
                 color=self.palette[ct],
                 include_ylabel=include_ylabel
@@ -350,14 +360,14 @@ class main():
             self.update_limits(xlim, ylim, 0, col_index)
 
             print("\tPlotting row 2.")
-            xlim, ylim = self.scatterplot(
+            xlim, ylim, stats = self.scatterplot(
                 df=plot_df.loc[plot_df["bulk FDR"] <= 0.05, :],
                 fig=fig,
                 ax=axes[1, col_index],
-                x="SN z-score",
-                y="bulk z-score",
+                x="log bulk interaction beta",
+                y="log SN eqtl beta",
                 xlabel="",
-                ylabel="cortex eQTL z-score",
+                ylabel="ROSMAP SN log eqtl beta",
                 title="",
                 color=self.palette[ct],
                 include_ylabel=include_ylabel,
@@ -367,53 +377,22 @@ class main():
             self.update_limits(xlim, ylim, 1, col_index)
 
             print("\tPlotting row 3.")
-            xlim, ylim = self.scatterplot(
-                df=plot_df.loc[plot_df["bulk FDR"] <= 0.05, :],
+            xlim, ylim, _ = self.scatterplot(
+                df=plot_df.loc[plot_df["SN FDR"] <= 0.05, :],
                 fig=fig,
                 ax=axes[2, col_index],
-                x="SN z-score",
-                y="log bulk interaction beta",
-                xlabel="",
-                ylabel="log deconvolution beta",
+                x="log bulk interaction beta",
+                y="log SN eqtl beta",
+                xlabel="MetaBrain log interaction beta",
+                ylabel="ROSMAP SN log eqtl beta",
                 title="",
                 color=self.palette[ct],
                 include_ylabel=include_ylabel
             )
             self.update_limits(xlim, ylim, 2, col_index)
-
-            print("\tPlotting row 4.")
-            xlim, ylim = self.scatterplot(
-                df=plot_df.loc[plot_df["SN FDR"] <= 0.05, :],
-                fig=fig,
-                ax=axes[3, col_index],
-                x="SN z-score",
-                y="bulk z-score",
-                facecolors="hue",
-                xlabel="",
-                ylabel="cortex eQTL z-score",
-                title="",
-                color=self.palette[ct],
-                include_ylabel=include_ylabel
-            )
-            self.update_limits(xlim, ylim, 3, col_index)
-
-            print("\tPlotting row 5.")
-            xlim, ylim = self.scatterplot(
-                df=plot_df.loc[(plot_df["SN FDR"] <= 0.05) & (plot_df["bulk FDR"] <= 0.05), :],
-                fig=fig,
-                ax=axes[4, col_index],
-                x="SN z-score",
-                y="log bulk interaction beta",
-                label="Gene symbol",
-                xlabel="single-nucleus z-score",
-                ylabel="log interaction beta",
-                title="",
-                color=self.palette[ct],
-                ci=None,
-                include_ylabel=include_ylabel
-            )
-            self.update_limits(xlim, ylim, 4, col_index)
             print("")
+
+            replication_stats[col_index, :] = stats
 
         for (m, n), ax in np.ndenumerate(axes):
             (xmin, xmax) = self.shared_xlim[n]
@@ -422,12 +401,20 @@ class main():
             xmargin = (xmax - xmin) * 0.05
             ymargin = (ymax - ymin) * 0.05
 
-            ax.set_xlim(xmin - xmargin - 2, xmax + xmargin)
+            ax.set_xlim(xmin - xmargin - 1, xmax + xmargin)
             ax.set_ylim(ymin - ymargin, ymax + ymargin)
+
+        # Add the main title.
+        fig.suptitle("ieQTL replication in ROSMAP snRNA-seq",
+                     fontsize=40,
+                     color="#000000",
+                     weight='bold')
 
         for extension in self.extensions:
             fig.savefig(os.path.join(self.outdir, "sn_replication_plot.{}".format(extension)))
         plt.close()
+
+        return pd.DataFrame(replication_stats, index=cell_types, columns=["n", "concordance", "coef", "pi1", "rb"])
 
     @staticmethod
     def zscore_to_beta(df, z_col, maf_col, n_col, prefix=""):
@@ -447,7 +434,7 @@ class main():
         return new_df
 
     def scatterplot(self, df, fig, ax, x="x", y="y", facecolors=None,
-                    label=None, max_labels=20, xlabel="", ylabel="", title="",
+                    label=None, max_labels=15, xlabel="", ylabel="", title="",
                     color="#000000", ci=95, include_ylabel=True,
                     pi1_column=None, rb_columns=None):
         sns.despine(fig=fig, ax=ax)
@@ -501,10 +488,16 @@ class main():
                     texts.append(ax.text(point[x],
                                          point[y],
                                          str(point[label]),
-                                         ha='center',
-                                         va='center',
                                          color=color))
-                adjust_text(texts, ax=ax, arrowprops=dict(arrowstyle='-', color='#808080'))
+                adjust_text(texts,
+                            ax=ax,
+                            only_move={'points': 'x',
+                                       'text': 'xy',
+                                       'objects': 'x'},
+                            autoalign='x',
+                            expand_text=(1., 1.),
+                            expand_points=(1., 1.),
+                            arrowprops=dict(arrowstyle='-', color='#808080'))
 
         ax.axhline(0, ls='--', color="#D7191C", alpha=0.3, zorder=-1)
         ax.axvline(0, ls='--', color="#D7191C", alpha=0.3, zorder=-1)
@@ -575,7 +568,7 @@ class main():
                       fontsize=14,
                       fontweight='bold')
 
-        return (df[x].min(), df[x].max()), (df[y].min(), df[y].max())
+        return (df[x].min(), df[x].max()), (df[y].min(), df[y].max()), np.array([n, concordance, coef, pi1, rb])
 
     def update_limits(self, xlim, ylim, row, col):
         row_ylim = self.shared_ylim[row]
