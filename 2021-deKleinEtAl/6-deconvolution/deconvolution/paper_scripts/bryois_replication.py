@@ -142,13 +142,14 @@ class main():
         print(replication_df)
 
         print("Pre-process the discovery data.")
+        discovery_df = discovery_df.loc[~discovery_df["SNP"].str.contains("nors"), :]
         discovery_df.index = discovery_df["Gene"].str.split(".", expand=True)[0] + "_" + discovery_df["SNP"].str.split(":", expand=True)[2]
+        discovery_df = discovery_df.loc[~discovery_df.index.duplicated(), :]
         discovery_cell_types = [x.split(" ")[0] for x in discovery_df.columns if "pvalue" in x]
         discovery_aa_dict = dict(zip(discovery_df.index, discovery_df["Allele assessed"]))
 
         discovery_index_columns = ["Gene", "Gene symbol", "SNP", "Alleles", "Allele assessed"]
         discovery_df.columns = ["MetaBrain " + col if col not in discovery_index_columns else col for col in discovery_df.columns]
-        print(discovery_df)
 
         print("Pre-process the replication data.")
         # Translate the cell types.
@@ -181,7 +182,6 @@ class main():
 
         # Change the column names.
         replication_df.columns = ["Bryois " + col for col in replication_df.columns]
-        print(replication_df)
 
         # Add the sample size.
         replication_df["Bryois N"] = self.bryois_n
@@ -226,7 +226,6 @@ class main():
         df = df.loc[:, columns_of_interest].copy()
         df.columns = colnames
         print(df)
-        print(list(df.columns))
 
         print("Saving output")
         exclude_in_excel = ["MetaBrain N", "MetaBrain HW pval", "MetaBrain Minor allele", "MetaBrain MAF", "MetaBrain Overall z-score", "Bryois N"]

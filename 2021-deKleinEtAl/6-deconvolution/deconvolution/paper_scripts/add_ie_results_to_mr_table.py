@@ -66,7 +66,7 @@ class main():
         self.token = getattr(arguments, 'token')
 
         # Set variables.
-        self.table_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/2022-02-09-Supplementary_Table_12-MR_findings_passing_suggestive_threshold.xlsx"
+        self.table_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/2022-02-10-Supplementary_Table_12_MR_findings_passing_suggestive_threshold.xlsx"
         self.sheet_name = 'TopMR.dedup'
         self.table_ea_column = "Effect Allele"
         self.table_decon_snp_column = "eQTL SNP"
@@ -149,84 +149,87 @@ class main():
         decon_indices = set(decon_df.index)
         overlap = len(table_indices.intersection(decon_indices))
         print("\t{} / {} [{:.2f}%] of the rows have an exact match".format(overlap, len(table_indices), (100 / len(table_indices)) * overlap))
+        #
+        # print("Constructing the MR SNP link table.")
+        # n_rows = table_df.shape[0]
+        # n_exact_match = 0
+        # n_proxy_found = 0
+        # n_missing = 0
+        # n_excluded = 0
+        # links = []
+        # last_print_time = None
+        # for i, (index, row) in enumerate(table_df.iterrows()):
+        #     # Update user on progress.
+        #     now_time = int(time.time())
+        #     if (last_print_time is None or (now_time - last_print_time) >= 30 or i == (n_rows - 1)):
+        #         print("\t{:,}/{:,} rows processed [{:.2f}%]".format(i, (n_rows - 1), (100 / (n_rows - 1)) * i))
+        #         last_print_time = now_time
+        #
+        #     id = row["ID"]
+        #     if index in decon_indices:
+        #         links.append([id, index, index, row["SNP"], 1, 1])
+        #         n_exact_match += 1
+        #     else:
+        #         # Check if the instrument snp is in high ld with the ieQTL snp.
+        #         gene = row["Ensembl Gene ID"]
+        #         instrument_snp = row["SNP"]
+        #         effect_allele = row[self.table_ea_column]
+        #         if str(row["Proxy SNP"]).startswith("rs"):
+        #             instrument_snp = row["Proxy SNP"]
+        #
+        #         # Get all ieQTLs tested for this gene.
+        #         gene_decon_df_subset = decon_df.loc[decon_df["Gene"] == gene, ["Gene", "SNP", "Allele assessed"]].copy()
+        #         if len(gene_decon_df_subset.index) > 0:
+        #             gene_decon_df_subset["SNP"] = gene_decon_df_subset["SNP"].str.split(":", n=None, expand=True)[2]
+        #
+        #             match_index = None
+        #             match_snp = None
+        #             match_aa = None
+        #             match_r2 = 0
+        #             match_allele_combinations = None
+        #             for ld_option_index, ld_option_row in gene_decon_df_subset.iterrows():
+        #                 info = self.get_ldpair_info(instrument_snp, ld_option_row["SNP"])
+        #
+        #                 if info["WARNING"] is np.nan and info["R2"] != np.nan and info["R2"] > match_r2:
+        #                     match_index = ld_option_index
+        #                     match_snp = ld_option_row["SNP"]
+        #                     match_aa = ld_option_row["Allele assessed"]
+        #                     match_r2 = info["R2"]
+        #                     match_allele_combinations = info["matching"]
+        #
+        #             if match_r2 >= self.minimal_ld:
+        #                 flip = 1
+        #                 if [effect_allele, match_aa] not in match_allele_combinations:
+        #                     flip = -1
+        #                 print([effect_allele, match_aa])
+        #                 print(match_allele_combinations)
+        #                 print(flip)
+        #                 print("")
+        #                 links.append([id, index, match_index, match_snp, match_r2, flip])
+        #                 n_proxy_found += 1
+        #             else:
+        #                 links.append([id, index, np.nan, np.nan, np.nan, np.nan])
+        #                 n_missing += 1
+        #         else:
+        #             links.append([id, index, np.nan, np.nan, np.nan, np.nan])
+        #             n_excluded += 1
+        #
+        # print("\tN-rows with exact match: {:,} [{:.2f}%]".format(n_exact_match, (100 / n_rows) * n_exact_match))
+        # print("\tN-rows with proxy SNP found: {:,} [{:.2f}%]".format(n_proxy_found, (100 / n_rows) * n_proxy_found))
+        # print("\tN-rows with NaN: {:,} [{:.2f}%]".format(n_missing, (100 / n_rows) * n_missing))
+        # print("\tN-rows whose genes were excluded: {:,} [{:.2f}%]".format(n_excluded, (100 / n_rows) * n_excluded))
+        # print("")
 
-        print("Constructing the MR SNP link table.")
-        n_rows = table_df.shape[0]
-        n_exact_match = 0
-        n_proxy_found = 0
-        n_missing = 0
-        n_excluded = 0
-        links = []
-        last_print_time = None
-        for i, (index, row) in enumerate(table_df.iterrows()):
-            # Update user on progress.
-            now_time = int(time.time())
-            if (last_print_time is None or (now_time - last_print_time) >= 30 or i == (n_rows - 1)):
-                print("\t{:,}/{:,} rows processed [{:.2f}%]".format(i, (n_rows - 1), (100 / (n_rows - 1)) * i))
-                last_print_time = now_time
+        # print("Saving link file")
+        # links_df = pd.DataFrame(links, columns=["ID", "table index", "decon index", self.table_decon_snp_column, self.table_ld_r2_column, "flip"])
+        # print(links_df)
+        # self.save_file(df=links_df,
+        #                outpath=os.path.join(self.outdir, "links.txt.gz"),
+        #                header=True,
+        #                index=False)
 
-            id = row["ID"]
-            if index in decon_indices:
-                links.append([id, index, index, row["SNP"], 1, 1])
-                n_exact_match += 1
-            else:
-                # Check if the instrument snp is in high ld with the ieQTL snp.
-                gene = row["Ensembl Gene ID"]
-                instrument_snp = row["SNP"]
-                effect_allele = row[self.table_ea_column]
-                if str(row["Proxy SNP"]).startswith("rs"):
-                    instrument_snp = row["Proxy SNP"]
-
-                # Get all ieQTLs tested for this gene.
-                gene_decon_df_subset = decon_df.loc[decon_df["Gene"] == gene, ["Gene", "SNP", "Allele assessed"]].copy()
-                if len(gene_decon_df_subset.index) > 0:
-                    gene_decon_df_subset["SNP"] = gene_decon_df_subset["SNP"].str.split(":", n=None, expand=True)[2]
-
-                    match_index = None
-                    match_snp = None
-                    match_aa = None
-                    match_r2 = 0
-                    match_allele_combinations = None
-                    for ld_option_index, ld_option_row in gene_decon_df_subset.iterrows():
-                        info = self.get_ldpair_info(instrument_snp, ld_option_row["SNP"])
-
-                        if info["WARNING"] is np.nan and info["R2"] != np.nan and info["R2"] > match_r2:
-                            match_index = ld_option_index
-                            match_snp = ld_option_row["SNP"]
-                            match_aa = ld_option_row["Allele assessed"]
-                            match_r2 = info["R2"]
-                            match_allele_combinations = info["matching"]
-
-                    if match_r2 >= self.minimal_ld:
-                        flip = 1
-                        if [effect_allele, match_aa] not in match_allele_combinations:
-                            flip = -1
-                        print([effect_allele, match_aa])
-                        print(match_allele_combinations)
-                        print(flip)
-                        print("")
-                        links.append([id, index, match_index, match_snp, match_r2, flip])
-                        n_proxy_found += 1
-                    else:
-                        links.append([id, index, np.nan, np.nan, np.nan, np.nan])
-                        n_missing += 1
-                else:
-                    links.append([id, index, np.nan, np.nan, np.nan, np.nan])
-                    n_excluded += 1
-
-        print("\tN-rows with exact match: {:,} [{:.2f}%]".format(n_exact_match, (100 / n_rows) * n_exact_match))
-        print("\tN-rows with proxy SNP found: {:,} [{:.2f}%]".format(n_proxy_found, (100 / n_rows) * n_proxy_found))
-        print("\tN-rows with NaN: {:,} [{:.2f}%]".format(n_missing, (100 / n_rows) * n_missing))
-        print("\tN-rows whose genes were excluded: {:,} [{:.2f}%]".format(n_excluded, (100 / n_rows) * n_excluded))
-        print("")
-
-        print("Saving link file")
-        links_df = pd.DataFrame(links, columns=["ID", "table index", "decon index", self.table_decon_snp_column, self.table_ld_r2_column, "flip"])
+        links_df = self.load_file(os.path.join(self.outdir, "links.txt.gz"), header=0, index_col=None)
         print(links_df)
-        self.save_file(df=links_df,
-                       outpath=os.path.join(self.outdir, "links.txt.gz"),
-                       header=True,
-                       index=False)
 
         print("Post-processing")
         # Check indices are correct.
@@ -252,6 +255,15 @@ class main():
         # Subset the right columns.
         columns_of_interest = [self.table_decon_snp_column, self.table_ld_r2_column] + ["{} Beta".format(ct) for ct in cell_types] + ["{} FDR".format(ct) for ct in cell_types] + [self.table_n_ieqtls_column]
         decon_subset_df = decon_subset_df.loc[:, columns_of_interest]
+
+        # Set the existing columns to nan.
+        for col in columns_of_interest:
+            if col in table_df.columns:
+                table_df[col] = np.nan
+            else:
+                print("Error, column '{}' not found in table".format(col))
+
+        print(table_df[columns_of_interest])
         print(decon_subset_df)
 
         print("Merging tables")

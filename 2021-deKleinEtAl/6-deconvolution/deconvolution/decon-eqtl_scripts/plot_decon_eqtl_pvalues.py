@@ -26,13 +26,14 @@ from __future__ import print_function
 from pathlib import Path
 import argparse
 import math
+import glob
 import os
+import re
 
 # Third party imports.
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from scipy import stats
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -42,7 +43,7 @@ import matplotlib.pyplot as plt
 """
 Syntax:
 ./plot_decon_eqtl_pvalues.py \
-    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron/deconvolutionResults.txt.gz \
+    -i /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron \
     -o 2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron \
     -e png pdf
 """
@@ -66,7 +67,7 @@ class main():
     def __init__(self):
         # Get the command line arguments.
         arguments = self.create_argument_parser()
-        self.decon_path = getattr(arguments, 'decon_path')
+        self.indir = getattr(arguments, 'indir')
         self.outfile = getattr(arguments, 'outfile')
         self.extensions = getattr(arguments, 'extensions')
 
@@ -90,11 +91,12 @@ class main():
                                          description=__description__)
 
         # Add optional arguments.
-        parser.add_argument("-d",
-                            "--decon_path",
+        parser.add_argument("-id",
+                            "--indir",
                             type=str,
-                            required=True,
-                            help="The path to the deconvolution results matrix")
+                            required=False,
+                            default=None,
+                            help="The name of the input path.")
         parser.add_argument("-o",
                             "--outfile",
                             type=str,
@@ -114,8 +116,8 @@ class main():
     def start(self):
         self.print_arguments()
 
-        print("Loading data")
-        decon_df = self.load_file(self.decon_path, header=0, index_col=0)
+        print("Loading nominal p-value data")
+        decon_df = self.load_file(os.path.join(self.indir, "deconvolutionResults.txt.gz"), header=0, index_col=0)
         nominal_pvalues_df = decon_df.loc[:, [x for x in decon_df.columns if x.endswith("_pvalue")]]
         print(nominal_pvalues_df)
         nominal_pvalues_df.columns = [x.replace("_pvalue", "") for x in nominal_pvalues_df.columns]
@@ -123,9 +125,45 @@ class main():
         cell_types = list(nominal_pvalues_df.columns)
         print("\tcell types: {}".format(", ".join(cell_types)))
 
-        print("Plotting data")
+        print("Plotting nominal p-value data")
         self.plot(df=nominal_pvalues_df,
-                  cell_types=cell_types)
+                  cell_types=cell_types,
+                  xlabel="nominal p-value",
+                  appendix="_nominal_pvalues",
+                  title="Decon-eQTL nominal p-values")
+
+        del decon_df, nominal_pvalues_df
+
+        print("Loading permutation p-value data")
+        perm_pvalues_m_list = []
+        perm_pvalues_inpaths = glob.glob(os.path.join(self.indir, "permutation_pvalues_*"))
+        perm_pvalues_inpaths.sort(key=self.natural_keys)
+        print(perm_pvalues_inpaths)
+        for perm_pvalues_inpath in perm_pvalues_inpaths:
+            perm_pvalues_m_list.append(self.load_matrix(perm_pvalues_inpath))
+        perm_pvalues_m = np.dstack(perm_pvalues_m_list)
+        del perm_pvalues_m_list
+        print("\tShape: {}".format(perm_pvalues_m.shape))
+
+        total_n = 0
+        total_p_et_one = 0
+        for i, ct in enumerate(cell_types):
+            data = perm_pvalues_m[:, i, :].flatten()
+            n_values = np.size(data)
+            p_et_one = np.sum(data > 0.95)
+            print("{}: {} / {} [{:.0f}%] permuted p-values are equal to 1".format(ct, p_et_one, n_values, (100 / n_values) * p_et_one))
+
+            total_n += n_values
+            total_p_et_one += p_et_one
+        print("{} / {} [{:.0f}%] permuted p-values are equal to 1".format(total_p_et_one, total_n, (100 / total_n) * total_p_et_one))
+        print(np.median(perm_pvalues_m.flatten()))
+
+        # print("Plotting permuted p-value data")
+        # self.plot(df=perm_pvalues_m,
+        #           cell_types=cell_types,
+        #           xlabel="permuted p-value",
+        #           appendix="_permuted_pvalues",
+        #           title="Decon-eQTL permuted p-values")
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
@@ -137,7 +175,19 @@ class main():
                                       df.shape))
         return df
 
-    def plot(self, df, cell_types):
+    @staticmethod
+    def natural_keys(text):
+        return [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', text)]
+
+    @staticmethod
+    def load_matrix(inpath):
+        m = np.load(inpath)
+        print("\tLoaded dataframe: {} "
+              "with shape: {}".format(os.path.basename(inpath),
+                                      m.shape))
+        return m
+
+    def plot(self, df, cell_types, xlabel="", title="", appendix=""):
         nplots = len(cell_types)
         ncols = math.ceil(np.sqrt(nplots))
         nrows = math.ceil(nplots / ncols)
@@ -149,6 +199,7 @@ class main():
                                  sharex='all',
                                  sharey='all')
 
+        data = None
         row_index = 0
         col_index = 0
         for i in range(ncols * nrows):
@@ -164,9 +215,15 @@ class main():
             if i < len(cell_types):
                 ct = cell_types[i]
 
+                if len(df.shape) == 2:
+                    data = df[ct]
+                if len(df.shape) == 3:
+                    data = df[:, i, :].flatten()
+
                 sns.despine(fig=fig, ax=ax)
 
-                sns.histplot(data=df[ct],
+                sns.histplot(data=data,
+                             stat="probability",
                              ax=ax,
                              kde=True,
                              kde_kws={"cut": 0},
@@ -175,15 +232,15 @@ class main():
                 ax.set_title(ct,
                              fontsize=18,
                              fontweight='bold')
-                ax.set_ylabel("count",
+                ax.set_ylabel("proportion",
                               fontsize=14,
                               fontweight='bold')
-                ax.set_xlabel("nominal p-value",
+                ax.set_xlabel(xlabel,
                               fontsize=14,
                               fontweight='bold')
 
                 ax.annotate(
-                    'N = {:,}'.format(df.shape[0]),
+                    'N = {:,}'.format(np.size(data)),
                     xy=(0.03, 0.94),
                     xycoords=ax.transAxes,
                     color=self.palette[ct],
@@ -197,18 +254,18 @@ class main():
                 row_index += 1
 
         # Add the main title.
-        fig.suptitle("Decon-eQTL nominal p-values",
+        fig.suptitle(title,
                      fontsize=25,
                      color="#000000",
                      weight='bold')
 
         for extension in self.extensions:
-            fig.savefig(os.path.join(self.outdir, "{}.{}".format(self.outfile, extension)))
+            fig.savefig(os.path.join(self.outdir, "{}{}.{}".format(self.outfile, appendix, extension)))
         plt.close()
 
     def print_arguments(self):
         print("Arguments:")
-        print("  > Decon path: {}".format(self.decon_path))
+        print("  > Decon input directory: {}".format(self.indir))
         print("  > Output filename: {}".format(self.outfile))
         print("  > Extensions: {}".format(", ".join(self.extensions)))
         print("  > Output directory: {}".format(self.outdir))

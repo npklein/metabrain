@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 """
-File:         visualise_ct_mediated_eqtl.py
-Created:      2020/09/23
+File:         visualise_ct_mediated_eqtl_replication.py
+Created:      2022/02/16
 Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
@@ -39,7 +39,7 @@ from scipy import stats
 # Local application imports.
 
 # Metadata
-__program__ = "Visualise CellType mediated eQTL"
+__program__ = "Visualise CellType mediated eQTL Replication"
 __author__ = "Martijn Vochteloo"
 __maintainer__ = "Martijn Vochteloo"
 __email__ = "m.vochteloo@rug.nl"
@@ -54,31 +54,18 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./visualise_ct_mediated_eqtl.py \
-    -eq ../matrix_preparation/cortex_eur_cis/combine_eqtlprobes/eQTLprobes_combined.txt.gz \
-    -ge ../matrix_preparation/cortex_eur_cis/create_matrices/genotype_table.txt.gz \
-    -al ../matrix_preparation/cortex_eur_cis/create_matrices/genotype_alleles.txt.gz \
-    -ex ../matrix_preparation/cortex_eur_cis/create_matrices/expression_table.txt.gz \
-    -cc ../matrix_preparation/cortex_eur_cis/perform_deconvolution/deconvolution_table.txt.gz \
-    -d ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv \
-    -i CLECL1 CYP24A1 \
-    -n 600 \
-    -e pdf
-    
-### 2022-02-26 ###
-
-./visualise_ct_mediated_eqtl.py \
+./visualise_ct_mediated_eqtl_replication.py \
     -eq ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined_withFDRCol.txt.gz \
     -ge ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_table.txt.gz \
     -al ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz \
     -ex ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/expression_table.txt.gz \
     -cc ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table_InhibitorySummedWithOtherNeuron.txt.gz \
     -d ../decon-eqtl_scripts/decon_eqtl/2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron/merged_decon_results.txt.gz \
+    -rr sn_replication/single_nucleus_replication.txt.gz \
+    -br bryois_replication/bryois_replication.txt.gz \
     -i ENSG00000153291.16_6:46677138:rs2270450:C_T_Excitatory ENSG00000019186.10_20:54173204:rs2248137:C_G_OtherNeuron ENSG00000015592.16_8:27245507:rs17366947:A_G_Oligodendrocyte ENSG00000188732.11_7:23681366:rs4722244:C_T_Oligodendrocyte ENSG00000184293.7_12:9724600:rs7306304:G_A_Microglia \
     -n 850 \
     -e png pdf
-    
-    -ex ../preprocess_scripts/select_and_reorder_matrix/2021-12-07-CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt \
 """
 
 
@@ -92,17 +79,40 @@ class main():
         self.expr_path = getattr(arguments, 'expression')
         self.cc_path = getattr(arguments, 'cellcount%')
         self.decon_path = getattr(arguments, 'decon')
+        self.rosmap_replication_path = getattr(arguments, 'rosmap_replication')
+        self.bryois_replication_path = getattr(arguments, 'bryois_replication')
         self.interest = getattr(arguments, 'interest')
         self.nrows = getattr(arguments, 'nrows')
         self.extensions = getattr(arguments, 'extension')
 
         # Set variables.
-        self.outdir = os.path.join(str(Path(__file__).parent.parent), 'visualise_ct_mediated_eqtl')
+        self.outdir = os.path.join(str(Path(__file__).parent.parent), 'visualise_ct_mediated_eqtl_replication')
 
         self.palette = {
             2.: "#E69F00",
             1.: "#0072B2",
-            0.: "#D55E00"
+            0.: "#D55E00",
+            "AST": "#D55E00",
+            "END": "#CC79A7",
+            "EX": "#56B4E9",
+            "IN": "#0072B2",
+            "MIC": "#E69F00",
+            "OPC": "#009E73",
+            "OLI": "#009E73",
+            "PER": "#808080"
+        }
+
+        self.ct_abbrevations = {
+            "Astrocyte": "AST",
+            "EndothelialCell": "END",
+            "Excitatory": "EX",
+            "Inhibitory": "IN",
+            "Microglia": "MIC",
+            "OPC": "OPC",
+            "OPCsCOPs": "OPC",
+            "Oligodendrocyte": "OLI",
+            "Pericytes": "PER",
+            "Pericyte": "PER"
         }
 
         if not os.path.exists(self.outdir):
@@ -154,6 +164,18 @@ class main():
                             type=str,
                             required=True,
                             help="The path to the deconvolution matrix")
+        parser.add_argument("-rr",
+                            "--rosmap_replication",
+                            type=str,
+                            required=True,
+                            help="The path to the ROSMAP replication "
+                                 "matrix")
+        parser.add_argument("-br",
+                            "--bryois_replication",
+                            type=str,
+                            required=True,
+                            help="The path to the bryois replication "
+                                 "matrix")
         parser.add_argument("-i",
                             "--interest",
                             nargs="+",
@@ -188,6 +210,8 @@ class main():
         expr_df = self.load_file(self.expr_path, header=0, index_col=0, nrows=self.nrows)
         cc_df = self.load_file(self.cc_path, header=0, index_col=0)
         decon_df = self.load_file(self.decon_path, header=0, index_col=None, nrows=self.nrows)
+        rosmap_df = self.load_file(self.rosmap_replication_path, header=0, index_col=None)
+        bryois_df = self.load_file(self.bryois_replication_path, header=0, index_col=None)
 
         print("Validate data")
         probes = list(eqtl_df["ProbeName"])
@@ -208,8 +232,27 @@ class main():
 
         print("Pre-process data")
         decon_df.index = decon_df["Gene"] + "_" + decon_df["SNP"]
+        rosmap_df.index = rosmap_df["Gene"] + "_" + rosmap_df["SNP"]
+        bryois_df.index = bryois_df["Gene"] + "_" + bryois_df["SNP"]
 
-        print("Iterating over eQTLs.")
+        rosmap_ct = [col.replace("SN ", "").replace(" eQTL pvalue", "") for col in rosmap_df.columns if col.startswith("SN ") and col.endswith(" eQTL pvalue")]
+        rosmap_ct.sort()
+
+        bryois_ct = [col.replace("Bryois ", "").replace(" pvalue", "") for col in bryois_df.columns if col.startswith("Bryois ") and col.endswith(" pvalue")]
+        bryois_ct.sort()
+
+        print("Visualizing data")
+        nrows = len(self.interest)
+        ncols = 4
+
+        sns.set(rc={'figure.figsize': (ncols * 12, nrows * 9)})
+        sns.set_style("ticks")
+        fig, axes = plt.subplots(nrows=nrows,
+                                 ncols=ncols,
+                                 sharex='none',
+                                 sharey='none')
+
+        row_count = 0
         for row_index, (_, row) in enumerate(eqtl_df.iterrows()):
             # Extract the usefull information from the row.
             snp_name = row["SNPName"]
@@ -291,7 +334,9 @@ class main():
                       "MAF: {:.2f}".format(minor_allele_frequency)]
 
             # Plot the main eQTL effect.
-            self.eqtl_plot(df=data,
+            self.eqtl_plot(fig=fig,
+                           ax=axes[row_count, 0],
+                           df=data,
                            x="group",
                            y="expression",
                            palette=self.palette,
@@ -299,8 +344,7 @@ class main():
                            xlabel=snp_name,
                            ylabel="{} expression".format(hgnc_name),
                            annot=annot1,
-                           title="eQTL",
-                           filename="{}_{}_{}_{}".format(row_index, probe_name, hgnc_name, snp_name)
+                           title="Bulk eQTL effect" if row_count == 0 else ""
                            )
 
             # Add the cell type of interest
@@ -322,7 +366,9 @@ class main():
                       "MAF: {:.2f}".format(minor_allele_frequency)]
 
             # Plot the interaction eQTL.
-            self.inter_plot(df=data,
+            self.inter_plot(fig=fig,
+                            ax=axes[row_count, 1],
+                            df=data,
                             x="context",
                             y="expression",
                             group="group",
@@ -331,9 +377,71 @@ class main():
                             xlabel="{} proportion".format(cell_type),
                             ylabel="{} expression".format(hgnc_name),
                             annot=annot2,
-                            title="ieQTL",
-                            filename="{}_{}_{}_{}_{}".format(row_index, probe_name, hgnc_name, snp_name, cell_type)
+                            title="Bulk ieQTL effect" if row_count == 0 else ""
                             )
+
+            # Plot the replication in ROSMAP.
+            if id in rosmap_df.index:
+                rosmap_forest_df = pd.DataFrame(np.nan, index=rosmap_ct, columns=["cell type", "affect allele", "x", "lower", "upper"])
+                for ct in rosmap_ct:
+                    beta = float(rosmap_df.loc[id, "SN {} eQTL beta".format(ct)])
+                    se = float(rosmap_df.loc[id, "SN {} eQTL se".format(ct)])
+                    if rosmap_df.loc[id, "Allele assessed"] != minor_allele:
+                        beta = beta * -1
+                    rosmap_forest_df.loc[ct, :] = [self.ct_abbrevations[ct], minor_allele, beta, beta - se, beta + se]
+
+                self.stripplot(fig=fig,
+                               ax=axes[row_count, 2],
+                               df=rosmap_forest_df,
+                               x="x",
+                               y="cell type",
+                               palette=self.palette,
+                               xlabel="eQTL beta",
+                               title="ROSMAP SN eQTL effect" if row_count == 0 else ""
+                               )
+
+                del rosmap_forest_df
+            else:
+                axes[row_count, 2].set_axis_off()
+
+            # Plot the replication in ROSMAP.
+            if id in bryois_df.index:
+                bryois_forest_df = pd.DataFrame(np.nan, index=bryois_ct, columns=["cell type", "affect allele", "x", "lower", "upper"])
+                for ct in bryois_ct:
+                    beta = float(bryois_df.loc[id, "Bryois {} eQTL beta".format(ct)])
+                    pvalue = float(bryois_df.loc[id, "Bryois {} pvalue".format(ct)])
+                    maf = float(bryois_df.loc[id, "MetaBrain MAF"])
+                    n = float(bryois_df.loc[id, "MetaBrain N"])
+
+                    beta, se = self.pvalue_to_beta_and_se(beta=beta,
+                                                          pvalue=pvalue,
+                                                          maf=maf,
+                                                          n=n)
+                    if bryois_df.loc[id, "Allele assessed"] != minor_allele:
+                        beta = beta * -1
+                    bryois_forest_df.loc[ct, :] = [self.ct_abbrevations[ct], minor_allele, beta, beta - se, beta + se]
+
+                self.stripplot(fig=fig,
+                               ax=axes[row_count, 3],
+                               df=bryois_forest_df,
+                               x="x",
+                               y="cell type",
+                               palette=self.palette,
+                               xlabel="eQTL beta",
+                               title="Bryois 2021 eQTL effect" if row_count == 0 else ""
+                               )
+
+                del bryois_forest_df
+            else:
+                axes[row_count, 3].set_axis_off()
+
+            row_count += 1
+
+        for extension in self.extensions:
+            outpath = os.path.join(self.outdir, "visualise_ct_mediated_eqtl_replication.{}".format(extension))
+            print("Saving plot: {}".format(os.path.basename(outpath)))
+            fig.savefig(outpath)
+        plt.close()
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
@@ -345,12 +453,9 @@ class main():
                                       df.shape))
         return df
 
-    def eqtl_plot(self, df, x="x", y="y", palette=None, allele_map=None,
-                  annot=None, xlabel="", ylabel="", title="",
-                  filename="eqtl_plot"):
-        sns.set(rc={'figure.figsize': (12, 9)})
-        sns.set_style("ticks")
-        fig, ax = plt.subplots()
+    @staticmethod
+    def eqtl_plot(fig, ax, df, x="x", y="y", palette=None, allele_map=None,
+                  annot=None, xlabel="", ylabel="", title=""):
         sns.despine(fig=fig, ax=ax)
 
         sns.regplot(x=x,
@@ -400,21 +505,13 @@ class main():
                       fontsize=14,
                       fontweight='bold')
 
-        for extension in self.extensions:
-            outpath = os.path.join(self.outdir, "{}.{}".format(filename, extension))
-            print("\t\tSaving plot: {}".format(os.path.basename(outpath)))
-            fig.savefig(outpath)
-        plt.close()
-
-    def inter_plot(self, df, x="x", y="y", group="group", palette=None,
+    @staticmethod
+    def inter_plot(fig, ax, df, x="x", y="y", group="group", palette=None,
                    allele_map=None, annot=None, xlabel="", ylabel="",
-                   title="", filename="ieqtl_plot"):
+                   title=""):
         if len(set(df[group].unique()).symmetric_difference({0, 1, 2})) > 0:
             return
 
-        sns.set(rc={'figure.figsize': (12, 9)})
-        sns.set_style("ticks")
-        fig, ax = plt.subplots()
         sns.despine(fig=fig, ax=ax)
 
         for i, group_id in enumerate([0, 1, 2]):
@@ -480,11 +577,66 @@ class main():
                       fontsize=14,
                       fontweight='bold')
 
-        for extension in self.extensions:
-            outpath = os.path.join(self.outdir, "{}.{}".format(filename, extension))
-            print("\t\tSaving plot: {}".format(os.path.basename(outpath)))
-            fig.savefig(outpath)
-        plt.close()
+    @staticmethod
+    def stripplot(fig, ax, df, x="x", y="y", lower="lower", upper="upper",
+                  palette=None, xlabel="", ylabel="", title=""):
+        sns.despine(fig=fig, ax=ax)
+
+        ax.axvline(-0.75, ls='--', color="#000000", alpha=0.15, zorder=-1)
+        ax.axvline(0, ls='--', color="#000000", alpha=0.15, zorder=-1)
+        ax.axvline(0.75, ls='--', color="#000000", alpha=0.15, zorder=-1)
+
+        df_m = df.melt(id_vars=[y], value_vars=[lower, upper])
+        sns.pointplot(x="value",
+                      y=y,
+                      data=df_m,
+                      join=False,
+                      palette=palette,
+                      ax=ax)
+
+        sns.stripplot(x=x,
+                      y=y,
+                      data=df,
+                      size=25,
+                      dodge=False,
+                      orient="h",
+                      palette=palette,
+                      linewidth=0,
+                      edgecolor="w",
+                      jitter=0,
+                      ax=ax)
+
+        ax.set_title(title,
+                     fontsize=16,
+                     fontweight='bold')
+        ax.set_ylabel(ylabel,
+                      fontsize=14,
+                      fontweight='bold')
+        ax.set_xlabel(xlabel,
+                      fontsize=14,
+                      fontweight='bold')
+        ax.xaxis.grid(False)
+        ax.yaxis.grid(True)
+
+        ax.set_xlim([-1.05, 1.05])
+
+    @staticmethod
+    def pvalue_to_beta_and_se(beta, pvalue, maf, n):
+        zscore = stats.norm.ppf(pvalue / 2)
+        if beta > 0:
+            zscore = zscore * -1
+
+        if pvalue == 1:
+            zscore = 4
+        if pvalue == 0:
+            zscore = -40.
+
+        chi = zscore * zscore
+        a = 2 * maf * (1 - maf) * (n + chi)
+        beta = zscore / a ** (1/2)
+        se = 1 / a ** (1/2)
+
+        return beta, se
 
     def print_arguments(self):
         print("Arguments:")
@@ -494,6 +646,8 @@ class main():
         print("  > Expression path: {}".format(self.expr_path))
         print("  > Cell count % path: {}".format(self.cc_path))
         print("  > Deconvolution path: {}".format(self.decon_path))
+        print("  > ROSMAP Replication path: {}".format(self.rosmap_replication_path))
+        print("  > Bryois Replication path: {}".format(self.bryois_replication_path))
         print("  > Interest: {}".format(self.interest))
         print("  > Nrows: {}".format(self.nrows))
         print("  > Extension: {}".format(self.extensions))
