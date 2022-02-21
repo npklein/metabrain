@@ -3,7 +3,7 @@
 """
 File:         sn_replication.py
 Created:      2022/02/10
-Last Changed: 2022/02/15
+Last Changed: 2022/02/21
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -383,6 +383,7 @@ class main():
                 ax=axes[2, col_index],
                 x="log bulk interaction beta",
                 y="log SN eqtl beta",
+                label="Gene symbol",
                 xlabel="MetaBrain log interaction beta",
                 ylabel="ROSMAP SN log eqtl beta",
                 title="",

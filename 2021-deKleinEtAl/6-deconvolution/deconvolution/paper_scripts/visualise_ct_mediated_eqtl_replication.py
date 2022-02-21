@@ -3,7 +3,7 @@
 """
 File:         visualise_ct_mediated_eqtl_replication.py
 Created:      2022/02/16
-Last Changed: 2022/02/10
+Last Changed: 2022/02/21
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -58,12 +58,12 @@ Syntax:
     -eq ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined_withFDRCol.txt.gz \
     -ge ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_table.txt.gz \
     -al ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz \
-    -ex ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/expression_table.txt.gz \
+    -ex ../preprocess_scripts/select_and_reorder_matrix/2021-12-07-CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt \
     -cc ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table_InhibitorySummedWithOtherNeuron.txt.gz \
     -d ../decon-eqtl_scripts/decon_eqtl/2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron/merged_decon_results.txt.gz \
     -rr sn_replication/single_nucleus_replication.txt.gz \
     -br bryois_replication/bryois_replication.txt.gz \
-    -i ENSG00000153291.16_6:46677138:rs2270450:C_T_Excitatory ENSG00000019186.10_20:54173204:rs2248137:C_G_OtherNeuron ENSG00000015592.16_8:27245507:rs17366947:A_G_Oligodendrocyte ENSG00000188732.11_7:23681366:rs4722244:C_T_Oligodendrocyte ENSG00000184293.7_12:9724600:rs7306304:G_A_Microglia \
+    -i ENSG00000153291.16_6:46677138:rs2270450:C_T_Excitatory ENSG00000015592.16_8:27245507:rs17366947:A_G_Oligodendrocyte ENSG00000188732.11_7:23681366:rs4722244:C_T_Oligodendrocyte  \
     -n 850 \
     -e png pdf
 """
@@ -252,6 +252,11 @@ class main():
                                  sharex='none',
                                  sharey='none')
 
+        bulk_shared_ylim = [0, 0]
+        ieqtl_shared_xlim = [0, 0]
+        sn_shared_xlim = [0, 0]
+        bryois_shared_xlim = [0, 0]
+
         row_count = 0
         for row_index, (_, row) in enumerate(eqtl_df.iterrows()):
             # Extract the usefull information from the row.
@@ -334,18 +339,24 @@ class main():
                       "MAF: {:.2f}".format(minor_allele_frequency)]
 
             # Plot the main eQTL effect.
-            self.eqtl_plot(fig=fig,
-                           ax=axes[row_count, 0],
-                           df=data,
-                           x="group",
-                           y="expression",
-                           palette=self.palette,
-                           allele_map=allele_map,
-                           xlabel=snp_name,
-                           ylabel="{} expression".format(hgnc_name),
-                           annot=annot1,
-                           title="Bulk eQTL effect" if row_count == 0 else ""
-                           )
+            ylim = self.eqtl_plot(
+                fig=fig,
+                ax=axes[row_count, 0],
+                df=data,
+                x="group",
+                y="expression",
+                palette=self.palette,
+                allele_map=allele_map,
+                xlabel=snp_name,
+                ylabel="{} expression".format(hgnc_name),
+                annot=annot1,
+                title="Bulk eQTL effect" if row_count == 0 else ""
+            )
+
+            if ylim[0] < bulk_shared_ylim[0]:
+                bulk_shared_ylim[0] = ylim[0]
+            if ylim[1] > bulk_shared_ylim[1]:
+                bulk_shared_ylim[1] = ylim[1]
 
             # Add the cell type of interest
             cell_type = interest_id.replace(id + "_", "")
@@ -366,19 +377,29 @@ class main():
                       "MAF: {:.2f}".format(minor_allele_frequency)]
 
             # Plot the interaction eQTL.
-            self.inter_plot(fig=fig,
-                            ax=axes[row_count, 1],
-                            df=data,
-                            x="context",
-                            y="expression",
-                            group="group",
-                            palette=self.palette,
-                            allele_map=allele_map,
-                            xlabel="{} proportion".format(cell_type),
-                            ylabel="{} expression".format(hgnc_name),
-                            annot=annot2,
-                            title="Bulk ieQTL effect" if row_count == 0 else ""
-                            )
+            xlim, ylim = self.inter_plot(
+                fig=fig,
+                ax=axes[row_count, 1],
+                df=data,
+                x="context",
+                y="expression",
+                group="group",
+                palette=self.palette,
+                allele_map=allele_map,
+                xlabel="{} proportion".format(cell_type),
+                ylabel="",
+                annot=annot2,
+                title="Bulk ieQTL effect" if row_count == 0 else ""
+            )
+
+            if xlim[0] < ieqtl_shared_xlim[0]:
+                ieqtl_shared_xlim[0] = xlim[0]
+            if xlim[1] > ieqtl_shared_xlim[1]:
+                ieqtl_shared_xlim[1] = xlim[1]
+            if ylim[0] < bulk_shared_ylim[0]:
+                bulk_shared_ylim[0] = ylim[0]
+            if ylim[1] > bulk_shared_ylim[1]:
+                bulk_shared_ylim[1] = ylim[1]
 
             # Plot the replication in ROSMAP.
             if id in rosmap_df.index:
@@ -390,15 +411,21 @@ class main():
                         beta = beta * -1
                     rosmap_forest_df.loc[ct, :] = [self.ct_abbrevations[ct], minor_allele, beta, beta - se, beta + se]
 
-                self.stripplot(fig=fig,
-                               ax=axes[row_count, 2],
-                               df=rosmap_forest_df,
-                               x="x",
-                               y="cell type",
-                               palette=self.palette,
-                               xlabel="eQTL beta",
-                               title="ROSMAP SN eQTL effect" if row_count == 0 else ""
-                               )
+                xlim = self.stripplot(
+                    fig=fig,
+                    ax=axes[row_count, 2],
+                    df=rosmap_forest_df,
+                    x="x",
+                    y="cell type",
+                    palette=self.palette,
+                    xlabel="eQTL beta" if row_count == (nrows - 1) else "",
+                    title="ROSMAP SN eQTL effect" if row_count == 0 else ""
+                )
+
+                if xlim[0] < sn_shared_xlim[0]:
+                    sn_shared_xlim[0] = xlim[0]
+                if xlim[1] > sn_shared_xlim[1]:
+                    sn_shared_xlim[1] = xlim[1]
 
                 del rosmap_forest_df
             else:
@@ -411,31 +438,51 @@ class main():
                     beta = float(bryois_df.loc[id, "Bryois {} eQTL beta".format(ct)])
                     pvalue = float(bryois_df.loc[id, "Bryois {} pvalue".format(ct)])
                     maf = float(bryois_df.loc[id, "MetaBrain MAF"])
-                    n = float(bryois_df.loc[id, "MetaBrain N"])
+                    n = float(bryois_df.loc[id, "Bryois N"])
 
-                    beta, se = self.pvalue_to_beta_and_se(beta=beta,
-                                                          pvalue=pvalue,
-                                                          maf=maf,
-                                                          n=n)
+                    _, se = self.pvalue_to_beta_and_se(beta=beta,
+                                                       pvalue=pvalue,
+                                                       maf=maf,
+                                                       n=n)
                     if bryois_df.loc[id, "Allele assessed"] != minor_allele:
                         beta = beta * -1
                     bryois_forest_df.loc[ct, :] = [self.ct_abbrevations[ct], minor_allele, beta, beta - se, beta + se]
 
-                self.stripplot(fig=fig,
-                               ax=axes[row_count, 3],
-                               df=bryois_forest_df,
-                               x="x",
-                               y="cell type",
-                               palette=self.palette,
-                               xlabel="eQTL beta",
-                               title="Bryois 2021 eQTL effect" if row_count == 0 else ""
-                               )
+                xlim = self.stripplot(
+                    fig=fig,
+                    ax=axes[row_count, 3],
+                    df=bryois_forest_df,
+                    x="x",
+                    y="cell type",
+                    palette=self.palette,
+                    xlabel="eQTL beta" if row_count == (nrows - 1) else "",
+                    title="Bryois 2021 eQTL effect" if row_count == 0 else ""
+
+                )
+
+                if xlim[0] < bryois_shared_xlim[0]:
+                    bryois_shared_xlim[0] = xlim[0]
+                if xlim[1] > bryois_shared_xlim[1]:
+                    bryois_shared_xlim[1] = xlim[1]
 
                 del bryois_forest_df
             else:
                 axes[row_count, 3].set_axis_off()
 
             row_count += 1
+
+        for row_count in range(nrows):
+            axes[row_count, 0].set_ylim(bulk_shared_ylim[0], bulk_shared_ylim[1])
+            axes[row_count, 1].set_xlim(ieqtl_shared_xlim[0], ieqtl_shared_xlim[1])
+            axes[row_count, 1].set_ylim(bulk_shared_ylim[0], bulk_shared_ylim[1])
+            axes[row_count, 2].set_xlim(sn_shared_xlim[0] - 0.05, sn_shared_xlim[1] + 0.05)
+            axes[row_count, 3].set_xlim(bryois_shared_xlim[0] - 0.05, bryois_shared_xlim[1] + 0.05)
+
+            axes[row_count, 1].set_yticks([])
+            if row_count < (nrows - 1):
+                axes[row_count, 1].set_xticks([])
+                axes[row_count, 2].set_xticks([])
+                axes[row_count, 3].set_xticks([])
 
         for extension in self.extensions:
             outpath = os.path.join(self.outdir, "visualise_ct_mediated_eqtl_replication.{}".format(extension))
@@ -504,6 +551,8 @@ class main():
         ax.set_xlabel(xlabel,
                       fontsize=14,
                       fontweight='bold')
+
+        return ax.get_ylim()
 
     @staticmethod
     def inter_plot(fig, ax, df, x="x", y="y", group="group", palette=None,
@@ -577,6 +626,8 @@ class main():
                       fontsize=14,
                       fontweight='bold')
 
+        return ax.get_xlim(), ax.get_ylim()
+
     @staticmethod
     def stripplot(fig, ax, df, x="x", y="y", lower="lower", upper="upper",
                   palette=None, xlabel="", ylabel="", title=""):
@@ -590,6 +641,7 @@ class main():
         sns.pointplot(x="value",
                       y=y,
                       data=df_m,
+                      linewidth=4,
                       join=False,
                       palette=palette,
                       ax=ax)
@@ -618,7 +670,7 @@ class main():
         ax.xaxis.grid(False)
         ax.yaxis.grid(True)
 
-        ax.set_xlim([-1.05, 1.05])
+        return ax.get_xlim()
 
     @staticmethod
     def pvalue_to_beta_and_se(beta, pvalue, maf, n):
