@@ -3,7 +3,7 @@
 """
 File:         sn_replication.py
 Created:      2022/02/10
-Last Changed: 2022/02/21
+Last Changed: 2022/02/22
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -183,7 +183,6 @@ class main():
                                                    "AlleleAssessed",
                                                    "PValue",
                                                    "FDR",
-                                                   "OverallZScore",
                                                    "Meta-Beta",
                                                    "Meta-SE"]]
             replication_ct_df.columns = ["ProbeName",
@@ -191,7 +190,6 @@ class main():
                                          "replication_aa",
                                          "SN {} eQTL pvalue".format(full_name),
                                          "SN {} eQTL FDR".format(full_name),
-                                         "SN {} eQTL z-score".format(full_name),
                                          "SN {} eQTL beta".format(full_name),
                                          "SN {} eQTL se".format(full_name)]
             replication_ct_df.index = replication_ct_df["ProbeName"] + "_" + replication_ct_df["SNPName"]
@@ -201,17 +199,13 @@ class main():
             replication_ct_df.dropna(inplace=True)
 
             replication_ct_df["flip"] = replication_ct_df["replication_aa"] != replication_ct_df["discovery_aa"]
-            replication_ct_df.loc[:, "SN {} eQTL z-score".format(full_name)] = replication_ct_df["SN {} eQTL z-score".format(full_name)] * replication_ct_df["flip"].map({True: -1, False: 1})
             replication_ct_df.loc[:, "SN {} eQTL beta".format(full_name)] = replication_ct_df["SN {} eQTL beta".format(full_name)] * replication_ct_df["flip"].map({True: -1, False: 1})
 
             # save.
             replication_df_list.append(replication_ct_df.loc[:, ["SN {} eQTL pvalue".format(full_name),
                                                                  "SN {} eQTL FDR".format(full_name),
-                                                                 "SN {} eQTL z-score".format(full_name),
                                                                  "SN {} eQTL beta".format(full_name),
                                                                  "SN {} eQTL se".format(full_name)]].copy())
-            exclude_in_excel.append("SN {} eQTL pvalue".format(full_name))
-            exclude_in_excel.append("SN {} eQTL beta".format(full_name))
             exclude_in_excel.append("SN {} eQTL se".format(full_name))
 
         replication_df = pd.concat(replication_df_list, axis=1)
@@ -240,12 +234,27 @@ class main():
         overlap_ct.sort()
 
         replication_stats_df = self.plot(df=df, cell_types=overlap_ct)
-        print(replication_stats_df)
-        print(replication_stats_df.mean(axis=0))
-
         self.save_file(df=replication_stats_df,
                        outpath=os.path.join(self.outdir,
                                             "replication_stats.txt.gz"))
+
+        # replication_stats_df = self.load_file(os.path.join(self.outdir,  "replication_stats.txt.gz"),
+        #                                       header=0,
+        #                                       index_col=0)
+
+        print("Replication stats")
+        for label in replication_stats_df["label"].unique():
+            print("\t{}".format(label))
+            stats_df = replication_stats_df.loc[replication_stats_df["label"] == label, :]
+            stats_df_mean = stats_df[["variable", "value"]].groupby("variable").mean()
+            for index, row in stats_df_mean.iterrows():
+                print("\t  {}: {:.2f}".format(index, row["value"]))
+
+            stats_df_sum = stats_df[["variable", "value"]].groupby("variable").sum()
+            print("\t  Overall concordance: {:,}/{:,} [{:.2f}%]".format(stats_df_sum.loc["N concordant", "value"],
+                                                                        stats_df_sum.loc["N", "value"],
+                                                                        (100 / stats_df_sum.loc["N", "value"]) * stats_df_sum.loc["N concordant", "value"]))
+            print("")
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
@@ -284,7 +293,7 @@ class main():
         self.shared_ylim = {i: (0, 1) for i in range(nrows)}
         self.shared_xlim = {i: (0, 1) for i in range(ncols)}
 
-        replication_stats = np.empty((ncols, 5))
+        replication_stats = []
 
         sns.set(rc={'figure.figsize': (ncols * 8, nrows * 6)})
         sns.set_style("ticks")
@@ -300,31 +309,31 @@ class main():
             plot_df = df.loc[:, ["Gene symbol",
                                  "N",
                                  "MAF",
-                                 "Overall z-score",
                                  "Bulk {} pvalue".format(ct),
                                  "Bulk {} FDR".format(ct),
                                  "Bulk {} interaction beta".format(ct),
                                  "SN {} eQTL pvalue".format(ct),
                                  "SN {} eQTL FDR".format(ct),
-                                 "SN {} eQTL z-score".format(ct),
                                  "SN {} eQTL beta".format(ct),
                                  "SN {} eQTL se".format(ct)]].copy()
             plot_df.columns = ["Gene symbol",
                                "bulk N",
                                "bulk MAF",
-                               "bulk z-score",
                                "bulk pvalue",
                                "bulk FDR",
                                "bulk interaction beta",
                                "SN pvalue",
                                "SN FDR",
-                               "SN z-score",
                                "SN beta",
                                "SN se"]
             plot_df.dropna(inplace=True)
             plot_df.sort_values(by="bulk pvalue", inplace=True)
 
             # Calculate the discovery standard error.
+            self.pvalue_to_zscore(df=plot_df,
+                                  beta_col="bulk interaction beta",
+                                  p_col="bulk pvalue",
+                                  prefix="bulk ")
             self.zscore_to_beta(df=plot_df,
                                 z_col="bulk z-score",
                                 maf_col="bulk MAF",
@@ -345,7 +354,7 @@ class main():
                 include_ylabel = True
 
             print("\tPlotting row 1.")
-            xlim, ylim, _ = self.scatterplot(
+            xlim, ylim, stats1 = self.scatterplot(
                 df=plot_df,
                 fig=fig,
                 ax=axes[0, col_index],
@@ -360,7 +369,7 @@ class main():
             self.update_limits(xlim, ylim, 0, col_index)
 
             print("\tPlotting row 2.")
-            xlim, ylim, stats = self.scatterplot(
+            xlim, ylim, stats2 = self.scatterplot(
                 df=plot_df.loc[plot_df["bulk FDR"] <= 0.05, :],
                 fig=fig,
                 ax=axes[1, col_index],
@@ -377,7 +386,7 @@ class main():
             self.update_limits(xlim, ylim, 1, col_index)
 
             print("\tPlotting row 3.")
-            xlim, ylim, _ = self.scatterplot(
+            xlim, ylim, stats3 = self.scatterplot(
                 df=plot_df.loc[plot_df["SN FDR"] <= 0.05, :],
                 fig=fig,
                 ax=axes[2, col_index],
@@ -393,7 +402,11 @@ class main():
             self.update_limits(xlim, ylim, 2, col_index)
             print("")
 
-            replication_stats[col_index, :] = stats
+            for stats, label in zip([stats1, stats2, stats3], ["all", "discovery significant", "both significant"]):
+                stats_m = stats.melt()
+                stats_m["label"] = label
+                stats_m["cell type"] = ct
+                replication_stats.append(stats_m)
 
         for (m, n), ax in np.ndenumerate(axes):
             (xmin, xmax) = self.shared_xlim[n]
@@ -415,7 +428,21 @@ class main():
             fig.savefig(os.path.join(self.outdir, "sn_replication_plot.{}".format(extension)))
         plt.close()
 
-        return pd.DataFrame(replication_stats, index=cell_types, columns=["n", "concordance", "coef", "pi1", "rb"])
+        # Construct the replication stats data frame.
+        replication_stats_df = pd.concat(replication_stats, axis=0)
+        replication_stats_df.dropna(inplace=True)
+
+        return replication_stats_df
+
+    @staticmethod
+    def pvalue_to_zscore(df, beta_col, p_col, prefix=""):
+        p_values = df[p_col].to_numpy()
+        zscores = stats.norm.ppf(p_values / 2)
+        mask = np.ones_like(p_values)
+        mask[df[beta_col] > 0] = -1
+        df["{}z-score".format(prefix)] = zscores * mask
+        df.loc[df[p_col] == 1, "{}z-score".format(prefix)] = 0
+        df.loc[df[p_col] == 0, "{}z-score".format(prefix)] = -40.
 
     @staticmethod
     def zscore_to_beta(df, z_col, maf_col, n_col, prefix=""):
@@ -449,15 +476,17 @@ class main():
             facecolors = df[facecolors]
 
         n = df.shape[0]
-        concordance = None
-        coef = None
-        pi1 = None
-        rb = None
+        concordance = np.nan
+        n_concordant = np.nan
+        coef = np.nan
+        pi1 = np.nan
+        rb = np.nan
 
         if n > 0:
             lower_quadrant = df.loc[(df[x] < 0) & (df[y] < 0), :]
             upper_quadrant = df.loc[(df[x] > 0) & (df[y] > 0), :]
-            concordance = (100 / n) * (lower_quadrant.shape[0] + upper_quadrant.shape[0])
+            n_concordant = lower_quadrant.shape[0] + upper_quadrant.shape[0]
+            concordance = (100 / n) * n_concordant
 
             if n > 1:
                 coef, p = stats.pearsonr(df[x], df[y])
@@ -515,7 +544,7 @@ class main():
             )
             y_pos -= 0.05
 
-        if coef is not None:
+        if not np.isnan(coef):
             ax.annotate(
                 'r = {:.2f}'.format(coef),
                 xy=(0.03, y_pos),
@@ -526,7 +555,7 @@ class main():
             )
             y_pos -= 0.05
 
-        if concordance is not None:
+        if not np.isnan(concordance):
             ax.annotate(
                 'concordance = {:.0f}%'.format(concordance),
                 xy=(0.03, y_pos),
@@ -537,7 +566,7 @@ class main():
             )
             y_pos -= 0.05
 
-        if pi1 is not None:
+        if not np.isnan(pi1):
             ax.annotate(
                 '\u03C01 = {:.2f}'.format(pi1),
                 xy=(0.03, y_pos),
@@ -548,7 +577,7 @@ class main():
             )
             y_pos -= 0.05
 
-        if rb is not None:
+        if not np.isnan(rb):
             ax.annotate(
                 'Rb = {:.2f}'.format(rb),
                 xy=(0.03, y_pos),
@@ -569,7 +598,11 @@ class main():
                       fontsize=14,
                       fontweight='bold')
 
-        return (df[x].min(), df[x].max()), (df[y].min(), df[y].max()), np.array([n, concordance, coef, pi1, rb])
+        stats_df = pd.DataFrame([[n, n_concordant, concordance, coef, pi1, rb]],
+                                columns=["N", "N concordant", "concordance", "pearsonr", "pi1", "Rb"],
+                                index=[0])
+
+        return (df[x].min(), df[x].max()), (df[y].min(), df[y].max()), stats_df
 
     def update_limits(self, xlim, ylim, row, col):
         row_ylim = self.shared_ylim[row]

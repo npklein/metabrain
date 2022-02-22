@@ -3,7 +3,7 @@
 """
 File:         afr_replication.py
 Created:      2022/02/11
-Last Changed: 2022/02/15
+Last Changed: 2022/02/22
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -204,11 +204,27 @@ class main():
         overlap_ct.sort()
 
         replication_stats_df = self.plot(df=df, cell_types=overlap_ct)
-        print(replication_stats_df)
-        print(replication_stats_df.mean(axis=0))
-
         self.save_file(df=replication_stats_df,
                        outpath=os.path.join(self.outdir, "replication_stats.txt.gz"))
+
+        # replication_stats_df = self.load_file(os.path.join(self.outdir,  "replication_stats.txt.gz"),
+        #                                       header=0,
+        #                                       index_col=0)
+
+        print("Replication stats")
+        for label in replication_stats_df["label"].unique():
+            print("\t{}".format(label))
+            stats_df = replication_stats_df.loc[replication_stats_df["label"] == label, :]
+            stats_df_mean = stats_df[["variable", "value"]].groupby("variable").mean()
+            for index, row in stats_df_mean.iterrows():
+                print("\t  {}: {:.2f}".format(index, row["value"]))
+
+            stats_df_sum = stats_df[["variable", "value"]].groupby("variable").sum()
+            print("\t  Overall concordance: {:,}/{:,} [{:.2f}%]".format(stats_df_sum.loc["N concordant", "value"],
+                                                                        stats_df_sum.loc["N", "value"],
+                                                                        (100 / stats_df_sum.loc["N", "value"]) * stats_df_sum.loc["N concordant", "value"]))
+            print("")
+
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
@@ -247,7 +263,7 @@ class main():
         self.shared_ylim = {i: (0, 1) for i in range(nrows)}
         self.shared_xlim = {i: (0, 1) for i in range(ncols)}
 
-        replication_stats = np.empty((ncols, 5))
+        replication_stats = []
 
         sns.set(rc={'figure.figsize': (ncols * 8, nrows * 6)})
         sns.set_style("ticks")
@@ -308,7 +324,7 @@ class main():
                 include_ylabel = True
 
             print("\tPlotting row 1.")
-            xlim, ylim, _ = self.scatterplot(
+            xlim, ylim, stats1 = self.scatterplot(
                 df=plot_df,
                 fig=fig,
                 ax=axes[0, col_index],
@@ -323,7 +339,7 @@ class main():
             self.update_limits(xlim, ylim, 0, col_index)
 
             print("\tPlotting row 2.")
-            xlim, ylim, stats = self.scatterplot(
+            xlim, ylim, stats2 = self.scatterplot(
                 df=plot_df.loc[plot_df["EUR FDR"] <= 0.05, :],
                 fig=fig,
                 ax=axes[1, col_index],
@@ -340,7 +356,7 @@ class main():
             self.update_limits(xlim, ylim, 1, col_index)
 
             print("\tPlotting row 3.")
-            xlim, ylim, _ = self.scatterplot(
+            xlim, ylim, stats3 = self.scatterplot(
                 df=plot_df.loc[plot_df["AFR FDR"] <= 0.05, :],
                 fig=fig,
                 ax=axes[2, col_index],
@@ -356,7 +372,11 @@ class main():
             self.update_limits(xlim, ylim, 2, col_index)
             print("")
 
-            replication_stats[col_index, :] = stats
+            for stats, label in zip([stats1, stats2, stats3], ["all", "discovery significant", "both significant"]):
+                stats_m = stats.melt()
+                stats_m["label"] = label
+                stats_m["cell type"] = ct
+                replication_stats.append(stats_m)
 
         for (m, n), ax in np.ndenumerate(axes):
             (xmin, xmax) = self.shared_xlim[n]
@@ -378,7 +398,11 @@ class main():
             fig.savefig(os.path.join(self.outdir, "afr_replication_plot.{}".format(extension)))
         plt.close()
 
-        return pd.DataFrame(replication_stats, index=cell_types, columns=["n", "concordance", "coef", "pi1", "rb"])
+        # Construct the replication stats data frame.
+        replication_stats_df = pd.concat(replication_stats, axis=0)
+        replication_stats_df.dropna(inplace=True)
+
+        return replication_stats_df
 
     @staticmethod
     def pvalue_to_zscore(df, beta_col, p_col, prefix=""):
@@ -422,15 +446,17 @@ class main():
             facecolors = df[facecolors]
 
         n = df.shape[0]
-        concordance = None
-        coef = None
-        pi1 = None
-        rb = None
+        concordance = np.nan
+        n_concordant = np.nan
+        coef = np.nan
+        pi1 = np.nan
+        rb = np.nan
 
         if n > 0:
             lower_quadrant = df.loc[(df[x] < 0) & (df[y] < 0), :]
             upper_quadrant = df.loc[(df[x] > 0) & (df[y] > 0), :]
-            concordance = (100 / n) * (lower_quadrant.shape[0] + upper_quadrant.shape[0])
+            n_concordant = lower_quadrant.shape[0] + upper_quadrant.shape[0]
+            concordance = (100 / n) * n_concordant
 
             if n > 1:
                 coef, p = stats.pearsonr(df[x], df[y])
@@ -489,7 +515,7 @@ class main():
             )
             y_pos -= 0.05
 
-        if coef is not None:
+        if not np.isnan(coef):
             ax.annotate(
                 'r = {:.2f}'.format(coef),
                 xy=(0.03, y_pos),
@@ -500,7 +526,7 @@ class main():
             )
             y_pos -= 0.05
 
-        if concordance is not None:
+        if not np.isnan(concordance):
             ax.annotate(
                 'concordance = {:.0f}%'.format(concordance),
                 xy=(0.03, y_pos),
@@ -511,7 +537,7 @@ class main():
             )
             y_pos -= 0.05
 
-        if pi1 is not None:
+        if not np.isnan(pi1):
             ax.annotate(
                 '\u03C01 = {:.2f}'.format(pi1),
                 xy=(0.03, y_pos),
@@ -522,7 +548,7 @@ class main():
             )
             y_pos -= 0.05
 
-        if rb is not None:
+        if not np.isnan(rb):
             ax.annotate(
                 'Rb = {:.2f}'.format(rb),
                 xy=(0.03, y_pos),
@@ -543,7 +569,11 @@ class main():
                       fontsize=14,
                       fontweight='bold')
 
-        return (df[x].min(), df[x].max()), (df[y].min(), df[y].max()), np.array([n, concordance, coef, pi1, rb])
+        stats_df = pd.DataFrame([[n, n_concordant, concordance, coef, pi1, rb]],
+                                columns=["N", "N concordant", "concordance", "pearsonr", "pi1", "Rb"],
+                                index=[0])
+
+        return (df[x].min(), df[x].max()), (df[y].min(), df[y].max()), stats_df
 
     def update_limits(self, xlim, ylim, row, col):
         row_ylim = self.shared_ylim[row]
