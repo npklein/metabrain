@@ -46,23 +46,23 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 class main():
     def __init__(self):
-        self.table_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/paper_scripts/add_ie_results_to_mr_table/2022-02-10-Supplementary_Table_12_MR_findings_passing_suggestive_threshold.xlsx"
-        self.cell_types = ['Astrocyte FDR', 'EndothelialCell FDR', 'Excitatory FDR', 'Microglia FDR', 'Oligodendrocyte FDR', 'OtherNeuron FDR']
-        self.ct_trans_dict = {'Astrocyte': 'astrocyte',
-                              'EndothelialCell': 'endothelial cell',
-                              'Excitatory': 'excitatory neuron',
-                              'Microglia': 'microglia',
-                              'Oligodendrocyte': 'oligodendrocyte',
-                              'OtherNeuron': 'other neuron'
+        self.table_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/paper_scripts/add_ie_results_to_mr_table/2022-03-14-Supplementary_Table_12_MR_findings_passing_suggestive_threshold.xlsx"
+        self.cell_types = ['Astrocyte FDR', 'EndothelialCell FDR', 'Excitatory FDR', 'Inhibitory FDR', 'Microglia FDR', 'Oligodendrocyte FDR', 'OtherNeuron FDR']
+        self.ct_trans_dict = {'Astrocyte': 'astrocytes',
+                              'EndothelialCell': 'endothelial cells',
+                              'Excitatory': 'excitatory neurons',
+                              'Inhibitory': 'inhibitory neurons',
+                              'Microglia': "microglia's",
+                              'Oligodendrocyte': 'oligodendrocytes',
+                              'OtherNeuron': 'other neurons'
                               }
         self.traits = {
-            'ADHD': ['ADHD'],
-            'AD': ['Alzheimer’s disease'],
-            'ALS': ['Amyotrophic Lateral Sclerosis'],
-            'autism': ['Autism Spectrum Disorder'],
-            'bipolar disorder': ['bipolar disorder'],
-            'depression': ['Depression (broad)'],
-            'epilepsy': ['epilepsy, all documented cases',
+            "Alzheimer’s disease": ['Alzheimer’s disease'],
+            'Attention deficit/hyperactivity disorder (ADHD)': ['ADHD'],
+            'Amyotrophic lateral sclerosis': ['Amyotrophic Lateral Sclerosis'],
+            'Autism spectrum disorder ': ['Autism Spectrum Disorder'],
+            'Bipolar disorder': ['bipolar disorder'],
+            'Epilepsy': ['epilepsy, all documented cases',
                          'focal epilepsy, all documented cases',
                          'focal epilepsy, documented hippocampal sclerosis',
                          'focal epilepsy, documented lesion negative',
@@ -71,20 +71,21 @@ class main():
                          'generalized epilepsy, all documented cases',
                          'juvenile absence epilepsy',
                          'juvenile myoclonic epilepsy '],
-            'frontotemporal dementia': ['Frontotemporal Dementia',
+            'Frontotemporal dementia': ['Frontotemporal Dementia',
                                         'frontotemporal dementia (TDP subtype)'],
-            'years of schooling and fluid intelligence': ['Intelligence',
-                                                          'Years of schooling'],
-            'MS': ['multiple sclerosis'],
-            'PD': ["Parkinson's disease"],
-            'schizophrenia': ['schizophrenia'],
-            'brain volume': ['Caudate volume',
-                             'Hippocampus volume',
+            'Major depressive disorder': ['Depression (broad)'],
+            'Multiple Sclerosis': ['multiple sclerosis'],
+            "Parkinson's disease": ["Parkinson's disease"],
+            'Schizophrenia': ['schizophrenia'],
+            'Years of schooling and cognitive function': ['Years of schooling',
+                                                          'cognitive function'],
+            'Brain volume': ['Hippocampus volume',
                              'Intracranial volume',
-                             'Pallidum volume',
                              'Putamen volume',
                              'Thalamus volume',
-                             'Amygdala volume']}
+                             'Amygdala volume'
+                             ]
+        }
         self.outcomes = []
         for outcome in self.traits.values():
             self.outcomes.extend(outcome)
@@ -176,15 +177,11 @@ class main():
 
             #####################################################################
 
-            suffix = ""
-            if n_hits > 1:
-                suffix = "s"
-
             decon_hits = {}
-            decon_order = [self.ct_trans_dict[x] + "s" for x in list(decon_df.columns)]
+            decon_order = [self.ct_trans_dict[x] for x in list(decon_df.columns)]
             for index, row in decon_df.iterrows():
                 gene = index.split("_")[1]
-                signif_cell_types = " / ".join([self.ct_trans_dict[x] + "s" for x in list(row[row <= 0.05].index.values)])
+                signif_cell_types = " / ".join([self.ct_trans_dict[x] for x in list(row[row <= 0.05].index.values)])
                 if signif_cell_types in decon_hits:
                     genes = decon_hits[signif_cell_types]
                     genes.append(gene)
@@ -201,7 +198,7 @@ class main():
                     if len(genes) > 0:
                         part2_parts.append("{} with {} ({})".format(len(genes), cell_type, self.special_join(genes)))
 
-            part2 = "In total, {} eQTL instrument{} were significant ieQTLs, ".format(n_hits, suffix) + self.special_join(part2_parts) + "."
+            part2 = "In total, {} eQTL instrument{} were significant ieQTLs, ".format(n_hits, "s" if n_hits > 1 else "") + self.special_join(part2_parts) + "."
 
             #####################################################################
 
@@ -234,12 +231,9 @@ class main():
                     genes = mr_hits[key]
                     if len(genes) > 0:
                         text = ""
-                        prefix = ""
-                        if len(genes) > 1:
-                            prefix = "s"
                         if key != "both MR and colocalization":
                             text = "only "
-                        part3_parts.append("{} eQTL instrument{} passed the significance threshold {}for {} ({})".format(len(genes), prefix, text, key, self.special_join(genes)))
+                        part3_parts.append("{} eQTL instrument{} passed the significance threshold {}for {} ({})".format(len(genes), "s" if n_hits > 1 else "", text, key, self.special_join(genes)))
                 part3 = "Of these, " + self.special_join(part3_parts) + "."
 
             #####################################################################

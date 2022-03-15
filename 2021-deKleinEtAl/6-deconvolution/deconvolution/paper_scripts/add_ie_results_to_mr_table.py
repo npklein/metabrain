@@ -3,7 +3,7 @@
 """
 File:         add_ie_results_to_mr_table.py
 Created:      2021/02/026
-Last Changed: 2022/02/10
+Last Changed: 2022/03/14
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -39,7 +39,7 @@ import requests
 """
 Syntax:
 ./add_ie_results_to_mr_table.py \
-    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron/merged_decon_results.txt.gz \
+    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected/merged_decon_results.txt.gz \
     -t
 """
 
@@ -66,8 +66,8 @@ class main():
         self.token = getattr(arguments, 'token')
 
         # Set variables.
-        self.table_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/2022-02-10-Supplementary_Table_12_MR_findings_passing_suggestive_threshold.xlsx"
-        self.sheet_name = 'TopMR.dedup'
+        self.table_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/2022-03-14-Supplementary_Table_12_MR_findings_passing_suggestive_threshold.xlsx"
+        self.sheet_name = 'TopMR'
         self.table_ea_column = "Effect Allele"
         self.table_decon_snp_column = "eQTL SNP"
         self.table_ld_r2_column = "LD R-squared"
@@ -127,19 +127,16 @@ class main():
         print(list(decon_df.columns))
 
         print("Checking if all columns are present")
-        cell_types = [x.split(" ")[0] for x in decon_df.columns if "pvalue" in x]
-        if self.table_ea_column not in table_df.columns:
-            print("Error, column '{}' is missing".format(self.table_ea_column))
-            exit()
-        for col in [self.table_decon_snp_column, self.table_ld_r2_column, self.table_n_ieqtls_column]:
+        for col in [self.table_ea_column, self.table_decon_snp_column, self.table_ld_r2_column, self.table_n_ieqtls_column]:
             if col not in table_df.columns:
                 print("Error, column '{}' is missing".format(col))
                 exit()
+        cell_types = [x.split(" ")[0] for x in decon_df.columns if "pvalue" in x]
         for ct in cell_types:
-            if "{} Beta".format(ct) not in table_df.columns:
+            if "{} Beta".format(ct) not in decon_df.columns:
                 print("Error, column '{} Beta' is missing".format(ct))
                 exit()
-            if "{} FDR".format(ct) not in table_df.columns:
+            if "{} FDR".format(ct) not in decon_df.columns:
                 print("Error, column '{} FDR' is missing".format(ct))
                 exit()
         print("\tValid.")
@@ -201,10 +198,6 @@ class main():
         #                 flip = 1
         #                 if [effect_allele, match_aa] not in match_allele_combinations:
         #                     flip = -1
-        #                 print([effect_allele, match_aa])
-        #                 print(match_allele_combinations)
-        #                 print(flip)
-        #                 print("")
         #                 links.append([id, index, match_index, match_snp, match_r2, flip])
         #                 n_proxy_found += 1
         #             else:
@@ -219,7 +212,7 @@ class main():
         # print("\tN-rows with NaN: {:,} [{:.2f}%]".format(n_missing, (100 / n_rows) * n_missing))
         # print("\tN-rows whose genes were excluded: {:,} [{:.2f}%]".format(n_excluded, (100 / n_rows) * n_excluded))
         # print("")
-
+        #
         # print("Saving link file")
         # links_df = pd.DataFrame(links, columns=["ID", "table index", "decon index", self.table_decon_snp_column, self.table_ld_r2_column, "flip"])
         # print(links_df)
@@ -318,7 +311,6 @@ class main():
 
     def get_ldpair_info(self, rs1, rs2):
         url = 'https://ldlink.nci.nih.gov/LDlinkRest/ldpair?var1={}&var2={}&pop=EUR&token={}'.format(rs1, rs2, self.token)
-        print(url)
         r = requests.get(url)
 
         interest = ["D'", "R2", "Chi-sq", "p-value", "WARNING"]

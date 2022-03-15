@@ -80,9 +80,10 @@ class main():
             "Astrocyte": "#D55E00",
             "EndothelialCell": "#CC79A7",
             "Excitatory": "#56B4E9",
+            "Inhibitory": "#0072B2",
             "Microglia": "#E69F00",
             "Oligodendrocyte": "#009E73",
-            "OtherNeuron": "#0072B2"
+            "OtherNeuron": "#2690ce"
         }
 
     @staticmethod
@@ -151,19 +152,19 @@ class main():
             data = perm_pvalues_m[:, i, :].flatten()
             n_values = np.size(data)
             p_et_one = np.sum(data > 0.95)
-            print("{}: {} / {} [{:.0f}%] permuted p-values are equal to 1".format(ct, p_et_one, n_values, (100 / n_values) * p_et_one))
+            print("{}: {} / {} [{:.0f}%] permuted p-values are > 0.95".format(ct, p_et_one, n_values, (100 / n_values) * p_et_one))
 
             total_n += n_values
             total_p_et_one += p_et_one
-        print("{} / {} [{:.0f}%] permuted p-values are equal to 1".format(total_p_et_one, total_n, (100 / total_n) * total_p_et_one))
+        print("{} / {} [{:.0f}%] permuted p-values are > 0.95".format(total_p_et_one, total_n, (100 / total_n) * total_p_et_one))
         print(np.median(perm_pvalues_m.flatten()))
 
-        # print("Plotting permuted p-value data")
-        # self.plot(df=perm_pvalues_m,
-        #           cell_types=cell_types,
-        #           xlabel="permuted p-value",
-        #           appendix="_permuted_pvalues",
-        #           title="Decon-eQTL permuted p-values")
+        print("Plotting permuted p-value data")
+        self.plot(df=perm_pvalues_m,
+                  cell_types=cell_types,
+                  xlabel="permuted p-value",
+                  appendix="_permuted_pvalues",
+                  title="Decon-eQTL permuted p-values")
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
@@ -203,6 +204,7 @@ class main():
         row_index = 0
         col_index = 0
         for i in range(ncols * nrows):
+            print(i)
             if nrows == 1 and ncols == 1:
                 ax = axes
             elif nrows == 1 and ncols > 1:

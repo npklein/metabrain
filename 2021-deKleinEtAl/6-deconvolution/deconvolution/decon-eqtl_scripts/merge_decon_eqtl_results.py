@@ -25,6 +25,7 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 from __future__ import print_function
 import argparse
 import os
+from statsmodels.stats import multitest
 
 # Third party imports.
 import pandas as pd
@@ -41,6 +42,18 @@ Syntax:
     
 ./merge_decon_eqtl_results.py \
     -w /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-02-09-CortexAFR-cis-replicationOfCortexEUR-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron \
+    -e /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-02-09-CortexAFR-cis-replicationOfCortexEUR-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined.txt.gz \
+    -a /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemoved/genotype_alleles.txt.gz
+    
+### INHIBITORY SEPERATE ###
+
+./merge_decon_eqtl_results.py \
+    -w /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected \
+    -e /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined.txt.gz \
+    -a /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz
+    
+./merge_decon_eqtl_results.py \
+    -w /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-14-CortexAFR-cis-replicationOfCortexEUR-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected \
     -e /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-02-09-CortexAFR-cis-replicationOfCortexEUR-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined.txt.gz \
     -a /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemoved/genotype_alleles.txt.gz
     
@@ -114,6 +127,12 @@ class main():
             bh_fdr_df = self.load_file(os.path.join(self.work_dir, "BH_FDR.txt.gz"), header=0, index_col=0)
             bh_fdr_df.columns = ["{} BH-FDR".format(col) for col in bh_fdr_df.columns]
             decon_df = decon_df.merge(bh_fdr_df, left_index=True, right_index=True)
+        else:
+            for column in decon_df.columns:
+                if not column.endswith("_pvalue"):
+                    continue
+
+                decon_df[column.replace("_pvalue", " BH-FDR")] = multitest.multipletests(decon_df[column], method='fdr_bh')[1]
 
         if os.path.exists(os.path.join(self.work_dir, "EMP_FDR.txt.gz")):
             emp_fdr_df = self.load_file( os.path.join(self.work_dir, "EMP_FDR.txt.gz"), header=0, index_col=0)
