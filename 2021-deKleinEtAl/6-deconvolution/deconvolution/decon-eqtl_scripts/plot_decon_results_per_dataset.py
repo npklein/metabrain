@@ -107,7 +107,7 @@ class main():
             "Macrophage": "#E69F00",
             "Astrocyte": "#D55E00",
             "Pericytes": "#808080",
-            "OtherNeuron": "#0072B2"
+            "OtherNeuron": "#2690ce"
         }
 
     @staticmethod

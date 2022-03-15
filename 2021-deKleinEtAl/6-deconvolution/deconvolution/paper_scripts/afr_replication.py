@@ -3,7 +3,7 @@
 """
 File:         afr_replication.py
 Created:      2022/02/11
-Last Changed: 2022/02/22
+Last Changed: 2022/03/14
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -48,6 +48,11 @@ Syntax:
     -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-02-09-CortexAFR-cis-replicationOfCortexEUR-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron/merged_decon_results.txt.gz \
     -e png pdf
     
+./afr_replication.py \
+    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected/merged_decon_results.txt.gz \
+    -r /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-14-CortexAFR-cis-replicationOfCortexEUR-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected/merged_decon_results.txt.gz \
+    -e png pdf
+    
 """
 
 # Metadata
@@ -82,9 +87,10 @@ class main():
             "Astrocyte": "#D55E00",
             "EndothelialCell": "#CC79A7",
             "Excitatory": "#56B4E9",
+            "Inhibitory": "#0072B2",
             "Microglia": "#E69F00",
             "Oligodendrocyte": "#009E73",
-            "OtherNeuron": "#0072B2"
+            "OtherNeuron": "#2690ce"
         }
 
         self.shared_xlim = None

@@ -55,6 +55,8 @@ __description__ = "{} is a program developed and maintained by {}. " \
 """
 Syntax:
 ./plot_decon_results_per_zscore.py -of 2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron
+
+./plot_decon_results_per_zscore.py -of 2022-02-27-CortexEUR-cis-ForceNormalised-MAF5-NegativeToZero-DatasetAndRAMCorrected
 """
 
 
@@ -71,7 +73,8 @@ class main():
 
         self.palette = {
             "Excitatory": "#56B4E9",
-            "OtherNeuron": '#0072B2',
+            "Inhibitory": "#0072B2",
+            "OtherNeuron": '#2690ce',
             "Oligodendrocyte": "#009E73",
             "Astrocyte": "#D55E00",
             "Microglia": "#E69F00",

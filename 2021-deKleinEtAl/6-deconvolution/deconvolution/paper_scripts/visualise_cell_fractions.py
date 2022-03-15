@@ -56,11 +56,15 @@ __description__ = "{} is a program developed and maintained by {}. " \
 """
 Syntax:
 
-./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table_complete.txt.gz -o 2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected-Complete -e png pdf
+./visualise_cell_fractions.py \
+    -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table_complete.txt.gz \
+    -o 2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected-Complete \
+    -e png pdf
 
-./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table.txt.gz -o 2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected -e png pdf
-
-./visualise_cell_fractions.py -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table_InhibitorySummedWithOtherNeuron.txt.gz -o 2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron -e png pdf
+./visualise_cell_fractions.py \
+    -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table.txt.gz \
+    -o 2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected \
+    -e png pdf
 
 """
 
@@ -108,8 +112,8 @@ class main():
             'Dev-Replicating': '#000000',
             'Dev-Quiescent': '#808080',
             "Excitatory": "#56B4E9",
-            "Inhibitory": "#2690ce",
-            'OtherNeuron': '#0072B2',
+            "Inhibitory": "#0072B2",
+            "OtherNeuron": "#2690ce",
             "Oligodendrocyte": "#009E73",
             "EndothelialCell": "#CC79A7",
             "Microglia": "#E69F00",
@@ -157,6 +161,7 @@ class main():
 
         print("Preprocessing data.")
         cc_dfm = cf_df.melt()
+        cc_dfm["value"] = cc_dfm["value"] * 100
         print(cc_dfm)
 
         print("Plotting.")
@@ -216,6 +221,22 @@ class main():
         ax.set_ylabel(ylabel,
                       fontsize=14,
                       fontweight='bold')
+
+        # Annotate the mean.
+        if order is None:
+            order = list(df.index)
+        for i, x_value in enumerate(order):
+            subset = df.loc[df[x] == x_value, y].copy()
+            ax.annotate(
+                '{:.0f}%'.format(subset.mean()),
+                xy=(i, subset.max() + 2),
+                ha="center",
+                va="center",
+                color="#000000",
+                fontsize=15,
+                fontweight='bold')
+
+        ax.set_ylim(ax.get_ylim()[0], df[y].max() + 5)
 
         plt.tight_layout()
         for extension in self.extensions:

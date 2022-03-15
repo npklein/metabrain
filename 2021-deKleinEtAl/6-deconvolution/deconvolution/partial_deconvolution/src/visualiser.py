@@ -59,9 +59,9 @@ class Visualiser:
         self.order = order
         self.palette = {
             "Excitatory": "#56B4E9",
-            "Inhibitory": "#2690ce",
+            "Inhibitory": "#0072B2",
             "Neuron": "#0072B2",
-            'OtherNeuron': '#0072B2',
+            "OtherNeuron": "#2690ce",
             "Oligodendrocyte": "#009E73",
             "OPC": "#009E73",
             "EndothelialCell": "#CC79A7",

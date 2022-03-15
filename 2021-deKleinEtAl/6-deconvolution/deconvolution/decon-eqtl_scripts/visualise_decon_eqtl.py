@@ -77,8 +77,8 @@ class main():
 
         self.palette = {
             "Excitatory": "#56B4E9",
-            "Inhibitory": "#2690ce",
-            "OtherNeuron": "#0072B2",
+            "Inhibitory": "#0072B2",
+            "OtherNeuron": "#2690ce",
             "Oligodendrocyte": "#009E73",
             "EndothelialCell": "#CC79A7",
             "Microglia": "#E69F00",

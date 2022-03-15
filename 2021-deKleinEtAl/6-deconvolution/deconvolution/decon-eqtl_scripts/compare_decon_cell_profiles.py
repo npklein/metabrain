@@ -102,7 +102,7 @@ class main():
         self.ct_colormap = {
             "Excitatory": "#56B4E9",
             "Inhibitory": "#0072B2",
-            "Neuron": "#0072B2",
+            "Neuron": "#2690ce",
             "Oligodendrocyte": "#009E73",
             "OPC": "#009E73",
             "EndothelialCell": "#CC79A7",

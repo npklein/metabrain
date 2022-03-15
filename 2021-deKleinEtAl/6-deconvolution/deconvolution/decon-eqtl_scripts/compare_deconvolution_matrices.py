@@ -86,6 +86,14 @@ Syntax:
     -n2 DFMinOne \
     -log10 \
     -o 2022-02-09-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron_Default_vs_DFMinOne
+    
+./compare_deconvolution_matrices.py \
+    -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-27-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron/deconvolutionResults.txt.gz \
+    -n1 WithoutInhibitory \
+    -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-02-27-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected/deconvolutionResults.txt.gz \
+    -n2 WithInhibitory \
+    -log10 \
+    -o 2022-01-27-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected_InhibitorySeparateOrNot
 """
 
 
@@ -118,8 +126,8 @@ class main():
             "Inhibitory/Neuron": "#0072B2",
             "Excitatory+Inhibitory/Neuron": "#BEBEBE",
             "Excitatory": "#56B4E9",
-            "Inhibitory": "#2690ce",
-            "OtherNeuron": "#0072B2",
+            "Inhibitory": "#0072B2",
+            "OtherNeuron": "#2690ce",
             "Oligodendrocyte": "#009E73",
             "EndothelialCell": "#CC79A7",
             "Microglia": "#E69F00",

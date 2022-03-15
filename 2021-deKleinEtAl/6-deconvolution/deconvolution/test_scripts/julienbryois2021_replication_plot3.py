@@ -107,7 +107,7 @@ class main():
             "Astrocyte": "#D55E00",
             "Astrocytes": "#D55E00",
             "Pericytes": "#808080",
-            "OtherNeuron": "#0072B2"
+            "OtherNeuron": "#2690ce"
         }
 
         self.bryois_ct_trans = {
@@ -227,8 +227,8 @@ class main():
                     break
 
             # Select the discovery ieQTLs.
-            # ieqtls = list(discovery_unique_ieqtls_df.loc[discovery_unique_ieqtls_df[discovery_fdr_column] == 1, :].index)
-            ieqtls = list(discovery_df.loc[discovery_df[discovery_fdr_column] <= 0.05, :].index)
+            ieqtls = list(discovery_unique_ieqtls_df.loc[discovery_unique_ieqtls_df[discovery_fdr_column] == 1, :].index)
+            # ieqtls = list(discovery_df.loc[discovery_df[discovery_fdr_column] <= 0.05, :].index)
             discovery_subset_df = discovery_df.loc[ieqtls, ["index", discovery_pvalue_column, discovery_beta_column, "DeconAllele", "N", "MAF"]].copy()
             discovery_subset_df.columns = ["index", "discovery p-value", "discovery beta", "discovery allele", "discovery n", "discovery MAF"]
 

@@ -57,7 +57,13 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./visualise_sn_eqtl.py -eq /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/cis_100Perm/MASK/eQTLsFDR-ProbeLevel.txt.gz -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/genotypedump/GenotypeData.txt.gz -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/MASK_expression.txt -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/ROSMAP-scRNAseq-genometoexpressioncoupling.txt -i STMN4 NKAIN1 FAM221A SLC25A27 -e pdf
+./visualise_sn_eqtl.py \
+    -eq /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/cis_100Perm/MASK/eQTLsFDR-ProbeLevel.txt.gz \
+    -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/genotypedump/GenotypeData.txt.gz \
+    -ex /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/MASK_expression.txt \
+    -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/ROSMAP-scRNAseq-genometoexpressioncoupling.txt \
+    -i STMN4 NKAIN1 FAM221A SLC25A27 \
+    -e pdf
 """
 
 
@@ -87,7 +93,7 @@ class main():
             "minor": "#E69F00",
             "center": "#0072B2",
             "major": "#D55E00",
-            "EX": "#0072B2",
+            "EX": "#56B4E9",
             "IN": "#0072B2",
             "OLI": "#009E73",
             "OPC": "#009E73",
