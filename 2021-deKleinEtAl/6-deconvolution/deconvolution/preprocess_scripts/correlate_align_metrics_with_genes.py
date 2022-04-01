@@ -3,7 +3,7 @@
 """
 File:         correlate_align_metrics_with_genes.py
 Created:      2021/12/07
-Last Changed:
+Last Changed: 2022/03/31
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -56,6 +56,11 @@ Syntax:
 ./correlate_align_metrics_with_genes.py -am /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-07-CortexEUR-cis/create_correction_matrix/technical_covariates_table.txt.gz -e /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2021-08-27-step5-remove-covariates-per-dataset/output-PCATitration-MDSCorrectedPerDsCovarOverall-cortex-EUR/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.txt.gz -o 2021-12-07-CortexEUR-cis-round1
 
 ./correlate_align_metrics_with_genes.py -am /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemoved/create_correction_matrix/technical_covariates_table.txt.gz -e /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2021-08-27-step5-remove-covariates-per-dataset/output-PCATitration-MDSCorrectedPerDsCovarOverall-cortex-AFR/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.ProbesCentered.SamplesZTransformed.txt.gz -o 2021-12-07-CortexAFR-cis-round3
+
+./correlate_align_metrics_with_genes.py \
+    -am /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2020-02-05-step0-correlate-covariates-with-expression/2020-02-05-freeze2dot1.TMM.Covariates.withBrainRegion-noncategorical-variable.txt.gz \
+    -e /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2021-08-27-step5-remove-covariates-per-dataset/output-PCATitration-MDSCorrectedPerDsCovarOverall-cortex-EURandAFR-noENA-noAMPAD/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz \
+    -o 2022-03-31-CortexEURandAFR-noENA-noAMPAD-trans-round2
 """
 
 
@@ -127,9 +132,7 @@ class main():
         # Remove columns that are a linear combination of others.
         am_df = self.remove_multicollinearity(am_df.T).T
 
-        # print("Correcting gene expression data.")
-
-        ### EUR ###
+        ### EUR cis ###
         # correction_df = am_df.loc[["PCT_MRNA_BASES",
         #                            "PCT_INTRONIC_BASES",
         #                            "PCT_USABLE_BASES",
@@ -163,7 +166,7 @@ class main():
         #                            "PF_MISMATCH_RATE"
         #                            ], :].T
 
-        ### AFR  ###
+        ### AFR  cis ###
         # correction_df = am_df.loc[["PCT_INTRONIC_BASES",
         #                            "PCT_MRNA_BASES",
         #                            "PCT_INTERGENIC_BASES",
@@ -196,6 +199,20 @@ class main():
         #                            "PCT_READS_ALIGNED_IN_PAIRS",
         #                            "MEAN_READ_LENGTH"
         #                            ], :].T
+
+        # correction_df = am_df.loc[["PCT_RIBOSOMAL_BASES",
+        #                            "PCT_MRNA_BASES",
+        #                            "PCT_INTRONIC_BASES",
+        #                            "PCT_USABLE_BASES",
+        #                            "PCT_CODING_BASES",
+        #                            "INTRONIC_BASES",
+        #                            "PCT_UTR_BASES",
+        #                            "RIBOSOMAL_BASES",
+        #                            "MEDIAN_3PRIME_BIAS",
+        #                            "unmapped_tooshort"
+        #                            ], :].T
+        #
+        # print("Correcting gene expression data.")
         # expr_df = self.calculate_residuals(df=expr_df, correction_df=correction_df)
 
         # Safe the indices.
@@ -215,9 +232,9 @@ class main():
         corr_df = pd.DataFrame(corr_m, index=metrics, columns=genes)
         print(corr_df)
 
-        print("Saving file.")
-        self.save_file(df=corr_df,
-                       outpath=os.path.join(self.outdir, "{}_correlations.txt.gz".format(self.out_filename)))
+        # print("Saving file.")
+        # self.save_file(df=corr_df,
+        #                outpath=os.path.join(self.outdir, "{}_correlations.txt.gz".format(self.out_filename)))
 
         print("Ranking top metrics.")
         summary_df = pd.DataFrame({"max abs correlation": corr_df.abs().max(axis=1),

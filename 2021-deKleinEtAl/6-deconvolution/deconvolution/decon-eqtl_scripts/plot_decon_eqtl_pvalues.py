@@ -46,6 +46,11 @@ Syntax:
     -i /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron \
     -o 2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron \
     -e png pdf
+    
+./plot_decon_eqtl_pvalues.py \
+    -i /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected \
+    -o 2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected \
+    -e png pdf
 """
 
 # Metadata
@@ -120,7 +125,6 @@ class main():
         print("Loading nominal p-value data")
         decon_df = self.load_file(os.path.join(self.indir, "deconvolutionResults.txt.gz"), header=0, index_col=0)
         nominal_pvalues_df = decon_df.loc[:, [x for x in decon_df.columns if x.endswith("_pvalue")]]
-        print(nominal_pvalues_df)
         nominal_pvalues_df.columns = [x.replace("_pvalue", "") for x in nominal_pvalues_df.columns]
         print(nominal_pvalues_df)
         cell_types = list(nominal_pvalues_df.columns)
@@ -139,7 +143,6 @@ class main():
         perm_pvalues_m_list = []
         perm_pvalues_inpaths = glob.glob(os.path.join(self.indir, "permutation_pvalues_*"))
         perm_pvalues_inpaths.sort(key=self.natural_keys)
-        print(perm_pvalues_inpaths)
         for perm_pvalues_inpath in perm_pvalues_inpaths:
             perm_pvalues_m_list.append(self.load_matrix(perm_pvalues_inpath))
         perm_pvalues_m = np.dstack(perm_pvalues_m_list)
@@ -151,20 +154,33 @@ class main():
         for i, ct in enumerate(cell_types):
             data = perm_pvalues_m[:, i, :].flatten()
             n_values = np.size(data)
-            p_et_one = np.sum(data > 0.95)
-            print("{}: {} / {} [{:.0f}%] permuted p-values are > 0.95".format(ct, p_et_one, n_values, (100 / n_values) * p_et_one))
+            p_bt_ninefive = np.sum(data > 0.95)
+            print("{}: {:,} / {:,} [{:.0f}%] permuted p-values are > 0.95".format(ct, p_bt_ninefive, n_values, (100 / n_values) * p_bt_ninefive))
+
+            p_et_one = np.sum(data == 1)
+            print("{}: {:,} / {:,} [{:.0f}%] permuted p-values are == 1".format(ct, p_et_one, n_values, (100 / n_values) * p_et_one))
+
+
+            print("{}: median = {:.2f}".format(ct, np.median(data)))
 
             total_n += n_values
             total_p_et_one += p_et_one
-        print("{} / {} [{:.0f}%] permuted p-values are > 0.95".format(total_p_et_one, total_n, (100 / total_n) * total_p_et_one))
+        print("{:,} / {:,} [{:.0f}%] permuted p-values are == 1".format(total_p_et_one, total_n, (100 / total_n) * total_p_et_one))
         print(np.median(perm_pvalues_m.flatten()))
 
-        print("Plotting permuted p-value data")
-        self.plot(df=perm_pvalues_m,
+        # print("Plotting permuted p-value data")
+        # self.plot(df=perm_pvalues_m,
+        #           cell_types=cell_types,
+        #           xlabel="permuted p-value",
+        #           appendix="_permuted_pvalues",
+        #           title="Decon-eQTL permuted p-values")
+
+        log10_perm_pvalues_m = -1 * np.log10(perm_pvalues_m)
+        self.plot(df=log10_perm_pvalues_m,
                   cell_types=cell_types,
-                  xlabel="permuted p-value",
-                  appendix="_permuted_pvalues",
-                  title="Decon-eQTL permuted p-values")
+                  xlabel="permuted -1log10 p-value",
+                  appendix="_permuted_pvalues_log10",
+                  title="Decon-eQTL -log10 permuted p-values")
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
@@ -196,9 +212,7 @@ class main():
         sns.set(rc={'figure.figsize': (ncols * 8, nrows * 6)})
         sns.set_style("ticks")
         fig, axes = plt.subplots(nrows=nrows,
-                                 ncols=ncols,
-                                 sharex='all',
-                                 sharey='all')
+                                 ncols=ncols)
 
         data = None
         row_index = 0
@@ -232,23 +246,27 @@ class main():
                              color=self.palette[ct])
 
                 ax.set_title(ct,
-                             fontsize=18,
+                             fontsize=24,
                              fontweight='bold')
                 ax.set_ylabel("proportion",
-                              fontsize=14,
+                              fontsize=20,
                               fontweight='bold')
                 ax.set_xlabel(xlabel,
-                              fontsize=14,
+                              fontsize=20,
                               fontweight='bold')
 
                 ax.annotate(
                     'N = {:,}'.format(np.size(data)),
-                    xy=(0.03, 0.94),
+                    xy=(0.03, 0.9),
                     xycoords=ax.transAxes,
                     color=self.palette[ct],
-                    fontsize=14,
+                    fontsize=20,
                     fontweight='bold'
                 )
+            else:
+                ax.set_xlabel(xlabel,
+                              fontsize=20,
+                              fontweight='bold')
 
             col_index += 1
             if col_index > (ncols - 1):
@@ -257,7 +275,7 @@ class main():
 
         # Add the main title.
         fig.suptitle(title,
-                     fontsize=25,
+                     fontsize=30,
                      color="#000000",
                      weight='bold')
 

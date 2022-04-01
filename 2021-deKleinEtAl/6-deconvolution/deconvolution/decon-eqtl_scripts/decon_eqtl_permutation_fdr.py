@@ -48,7 +48,13 @@ from venn import venn
 
 """
 Syntax:
-./decon_eqtl_permutation_fdr.py -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts -if 2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron
+./decon_eqtl_permutation_fdr.py \
+    -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts \
+    -if 2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron
+    
+./decon_eqtl_permutation_fdr.py \
+    -id /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts \
+    -if 2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected 
 """
 
 # Metadata
@@ -194,6 +200,7 @@ class main():
             ranks = np.array([np.sum(nominal_pvalues <= nominal_pvalue) for nominal_pvalue in nominal_pvalues])
             perm_ranks = np.array([np.sum(perm_pvalues <= nominal_pvalue) for nominal_pvalue in nominal_pvalues])
             emp_fdr = (perm_ranks / n_permutations) / ranks
+            emp_fdr[emp_fdr > 1] = 1
 
             print("\tMethod 3: Fast-QTL style FDR")
             print("\t  Fitting beta function.")
@@ -283,6 +290,12 @@ class main():
                                  log10=log10,
                                  filename="{}_adj_pval_vs_qval".format(column),
                                  outdir=outdir)
+                    self.regplot(x=adj_pvalues, y=perm_ranks,
+                                 xlabel="adj. p-values",
+                                 ylabel="perm_ranks",
+                                 log10=log10,
+                                 filename="{}_adj_pval_vs_perm_ranks".format(column),
+                                 outdir=outdir)
                     self.regplot(x=nominal_pvalues, y=qvalues,
                                  xlabel="p-values",
                                  ylabel="q-values",
@@ -366,6 +379,7 @@ class main():
             # Save thats data frame.
             stats_df = pd.DataFrame(stats_m, index=rownames, columns=["nominal p-value", "rank", "permutation rank", "EMP-FDR", "adj. p-value", "q-value", "permutation rank (per eQTL)", "adj. p-value (per eQTL)", "q-value (per eQTL)"])
             self.save_file(df=stats_df, outpath=os.path.join(self.indir, "{}_stats_df.txt.gz".format(column)))
+            print("")
             del stats_m, stats_df
         print("")
 

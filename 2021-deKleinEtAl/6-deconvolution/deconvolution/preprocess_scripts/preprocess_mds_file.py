@@ -57,6 +57,14 @@ Syntax:
 ### MetaBrain AFR ###
 
 ./preprocess_mds_file.py -d /groups/umcg-biogen/tmp01/input/GENOTYPES/2021-08-31-Cortex-AFR-vcf/2021-12-13-PICALO-MetaBrain-CortexAFR-GenotypeMDS-analysis/allchr-mds-dupsremoved-VariantFilter.mds -gte /groups/umcg-biogen/tmp01/output/2020-11-10-PICALO/data/MetaBrain_GTE_cortex_AFR.txt.gz -op MetaBrain-CortexAFR-
+
+### MetaBrain EUR and AFR noENA ###
+
+./preprocess_mds_file.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/MetaBrain-CortexEUR-AFR-noENA-allchr-mds-VariantFilter.mds -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/GTE_combined.txt.gz
+
+### MetaBrain EUR and AFR noENA no AMPAD ###
+
+./preprocess_mds_file.py -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/MetaBrain-CortexEUR-AFR-noENA-noAMPAD-allchr-mds-VariantFilter.mds -gte /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/GTE_combined.txt.gz
 """
 
 
