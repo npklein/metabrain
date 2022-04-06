@@ -3,7 +3,7 @@
 """
 File:         interaction_mapper_cf_as_dependent_variable.py
 Created:      2022/04/05
-Last Changed:
+Last Changed: 2022/04/06
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -57,6 +57,29 @@ Syntax:
     -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset.txt.gz \
     -maf 0.05 \
     -of 2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected
+    
+### AMP-AD ONLY ###
+
+./interaction_mapper_cf_as_dependent_variable.py \
+    -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_table.txt.gz \
+    -al /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz \
+    -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table.txt.gz \
+    -co /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_covs_matrix/ADstatus.txt.gz \
+    -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset.txt.gz \
+    -d AMPAD-ROSMAP-V2 AMPAD-MAYO-V2 AMPAD-MSBB-V2 \
+    -maf 0.05 \
+    -of 2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected-AMPAD
+    
+./interaction_mapper_cf_as_dependent_variable.py \
+    -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_table.txt.gz \
+    -al /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz \
+    -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table.txt.gz \
+    -co /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/create_covs_matrix/ADstatus.txt.gz \
+    -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset.txt.gz \
+    -d AMPAD-ROSMAP-V2 AMPAD-MAYO-V2 AMPAD-MSBB-V2 \
+    -maf 0.05 \
+    -of 2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected-AMPAD
+    
 """
 
 # Metadata
@@ -86,6 +109,7 @@ class main():
         self.cell_path = getattr(arguments, 'cell_fraction')
         self.cova_path = getattr(arguments, 'covariate')
         self.std_path = getattr(arguments, 'sample_to_dataset')
+        self.datasets = getattr(arguments, 'datasets')
         self.genotype_na = getattr(arguments, 'genotype_na')
         self.covariate_na = getattr(arguments, 'covariate_na')
         self.call_rate = getattr(arguments, 'call_rate')
@@ -143,6 +167,12 @@ class main():
                             type=str,
                             default=None,
                             help="The path to the sample-to-dataset matrix.")
+        parser.add_argument("-d",
+                            "--datasets",
+                            nargs="*",
+                            type=str,
+                            default=None,
+                            help="The datasets to include. Default: None.")
         parser.add_argument("-gna",
                             "--genotype_na",
                             type=int,
@@ -208,12 +238,20 @@ class main():
         # Remove duplicates.
         geno_df = geno_df.groupby(geno_df.index).first()
 
+        dataset_mask = np.ones(geno_df.shape[1]).astype(bool)
         if self.std_path is not None:
             std_df = self.load_file(self.std_path, header=0, index_col=None)
 
             # Validate that the input data matches.
             self.validate_data(std_df=std_df,
                                geno_df=geno_df)
+
+            # Filter on datasets.
+            if self.datasets is not None:
+                print("Filtering datasets.")
+                dataset_mask = std_df["dataset"].isin(self.datasets).to_numpy()
+                std_df = std_df.loc[dataset_mask, :]
+                geno_df = geno_df.loc[:, dataset_mask]
         else:
             # Create sample-to-dataset file with all the samples having the
             # same dataset.
@@ -284,12 +322,17 @@ class main():
         cova_df = self.load_file(self.cova_path, header=0, index_col=0)
 
         # Transpose if need be. We want samples always as columns.
-        if cell_df.shape[0] == geno_df.shape[1]:
+        if cell_df.shape[0] == np.size(dataset_mask):
             print("\t  Transposing cell fraction matrix.")
             cell_df = cell_df.T
-        if cova_df.shape[0] == geno_df.shape[1]:
+        if cova_df.shape[0] == np.size(dataset_mask):
             print("\t  Transposing covariate matrix.")
             cova_df = cova_df.T
+
+        # Filter the datasets.
+        if dataset_mask is not None:
+            cell_df = cell_df.loc[:, dataset_mask]
+            cova_df = cova_df.loc[:, dataset_mask]
 
         # Remove duplicates.
         alle_df = alle_df.groupby(alle_df.index).first()
@@ -315,6 +358,11 @@ class main():
 
         print("### STEP 3 ###")
         print("Pre-processing data.")
+        # Add the allele assed column.
+        alle_df["AlleleAssessed"] = alle_df["Alleles"].str.split("/", n=None, expand=True)[1]
+        alle_df.drop(["AltAllele"], axis=1, inplace=True)
+        alle_df.reset_index(drop=True, inplace=True)
+
         # Convert to numpy for speed.
         geno_m = geno_df.to_numpy(np.float64)
         cell_m = cell_df.to_numpy(np.float64)
@@ -350,7 +398,7 @@ class main():
 
         # Initializing output matrices / arrays.
         combinations = ["{}_{}".format(ct, cov) for ct in cell_types for cov in covariates]
-        ieqtl_results = {key: np.empty((n_snps, 10), dtype=np.float64) for key
+        ieqtl_results = {key: np.empty((n_snps, 14), dtype=np.float64) for key
                          in combinations}
 
         # Start loop.
@@ -396,7 +444,7 @@ class main():
                     # if each column is unique.
                     if (np.min(np.std(X[:, 1:], axis=0)) == 0) or (np.unique(X, axis=1).shape[1] != 4):
                         # Save results.
-                        ieqtl_results[key][eqtl_index, :] = np.array([n] + [np.nan] * 9)
+                        ieqtl_results[key][eqtl_index, :] = np.array([n] + [np.nan] * 13)
                         continue
 
                     # First calculate the rss for the matrix minux the interaction
@@ -406,30 +454,34 @@ class main():
                                                                         y=y))
 
                     # Calculate the rss for the interaction model.
-                    ieqtl_inv_m = self.inverse(X)
-                    ieqtl_betas = self.fit(X=X,
-                                           y=y,
-                                           inv_m=ieqtl_inv_m)
+                    inv_m = self.inverse(X)
+                    betas = self.fit(X=X,
+                                     y=y,
+                                     inv_m=inv_m)
                     rss_alt = self.calc_rss(y=y,
                                             y_hat=self.predict(X=X,
-                                                               betas=ieqtl_betas))
-                    ieqtl_std = self.calc_std(rss=rss_alt,
-                                              n=n,
-                                              df=4,
-                                              inv_m=ieqtl_inv_m)
+                                                               betas=betas))
+                    std = self.calc_std(rss=rss_alt,
+                                        n=n,
+                                        df=4,
+                                        inv_m=inv_m)
 
                     # Calculate interaction p-value.
-                    ieqtl_p_value = self.calc_p_value(rss1=rss_null,
-                                                      rss2=rss_alt,
-                                                      df1=3,
-                                                      df2=4,
-                                                      n=n)
+                    p_value = self.calc_p_value(rss1=rss_null,
+                                                rss2=rss_alt,
+                                                df1=3,
+                                                df2=4,
+                                                n=n)
+
+                    # Calculate the t-values.
+                    t_values = betas / std
 
                     # Save results.
                     ieqtl_results[key][eqtl_index, :] = np.hstack((np.array([n]),
-                                                                   ieqtl_betas,
-                                                                   ieqtl_std,
-                                                                   np.array([ieqtl_p_value])))
+                                                                   betas,
+                                                                   std,
+                                                                   t_values,
+                                                                   np.array([p_value])))
         print("", flush=True)
 
         ########################################################################
@@ -450,29 +502,32 @@ class main():
                                        "std-genotype",
                                        "std-covariate",
                                        "std-interaction",
+                                       "tvalue-intercept",
+                                       "tvalue-genotype",
+                                       "tvalue-covariate",
+                                       "tvalue-interaction",
                                        "p-value"]
                               )
 
-            alle_df.reset_index(drop=True, inplace=True)
             df = pd.concat([alle_df, df], axis=1)
-            df["tvalue-intercept"] = df["beta-intercept"] / df["std-intercept"]
-            df["tvalue-genotype"] = df["beta-genotype"] / df["std-genotype"]
-            df["tvalue-covariate"] = df["beta-covariate"] / df["std-covariate"]
-            df["tvalue-interaction"] = df["beta-interaction"] / df["std-interaction"]
             df.insert(0, "SNPName", snps)
             df["FDR"] = np.nan
             df.loc[~df["p-value"].isnull(), "FDR"] = multitest.multipletests(df.loc[~df["p-value"].isnull(), "p-value"], method='fdr_bh')[1]
             print("\t{:,} ieQTLs (p-value <0.05)".format(df.loc[df["p-value"] < 0.05, :].shape[0]))
             print("\t{:,} ieQTLs (BH-FDR <0.05)".format(df.loc[df["FDR"] < 0.05, :].shape[0]))
 
-            self.save_file(df=df, outpath=os.path.join(self.outdir, "{}_InteractionResults.txt.gz".format(key.replace(" ", ""))))
+            # Save.
+            self.save_file(df=df,
+                           outpath=os.path.join(self.outdir, "{}_InteractionResults.txt.gz".format(key.replace(" ", ""))),
+                           index=False)
 
             # tmp.
             df["chr"] = [int(x.split(":")[0]) for x in df["SNPName"]]
             tested_counts = df["chr"].value_counts()
             signif_counts = df.loc[df["FDR"] < 0.05, "chr"].value_counts()
 
-            print("Hits per chromosome:")
+            print("")
+            print("  Hits per chromosome:")
             for i in range(1, 23):
                 n_tested = 0
                 if i in tested_counts.index:
@@ -489,7 +544,6 @@ class main():
                 print("\t{}: {:,} / {:,} [{:.2f}%]".format(i, n_signif, n_tested, perc))
 
             print("", flush=True)
-
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
