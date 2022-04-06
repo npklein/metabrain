@@ -33,6 +33,7 @@ import numpy as np
 import pandas as pd
 from scipy.special import betainc
 from statsmodels.stats import multitest
+from statsmodels.regression.linear_model import OLS
 
 # Local application imports.
 
@@ -80,6 +81,27 @@ Syntax:
     -maf 0.05 \
     -of 2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected-AMPAD
     
+### Dataset corrected ###
+
+./interaction_mapper_cf_as_dependent_variable.py \
+    -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_table.txt.gz \
+    -al /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz \
+    -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table.txt.gz \
+    -co /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_covs_matrix/ADstatus.txt.gz \
+    -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset.txt.gz \
+    -dataset_correct \
+    -maf 0.05 \
+    -of 2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected-DatasetCorrected
+    
+./interaction_mapper_cf_as_dependent_variable.py \
+    -ge /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_table.txt.gz \
+    -al /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz \
+    -cf /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table.txt.gz \
+    -co /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/create_covs_matrix/ADstatus.txt.gz \
+    -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset.txt.gz \
+    -dataset_correct \
+    -maf 0.05 \
+    -of 2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected-DatasetCorrected
 """
 
 # Metadata
@@ -110,6 +132,7 @@ class main():
         self.cova_path = getattr(arguments, 'covariate')
         self.std_path = getattr(arguments, 'sample_to_dataset')
         self.datasets = getattr(arguments, 'datasets')
+        self.dataset_correct = getattr(arguments, 'dataset_correct')
         self.genotype_na = getattr(arguments, 'genotype_na')
         self.covariate_na = getattr(arguments, 'covariate_na')
         self.call_rate = getattr(arguments, 'call_rate')
@@ -173,6 +196,10 @@ class main():
                             type=str,
                             default=None,
                             help="The datasets to include. Default: None.")
+        parser.add_argument("-dataset_correct",
+                            action='store_true',
+                            help="Include dataset as tech. confounder."
+                                 " Default: False.")
         parser.add_argument("-gna",
                             "--genotype_na",
                             type=int,
@@ -238,7 +265,7 @@ class main():
         # Remove duplicates.
         geno_df = geno_df.groupby(geno_df.index).first()
 
-        dataset_mask = np.ones(geno_df.shape[1]).astype(bool)
+        dataset_mask = np.ones(geno_df.shape[1], dtype=bool)
         if self.std_path is not None:
             std_df = self.load_file(self.std_path, header=0, index_col=None)
 
@@ -268,6 +295,9 @@ class main():
             print("\t  One or more datasets have a smaller sample "
                   "size than recommended. Consider excluded these")
             exit()
+
+        # Construct dataset df.
+        dataset_df = self.construct_dataset_df(std_df=std_df)
 
         print("Calculating genotype call rate per dataset")
         geno_df, call_rate_df = self.calculate_call_rate(geno_df=geno_df,
@@ -366,6 +396,7 @@ class main():
         # Convert to numpy for speed.
         geno_m = geno_df.to_numpy(np.float64)
         cell_m = cell_df.to_numpy(np.float64)
+        dataset_m = dataset_df.to_numpy(np.uint8)
         cova_m = cova_df.to_numpy(np.float64)
 
         # Replace missing values with nan
@@ -376,7 +407,8 @@ class main():
         snps = list(geno_df.index)
         cell_types = list(cell_df.index)
         covariates = list(cova_df.index)
-        del geno_df, cell_df, cova_df
+        datasets = list(dataset_df.columns)
+        del geno_df, cell_df, dataset_df, cova_df
 
         # Print info.
         n_snps = geno_m.shape[0]
@@ -446,6 +478,16 @@ class main():
                         # Save results.
                         ieqtl_results[key][eqtl_index, :] = np.array([n] + [np.nan] * 13)
                         continue
+
+                    if self.dataset_correct:
+                        # Correct expression for dataset differences.
+                        dataset_subset_m = dataset_m[mask, :].copy()
+                        dataset_subset_m = dataset_subset_m[:,
+                                           np.sum(dataset_subset_m, axis=0) > 0]
+                        corr_m = np.hstack((X[:, [0]], dataset_subset_m[:, 1:],
+                                            dataset_subset_m * genotype[mask][:,
+                                                               np.newaxis]))
+                        y = OLS(y, corr_m).fit().resid
 
                     # First calculate the rss for the matrix minux the interaction
                     # term.
@@ -578,6 +620,19 @@ class main():
             print("\tThe covariate file header does not match "
                   "the sample-to-dataset link file")
             exit()
+
+    @staticmethod
+    def construct_dataset_df(std_df):
+        dataset_sample_counts = list(zip(*np.unique(std_df.iloc[:, 1], return_counts=True)))
+        dataset_sample_counts.sort(key=lambda x: -x[1])
+        datasets = [csc[0] for csc in dataset_sample_counts]
+
+        dataset_df = pd.DataFrame(0, index=std_df.iloc[:, 0], columns=datasets)
+        for dataset in datasets:
+            dataset_df.loc[(std_df.iloc[:, 1] == dataset).values, dataset] = 1
+        dataset_df.index.name = "-"
+
+        return dataset_df
 
     def calculate_call_rate(self, geno_df, std_df, datasets):
         """
@@ -777,6 +832,11 @@ class main():
         print("  > Cell fraction path: {}".format(self.cell_path))
         print("  > Covariate path: {}".format(self.cova_path))
         print("  > Sample-to-dataset path: {}".format(self.std_path))
+        if self.datasets is None:
+            print("  > Datasets: {}".format(self.datasets))
+        else:
+            print("  > Datasets: {}".format(", ".join(self.datasets)))
+        print("  > Datasets correct: {}".format(self.dataset_correct))
         print("  > Genotype NaN: {}".format(self.genotype_na))
         print("  > Covariate NaN: {}".format(self.covariate_na))
         print("  > SNP call rate: >{}".format(self.call_rate))
