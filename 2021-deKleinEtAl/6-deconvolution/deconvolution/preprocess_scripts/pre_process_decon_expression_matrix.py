@@ -3,7 +3,7 @@
 """
 File:         pre_process_decon_expression_matrix.py
 Created:      2021/07/06
-Last Changed: 2021/09/22
+Last Changed: 2022/04/04
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -85,6 +85,45 @@ Syntax:
     -m /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemoved/create_correction_matrix/mds_covariates_table.txt.gz \
     -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemoved/combine_gte_files/SampleToDataset.txt.gz \
     -of 2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemoved
+    
+./pre_process_decon_expression_matrix.py \
+    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2021-08-27-step5-remove-covariates-per-dataset/output-PCATitration-MDSCorrectedPerDsCovarOverall-cortex-EURandAFR-noENA/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz \
+    -ra /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_correction_matrix/technical_covariates_table_subset.txt.gz \
+    -m /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_correction_matrix/mds_covariates_table.txt.gz \
+    -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset.txt.gz \
+    -of 2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-Normalised
+    
+./pre_process_decon_expression_matrix.py \
+    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2021-08-27-step5-remove-covariates-per-dataset/output-PCATitration-MDSCorrectedPerDsCovarOverall-cortex-EURandAFR-noENA/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz \
+    -ra /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/create_correction_matrix/technical_covariates_table_subset.txt.gz \
+    -m /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/create_correction_matrix/mds_covariates_table.txt.gz \
+    -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset.txt.gz \
+    -rpc 100 \
+    -of 2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-Normalised
+    
+./pre_process_decon_expression_matrix.py \
+    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2021-08-27-step5-remove-covariates-per-dataset/output-PCATitration-MDSCorrectedPerDsCovarOverall-cortex-EURandAFR-noENA/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz \
+    -ra /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_correction_matrix/technical_covariates_table_subset.txt.gz \
+    -m /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_correction_matrix/mds_covariates_table.txt.gz \
+    -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset.txt.gz \
+    -of 2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-0PCs-Normalised
+    
+./pre_process_decon_expression_matrix.py \
+    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2021-08-27-step5-remove-covariates-per-dataset/output-PCATitration-MDSCorrectedPerDsCovarOverall-cortex-EURandAFR-noENA/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz \
+    -ra /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-80PCs-NegativeToZero-DatasetAndRAMCorrected/create_correction_matrix/technical_covariates_table_subset.txt.gz \
+    -m /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-80PCs-NegativeToZero-DatasetAndRAMCorrected/create_correction_matrix/mds_covariates_table.txt.gz \
+    -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-80PCs-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset.txt.gz \
+    -rpc 80 \
+    -of 2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-80PCs-Normalised
+    
+### Harm-Jan files ###
+
+./pre_process_decon_expression_matrix.py \
+    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-01-31-expression-tables/2020-02-05-step6-covariate-removal/2021-08-27-step5-remove-covariates-per-dataset/output-PCATitration-MDSCorrectedPerDsCovarOverall-cortex-EURandAFR-noENA/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.txt.gz \
+    -ra /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_correction_matrix/technical_covariates_table_subset_hj.txt.gz \
+    -m /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_correction_matrix/mds_covariates_table_hj.txt.gz \
+    -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset.txt.gz \
+    -of 2022-03-31-CortexEUR-and-AFR-noENA-trans-Normalised-0PCs-HJFiles
 """
 
 
@@ -98,6 +137,7 @@ class main():
         self.mds_path = getattr(arguments, 'mds')
         self.expression_pcs_path = getattr(arguments, 'expression_pcs')
         self.std_path = getattr(arguments, 'sample_to_dataset')
+        self.remove_n_pcs = getattr(arguments, 'rm_n_pcs')
         outdir = getattr(arguments, 'outdir')
         outfolder = getattr(arguments, 'outfolder')
 
@@ -177,6 +217,13 @@ class main():
                             required=False,
                             default=None,
                             help="The path to the expression pcs matrix.")
+        parser.add_argument("-rpc",
+                            "--rm_n_pcs",
+                            type=int,
+                            required=False,
+                            default=0,
+                            help="The number of expression PCs to remove. "
+                                 "Default: 0.")
         parser.add_argument("-std",
                             "--sample_to_dataset",
                             type=str,
@@ -243,11 +290,11 @@ class main():
             df = np.log2(df + 1)
 
         print("Step 4: PCA analysis.")
-        self.pca(df=df,
-                 sample_to_dataset=sample_to_dataset,
-                 plot_appendix="_1_Log2Transformed")
+        _ = self.pca(df=df,
+                     sample_to_dataset=sample_to_dataset,
+                     plot_appendix="_1_Log2Transformed")
 
-        print("Step 6: Construct correction matrix.")
+        print("Step 5: Construct correction matrix.")
         ram_df = None
         if self.rna_alignment_path is not None:
             ram_df = self.load_file(self.rna_alignment_path, header=0, index_col=0)
@@ -277,31 +324,65 @@ class main():
         print("\tSaving file.")
         self.save_file(df=correction_df, outpath=os.path.join(self.file_outdir, "correction_matrix1.txt.gz"))
 
-        print("Step 7: remove technical covariates OLS.")
+        print("Step 6: remove technical covariates OLS.")
         corrected_df = self.calculate_residuals(df=df, correction_df=correction_df)
 
-        print("Step 8: PCA analysis.")
-        self.pca(df=corrected_df,
-                 sample_to_dataset=sample_to_dataset,
-                 plot_appendix="_2_Log2Transformed_CovariatesRemovedOLS")
+        print("Step 7: PCA analysis.")
+        pca_components_df = self.pca(df=corrected_df,
+                                     sample_to_dataset=sample_to_dataset,
+                                     n_components=self.remove_n_pcs,
+                                     plot_appendix="_2_Log2Transformed_CovariatesRemovedOLS")
 
-        print("Step 9: force normalise.")
+        prefn_corrected_df = None
+        correction_df2 = None
+        if self.remove_n_pcs > 0:
+            correction_df2 = self.prepare_correction_matrix(expr_pcs_df=pca_components_df)
+
+            print("\tSaving file.")
+            self.save_file(df=correction_df2, outpath=os.path.join(self.file_outdir, "correction_matrix2.txt.gz"))
+
+            prefn_corrected_df = corrected_df.copy()
+            print(corrected_df)
+            print(correction_df2)
+
+        print("Step 8: force normalise.")
         normal_df = self.force_normalise(df=corrected_df)
 
-        print("Step 10: PCA analysis.")
+        print("Step 9: PCA analysis.")
         self.pca(df=normal_df,
                  sample_to_dataset=sample_to_dataset,
                  plot_appendix="_3_Log2Transformed_CovariatesRemovedOLS_ForceNormalised")
 
-        print("Step 13: exp added.")
+        print("Step 10: exp added.")
         decon_df = np.power(2, normal_df)
+
         print("\tSaving file.")
         self.save_file(df=decon_df, outpath=os.path.join(self.file_outdir, "{}.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt.gz".format(filename)))
 
-        print("Step 14: PCA analysis.")
+        print("Step 11: PCA analysis.")
         self.pca(df=decon_df,
                  sample_to_dataset=sample_to_dataset,
                  plot_appendix="_4_Log2Transformed_CovariatesRemovedOLS_ForceNormalised_ExpAdded")
+
+        del corrected_df, normal_df, decon_df
+
+        if self.remove_n_pcs > 0:
+            print(prefn_corrected_df)
+            print(correction_df2)
+
+            print("Step 8: remove N expression PCs.")
+            corrected_df = self.calculate_residuals(df=prefn_corrected_df,
+                                                    correction_df=correction_df2)
+
+            print("Step 9: force normalise.")
+            normal_df = self.force_normalise(df=corrected_df)
+
+            print("Step 10: exp added.")
+            decon_df = np.power(2, normal_df)
+
+            print("\tSaving file.")
+            self.save_file(df=decon_df, outpath=os.path.join(self.file_outdir,
+                                                             "{}.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.{}PCsRemovedOLS.ForceNormalised.ExpAdded.txt.gz".format(filename, self.remove_n_pcs)))
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
@@ -343,7 +424,8 @@ class main():
 
         return out_dict
 
-    def prepare_correction_matrix(self, ram_df, sex_df, mds_df, expr_pcs_df, dataset_df):
+    def prepare_correction_matrix(self, ram_df=None, sex_df=None, mds_df=None,
+                                  expr_pcs_df=None, dataset_df=None):
         ram_df_subset_df = None
         if ram_df is not None:
             # Remove columns without variance and filter the RNAseq alignment
@@ -377,10 +459,11 @@ class main():
 
         # Add the dataset dummies but exclude the dataset with the highest
         # number of samples.
-        if correction_df is not None:
-            correction_df = correction_df.merge(dataset_df.iloc[:, 1:], left_index=True, right_index=True)
-        else:
-            correction_df = dataset_df.iloc[:, 1:]
+        if dataset_df is not None:
+            if correction_df is not None:
+                correction_df = correction_df.merge(dataset_df.iloc[:, 1:], left_index=True, right_index=True)
+            else:
+                correction_df = dataset_df.iloc[:, 1:]
 
         # Add intercept.
         correction_df.insert(0, "INTERCEPT", 1)
@@ -427,18 +510,22 @@ class main():
     def force_normalise(df):
         return pd.DataFrame(stats.norm.ppf((df.rank(axis=1, ascending=True) - 0.5) / df.shape[1]), index=df.index, columns=df.columns)
 
-    def pca(self, df, sample_to_dataset, plot_appendix=""):
+    def pca(self, df, sample_to_dataset, n_components=2, plot_appendix=""):
+        if n_components < 2:
+            n_components = 2
+
         # samples should be on the columns and genes on the rows.
         zscores = (df - df.mean(axis=0)) / df.std(axis=0)
-        pca = PCA(n_components=2)
+        pca = PCA(n_components=n_components)
         pca.fit(zscores)
         expl_variance = {"PC{}".format(i+1): pca.explained_variance_ratio_[i] * 100 for i in range(2)}
         components_df = pd.DataFrame(pca.components_)
         components_df.index = ["Comp{}".format(i + 1) for i, _ in enumerate(components_df.index)]
         components_df.columns = df.columns
+        components_df = components_df.T
 
-        print("\tPlotting PCA")
-        plot_df = components_df.T
+        print("\tPlotting PCA.")
+        plot_df = components_df.copy()
         plot_df["hue"] = plot_df.index.map(sample_to_dataset)
         self.plot(df=plot_df,
                   x="Comp1",
@@ -449,6 +536,8 @@ class main():
                   ylabel="PC2 [{:.2f}%]".format(expl_variance["PC2"]),
                   title="PCA - eigenvectors",
                   filename="eigenvectors_plot{}".format(plot_appendix))
+
+        return components_df
 
     def plot(self, df, x="x", y="y", hue=None, palette=None, xlabel=None,
              ylabel=None, title="", filename="PCA_plot"):
@@ -502,6 +591,7 @@ class main():
         print("  > MDS: {}".format(self.mds_path))
         print("  > Expression PCs: {}".format(self.expression_pcs_path))
         print("  > Sample-to-dataset path: {}".format(self.std_path))
+        print("  > Remove N-PCs: {}".format(self.remove_n_pcs))
         print("  > Plot output directory: {}".format(self.plot_outdir))
         print("  > File output directory: {}".format(self.file_outdir))
         print("")

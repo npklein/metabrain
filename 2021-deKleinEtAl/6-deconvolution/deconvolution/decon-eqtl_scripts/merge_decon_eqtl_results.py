@@ -57,6 +57,27 @@ Syntax:
     -e /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-02-09-CortexAFR-cis-replicationOfCortexEUR-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined.txt.gz \
     -a /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/decon_eqtl_replication_select_and_harmonize/2021-12-22-CortexAFR-replicationOfCortexEUR20211207-cis-ProbesWithZeroVarianceRemoved/genotype_alleles.txt.gz
     
+### Trans ###
+
+./merge_decon_eqtl_results.py \
+    -w /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected \
+    -e /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined.txt.gz \
+    -a /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz
+    
+./merge_decon_eqtl_results.py \
+    -w /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-80PCs-NegativeToZero-DatasetAndRAMCorrected \
+    -e /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-80PCs-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined.txt.gz \
+    -a /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-80PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz
+    
+./merge_decon_eqtl_results.py \
+    -w /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected \
+    -e /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined.txt.gz \
+    -a /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz
+    
+./merge_decon_eqtl_results.py \
+    -w /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected \
+    -e /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined.txt.gz \
+    -a /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz
 """
 
 # Metadata
@@ -158,13 +179,27 @@ class main():
         snp_to_alles_dict = dict(zip(alleles_df.index, alleles_df["Alleles"]))
 
         # Flip the main z-score to the decon-eQTL allele assessed.
+        zscore_column = "OverallZScore"
+        if zscore_column not in eqtl_df.columns:
+            if "MetaPZ" in eqtl_df.columns:
+                zscore_column = "MetaPZ"
+            else:
+                print("OverallZScore / MetaPZ not in eQTL column.")
+                exit()
         eqtl_df["Alleles"] = eqtl_df["SNPName"].map(snp_to_alles_dict)
         eqtl_df["DeconAlleleAssessed"] = eqtl_df["Alleles"].str.split("/", n=1, expand=True)[1]
         eqtl_df["eQTLZscoreFlip"] = eqtl_df["AlleleAssessed"] != eqtl_df["DeconAlleleAssessed"]
-        eqtl_df["MetaPZFlipped"] = eqtl_df["MetaPZ"] * eqtl_df["eQTLZscoreFlip"].map({True: -1, False: 1})
+        eqtl_df["ZscoreFlipped"] = eqtl_df[zscore_column] * eqtl_df["eQTLZscoreFlip"].map({True: -1, False: 1})
+
+        if "GeneSymbol" not in eqtl_df:
+            gene_trans_df = pd.read_csv("/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.PsychENCODEGenesExtended.txt.gz",
+                sep="\t", index_col=None)
+            print(gene_trans_df)
+            gene_trans_dict = dict(zip(gene_trans_df["ArrayAddress"], gene_trans_df["Symbol"]))
+            eqtl_df["GeneSymbol"] = eqtl_df["ProbeName"].map(gene_trans_dict)
 
         # Select the columns we want.
-        eqtl_df = eqtl_df.loc[:, ["ProbeName", "GeneSymbol", "SNPName", "Alleles", "DeconAlleleAssessed", "MetaPZFlipped"]].copy()
+        eqtl_df = eqtl_df.loc[:, ["ProbeName", "GeneSymbol", "SNPName", "Alleles", "DeconAlleleAssessed", "ZscoreFlipped"]].copy()
         eqtl_df.columns = ["Gene", "Gene symbol", "SNP", "Alleles", "Allele assessed", "Overall z-score"]
         eqtl_df.index = eqtl_df["Gene"] + "_" + eqtl_df["SNP"]
 

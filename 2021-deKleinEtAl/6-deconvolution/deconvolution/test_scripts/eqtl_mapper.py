@@ -3,7 +3,7 @@
 """
 File:         eqtl_mapper.py
 Created:      2022/04/01
-Last Changed:
+Last Changed: 2022/04/06
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -274,10 +274,6 @@ class main():
         expr_df = self.load_file(self.expr_path, header=0, index_col=0, nrows=self.nrows)
         alle_df = self.load_file(self.alle_path, header=0, index_col=0, nrows=self.nrows)
 
-        # Remove columns with all nan. This line is just because
-        # the expression file I used somehow had one column with nan's.
-        expr_df.dropna(axis='columns', how='all', inplace=True)
-
         # Select eQTL rows that meet requirements.
         geno_df = geno_df.loc[combined_keep_mask, :]
         alle_df = alle_df.loc[combined_keep_mask, :]
@@ -295,6 +291,11 @@ class main():
 
         print("### STEP 3 ###")
         print("Pre-processing data.")
+        # Add the allele assed column.
+        alle_df["AlleleAssessed"] = alle_df["Alleles"].str.split("/", n=None, expand=True)[1]
+        alle_df.drop(["AltAllele"], axis=1, inplace=True)
+        alle_df.reset_index(drop=True, inplace=True)
+
         # Convert to numpy for speed.
         geno_m = geno_df.to_numpy(np.float64)
         expr_m = expr_df.to_numpy(np.float64)
@@ -322,7 +323,7 @@ class main():
         print("Analyzing eQTLs.")
 
         # Initializing output matrices / arrays.
-        eqtl_results_m = np.empty((n_eqtls, 6), dtype=np.float64)
+        eqtl_results_m = np.empty((n_eqtls, 8), dtype=np.float64)
 
         # Start loop.
         start_time = int(time.time())
@@ -345,27 +346,41 @@ class main():
             mask = ~np.isnan(genotype)
             n = np.sum(mask)
 
-            # Create the base matrix.
-            base_matrix = np.empty((n, 2), np.float32)
-            base_matrix[:, 0] = 1
-            base_matrix[:, 1] = genotype[mask]
+            # Create the matrix.
+            X = np.empty((n, 2), np.float32)
+            X[:, 0] = 1
+            X[:, 1] = genotype[mask]
 
             # Get the expression.
             y = expr_m[eqtl_index, mask]
 
+            # if each column is unique.
+            if (np.min(np.std(X[:, 1:], axis=0)) == 0) or (
+                    np.unique(X, axis=1).shape[1] != 4):
+                # Save results.
+                eqtl_results_m[eqtl_index, :] = np.array(
+                    [n] + [np.nan] * 7)
+                continue
+
             # Compute the rss for just the intercept.
-            rss_model1 = self.calc_rss(y=y, y_hat=np.mean(y))
+            rss_model1 = self.calc_rss(y=y,
+                                       y_hat=np.mean(y))
 
             # Compute the rss for the main eQTL effect.
-            eqtl_inv_m = self.inverse(X=base_matrix)
-            eqtl_betas = self.fit(X=base_matrix, y=y, inv_m=eqtl_inv_m)
+            inv_m = self.inverse(X=X)
+            betas = self.fit(X=X,
+                             y=y,
+                             inv_m=inv_m)
             rss_model2 = self.calc_rss(y=y,
-                                       y_hat=self.predict(X=base_matrix,
-                                                          betas=eqtl_betas))
-            eqtl_std = self.calc_std(rss=rss_model2, n=n, df=2, inv_m=eqtl_inv_m)
+                                       y_hat=self.predict(X=X,
+                                                          betas=betas))
+            std = self.calc_std(rss=rss_model2,
+                                n=n,
+                                df=2,
+                                inv_m=inv_m)
 
             # Calculate eQTL p-value.
-            eqtl_p_value = self.calc_p_value(
+            p_value = self.calc_p_value(
                 rss1=rss_model1,
                 rss2=rss_model2,
                 df1=1,
@@ -373,12 +388,16 @@ class main():
                 n=n
             )
 
+            # Calculate the t-values.
+            t_values = betas / std
+
             # Save results.
             eqtl_results_m[eqtl_index, :] = np.hstack((
                 np.array([n]),
-                eqtl_betas,
-                eqtl_std,
-                np.array([eqtl_p_value]))
+                betas,
+                std,
+                t_values,
+                np.array([p_value]))
             )
         print("", flush=True)
 
@@ -393,19 +412,21 @@ class main():
                                    "beta-genotype",
                                    "std-intercept",
                                    "std-genotype",
-                                   "p-value"
-                                   ]
+                                   "tvalue-intercept",
+                                   "tvalue-genotype",
+                                   "p-value"]
                           )
-        alle_df.reset_index(drop=True, inplace=True)
         df = pd.concat([alle_df, df], axis=1)
-        df["tvalue-intercept"] = df["beta-intercept"] / df["std-intercept"]
-        df["tvalue-genotype"] = df["beta-genotype"] / df["std-genotype"]
         df.insert(0, "ProbeName", genes)
         df.insert(0, "SNPName", snps)
-        df["FDR"] = multitest.multipletests(df["p-value"], method='fdr_bh')[1]
+        df["FDR"] = np.nan
+        df.loc[~df["p-value"].isnull(), "FDR"] = \
+        multitest.multipletests(df.loc[~df["p-value"].isnull(), "p-value"],
+                                method='fdr_bh')[1]
         print("\t{:,} eQTLs (p-value <0.05)".format(df.loc[df["p-value"] < 0.05, :].shape[0]))
         print("\t{:,} eQTLs (BH-FDR <0.05)".format(df.loc[df["FDR"] < 0.05, :].shape[0]))
 
+        # Save.
         self.save_file(df=df, outpath=os.path.join(self.outdir, "eQTLResults.txt.gz"))
         print("", flush=True)
 
@@ -628,6 +649,7 @@ class main():
     def print_arguments(self):
         print("Arguments:")
         print("  > Genotype path: {}".format(self.geno_path))
+        print("  > Alleles path: {}".format(self.alle_path))
         print("  > Expression path: {}".format(self.expr_path))
         print("  > Sample-to-dataset path: {}".format(self.std_path))
         print("  > Genotype NaN: {}".format(self.genotype_na))

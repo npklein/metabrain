@@ -31,6 +31,7 @@ import numpy as np
 import pandas as pd
 import rpy2.robjects as robjects
 from rpy2.robjects.packages import importr
+from rpy2.rinterface_lib.embedded import RRuntimeError
 import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
@@ -48,6 +49,36 @@ Syntax:
     
 ./sn_replication.py \
     -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected/merged_decon_results.txt.gz \
+    -e png pdf
+    
+### trans
+
+./sn_replication.py \
+    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/merged_decon_results.txt.gz \
+    -s 2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected \
+    -t CortexEUR-and-AFR-noENA-noAMPAD-trans-0PCs \
+    -et trans \
+    -e png pdf
+    
+./sn_replication.py \
+    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-80PCs-NegativeToZero-DatasetAndRAMCorrected/merged_decon_results.txt.gz \
+    -s 2022-03-31-CortexEUR-and-AFR-noENA-noAMPAD-trans-80PCs-NegativeToZero-DatasetAndRAMCorrected \
+    -t CortexEUR-and-AFR-noENA-noAMPAD-trans-80PCs \
+    -et trans \
+    -e png pdf
+    
+./sn_replication.py \
+    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/merged_decon_results.txt.gz \
+    -s 2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected \
+    -t CortexEUR-and-AFR-noENA-trans-0PCs \
+    -et trans \
+    -e png pdf
+    
+./sn_replication.py \
+    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/merged_decon_results.txt.gz \
+    -s 2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected \
+    -t CortexEUR-and-AFR-noENA-trans-100PCs \
+    -et trans \
     -e png pdf
 """
 
@@ -70,10 +101,13 @@ class main():
     def __init__(self):
         arguments = self.create_argument_parser()
         self.discovery_path = getattr(arguments, 'discovery_path')
+        self.subdir = getattr(arguments, 'subdir')
+        self.title = " ".join(getattr(arguments, 'title'))
+        self.eqtl_type = getattr(arguments, 'eqtl_type')
         self.extensions = getattr(arguments, 'extension')
 
         # Define the replication data.
-        self.sn_eqtl_infolder = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2021-12-23-ROSMAP-scRNAseq/cis_100Perm_ieQTLs/"
+        self.sn_eqtl_infolder = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2021-12-23-ROSMAP-scRNAseq/{}_100Perm_ieQTLs/".format(self.eqtl_type)
         self.sn_celltypes = [
             ("AST", "Astrocyte"),
             ("END", "EndothelialCell"),
@@ -85,9 +119,13 @@ class main():
             ("PER", "Pericytes")
         ]
         self.sn_eqtl_filename = "eQTLsFDR-ProbeLevel.txt.gz"
+        if self.eqtl_type == "trans":
+            self.sn_eqtl_filename = "eQTLsFDR.txt.gz"
 
         # Set variables.
-        self.outdir = os.path.join(str(os.path.dirname(os.path.abspath(__file__))), 'sn_replication')
+        self.outdir = os.path.join(str(os.path.dirname(os.path.abspath(__file__))), 'sn_replication', self.eqtl_type)
+        if self.subdir:
+            self.outdir = os.path.join(self.outdir, self.subdir)
         if not os.path.exists(self.outdir):
             os.makedirs(self.outdir)
 
@@ -124,6 +162,25 @@ class main():
                             required=True,
                             help="The path to the discovery deconvolution "
                                  "results matrix")
+        parser.add_argument("-s",
+                            "--subdir",
+                            type=str,
+                            default=None,
+                            help="The output subdirectory. Default: None.")
+        parser.add_argument("-t",
+                            "--title",
+                            nargs="*",
+                            type=str,
+                            default="ieQTL replication in ROSMAP snRNA-seq",
+                            help="The plot title. Default: 'ieQTL replication "
+                                 "in ROSMAP snRNA-seq'.")
+        parser.add_argument("-et",
+                            "--eqtl_type",
+                            type=str,
+                            choices=["cis", "trans"],
+                            default="cis",
+                            help="The type of eQTLs to map. "
+                                 "Default: 'cis'.")
         parser.add_argument("-e",
                             "--extension",
                             nargs="+",
@@ -239,7 +296,9 @@ class main():
         overlap_ct = list(discovery_ct.intersection(replication_ct))
         overlap_ct.sort()
 
-        replication_stats_df = self.plot(df=df, cell_types=overlap_ct)
+        replication_stats_df = self.plot(df=df,
+                                         cell_types=overlap_ct,
+                                         title=self.title)
         self.save_file(df=replication_stats_df,
                        outpath=os.path.join(self.outdir,
                                             "replication_stats.txt.gz"))
@@ -292,7 +351,7 @@ class main():
               "with shape: {}".format(os.path.basename(outpath),
                                       df.shape))
 
-    def plot(self, df, cell_types):
+    def plot(self, df, cell_types, title=""):
         nrows = 3
         ncols = len(cell_types)
 
@@ -425,7 +484,7 @@ class main():
             ax.set_ylim(ymin - ymargin, ymax + ymargin)
 
         # Add the main title.
-        fig.suptitle("ieQTL replication in ROSMAP snRNA-seq",
+        fig.suptitle(title,
                      fontsize=40,
                      color="#000000",
                      weight='bold')
@@ -500,13 +559,13 @@ class main():
                 if pi1_column is not None:
                     pi1 = self.calculate_p1(p=df[pi1_column])
 
-                if rb_columns is not None:
+                if rb_columns is not None and n > 2:
                     rb_est = self.calculate_rb(
                         b1=df[rb_columns[0][0]],
                         se1=df[rb_columns[0][1]],
                         b2=df[rb_columns[1][0]],
                         se2=df[rb_columns[1][1]],
-                        )
+                    )
                     rb = rb_est[0]
 
             sns.regplot(x=x, y=y, data=df, ci=ci,
@@ -652,6 +711,8 @@ class main():
         print("    > Input folder: {}".format(self.sn_eqtl_infolder))
         print("    > Cell types: {}".format(", ".join([x[0] for x in self.sn_celltypes])))
         print("    > Input filename: {}".format(self.sn_eqtl_filename))
+        print("  > Title: {}".format(self.title))
+        print("  > eQTL type: {}".format(self.eqtl_type))
         print("  > Output directory: {}".format(self.outdir))
         print("  > Extensions: {}".format(self.extensions))
         print("")

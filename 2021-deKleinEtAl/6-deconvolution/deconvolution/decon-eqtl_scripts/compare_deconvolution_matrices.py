@@ -94,6 +94,23 @@ Syntax:
     -n2 WithInhibitory \
     -log10 \
     -o 2022-01-27-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected_InhibitorySeparateOrNot
+    
+./compare_deconvolution_matrices.py \
+    -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected/deconvolutionResults.txt.gz \
+    -n1 Default \
+    -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-DFMinOne/deconvolutionResults.txt.gz \
+    -n2 DFMinOne \
+    -log10 \
+    -o 2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected_Default_vs_DFMinOne
+    
+./compare_deconvolution_matrices.py \
+    -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected/BH_FDR.txt.gz \
+    -n1 BH-FDR \
+    -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected/EMP_FDR.txt.gz \
+    -n2 permutation FDR \
+    -log10 \
+    -o 2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected_BH_vs_EMP \
+    -e png pdf
 """
 
 
@@ -102,11 +119,12 @@ class main():
         # Get the command line arguments.
         arguments = self.create_argument_parser()
         self.decon1_path = getattr(arguments, 'decon1')
-        self.decon1_name = getattr(arguments, 'name1')
+        self.decon1_name = " ".join(getattr(arguments, 'name1'))
         self.decon2_path = getattr(arguments, 'decon2')
-        self.decon2_name = getattr(arguments, 'name2')
+        self.decon2_name = " ".join(getattr(arguments, 'name2'))
         self.log10_transform = getattr(arguments, 'log10')
         self.outfile = getattr(arguments, 'outfile')
+        self.extensions = getattr(arguments, 'extensions')
         self.nrows = None
         self.alpha = 0.05
 
@@ -158,6 +176,7 @@ class main():
                             help="The path to the first deconvolution matrix")
         parser.add_argument("-n1",
                             "--name1",
+                            nargs="*",
                             type=str,
                             required=False,
                             default="x",
@@ -169,6 +188,7 @@ class main():
                             help="The path to the second deconvolution matrix")
         parser.add_argument("-n2",
                             "--name2",
+                            nargs="*",
                             type=str,
                             required=False,
                             default="y",
@@ -183,6 +203,14 @@ class main():
                             required=False,
                             default="deconvolution",
                             help="The name of the plot file.")
+        parser.add_argument("-e",
+                            "--extensions",
+                            nargs="+",
+                            type=str,
+                            choices=["png", "pdf", "eps"],
+                            default=["png"],
+                            help="The figure file extension. "
+                                 "Default: 'png'.")
 
         return parser.parse_args()
 
@@ -191,8 +219,8 @@ class main():
         print("Loading data")
         decon1_df = self.load_file(self.decon1_path)
         decon2_df = self.load_file(self.decon2_path)
-        # fdr_df1 = self.load_file(self.decon1_path)
-        # fdr_df2 = self.load_file(self.decon2_path)
+        # fdr_df1 = self.load_file(self.decon1_path).clip(0, 1)
+        # fdr_df2 = self.load_file(self.decon2_path).clip(0, 1)
 
         decon1_df.columns = [x.replace("CellMapNNLS_", "") for x in decon1_df.columns]
         decon2_df.columns = [x.replace("CellMapNNLS_", "") for x in decon2_df.columns]
@@ -219,34 +247,34 @@ class main():
         # print(fdr_df1)
         # print(fdr_df2)
 
-        print("Comparing")
-        df1_df2_replication_df = self.create_replication_df(df1=fdr_df1, df2=fdr_df2)
-        self.plot_heatmap(df=df1_df2_replication_df,
-                          xlabel=self.decon2_name,
-                          ylabel=self.decon1_name,
-                          filename="{}_replicating_in_{}".format(self.decon1_name, self.decon2_name))
-
-        df2_df1_replication_df = self.create_replication_df(df1=fdr_df2, df2=fdr_df1)
-        self.plot_heatmap(df=df2_df1_replication_df,
-                          xlabel=self.decon1_name,
-                          ylabel=self.decon2_name,
-                          filename="{}_replicating_in_{}".format(self.decon2_name, self.decon1_name))
+        # print("Comparing")
+        # df1_df2_replication_df = self.create_replication_df(df1=fdr_df1, df2=fdr_df2)
+        # self.plot_heatmap(df=df1_df2_replication_df,
+        #                   xlabel=self.decon2_name,
+        #                   ylabel=self.decon1_name,
+        #                   filename="{}_replicating_in_{}".format(self.decon1_name, self.decon2_name))
+        #
+        # df2_df1_replication_df = self.create_replication_df(df1=fdr_df2, df2=fdr_df1)
+        # self.plot_heatmap(df=df2_df1_replication_df,
+        #                   xlabel=self.decon1_name,
+        #                   ylabel=self.decon2_name,
+        #                   filename="{}_replicating_in_{}".format(self.decon2_name, self.decon1_name))
 
         print("Plotting")
-        for decon1_df, decon2_df, appendix, log10_transform, signif_lines in (
-                        [intercept_beta_df1, intercept_beta_df2, "InterceptBeta", False, False],
-                        [ct_beta_df1, ct_beta_df2, "CellTypeBeta", False, False],
-                        [inter_beta_df1, inter_beta_df2, "IteractionBeta", False, False],
-                        [pval_df1, pval_df2, "pvalue", self.log10_transform, True],
-                        [fdr_df1, fdr_df2, "FDR", self.log10_transform, True],
+        for decon1_df, decon2_df, appendix, title, log10_transform, signif_lines in (
+                        [intercept_beta_df1, intercept_beta_df2, "InterceptBeta", "intercept beta", False, False],
+                        [ct_beta_df1, ct_beta_df2, "CellTypeBeta", "Cell type beta", False, False],
+                        [inter_beta_df1, inter_beta_df2, "IteractionBeta", "Iteraction beta", False, False],
+                        [pval_df1, pval_df2, "pvalue", "-log10 nominal p-value", self.log10_transform, True],
+                        [fdr_df1, fdr_df2, "FDR", "FDR", False, True],
         ):
             if decon1_df is None or decon2_df is None:
                 continue
 
-            print("Plotting {}".format(appendix))
-            self.plot_violin_comparison(decon1_df=decon1_df,
-                                        decon2_df=decon2_df,
-                                        filename=self.outfile + "_" + appendix)
+            # print("Plotting {}".format(appendix))
+            # self.plot_violin_comparison(decon1_df=decon1_df,
+            #                             decon2_df=decon2_df,
+            #                             filename=self.outfile + "_" + appendix)
 
             if decon1_df is None or decon2_df is None:
                 continue
@@ -283,6 +311,7 @@ class main():
                                             decon2_signif_df=decon2_signif_df,
                                             log10_transform=log10_transform,
                                             signif_lines=signif_lines,
+                                            title=title,
                                             filename=self.outfile + "_" + appendix)
 
     @staticmethod
@@ -433,7 +462,7 @@ class main():
 
     def plot_regression_comparison(self, decon1_df, decon2_df, decon1_signif_df=None,
                                    decon2_signif_df=None, log10_transform=False,
-                                   signif_lines=False, filename="plot"):
+                                   signif_lines=False, title="", filename="plot"):
 
         # celltypes = (("Microglia", "Macrophage"),
         #              ("EndothelialCell", "EndothelialCell"),
@@ -443,154 +472,167 @@ class main():
         #              ("Astrocyte", "Astrocyte"))
 
         # Calculate number of rows / columns.
-        celltypes = list(decon1_df.columns)
-        celltypes.sort()
-        ncols = 3
-        nrows = math.ceil(len(celltypes) / 3)
+        cell_types = list(decon1_df.columns)
+        cell_types.sort()
+        nplots = len(cell_types)
+        ncols = math.ceil(np.sqrt(nplots))
+        nrows = math.ceil(nplots / ncols)
 
-        sns.set(rc={'figure.figsize': (12 * ncols, 9 * nrows)})
+        sns.set(rc={'figure.figsize': (ncols * 8, nrows * 6)})
         sns.set_style("ticks")
-        fig = plt.figure()
-        grid = fig.add_gridspec(ncols=ncols,
-                                nrows=nrows)
+        fig, axes = plt.subplots(nrows=nrows,
+                                 ncols=ncols,
+                                 sharex='none',
+                                 sharey='none')
 
         row_index = 0
         col_index = 0
+        for i in range(ncols * nrows):
+            print(i)
+            if nrows == 1 and ncols == 1:
+                ax = axes
+            elif nrows == 1 and ncols > 1:
+                ax = axes[col_index]
+            elif nrows > 1 and ncols == 1:
+                ax = axes[row_index]
+            else:
+                ax = axes[row_index, col_index]
 
-        # for ct2, ct1 in celltypes:
-        for celltype in celltypes:
-            x_label = "{}_{}".format(self.decon1_name, celltype)
-            y_label = "{}_{}".format(self.decon2_name, celltype)
-            df = pd.DataFrame({x_label: decon1_df.loc[:, celltype],
-                               y_label: decon2_df.loc[:, celltype]})
+            tmp_xlabel = ""
+            if row_index == (nrows - 1):
+                tmp_xlabel = self.decon1_name
+            tmp_ylabel = ""
+            if col_index == 0:
+                tmp_ylabel = self.decon2_name
 
-            x_signif_col = x_label
-            y_signif_col = y_label
-            if decon1_signif_df is not None and decon2_signif_df is not None:
-                df["x_signif"] = decon1_signif_df.loc[:, celltype]
-                df["y_signif"] = decon2_signif_df.loc[:, celltype]
-                x_signif_col = "x_signif"
-                y_signif_col = "y_signif"
+            if i < len(cell_types):
+                ct = cell_types[i]
+                sns.despine(fig=fig, ax=ax)
 
-            # Add color
-            df["hue"] = self.point_colormap["no signif"]
-            df.loc[(df[x_signif_col] <= 0.05) & (df[y_signif_col] > 0.05), "hue"] = self.point_colormap["x signif"]
-            df.loc[(df[x_signif_col] > 0.05) & (df[y_signif_col] <= 0.05), "hue"] = self.point_colormap["y signif"]
-            df.loc[(df[x_signif_col] <= 0.05) & (df[y_signif_col] <= 0.05), "hue"] = self.point_colormap["both signif"]
+                df = decon1_df.loc[:, [ct]].merge(decon2_df.loc[:, [ct]], left_index=True, right_index=True)
+                df.columns = ["x", "y"]
 
-            counts = df["hue"].value_counts()
-            for value in self.point_colormap.values():
-                if value not in counts.index:
-                    counts[value] = 0
+                x_signif_col = "x"
+                y_signif_col = "y"
+                if decon1_signif_df is not None and decon2_signif_df is not None:
+                    df = df.merge(decon1_signif_df.loc[:, [ct]], left_index=True, right_index=True)
+                    df = df.merge(decon2_signif_df.loc[:, [ct]], left_index=True, right_index=True)
+                    df.columns = ["x", "y", "x_signif", "y_signif"]
+                    x_signif_col = "x_signif"
+                    y_signif_col = "y_signif"
 
-            coef, _ = stats.spearmanr(df[x_label], df[y_label])
-            coef_str = "{:.2f}".format(coef)
+                # Add color
+                df["hue"] = self.point_colormap["no signif"]
+                df.loc[(df[x_signif_col] <= 0.05) & (df[y_signif_col] > 0.05), "hue"] = self.point_colormap["x signif"]
+                df.loc[(df[x_signif_col] > 0.05) & (df[y_signif_col] <= 0.05), "hue"] = self.point_colormap["y signif"]
+                df.loc[(df[x_signif_col] <= 0.05) & (df[y_signif_col] <= 0.05), "hue"] = self.point_colormap["both signif"]
 
-            accent_color = self.accent_colormap[celltype]
+                counts = df["hue"].value_counts()
+                for value in self.point_colormap.values():
+                    if value not in counts.index:
+                        counts[value] = 0
 
-            # Convert to log10 scale.
-            if log10_transform:
-                df[x_label] = np.log10(df[x_label] + 1)
-                df[y_label] = np.log10(df[y_label] + 1)
+                coef, _ = stats.spearmanr(df["x"], df["y"])
+                coef_str = "{:.2f}".format(coef)
 
-            # Creat the subplot.
-            ax = fig.add_subplot(grid[row_index, col_index])
-            sns.despine(fig=fig, ax=ax)
+                accent_color = self.accent_colormap[ct]
 
-            # Plot.
-            g = sns.regplot(x=x_label,
-                            y=y_label,
-                            data=df,
-                            scatter_kws={'facecolors': df["hue"],
-                                         'linewidth': 0,
-                                         'alpha': 0.5},
-                            line_kws={"color": accent_color},
-                            ax=ax
-                            )
-
-            # sns.jointplot(data=df,
-            #               x=x_label,
-            #               y=y_label,
-            #               kind="reg",
-            #               scatter_kws={'facecolors': df["hue"],
-            #                            'linewidth': 0,
-            #                            'alpha': 0.5},
-            #               line_kws={"color": accent_color}
-            #               )
-
-            # Add the text.
-            ax.annotate(
-                'r = {}'.format(coef_str),
-                xy=(0.03, 0.94),
-                xycoords=ax.transAxes,
-                color="#404040",
-                fontsize=18,
-                fontweight='bold')
-            ax.annotate(
-                'total N = {:,}'.format(df.shape[0]),
-                xy=(0.03, 0.9),
-                xycoords=ax.transAxes,
-                color="#404040",
-                fontsize=18,
-                fontweight='bold')
-            ax.annotate(
-                'N = {:,}'.format(counts[self.point_colormap["both signif"]]),
-                xy=(0.03, 0.86),
-                xycoords=ax.transAxes,
-                color=self.point_colormap["both signif"],
-                fontsize=18,
-                fontweight='bold')
-            ax.annotate(
-                'N = {:,}'.format(counts[self.point_colormap["x signif"]]),
-                xy=(0.03, 0.82),
-                xycoords=ax.transAxes,
-                color=self.point_colormap["x signif"],
-                fontsize=18,
-                fontweight='bold')
-            ax.annotate(
-                'N = {:,}'.format(counts[self.point_colormap["y signif"]]),
-                xy=(0.03, 0.78),
-                xycoords=ax.transAxes,
-                color=self.point_colormap["y signif"],
-                fontsize=18,
-                fontweight='bold')
-            ax.annotate(
-                'N = {:,}'.format(counts[self.point_colormap["no signif"]]),
-                xy=(0.03, 0.74),
-                xycoords=ax.transAxes,
-                color=self.point_colormap["no signif"],
-                fontsize=18,
-                fontweight='bold')
-
-            ax.text(0.5, 1.05,
-                    celltype,
-                    fontsize=26, weight='bold', ha='center', va='bottom',
-                    color=accent_color,
-                    transform=ax.transAxes)
-
-            ax.set_xlabel(" ".join(x_label.split("_")),
-                          fontsize=18,
-                          fontweight='bold')
-
-            ax.set_ylabel(" ".join(y_label.split("_")),
-                          fontsize=18,
-                          fontweight='bold')
-
-            if signif_lines:
-                signif_line = 0.05
+                # Convert to log10 scale.
                 if log10_transform:
-                    signif_line = np.log10(1.05)
-                ax.axhline(signif_line, ls='--', color="#000000", zorder=-1)
-                ax.axvline(signif_line, ls='--', color="#000000", zorder=-1)
+                    df["x"] = -1 * np.log10(df["x"])
+                    df["y"] = -1 * np.log10(df["y"])
 
-            # min_value = np.min((df[[x_label, y_label]].min(axis=0).min() * 1.1, -0.1))
-            # max_value = np.max((df[[x_label, y_label]].max(axis=0).max() * 1.1, 1.1))
-            #
-            # print(min_value, max_value)
-            #
-            # ax.set_xlim(min_value, max_value)
-            # ax.set_ylim(min_value, max_value)
-            # ax.plot([min_value, max_value], [min_value, max_value], ls="--", c="#000000")
+                # Plot.
+                g = sns.regplot(x="x",
+                                y="y",
+                                data=df,
+                                scatter_kws={'facecolors': df["hue"],
+                                             'linewidth': 0,
+                                             'alpha': 0.5},
+                                line_kws={"color": accent_color},
+                                ax=ax
+                                )
+
+                # sns.jointplot(data=df,
+                #               x=x_label,
+                #               y=y_label,
+                #               kind="reg",
+                #               scatter_kws={'facecolors': df["hue"],
+                #                            'linewidth': 0,
+                #                            'alpha': 0.5},
+                #               line_kws={"color": accent_color}
+                #               )
+
+                # Add the text.
+                ax.annotate(
+                    'r = {}'.format(coef_str),
+                    xy=(0.03, 0.9),
+                    xycoords=ax.transAxes,
+                    color="#404040",
+                    fontsize=20,
+                    fontweight='bold')
+                ax.annotate(
+                    'total N = {:,}'.format(df.shape[0]),
+                    xy=(0.03, 0.84),
+                    xycoords=ax.transAxes,
+                    color="#404040",
+                    fontsize=20,
+                    fontweight='bold')
+                ax.annotate(
+                    'N = {:,}'.format(counts[self.point_colormap["both signif"]]),
+                    xy=(0.03, 0.78),
+                    xycoords=ax.transAxes,
+                    color=self.point_colormap["both signif"],
+                    fontsize=20,
+                    fontweight='bold')
+                ax.annotate(
+                    'N = {:,}'.format(counts[self.point_colormap["x signif"]]),
+                    xy=(0.03, 0.72),
+                    xycoords=ax.transAxes,
+                    color=self.point_colormap["x signif"],
+                    fontsize=20,
+                    fontweight='bold')
+                ax.annotate(
+                    'N = {:,}'.format(counts[self.point_colormap["y signif"]]),
+                    xy=(0.03, 0.66),
+                    xycoords=ax.transAxes,
+                    color=self.point_colormap["y signif"],
+                    fontsize=20,
+                    fontweight='bold')
+                ax.annotate(
+                    'N = {:,}'.format(counts[self.point_colormap["no signif"]]),
+                    xy=(0.03, 0.60),
+                    xycoords=ax.transAxes,
+                    color=self.point_colormap["no signif"],
+                    fontsize=20,
+                    fontweight='bold')
+
+                ax.set_title(ct,
+                             fontsize=24,
+                             fontweight='bold')
+                ax.set_xlabel(tmp_xlabel,
+                              fontsize=18,
+                              fontweight='bold')
+                ax.set_ylabel(tmp_ylabel,
+                              fontsize=18,
+                              fontweight='bold')
+
+                min_value = np.min((df[["x", "y"]].min(axis=0).min() * 1.1, -0.1))
+                max_value = np.max((df[["x", "y"]].max(axis=0).max() * 1.1, 1.1))
+
+                ax.set_xlim(min_value, max_value)
+                ax.set_ylim(min_value, max_value)
+
+                if signif_lines:
+                    signif_line = 0.05
+                    if log10_transform:
+                        signif_line = -1 * np.log10(0.05)
+                    ax.axhline(signif_line, ls='--', color="#000000", zorder=-1)
+                    ax.axvline(signif_line, ls='--', color="#000000", zorder=-1)
+            else:
+                ax.set_xlabel(tmp_xlabel,
+                              fontsize=20,
+                              fontweight='bold')
 
             # Increment indices.
             col_index += 1
@@ -598,9 +640,15 @@ class main():
                 col_index = 0
                 row_index += 1
 
+        # Add the main title.
+        fig.suptitle(title,
+                     fontsize=30,
+                     color="#000000",
+                     weight='bold')
+
         # Safe the plot.
-        plt.tight_layout()
-        fig.savefig(os.path.join(self.outdir, "{}_regression_comparison.png".format(filename)))
+        for extension in self.extensions:
+            fig.savefig(os.path.join(self.outdir, "{}_regression_comparison.{}".format(filename, extension)))
         plt.close()
 
 
