@@ -321,6 +321,10 @@ class main():
                 continue
             geno_dataset_df = geno_df.loc[:, samples].copy()
 
+            # Check the present samples.
+            n_a = np.sum(geno_dataset_df != self.genotype_na, axis=1)
+            n_mask = np.isnan(n_a)
+
             # Check the call rate.
             call_rate_s = (geno_dataset_df != self.genotype_na).astype(int).sum(axis=1) / len(samples)
             cr_mask = (call_rate_s < self.call_rate).to_numpy(dtype=bool)
@@ -328,7 +332,6 @@ class main():
             # Check the MAF.
             rounded_m = geno_dataset_df.copy().to_numpy(dtype=np.float64)
             rounded_m = np.rint(rounded_m)
-            n_a = np.sum(rounded_m != self.genotype_na, axis=1)
             zero_a = np.sum(rounded_m == 0, axis=1)
             one_a = np.sum(rounded_m == 1, axis=1)
             two_a = np.sum(rounded_m == 2, axis=1)
@@ -338,7 +341,7 @@ class main():
             maf_a = np.empty_like(n_a, dtype=np.float64)
             maf_a[:] = np.nan
             maf_a[n_a > 0] = np.minimum(allele1_a[n_a > 0], allele2_a[n_a > 0]) / (allele1_a[n_a > 0] + allele2_a[n_a > 0])
-            maf_mask = np.logical_or(np.isnan(maf_a), maf_a <= self.maf)
+            maf_mask = maf_a <= self.maf
 
             # Check the HWE p-value.
             hwe_pvalues_a = np.empty_like(n_a, dtype=np.float64)
@@ -346,7 +349,7 @@ class main():
             hwe_pvalues_a[n_a > 0] = self.calc_hwe_pvalue(obs_hets=one_a[n_a > 0],
                                                           obs_hom1=zero_a[n_a > 0],
                                                           obs_hom2=two_a[n_a > 0])
-            hwe_mask = np.logical_or(np.isnan(hwe_pvalues_a), hwe_pvalues_a < self.hw_pval)
+            hwe_mask = hwe_pvalues_a < self.hw_pval
 
             output_df = pd.DataFrame({"N": n_a,
                                       "0": zero_a,
@@ -360,8 +363,9 @@ class main():
             print(output_df.loc[self.snps, :])
 
             # Set samples that did not meet requirements to NaN.
-            mask = cr_mask | maf_mask | hwe_mask
+            mask = n_mask | cr_mask | maf_mask | hwe_mask
             if np.sum(mask) > 0:
+                print("\t  {:,} eQTL(s) failed sample size threshold".format(np.sum(n_mask)))
                 print("\t  {:,} eQTL(s) failed the call rate threshold".format(np.sum(cr_mask)))
                 print("\t  {:,} eQTL(s) failed the MAF threshold".format(np.sum(maf_mask)))
                 print("\t  {:,} eQTL(s) failed the Hardy-Weinberg p-value threshold".format(np.sum(hwe_mask)))
@@ -396,7 +400,6 @@ class main():
 
         # Get the distribution midpoint.
         mid = np.rint(rare_copies * (2 * l_genotypes - rare_copies) / (2 * l_genotypes)).astype(np.int)
-        return mid
         mid[mid % 2 != rare_copies % 2] += 1
 
         # Calculate the start points for the evaluation.
