@@ -88,9 +88,22 @@ Syntax:
     -al ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz \
     -ex ../preprocess_scripts/select_and_reorder_matrix/2021-12-07-CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt \
     -cc ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table.txt.gz \
+    -std ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset_CF4SDFiltered.txt.gz \
     -d ../decon-eqtl_scripts/decon_eqtl/2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected/merged_decon_results.txt.gz \
     -i ENSG00000153291.16_6:46677138:rs2270450:C_T_Excitatory ENSG00000019186.10_20:54173204:rs2248137:C_G_OtherNeuron ENSG00000015592.16_8:27245507:rs17366947:A_G_Oligodendrocyte ENSG00000188732.11_7:23681366:rs4722244:C_T_Oligodendrocyte ENSG00000184293.7_12:9724600:rs7306304:G_A_Microglia \
     -n 850 \
+    -e png pdf
+    
+./visualise_ct_mediated_eqtl.py \
+    -eq ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined_withFDRCol.txt.gz \
+    -ge ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_table.txt.gz \
+    -al ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz \
+    -ex ../preprocess_scripts/select_and_reorder_matrix/2021-12-07-CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt \
+    -cc ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table.txt.gz \
+    -std ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset_CF4SDFiltered.txt.gz \
+    -d ../decon-eqtl_scripts/decon_eqtl/2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected/merged_decon_results.txt.gz \
+    -i ENSG00000019186.10_20:54173204:rs2248137:C_G_Excitatory ENSG00000184293.7_12:9724600:rs7306304:G_A_Microglia ENSG00000188732.11_7:23681366:rs4722244:C_T_Oligodendrocyte ENSG00000084628.10_1:31208167:rs7549197:T_C_Oligodendrocyte ENSG00000015592.16_8:27245507:rs17366947:A_G_Oligodendrocyte ENSG00000133805.15_11:10452342:rs11042811:C_T_Oligodendrocyte ENSG00000085117.12_11:44614997:rs7935166:G_A_Oligodendrocyte ENSG00000004468.13_4:15735725:rs4698412:G_A_Astrocyte \
+    -n 1350 \
     -e png pdf
 """
 
@@ -104,6 +117,7 @@ class main():
         self.alleles_path = getattr(arguments, 'alleles')
         self.expr_path = getattr(arguments, 'expression')
         self.cc_path = getattr(arguments, 'cellcount%')
+        self.std_path = getattr(arguments, 'sample_to_dataset')
         self.decon_path = getattr(arguments, 'decon')
         self.interest = getattr(arguments, 'interest')
         self.nrows = getattr(arguments, 'nrows')
@@ -162,6 +176,11 @@ class main():
                             type=str,
                             required=True,
                             help="The path to the cell count % matrix")
+        parser.add_argument("-std",
+                            "--sample_to_dataset",
+                            type=str,
+                            required=False,
+                            help="The path to the sample-to-dataset matrix.")
         parser.add_argument("-d",
                             "--decon",
                             type=str,
@@ -202,12 +221,24 @@ class main():
         cc_df = self.load_file(self.cc_path, header=0, index_col=0)
         decon_df = self.load_file(self.decon_path, header=0, index_col=None, nrows=self.nrows)
 
+        if self.std_path:
+            std_df = self.load_file(self.std_path, header=0, index_col=None)
+
+            print("Filter data")
+            samples = list(std_df.iloc[:, 0])
+            geno_df = geno_df.loc[:, samples]
+            expr_df = expr_df.loc[:, samples]
+            cc_df = cc_df.loc[samples, :]
+
         print("Validate data")
         probes = list(eqtl_df["ProbeName"])
         snps = list(eqtl_df["SNPName"])
         samples = list(expr_df.columns)
         if list(geno_df.index) != snps:
             print("Error, genotype does not match eQTL file.")
+            exit()
+        if list(geno_df.columns) != samples:
+            print("Error, genotype does not match expression file.")
             exit()
         if list(alleles_df.index) != snps:
             print("Error, allele does not match eQTL file.")
@@ -300,7 +331,7 @@ class main():
             # Fill the eQTL plot annotation.
             annot1 = ["N: {:,}".format(data.shape[0]),
                       "r: {:.2f}".format(eqtl_pearsonr),
-                      "p-value: {}".format(eqtl_pvalue),
+                      "p-value: {}".format(eqtl_pvalue_str),
                       "MAF: {:.2f}".format(minor_allele_frequency)]
 
             # Plot the main eQTL effect.
@@ -452,11 +483,12 @@ class main():
                 sns.regplot(x=x, y=y, data=subset, ci=None,
                             scatter_kws={'facecolors': palette[group_id],
                                          'linewidth': 0,
-                                         'alpha': 0.3},
+                                         'alpha': 0.75},
                             line_kws={"color": palette[group_id], "alpha": 0.75},
                             ax=ax
                             )
 
+            print(allele, coef_str)
             ax.annotate(
                 '{}\n{}'.format(allele, coef_str),
                 xy=r_annot_pos,
@@ -506,6 +538,7 @@ class main():
         print("  > Alleles path: {}".format(self.alleles_path))
         print("  > Expression path: {}".format(self.expr_path))
         print("  > Cell count % path: {}".format(self.cc_path))
+        print("  > Sample-to-dataset file: {}".format(self.std_path))
         print("  > Deconvolution path: {}".format(self.decon_path))
         print("  > Interest: {}".format(self.interest))
         print("  > Nrows: {}".format(self.nrows))

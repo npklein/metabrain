@@ -225,6 +225,7 @@ class main():
 
             sns.regplot(x=x, y=y, data=subset,
                         scatter_kws={'facecolors': facecolors,
+                                     's': 75,
                                      'linewidth': 0},
                         line_kws={"color": color},
                         ax=ax1)

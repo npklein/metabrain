@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-File:         visualise_binary_interaction_eqtl.py
+File:         visualise_interaction_eqtl.py
 Created:      2022/04/07
-Last Changed:
+Last Changed: 2022/04/13
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -41,7 +41,7 @@ from statsmodels.regression.linear_model import OLS
 # Local application imports.
 
 # Metadata
-__program__ = "Visualise BVinary Interaction eQTL"
+__program__ = "Visualise Interaction eQTL"
 __author__ = "Martijn Vochteloo"
 __maintainer__ = "Martijn Vochteloo"
 __email__ = "m.vochteloo@rug.nl"
@@ -56,18 +56,40 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 """
 Syntax:
-./visualise_binary_interaction_eqtl.py -h
+./visualise_interaction_eqtl.py -h
+
+./visualise_interaction_eqtl.py \
+    -eq ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined.txt.gz \
+    -ge ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_table.txt.gz \
+    -al ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz \
+    -ex ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table.txt.gz \
+    -co ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/create_covs_matrix/ADstatus.txt.gz \
+    -std ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset.txt.gz \
+    -i Inhibitory_8:115627247:rs2737226:T_C_Alzheimer_disease \
+    -n 332 \
+    -e png
     
-./visualise_binary_interaction_eqtl.py \
+./visualise_interaction_eqtl.py \
     -eq ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined.txt.gz \
     -ge ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_table.txt.gz \
     -al ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz \
     -ex ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/expression_table.txt.gz \
     -co ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_covs_matrix/ADstatus.txt.gz \
-    -std /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset.txt.gz \
+    -std ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset.txt.gz \
     -i ENSG00000172137.19_7:12244161:rs1990622:A_G_Alzheimer_disease \
     -n 225 \
-    -e png pdf
+    -e png
+    
+./visualise_interaction_eqtl.py \
+    -eq ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined.txt.gz \
+    -ge ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_table.txt.gz \
+    -al ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz \
+    -ex ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/expression_table.txt.gz \
+    -co ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/create_covs_matrix/Age_ST10Removed.txt.gz \
+    -std ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset.txt.gz \
+    -i ENSG00000172137.19_7:12244161:rs1990622:A_G_Age \
+    -n 225 \
+    -e png
 """
 
 
@@ -86,37 +108,12 @@ class main():
         self.extensions = getattr(arguments, 'extension')
 
         # Set variables.
-        self.outdir = os.path.join(str(Path(__file__).parent.parent), 'visualise_binary_interaction_eqtl')
+        self.outdir = os.path.join(str(Path(__file__).parent.parent), 'visualise_interaction_eqtl')
 
         self.group_palette = {
             2.: "#E69F00",
             1.: "#0072B2",
             0.: "#D55E00"
-        }
-
-        self.point_palette = {
-            "AMPAD-MAYO-V2": "#9C9FA0",
-            "CMC_HBCC_set2": "#0877B4",
-            "GTEx": "#0FA67D",
-            "AMPAD-ROSMAP-V2": "#6950A1",
-            "BrainGVEX-V2": "#48B2E5",
-            "TargetALS": "#D5C77A",
-            "AMPAD-MSBB-V2": "#5CC5BF",
-            "NABEC-H610": "#6D743A",
-            "LIBD_1M": "#808080",
-            "LIBD_5M": "#808080",
-            "ENA": "#D46727",
-            "LIBD_h650": "#808080",
-            "GVEX": "#48B2E5",
-            "NABEC-H550": "#6D743A",
-            "CMC_HBCC_set3": "#0877B4",
-            "UCLA_ASD": "#F36D2A",
-            "CMC": "#EAE453",
-            "CMC_HBCC_set1": "#0877B4",
-            "Braineac": "#E49D26",
-            "Bipseq_1M": "#000000",
-            "Bipseq_h650": "#000000",
-            "Brainseq": "#C778A6"
         }
 
         if not os.path.exists(self.outdir):
@@ -203,6 +200,8 @@ class main():
         cova_df = self.load_file(self.cova_path, header=0, index_col=0)
         std_df = self.load_file(self.std_path, header=0, index_col=None)
 
+        expr_df = expr_df.T
+
         print("Validate data")
         probes = list(eqtl_df["ProbeName"])
         snps = list(eqtl_df["SNPName"])
@@ -213,9 +212,9 @@ class main():
         if list(alleles_df.index) != snps:
             print("Error, allele does not match eQTL file.")
             exit()
-        if list(expr_df.index) != probes:
-            print("Error, expression does not match eQTL file.")
-            exit()
+        # if list(expr_df.index) != probes:
+        #     print("Error, expression does not match eQTL file.")
+        #     exit()
         if list(geno_df.columns) != samples:
             print("Error, genotype does not match samples.")
             exit()
@@ -235,15 +234,20 @@ class main():
             snp_name = row["SNPName"]
             probe_name = row["ProbeName"]
             hgnc_name = row["HGNCName"]
-            id = probe_name + "_" + snp_name
+            # id = probe_name + "_" + snp_name
+            id = snp_name
 
             interest_id = None
             for interest in self.interest:
-                if interest.startswith(id):
+                if id in interest:
+                # if interest.startswith(id):
                     interest_id = interest
 
             if interest_id is None:
                 continue
+
+            probe_name = interest_id.split("_")[0]
+            hgnc_name = probe_name
 
             print("\tWorking on: {}\t{}\t{} [{}/{} "
                   "{:.2f}%]".format(snp_name, probe_name, hgnc_name,
@@ -256,7 +260,8 @@ class main():
             if genotype.columns != [snp_name]:
                 print("\t\tGenotype file not in identical order as eQTL file.")
                 exit()
-            expression = expr_df.iloc[[row_index], :].copy().T
+            # expression = expr_df.iloc[[row_index], :].copy().T
+            expression = expr_df.loc[[probe_name], :].copy().T
             if expression.columns != [probe_name]:
                 print("\t\tExpression file not in identical order as eQTL file.")
                 exit()
@@ -294,7 +299,7 @@ class main():
                           2.0: "{}/{}".format(minor_allele, minor_allele)}
 
             # Add the covariate of interest.
-            covariate = interest_id.replace(id + "_", "").replace("_", " ")
+            covariate = interest_id.replace(probe_name + "_", "").replace(snp_name + "_", "").replace("_", " ")
             covariate_df = cova_df.loc[[covariate], :].T
             covariate_df.columns = ["covariate"]
             data = data.merge(covariate_df, left_index=True, right_index=True)
@@ -340,64 +345,86 @@ class main():
                       "eQTL p-value: {:.2e}".format(eqtl_pvalue),
                       "MAF: {:.2f}".format(minor_allele_frequency)]
 
+            if len(set(data["covariate"].unique())) <= 2:
+                covs = list(data["covariate"].unique())
+                covs.sort()
+                for cov in covs:
+                    cov_data = data.loc[data["covariate"] == cov, :].copy()
+                    coef, _ = stats.pearsonr(cov_data["expression"], cov_data["genotype"])
+                    annot2.append("{} r: {:.2f}".format(cov, coef))
+                    del cov_data
+
             # Plot the interaction eQTL.
             self.inter_plot(df=data,
                             x="covariate",
                             y="expression",
                             group="group",
-                            hue="dataset",
                             group_palette=self.group_palette,
-                            point_palette=self.point_palette,
                             allele_map=allele_map,
                             xlabel=covariate,
-                            ylabel="{} expression".format(hgnc_name),
+                            ylabel="{} cell fraction".format(hgnc_name),
                             annot=annot2,
                             title="ieQTL",
                             filename="{}_{}_{}_{}_{}".format(row_index, probe_name, hgnc_name, snp_name, covariate.replace(" ", ""))
                             )
 
-            for dataset in data["dataset"].unique():
+            for dataset in data["dataset"].unique().tolist() + ["AMPAD", "NoAMPAD"]:
                 subset = data.loc[data["dataset"] == dataset, :].copy()
-                if len(subset["covariate"].unique()) == 2:
-                    # Determine annotation stats.
-                    eqtl_pvalue = OLS(subset["expression"], subset[["intercept", "genotype"]]).fit().pvalues[1]
+                if dataset == "AMPAD":
+                    subset = data.loc[data["dataset"].isin(["AMPAD-MAYO-V2", "AMPAD-ROSMAP-V2", "AMPAD-MSBB-V2"]), :].copy()
+                if dataset == "NoAMPAD":
+                    subset = data.loc[~data["dataset"].isin(["AMPAD-MAYO-V2", "AMPAD-ROSMAP-V2", "AMPAD-MSBB-V2"]), :].copy()
+
+                # Determine annotation stats.
+                eqtl_pvalue = OLS(subset["expression"], subset[["intercept", "genotype"]]).fit().pvalues[1]
+                ieqtl_pvalue = np.nan
+                if subset["covariate"].std() > 0:
                     ieqtl_pvalue = OLS(subset["expression"], subset[["intercept", "genotype", "covariate", "interaction"]]).fit().pvalues[3]
 
-                    counts = subset["group"].value_counts()
-                    for x in [0.0, 1.0, 2.0]:
-                        if x not in counts:
-                            counts.loc[x] = 0
-                    zero_geno_count = (counts[0.0] * 2) + counts[1.0]
-                    two_geno_count = (counts[2.0] * 2) + counts[1.0]
-                    minor_allele_frequency = min(zero_geno_count, two_geno_count) / ( zero_geno_count + two_geno_count)
+                counts = subset["group"].value_counts()
+                for x in [0.0, 1.0, 2.0]:
+                    if x not in counts:
+                        counts.loc[x] = 0
+                zero_geno_count = (counts[0.0] * 2) + counts[1.0]
+                two_geno_count = (counts[2.0] * 2) + counts[1.0]
+                minor_allele_frequency = min(zero_geno_count, two_geno_count) / ( zero_geno_count + two_geno_count)
 
-                    # Fill the interaction plot annotation.
-                    annot3 = [
-                        "{} - {}".format(snp_name.split(":")[2], minor_allele),
-                        "N: {:,}".format(subset.shape[0]),
-                        "interaction p-value: {:.2e}".format(ieqtl_pvalue),
-                        "eQTL p-value: {:.2e}".format(eqtl_pvalue),
-                        "MAF: {:.2f}".format(minor_allele_frequency)]
+                # Fill the interaction plot annotation.
+                annot3 = [
+                    "{} - {}".format(snp_name.split(":")[2], minor_allele),
+                    "N: {:,}".format(subset.shape[0]),
+                    "interaction p-value: {:.2e}".format(ieqtl_pvalue),
+                    "eQTL p-value: {:.2e}".format(eqtl_pvalue),
+                    "MAF: {:.2f}".format(minor_allele_frequency)]
 
-                    self.inter_plot(df=subset,
-                                    x="covariate",
-                                    y="expression",
-                                    group="group",
-                                    hue="dataset",
-                                    group_palette=self.group_palette,
-                                    point_palette=self.point_palette,
-                                    allele_map=allele_map,
-                                    xlabel=covariate,
-                                    ylabel="{} expression".format(hgnc_name),
-                                    annot=annot3,
-                                    title="ieQTL - {}".format(dataset),
-                                    filename="{}_{}_{}_{}_{}_{}".format(row_index,
-                                                                        probe_name,
-                                                                        hgnc_name,
-                                                                        snp_name,
-                                                                        covariate.replace(" ",""),
-                                                                        dataset)
-                                    )
+                if len(set(subset["covariate"].unique())) <= 2:
+                    covs = list(subset["covariate"].unique())
+                    covs.sort()
+                    for cov in covs:
+                        cov_data = subset.loc[subset["covariate"] == cov, :].copy()
+                        if cov_data.shape[0] < 2:
+                            continue
+                        coef, _ = stats.pearsonr(cov_data["expression"], cov_data["genotype"])
+                        annot3.append("{} r: {:.2f}".format(cov, coef))
+                        del cov_data
+
+                self.inter_plot(df=subset,
+                                x="covariate",
+                                y="expression",
+                                group="group",
+                                group_palette=self.group_palette,
+                                allele_map=allele_map,
+                                xlabel=covariate,
+                                ylabel="{} expression".format(hgnc_name),
+                                annot=annot3,
+                                title="ieQTL - {}".format(dataset),
+                                filename="{}_{}_{}_{}_{}_{}".format(row_index,
+                                                                    probe_name,
+                                                                    hgnc_name,
+                                                                    snp_name,
+                                                                    covariate.replace(" ", ""),
+                                                                    dataset)
+                                )
 
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
@@ -469,14 +496,42 @@ class main():
             fig.savefig(outpath)
         plt.close()
 
-    def inter_plot(self, df, x="x", y="y", group="group", hue=None,
-                   group_palette=None, point_palette=None, allele_map=None,
+    def inter_plot(self, df, x="x", y="y", group="group",
+                   group_palette=None, allele_map=None,
                    annot=None, xlabel="", ylabel="", title="",
                    filename="ieqtl_plot"):
         if len(set(df[group].unique()).symmetric_difference({0, 1, 2})) > 0:
             return
-        if len(set(df[x].unique())) != 2:
-            return
+
+        if len(set(df[x].unique())) <= 2:
+            self.binary_inter_plot(df=df,
+                                   x=x,
+                                   y=y,
+                                   group=group,
+                                   group_palette=group_palette,
+                                   allele_map=allele_map,
+                                   annot=annot,
+                                   xlabel=xlabel,
+                                   ylabel=ylabel,
+                                   title=title,
+                                   filename=filename)
+        else:
+            self.numerical_inter_plot(df=df,
+                                      x=x,
+                                      y=y,
+                                      group=group,
+                                      group_palette=group_palette,
+                                      allele_map=allele_map,
+                                      annot=annot,
+                                      xlabel=xlabel,
+                                      ylabel=ylabel,
+                                      title=title,
+                                      filename=filename)
+
+    def binary_inter_plot(self, df, x="x", y="y", group="group",
+                   group_palette=None, allele_map=None,
+                   annot=None, xlabel="", ylabel="", title="",
+                   filename="ieqtl_plot"):
         sns.set(rc={'figure.figsize': (12, 9)})
         sns.set_style("ticks")
         fig, ax = plt.subplots()
@@ -510,6 +565,70 @@ class main():
             for i, annot_label in enumerate(annot):
                 ax.annotate(annot_label,
                             xy=(0.03, 0.94 - (i * 0.04)),
+                            xycoords=ax.transAxes,
+                            color="#000000",
+                            alpha=0.75,
+                            fontsize=12,
+                            fontweight='bold')
+
+        ax.set_title(title,
+                     fontsize=16,
+                     fontweight='bold')
+        ax.set_ylabel(ylabel,
+                      fontsize=14,
+                      fontweight='bold')
+        ax.set_xlabel(xlabel,
+                      fontsize=14,
+                      fontweight='bold')
+
+        for extension in self.extensions:
+            outpath = os.path.join(self.outdir, "{}.{}".format(filename, extension))
+            print("\t\tSaving plot: {}".format(os.path.basename(outpath)))
+            fig.savefig(outpath)
+        plt.close()
+
+    def numerical_inter_plot(self, df, x="x", y="y", group="group",
+                   group_palette=None, allele_map=None,
+                   annot=None, xlabel="", ylabel="", title="",
+                   filename="ieqtl_plot"):
+        sns.set(rc={'figure.figsize': (12, 9)})
+        sns.set_style("ticks")
+        fig, ax = plt.subplots()
+        sns.despine(fig=fig, ax=ax)
+
+        for i, group_id in enumerate([0, 1, 2]):
+            subset = df.loc[df[group] == group_id, :].copy()
+            allele = group_id
+            if allele_map is not None:
+                allele = allele_map[group_id]
+
+            coef_str = "NA"
+            if len(subset.index) > 1:
+                coef, p = stats.pearsonr(subset[y], subset[x])
+                coef_str = "{:.2f}".format(coef)
+
+                sns.regplot(x=x, y=y, data=subset, ci=None,
+                            scatter_kws={'facecolors': group_palette[group_id],
+                                         'linewidth': 0,
+                                         'alpha': 0.3},
+                            line_kws={"color": group_palette[group_id],
+                                      "alpha": 0.75},
+                            ax=ax
+                            )
+
+            ax.annotate(
+                '{}: r = {}'.format(allele, coef_str),
+                xy=(0.03, 0.94 - (i * 0.04)),
+                xycoords=ax.transAxes,
+                color=group_palette[group_id],
+                alpha=0.75,
+                fontsize=12,
+                fontweight='bold')
+
+        if annot is not None:
+            for i, annot_label in enumerate(annot):
+                ax.annotate(annot_label,
+                            xy=(0.03, 0.82 - (i * 0.04)),
                             xycoords=ax.transAxes,
                             color="#000000",
                             alpha=0.75,

@@ -60,11 +60,38 @@ Syntax:
     -al ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz \
     -ex ../preprocess_scripts/select_and_reorder_matrix/2021-12-07-CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt \
     -cc ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table.txt.gz \
+    -std ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset_CF4SDFiltered.txt.gz \
     -d ../decon-eqtl_scripts/decon_eqtl/2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected/merged_decon_results.txt.gz \
-    -rr sn_replication/single_nucleus_replication.txt.gz \
+    -rr sn_replication/cis/2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected/single_nucleus_replication.txt.gz \
     -br bryois_replication/bryois_replication.txt.gz \
-    -i ENSG00000153291.16_6:46677138:rs2270450:C_T_Excitatory ENSG00000015592.16_8:27245507:rs17366947:A_G_Oligodendrocyte ENSG00000188732.11_7:23681366:rs4722244:C_T_Oligodendrocyte  \
-    -n 850 \
+    -i ENSG00000188732.11_7:23681366:rs4722244:C_T_Oligodendrocyte ENSG00000084628.10_1:31208167:rs7549197:T_C_Oligodendrocyte ENSG00000015592.16_8:27245507:rs17366947:A_G_Oligodendrocyte ENSG00000133805.15_11:10452342:rs11042811:C_T_Oligodendrocyte ENSG00000085117.12_11:44614997:rs7935166:G_A_Oligodendrocyte ENSG00000004468.13_4:15735725:rs4698412:G_A_Astrocyte  \
+    -n 1350 \
+    -e png pdf
+    
+./visualise_ct_mediated_eqtl_replication.py \
+    -eq ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined_withFDRCol.txt.gz \
+    -ge ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_table.txt.gz \
+    -al ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz \
+    -ex ../preprocess_scripts/select_and_reorder_matrix/2021-12-07-CortexEUR-cis-Normalised/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.ForceNormalised.ExpAdded.txt \
+    -cc ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table.txt.gz \
+    -std ../matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset_CF4SDFiltered.txt.gz \
+    -d ../decon-eqtl_scripts/decon_eqtl/2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected/merged_decon_results.txt.gz \
+    -rr sn_replication/cis/2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected/single_nucleus_replication.txt.gz \
+    -br bryois_replication/bryois_replication.txt.gz \
+    -i ENSG00000184293.7_12:9724600:rs7306304:G_A_Microglia ENSG00000203710.11_1:207577223:rs679515:T_C_Oligodendrocyte ENSG00000004468.13_4:15735725:rs4698412:G_A_Astrocyte ENSG00000078487.17_7:100419831:rs7783159:G_A_Oligodendrocyte \
+    -n 1350 \
+    -e png pdf
+    
+./visualise_ct_mediated_eqtl_replication.py \
+    -eq ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/combine_eqtlprobes/eQTLprobes_combined.txt.gz \
+    -ge ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_table.txt.gz \
+    -al ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/create_matrices/genotype_alleles.txt.gz \
+    -ex ../preprocess_scripts/select_and_reorder_matrix/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/MetaBrain.allCohorts.2020-02-16.TMM.freeze2dot1.SampleSelection.SampleSelection.ProbesWithZeroVarianceRemoved.Log2Transformed.CovariatesRemovedOLS.100PCsRemovedOLS.ForceNormalised.ExpAdded.txt \
+    -cc ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table.txt.gz \
+    -std ../matrix_preparation/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/combine_gte_files/SampleToDataset.txt.gz \
+    -d ../decon-eqtl_scripts/decon_eqtl/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/merged_decon_results.txt.gz \
+    -rr sn_replication/trans/2022-03-31-CortexEUR-and-AFR-noENA-trans-100PCs-NegativeToZero-DatasetAndRAMCorrected/single_nucleus_replication.txt.gz \
+    -i ENSG00000110042.8_7:64546850:rs73130769:C_G_Oligodendrocyte ENSG00000110042.8_7:64508517:rs57196191:A_C_Oligodendrocyte ENSG00000110042.8_7:64480828:rs73127029:G_A_Oligodendrocyte ENSG00000110042.8_7:64563203:rs2862795:A_G_Oligodendrocyte \
     -e png pdf
 """
 
@@ -78,6 +105,7 @@ class main():
         self.alleles_path = getattr(arguments, 'alleles')
         self.expr_path = getattr(arguments, 'expression')
         self.cc_path = getattr(arguments, 'cellcount%')
+        self.std_path = getattr(arguments, 'sample_to_dataset')
         self.decon_path = getattr(arguments, 'decon')
         self.rosmap_replication_path = getattr(arguments, 'rosmap_replication')
         self.bryois_replication_path = getattr(arguments, 'bryois_replication')
@@ -159,6 +187,11 @@ class main():
                             type=str,
                             required=True,
                             help="The path to the cell count % matrix")
+        parser.add_argument("-std",
+                            "--sample_to_dataset",
+                            type=str,
+                            required=False,
+                            help="The path to the sample-to-dataset matrix.")
         parser.add_argument("-d",
                             "--decon",
                             type=str,
@@ -173,8 +206,8 @@ class main():
         parser.add_argument("-br",
                             "--bryois_replication",
                             type=str,
-                            required=True,
-                            help="The path to the bryois replication "
+                            default=None,
+                            help="The path to the Bryois replication "
                                  "matrix")
         parser.add_argument("-i",
                             "--interest",
@@ -211,7 +244,19 @@ class main():
         cc_df = self.load_file(self.cc_path, header=0, index_col=0)
         decon_df = self.load_file(self.decon_path, header=0, index_col=None, nrows=self.nrows)
         rosmap_df = self.load_file(self.rosmap_replication_path, header=0, index_col=None)
-        bryois_df = self.load_file(self.bryois_replication_path, header=0, index_col=None)
+
+        bryois_df = None
+        if self.bryois_replication_path is not None:
+            bryois_df = self.load_file(self.bryois_replication_path, header=0, index_col=None)
+
+        if self.std_path:
+            std_df = self.load_file(self.std_path, header=0, index_col=None)
+
+            print("Filter data")
+            samples = list(std_df.iloc[:, 0])
+            geno_df = geno_df.loc[:, samples]
+            expr_df = expr_df.loc[:, samples]
+            cc_df = cc_df.loc[samples, :]
 
         print("Validate data")
         probes = list(eqtl_df["ProbeName"])
@@ -219,6 +264,9 @@ class main():
         samples = list(expr_df.columns)
         if list(geno_df.index) != snps:
             print("Error, genotype does not match eQTL file.")
+            exit()
+        if list(geno_df.columns) != samples:
+            print("Error, genotype does not match expression file.")
             exit()
         if list(alleles_df.index) != snps:
             print("Error, allele does not match eQTL file.")
@@ -233,17 +281,22 @@ class main():
         print("Pre-process data")
         decon_df.index = decon_df["Gene"] + "_" + decon_df["SNP"]
         rosmap_df.index = rosmap_df["Gene"] + "_" + rosmap_df["SNP"]
-        bryois_df.index = bryois_df["Gene"] + "_" + bryois_df["SNP"]
+        print(decon_df)
 
         rosmap_ct = [col.replace("SN ", "").replace(" eQTL pvalue", "") for col in rosmap_df.columns if col.startswith("SN ") and col.endswith(" eQTL pvalue")]
         rosmap_ct.sort()
 
-        bryois_ct = [col.replace("Bryois ", "").replace(" pvalue", "") for col in bryois_df.columns if col.startswith("Bryois ") and col.endswith(" pvalue")]
-        bryois_ct.sort()
+        bryois_ct = []
+        if bryois_df is not None:
+            bryois_df.index = bryois_df["Gene"] + "_" + bryois_df["SNP"]
+            bryois_ct = [col.replace("Bryois ", "").replace(" pvalue", "") for
+                         col in bryois_df.columns if
+                         col.startswith("Bryois ") and col.endswith(" pvalue")]
+            bryois_ct.sort()
 
         print("Visualizing data")
         nrows = len(self.interest)
-        ncols = 4
+        ncols = 4 if bryois_df is not None else 3
 
         sns.set(rc={'figure.figsize': (ncols * 12, nrows * 9)})
         sns.set_style("ticks")
@@ -325,7 +378,11 @@ class main():
                           2.0: "{}/{}".format(minor_allele, minor_allele)}
 
             # Determine annotation stats.
-            eqtl_pvalue = row["MetaP"]
+            eqtl_pvalue = np.nan
+            if "MetaP" in row:
+                eqtl_pvalue = row["MetaP"]
+            elif "PValue" in row:
+                eqtl_pvalue = row["PValue"]
             eqtl_pvalue_str = "{:.2e}".format(eqtl_pvalue)
             if eqtl_pvalue == 0:
                 eqtl_pvalue_str = "<{:.1e}".format(1e-308)
@@ -335,7 +392,7 @@ class main():
             # Fill the eQTL plot annotation.
             annot1 = ["N: {:,}".format(data.shape[0]),
                       "r: {:.2f}".format(eqtl_pearsonr),
-                      "p-value: {}".format(eqtl_pvalue),
+                      "p-value: {}".format(eqtl_pvalue_str),
                       "MAF: {:.2f}".format(minor_allele_frequency)]
 
             # Plot the main eQTL effect.
@@ -432,42 +489,43 @@ class main():
                 axes[row_count, 2].set_axis_off()
 
             # Plot the replication in ROSMAP.
-            if id in bryois_df.index:
-                bryois_forest_df = pd.DataFrame(np.nan, index=bryois_ct, columns=["cell type", "affect allele", "x", "lower", "upper"])
-                for ct in bryois_ct:
-                    beta = float(bryois_df.loc[id, "Bryois {} eQTL beta".format(ct)])
-                    pvalue = float(bryois_df.loc[id, "Bryois {} pvalue".format(ct)])
-                    maf = float(bryois_df.loc[id, "MetaBrain MAF"])
-                    n = float(bryois_df.loc[id, "Bryois N"])
+            if bryois_df is not None:
+                if id in bryois_df.index:
+                    bryois_forest_df = pd.DataFrame(np.nan, index=bryois_ct, columns=["cell type", "affect allele", "x", "lower", "upper"])
+                    for ct in bryois_ct:
+                        beta = float(bryois_df.loc[id, "Bryois {} eQTL beta".format(ct)])
+                        pvalue = float(bryois_df.loc[id, "Bryois {} pvalue".format(ct)])
+                        maf = float(bryois_df.loc[id, "MetaBrain MAF"])
+                        n = float(bryois_df.loc[id, "Bryois N"])
 
-                    _, se = self.pvalue_to_beta_and_se(beta=beta,
-                                                       pvalue=pvalue,
-                                                       maf=maf,
-                                                       n=n)
-                    if bryois_df.loc[id, "Allele assessed"] != minor_allele:
-                        beta = beta * -1
-                    bryois_forest_df.loc[ct, :] = [self.ct_abbrevations[ct], minor_allele, beta, beta - se, beta + se]
+                        _, se = self.pvalue_to_beta_and_se(beta=beta,
+                                                           pvalue=pvalue,
+                                                           maf=maf,
+                                                           n=n)
+                        if bryois_df.loc[id, "Allele assessed"] != minor_allele:
+                            beta = beta * -1
+                        bryois_forest_df.loc[ct, :] = [self.ct_abbrevations[ct], minor_allele, beta, beta - se, beta + se]
 
-                xlim = self.stripplot(
-                    fig=fig,
-                    ax=axes[row_count, 3],
-                    df=bryois_forest_df,
-                    x="x",
-                    y="cell type",
-                    palette=self.palette,
-                    xlabel="eQTL beta" if row_count == (nrows - 1) else "",
-                    title="Bryois 2021 eQTL effect" if row_count == 0 else ""
+                    xlim = self.stripplot(
+                        fig=fig,
+                        ax=axes[row_count, 3],
+                        df=bryois_forest_df,
+                        x="x",
+                        y="cell type",
+                        palette=self.palette,
+                        xlabel="eQTL beta" if row_count == (nrows - 1) else "",
+                        title="Bryois 2021 eQTL effect" if row_count == 0 else ""
 
-                )
+                    )
 
-                if xlim[0] < bryois_shared_xlim[0]:
-                    bryois_shared_xlim[0] = xlim[0]
-                if xlim[1] > bryois_shared_xlim[1]:
-                    bryois_shared_xlim[1] = xlim[1]
+                    if xlim[0] < bryois_shared_xlim[0]:
+                        bryois_shared_xlim[0] = xlim[0]
+                    if xlim[1] > bryois_shared_xlim[1]:
+                        bryois_shared_xlim[1] = xlim[1]
 
-                del bryois_forest_df
-            else:
-                axes[row_count, 3].set_axis_off()
+                    del bryois_forest_df
+                else:
+                    axes[row_count, 3].set_axis_off()
 
             row_count += 1
 
@@ -476,13 +534,15 @@ class main():
             axes[row_count, 1].set_xlim(ieqtl_shared_xlim[0], ieqtl_shared_xlim[1])
             axes[row_count, 1].set_ylim(bulk_shared_ylim[0], bulk_shared_ylim[1])
             axes[row_count, 2].set_xlim(sn_shared_xlim[0] - 0.05, sn_shared_xlim[1] + 0.05)
-            axes[row_count, 3].set_xlim(bryois_shared_xlim[0] - 0.05, bryois_shared_xlim[1] + 0.05)
+            if bryois_df is not None:
+                axes[row_count, 3].set_xlim(bryois_shared_xlim[0] - 0.05, bryois_shared_xlim[1] + 0.05)
 
             axes[row_count, 1].set_yticks([])
             if row_count < (nrows - 1):
                 axes[row_count, 1].set_xticks([])
                 axes[row_count, 2].set_xticks([])
-                axes[row_count, 3].set_xticks([])
+                if bryois_df is not None:
+                    axes[row_count, 3].set_xticks([])
 
         for extension in self.extensions:
             outpath = os.path.join(self.outdir, "visualise_ct_mediated_eqtl_replication.{}".format(extension))
@@ -585,7 +645,7 @@ class main():
                 sns.regplot(x=x, y=y, data=subset, ci=None,
                             scatter_kws={'facecolors': palette[group_id],
                                          'linewidth': 0,
-                                         'alpha': 0.3},
+                                         'alpha': 0.75},
                             line_kws={"color": palette[group_id], "alpha": 0.75},
                             ax=ax
                             )
@@ -633,9 +693,11 @@ class main():
                   palette=None, xlabel="", ylabel="", title=""):
         sns.despine(fig=fig, ax=ax)
 
-        ax.axvline(-0.75, ls='--', color="#000000", alpha=0.15, zorder=-1)
-        ax.axvline(0, ls='--', color="#000000", alpha=0.15, zorder=-1)
-        ax.axvline(0.75, ls='--', color="#000000", alpha=0.15, zorder=-1)
+        ax.axvline(-1, ls='--', color="#000000", alpha=0.15, zorder=-1)
+        ax.axvline(-0.5, ls='--', color="#000000", alpha=0.15, zorder=-1)
+        ax.axvline(0, ls='--', color="#000000", alpha=0.3, zorder=-1, linewidth=3)
+        ax.axvline(0.5, ls='--', color="#000000", alpha=0.15, zorder=-1)
+        ax.axvline(1, ls='--', color="#000000", alpha=0.15, zorder=-1)
 
         df_m = df.melt(id_vars=[y], value_vars=[lower, upper])
         sns.pointplot(x="value",
@@ -697,9 +759,10 @@ class main():
         print("  > Alleles path: {}".format(self.alleles_path))
         print("  > Expression path: {}".format(self.expr_path))
         print("  > Cell count % path: {}".format(self.cc_path))
+        print("  > Sample-to-dataset file: {}".format(self.std_path))
         print("  > Deconvolution path: {}".format(self.decon_path))
-        print("  > ROSMAP Replication path: {}".format(self.rosmap_replication_path))
-        print("  > Bryois Replication path: {}".format(self.bryois_replication_path))
+        print("  > ROSMAP replication path: {}".format(self.rosmap_replication_path))
+        print("  > Bryois replication path: {}".format(self.bryois_replication_path))
         print("  > Interest: {}".format(self.interest))
         print("  > Nrows: {}".format(self.nrows))
         print("  > Extension: {}".format(self.extensions))
