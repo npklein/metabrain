@@ -3,7 +3,7 @@
 """
 File:         sn_replication.py
 Created:      2022/02/10
-Last Changed: 2022/02/22
+Last Changed: 2022/05/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -30,8 +30,6 @@ import os
 import numpy as np
 import pandas as pd
 import rpy2.robjects as robjects
-from rpy2.robjects.packages import importr
-from rpy2.rinterface_lib.embedded import RRuntimeError
 import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
@@ -217,8 +215,6 @@ class main():
 
             columns_of_interest.append("{} interaction beta".format(ct))
             colnames.append("Bulk {} interaction beta".format(ct))
-
-            exclude_in_excel.append("Bulk {} pvalue".format(ct))
         discovery_df = discovery_df.loc[:, columns_of_interest].copy()
         discovery_df.columns = colnames
         print(discovery_df)
@@ -420,6 +416,16 @@ class main():
             include_ylabel = False
             if col_index == 0:
                 include_ylabel = True
+
+            if col_index == 0:
+                for row_index, panel in enumerate(["A", "B", "C"]):
+                    axes[row_index, col_index].annotate(
+                        panel,
+                        xy=(-0.3, 0.9),
+                        xycoords=axes[row_index, col_index].transAxes,
+                        color="#000000",
+                        fontsize=40
+                    )
 
             print("\tPlotting row 1.")
             xlim, ylim, stats1 = self.scatterplot(
@@ -689,11 +695,11 @@ class main():
 
     @staticmethod
     def calculate_p1(p):
-        importr("qvalue")
-        pvals = robjects.FloatVector(p)
-        lambda_seq = robjects.FloatVector([x for x in np.arange(0.05, 1, 0.05) if p.max() > x])
-        pi0est = robjects.r['pi0est'](pvals, lambda_seq)
-        return 1 - np.array(pi0est.rx2('pi0'))[0]
+        robjects.r("source('qvalue_truncp.R')")
+        p = robjects.FloatVector(p)
+        qvalue_truncp = robjects.globalenv['qvalue_truncp']
+        pi0 = qvalue_truncp(p)[0]
+        return 1 - np.array(pi0)
 
     @staticmethod
     def calculate_rb(b1, se1, b2, se2, theta=0):

@@ -3,7 +3,7 @@
 """
 File:         afr_replication.py
 Created:      2022/02/11
-Last Changed: 2022/03/14
+Last Changed: 2022/05/26
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -31,7 +31,6 @@ import numpy as np
 import pandas as pd
 from statsmodels.stats import multitest
 import rpy2.robjects as robjects
-from rpy2.robjects.packages import importr
 from scipy import stats
 import seaborn as sns
 import matplotlib
@@ -231,7 +230,6 @@ class main():
                                                                         (100 / stats_df_sum.loc["N", "value"]) * stats_df_sum.loc["N concordant", "value"]))
             print("")
 
-
     @staticmethod
     def load_file(inpath, header, index_col, sep="\t", low_memory=True,
                   nrows=None, skiprows=None):
@@ -328,6 +326,16 @@ class main():
             include_ylabel = False
             if col_index == 0:
                 include_ylabel = True
+
+            if col_index == 0:
+                for row_index, panel in enumerate(["A", "B", "C"]):
+                    axes[row_index, col_index].annotate(
+                        panel,
+                        xy=(-0.3, 0.9),
+                        xycoords=axes[row_index, col_index].transAxes,
+                        color="#000000",
+                        fontsize=40
+                    )
 
             print("\tPlotting row 1.")
             xlim, ylim, stats1 = self.scatterplot(
@@ -598,11 +606,11 @@ class main():
 
     @staticmethod
     def calculate_p1(p):
-        importr("qvalue")
-        pvals = robjects.FloatVector(p)
-        lambda_seq = robjects.FloatVector([x for x in np.arange(0.05, 1, 0.05) if p.max() > x])
-        pi0est = robjects.r['pi0est'](pvals, lambda_seq)
-        return 1 - np.array(pi0est.rx2('pi0'))[0]
+        robjects.r("source('qvalue_truncp.R')")
+        p = robjects.FloatVector(p)
+        qvalue_truncp = robjects.globalenv['qvalue_truncp']
+        pi0 = qvalue_truncp(p)[0]
+        return 1 - np.array(pi0)
 
     @staticmethod
     def calculate_rb(b1, se1, b2, se2, theta=0):
