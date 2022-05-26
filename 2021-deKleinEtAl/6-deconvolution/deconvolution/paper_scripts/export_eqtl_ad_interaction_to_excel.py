@@ -41,7 +41,7 @@ Syntax:
     
 ./export_eqtl_ad_interaction_to_excel.py \
     -i /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/test_scripts/interaction_mapper/ \
-    -n 2022-03-31-CortexEUR-and-AFR-noENA-trans-0PCs-NegativeToZero-DatasetAndRAMCorrected
+    -n 2022-03-31-CortexEUR-and-AFR-noENA-trans-NPCs-NegativeToZero-DatasetAndRAMCorrected
 
 """
 
@@ -102,7 +102,7 @@ class main():
                 df_list = []
                 for appendix in ["", "-DatasetCorrected", "-AMPAD"]:
                     fpath = os.path.join(self.indir, self.name.replace("NPCs", "{}PCs".format(n_pcs)) + appendix, "Alzheimerdisease_InteractionResults.txt.gz")
-                    print(fpath)
+                    print(n_pcs, appendix, fpath)
 
                     df = pd.read_csv(fpath, sep="\t", header=0, index_col=None)
                     df.index = df["SNPName"] + "_" + df["ProbeName"]
@@ -112,6 +112,7 @@ class main():
                     else:
                         df = df[["SNPName", "ProbeName", "N", "FDR"]].copy()
                         df.columns = ["SNPName", "ProbeName", "N", "{} FDR".format(appendix_dict[appendix])]
+                    df.dropna(inplace=True)
                     df_list.append(df)
 
                     summary_stats.append(["no ENA", n_pcs, appendix_dict[appendix], df.shape[0], (df["{} FDR".format(appendix_dict[appendix])] < 0.05).sum()])
