@@ -1,7 +1,9 @@
 {
   "combine_gte_files": {
     "input_directory": "",
-    "filename_regex": ""
+    "filename_regex": "",
+    "exclude_files": [],
+    "exclude_samples": ""
   },
   "combine_eqtlprobes": {
     "input_directory": "",
@@ -9,10 +11,7 @@
     "in_filename": "",
     "iterations": 1
   },
-  "create_cohort_matrix": {
-    "info_datafile": "",
-    "sample_id": "",
-    "cohort_id": ""
+  "create_dataset_matrix": {
   },
   "create_matrices": {
     "genotype_datafile": "",
@@ -25,14 +24,14 @@
     },
     "deconvolution_expr_datafile": ""
   },
-  "correct_cohort_effects": {
-
+  "correct_dataset_effects": {
   },
   "perform_deconvolution": {
     "min_expr_cutoff": 0
   },
-  "create_tech_covs_matrix": {
-    "covariate_datafile": "",
+  "create_correction_matrix": {
+    "tech_covariates_datafile": "",
+    "mds_datafile": "",
     "technical_covariates": []
   },
   "create_covs_matrix": {
@@ -40,9 +39,7 @@
     "num_eigenvectors": 50
   },
   "create_extra_covs_matrix": {
-
   },
   "normal_transform_matrix": {
-
   }
 }

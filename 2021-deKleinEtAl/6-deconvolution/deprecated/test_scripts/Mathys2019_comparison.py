@@ -3,7 +3,7 @@
 """
 File:         mathys2019_comparison.py
 Created:      2020/09/16
-Last Changed:
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -89,14 +89,14 @@ class main():
         decon_df = decon_df.groupby(decon_df["Symbol"], group_keys=False).apply(lambda x: x.loc[x["FDR"].idxmin()])
         decon_df.reset_index(drop=True, inplace=True)
         print(decon_df)
-        print("Signif. interaction: {}, No signif. interaction: {}".format(decon_df.loc[decon_df["FDR"] < 0.05, :].shape[0], decon_df.loc[decon_df["FDR"] >= 0.05, :].shape[0]))
+        print("Signif. interaction: {}, No signif. interaction: {}".format(decon_df.loc[decon_df["FDR"] <= 0.05, :].shape[0], decon_df.loc[decon_df["FDR"] > 0.05, :].shape[0]))
 
         df = mathys_df.merge(decon_df, left_on="gene.name", right_on="Symbol")
         print(df)
 
         size = df.loc[:, "subpopulation"].value_counts()
-        interaction = df.loc[df["FDR"] < 0.05, "subpopulation"].value_counts()
-        no_interaction = df.loc[df["FDR"] >= 0.05, "subpopulation"].value_counts()
+        interaction = df.loc[df["FDR"] <= 0.05, "subpopulation"].value_counts()
+        no_interaction = df.loc[df["FDR"] > 0.05, "subpopulation"].value_counts()
         celltypes = list(df["subpopulation"].unique())
 
         total_inter = interaction.sum()
@@ -133,7 +133,7 @@ class main():
                                           "out-of-group no interaction",
                                           "oddsratio", "pvalue"],
                                  index=indices)
-        result_df["signif."] = result_df["oddsratio"] < 0.05
+        result_df["signif."] = result_df["oddsratio"] <= 0.05
         result_df.sort_values(by="pvalue", ascending=True, inplace=True)
         print(result_df)
 
@@ -177,8 +177,8 @@ class main():
 #
 #     size = df.loc[:, "subpopulation"].value_counts()
 #     unique = df.drop_duplicates(subset=['gene.name'])["subpopulation"].value_counts()
-#     interaction = df.loc[df["Neuron_FDR"] < 0.05, "subpopulation"].value_counts()
-#     no_interaction = df.loc[df["Neuron_FDR"] >= 0.05, "subpopulation"].value_counts()
+#     interaction = df.loc[df["Neuron_FDR"] <= 0.05, "subpopulation"].value_counts()
+#     no_interaction = df.loc[df["Neuron_FDR"] > 0.05, "subpopulation"].value_counts()
 #     celltypes = list(df["subpopulation"].unique())
 #
 #     total_inter = interaction.sum()
@@ -214,7 +214,7 @@ class main():
 #     result_df = pd.DataFrame(data,
 #                              columns=["N", "N Unique", "interaction", "no interaction", "out-of-group interaction", "out-of-group no interaction", "oddsratio", "pvalue"],
 #                              index=indices)
-#     result_df["signif."] = result_df["oddsratio"] < 0.05
+#     result_df["signif."] = result_df["oddsratio"] <= 0.05
 #     result_df.sort_index(inplace=True)
 #     print(result_df)
 

@@ -1,7 +1,7 @@
 """
 File:         combine_eqtlprobes.py
 Created:      2020/10/08
-Last Changed: 2020/10/13
+Last Changed: 2021/07/08
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -79,6 +79,8 @@ class CombineEQTLProbes:
 
     def save(self):
         save_dataframe(df=self.eqtl_df, outpath=self.outpath,
+                       index=False, header=True, logger=self.log)
+        save_dataframe(df=self.eqtl_df.loc[:, ["ProbeName", "SNPName"]], outpath=os.path.join(self.outdir, "snp_gene_list.txt"),
                        index=False, header=True, logger=self.log)
 
     def clear_variables(self):

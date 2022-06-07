@@ -3,7 +3,7 @@
 """
 File:         add_ie_results_to_mr_table.py
 Created:      2021/02/026
-Last Changed:
+Last Changed: 2022/03/14
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -25,19 +25,26 @@ root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 from __future__ import print_function
 from pathlib import Path
 import argparse
+import time
 import os
 import re
 
 # Third party imports.
 import numpy as np
 import pandas as pd
-from statsmodels.stats import multitest
 import requests
 
 # Local application imports.
 
+"""
+Syntax:
+./add_ie_results_to_mr_table.py \
+    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected/merged_decon_results.txt.gz \
+    -t
+"""
+
 # Metadata
-__program__ = "Merge MR and decon results"
+__program__ = "Add Interaction eQTL results to MR Table"
 __author__ = "Martijn Vochteloo"
 __maintainer__ = "Martijn Vochteloo"
 __email__ = "m.vochteloo@rug.nl"
@@ -55,28 +62,16 @@ class main():
     def __init__(self):
         # Get the command line arguments.
         arguments = self.create_argument_parser()
+        self.decon_path = getattr(arguments, 'decon_path')
         self.token = getattr(arguments, 'token')
 
         # Set variables.
-        self.input_file = "Supplementary Table 11 - MR findings passing suggestive threshold.xlsx"
-        self.indir = "../data/"
+        self.table_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/data/2022-03-14-Supplementary_Table_12_MR_findings_passing_suggestive_threshold.xlsx"
         self.sheet_name = 'TopMR'
-        self.table_ea = "Effect Allele"
-        self.decon_path = "../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv"
-        self.alleles_path = "../../deconvolution/matrix_preparation/cortex_eur_cis/create_matrices/genotype_alleles.txt.gz"
-        self.drop_columns = ['eQTL SNP',
-                             'LD R-squared',
-                             'Astrocyte Beta',
-                             'EndothelialCell Beta',
-                             'Macrophage Beta',
-                             'Neuron Beta',
-                             'Oligodendrocyte Beta',
-                             'Astrocyte FDR',
-                             'EndothelialCell FDR',
-                             'Macrophage FDR',
-                             'Neuron FDR',
-                             'Oligodendrocyte FDR',
-                             'Number of cell types with significant interaction (FDR<0.05)',]
+        self.table_ea_column = "Effect Allele"
+        self.table_decon_snp_column = "eQTL SNP"
+        self.table_ld_r2_column = "LD R-squared"
+        self.table_n_ieqtls_column = "Number of cell types with significant interaction (FDR<0.05)"
         self.minimal_ld = 0.8
 
         # Set variables.
@@ -95,6 +90,12 @@ class main():
                             version="{} {}".format(__program__,
                                                    __version__),
                             help="show program's version number and exit.")
+        parser.add_argument("-d",
+                            "--decon_path",
+                            type=str,
+                            required=True,
+                            help="The path to the deconvolution "
+                                 "results matrix.")
         parser.add_argument("-t",
                             "--token",
                             type=str,
@@ -106,124 +107,176 @@ class main():
     def start(self):
         self.print_arguments()
 
-        print("")
-        print("### Step1 ###")
-        print("Loading MR table.")
-        df = self.load_file(os.path.join(self.indir, self.input_file), skiprows=1, index_col=None, sheet_name=self.sheet_name)
-        order = df.columns
-        df.drop(self.drop_columns, axis=1, inplace=True)
+        print("Loading data.")
+        table_df = self.load_file(self.table_path, header=0, index_col=None, skiprows=1, sheet_name=self.sheet_name)
+        decon_df = self.load_file(self.decon_path, header=0, index_col=None)
 
-        print("")
-        print("### Step2 ###")
-        print("Loading deconvolution table.")
-        decon_df, indices = self.preprocess_decon_df(self.load_file(self.decon_path))
+        print("Pre-process data.")
+        table_df.dropna(axis=0, how="all", inplace=True)
+        table_df.index = table_df["Ensembl Gene ID"].astype(str) + "_" + table_df["Chromosome"].astype(int).astype(str) + ":" + table_df["Position"].astype(int).astype(str) + ":" + table_df["SNP"].astype(str)
+        print(table_df)
+        print(list(table_df.columns))
 
-        # Add alleles.
-        alleles_df = self.load_file(self.alleles_path, index_col=None)
-        alleles_df.columns = ["SNP", "Alleles", "MinorAllele"]
-        snp_to_alles_dict = dict(zip(alleles_df["SNP"], alleles_df["Alleles"]))
-        decon_df["DeconAlleles"] = decon_df["SNPName"].map(snp_to_alles_dict)
-        decon_df["DeconQTLAlleleAssessed"] = decon_df["DeconAlleles"].str.split("/", n=1, expand=True)[1]
-        del alleles_df
+        snp_info_df = decon_df["SNP"].str.split(":", n=None, expand=True)
+        snp_info_df.columns = ["Chromosome", "Position", "SNP", "Alleles"]
+        snp_info_df = pd.concat([decon_df[["Gene"]], snp_info_df], axis=1)
+        index = snp_info_df["Gene"] + "_" + snp_info_df["Chromosome"] + ":" + snp_info_df["Position"] + ":" + snp_info_df["SNP"]
+        decon_df.index = index
+        decon_df.columns = [col.replace("beta", "Beta").replace("BH-FDR", "FDR") for col in decon_df.columns]
+        print(decon_df)
+        print(list(decon_df.columns))
 
-        print("")
-        print("### Step3 ###")
-        print("Set identical index.")
-        df.index = df["Ensembl Gene ID"].astype(str) + df["SNP"].astype(str)
-        decon_df.index = decon_df["ProbeName"].astype(str) + decon_df["SNP"].astype(str)
+        print("Checking if all columns are present")
+        for col in [self.table_ea_column, self.table_decon_snp_column, self.table_ld_r2_column, self.table_n_ieqtls_column]:
+            if col not in table_df.columns:
+                print("Error, column '{}' is missing".format(col))
+                exit()
+        cell_types = [x.split(" ")[0] for x in decon_df.columns if "pvalue" in x]
+        for ct in cell_types:
+            if "{} Beta".format(ct) not in decon_df.columns:
+                print("Error, column '{} Beta' is missing".format(ct))
+                exit()
+            if "{} FDR".format(ct) not in decon_df.columns:
+                print("Error, column '{} FDR' is missing".format(ct))
+                exit()
+        print("\tValid.")
 
-        overlap = len(set(df.index).intersection(set(decon_df.index)))
-        print("  {} / {} [{:.2f}%] of the rows have a match".format(overlap, df.shape[0], (100/df.shape[0])*overlap))
+        print("Checking overlap")
+        table_indices = set(table_df.index)
+        decon_indices = set(decon_df.index)
+        overlap = len(table_indices.intersection(decon_indices))
+        print("\t{} / {} [{:.2f}%] of the rows have an exact match".format(overlap, len(table_indices), (100 / len(table_indices)) * overlap))
+        #
+        # print("Constructing the MR SNP link table.")
+        # n_rows = table_df.shape[0]
+        # n_exact_match = 0
+        # n_proxy_found = 0
+        # n_missing = 0
+        # n_excluded = 0
+        # links = []
+        # last_print_time = None
+        # for i, (index, row) in enumerate(table_df.iterrows()):
+        #     # Update user on progress.
+        #     now_time = int(time.time())
+        #     if (last_print_time is None or (now_time - last_print_time) >= 30 or i == (n_rows - 1)):
+        #         print("\t{:,}/{:,} rows processed [{:.2f}%]".format(i, (n_rows - 1), (100 / (n_rows - 1)) * i))
+        #         last_print_time = now_time
+        #
+        #     id = row["ID"]
+        #     if index in decon_indices:
+        #         links.append([id, index, index, row["SNP"], 1, 1])
+        #         n_exact_match += 1
+        #     else:
+        #         # Check if the instrument snp is in high ld with the ieQTL snp.
+        #         gene = row["Ensembl Gene ID"]
+        #         instrument_snp = row["SNP"]
+        #         effect_allele = row[self.table_ea_column]
+        #         if str(row["Proxy SNP"]).startswith("rs"):
+        #             instrument_snp = row["Proxy SNP"]
+        #
+        #         # Get all ieQTLs tested for this gene.
+        #         gene_decon_df_subset = decon_df.loc[decon_df["Gene"] == gene, ["Gene", "SNP", "Allele assessed"]].copy()
+        #         if len(gene_decon_df_subset.index) > 0:
+        #             gene_decon_df_subset["SNP"] = gene_decon_df_subset["SNP"].str.split(":", n=None, expand=True)[2]
+        #
+        #             match_index = None
+        #             match_snp = None
+        #             match_aa = None
+        #             match_r2 = 0
+        #             match_allele_combinations = None
+        #             for ld_option_index, ld_option_row in gene_decon_df_subset.iterrows():
+        #                 info = self.get_ldpair_info(instrument_snp, ld_option_row["SNP"])
+        #
+        #                 if info["WARNING"] is np.nan and info["R2"] != np.nan and info["R2"] > match_r2:
+        #                     match_index = ld_option_index
+        #                     match_snp = ld_option_row["SNP"]
+        #                     match_aa = ld_option_row["Allele assessed"]
+        #                     match_r2 = info["R2"]
+        #                     match_allele_combinations = info["matching"]
+        #
+        #             if match_r2 >= self.minimal_ld:
+        #                 flip = 1
+        #                 if [effect_allele, match_aa] not in match_allele_combinations:
+        #                     flip = -1
+        #                 links.append([id, index, match_index, match_snp, match_r2, flip])
+        #                 n_proxy_found += 1
+        #             else:
+        #                 links.append([id, index, np.nan, np.nan, np.nan, np.nan])
+        #                 n_missing += 1
+        #         else:
+        #             links.append([id, index, np.nan, np.nan, np.nan, np.nan])
+        #             n_excluded += 1
+        #
+        # print("\tN-rows with exact match: {:,} [{:.2f}%]".format(n_exact_match, (100 / n_rows) * n_exact_match))
+        # print("\tN-rows with proxy SNP found: {:,} [{:.2f}%]".format(n_proxy_found, (100 / n_rows) * n_proxy_found))
+        # print("\tN-rows with NaN: {:,} [{:.2f}%]".format(n_missing, (100 / n_rows) * n_missing))
+        # print("\tN-rows whose genes were excluded: {:,} [{:.2f}%]".format(n_excluded, (100 / n_rows) * n_excluded))
+        # print("")
+        #
+        # print("Saving link file")
+        # links_df = pd.DataFrame(links, columns=["ID", "table index", "decon index", self.table_decon_snp_column, self.table_ld_r2_column, "flip"])
+        # print(links_df)
+        # self.save_file(df=links_df,
+        #                outpath=os.path.join(self.outdir, "links.txt.gz"),
+        #                header=True,
+        #                index=False)
 
-        print("")
-        print("### Step5 ###")
-        print("Construct merge data frame.")
-        merge_data = []
-        filled = 0
-        for i, (index, row) in enumerate(df.iterrows()):
-            # if row["Gene"] not in ["CYP24A1", "CLECL1"]:
-            #     continue
+        links_df = self.load_file(os.path.join(self.outdir, "links.txt.gz"), header=0, index_col=None)
+        print(links_df)
 
-            print("\tWorking on {}/{} {:.2f}%]".format(i, df.shape[0], (100 / df.shape[0])*i))
+        print("Post-processing")
+        # Check indices are correct.
+        if (list(table_df["ID"]) != list(links_df["ID"])) or (list(table_df.index) != list(links_df["table index"])):
+            print("Error, table indices do not match link dataframe.")
+            exit()
 
-            instrument_snp = row["SNP"]
+        # Reorder the decon frame.
+        links_df.index = links_df["table index"]
+        decon_subset_df = links_df.merge(decon_df, left_on="decon index", right_index=True, how="left")
 
-            # check if index is in decon table.
-            if index in decon_df.index:
-                print("\t  Found match in deconvolution table.")
+        # Flip the beta's.
+        for ct in cell_types:
+            decon_subset_df["{} Beta".format(ct)] = decon_subset_df["{} Beta".format(ct)] * decon_subset_df["flip"]
 
-                decon_data = decon_df.loc[index, :]
+        # Calculate the number of significant interactions.
+        decon_subset_df[self.table_n_ieqtls_column] = (decon_subset_df.loc[:, ["{} FDR".format(ct) for ct in cell_types]] <= 0.05).sum(axis=1)
 
-                beta_values = decon_data.loc[indices["beta"]].copy()
-                if decon_data["DeconQTLAlleleAssessed"] != row[self.table_ea]:
-                    beta_values = beta_values * -1
+        # Change the index to the table index.
+        table_df.index = table_df["ID"]
+        decon_subset_df.index = decon_subset_df["ID"]
 
-                fdr_values = decon_data.loc[indices["FDR"]]
-                n_signif = fdr_values[fdr_values < 0.05].count()
+        # Subset the right columns.
+        columns_of_interest = [self.table_decon_snp_column, self.table_ld_r2_column] + ["{} Beta".format(ct) for ct in cell_types] + ["{} FDR".format(ct) for ct in cell_types] + [self.table_n_ieqtls_column]
+        decon_subset_df = decon_subset_df.loc[:, columns_of_interest]
 
-                merge_data.append([decon_data["SNP"], 1] + list(beta_values.values) + list(fdr_values.values) + [n_signif])
-                filled += 1
+        # Set the existing columns to nan.
+        for col in columns_of_interest:
+            if col in table_df.columns:
+                table_df[col] = np.nan
             else:
-                # Check if there is a decon result with a different SNP.
-                gene_decon_df_subset = decon_df.loc[decon_df["ProbeName"] == row["Ensembl Gene ID"],:].copy()
+                print("Error, column '{}' not found in table".format(col))
 
-                if len(gene_decon_df_subset.index) > 0:
-                    # Test if there is a SNP in LD.
-                    best_match = None
-                    max_r2 = 0
-                    for _, ld_option in gene_decon_df_subset.iterrows():
-                        info = self.get_ldpair_info(instrument_snp,
-                                                    ld_option["SNP"])
-                        if info["WARNING"] is np.nan and info["R2"] != np.nan and info["R2"] > max_r2:
-                            info["data"] = ld_option
-                            best_match = info
-                            max_r2 = info["R2"]
+        print(table_df[columns_of_interest])
+        print(decon_subset_df)
 
-                    if max_r2 >= self.minimal_ld:
-                        # LD is high enough.
-                        print("\t  Found SNP in deconvolution table that is in high LD with instrument SNP.")
-
-                        decon_data = best_match["data"]
-
-                        mr_ea_decon_aa = [row[self.table_ea], decon_data["DeconQTLAlleleAssessed"]]
-
-                        beta_values = decon_data.loc[indices["beta"]].copy()
-                        if mr_ea_decon_aa not in best_match["matching"]:
-                            beta_values = beta_values * -1
-
-                        fdr_values = decon_data.loc[indices["FDR"]]
-                        n_signif = fdr_values[fdr_values < 0.05].count()
-
-                        merge_data.append([decon_data["SNP"], best_match["R2"]] + list(beta_values.values) + list(fdr_values.values) + [
-                                              n_signif])
-                        filled += 1
-                        continue
-                    else:
-                        # No LD match found.
-                        pass
-
-                print("\t  No match.")
-                merge_data.append([np.nan] * 12 + [0])
-        exit()
-        print("  {} / {} [{:.2f}%] of the rows are matched.".format(filled, df.shape[0], (100/df.shape[0])*filled))
-        merge_df = pd.DataFrame(merge_data, index=df.index, columns=self.drop_columns)
-        merge_df.to_pickle(os.path.join(self.outdir, "merge_df.pkl"))
-
-        print("")
-        print("### Step6 ###")
-        print("Combine data.")
-        combined_df = pd.concat([df, merge_df], axis=1)
-        combined_df = combined_df.loc[:, order]
-        combined_df.reset_index(drop=True, inplace=True)
-        print(combined_df)
+        print("Merging tables")
+        table_df.update(decon_subset_df)
+        print(table_df)
 
         print("")
         print("### Step7 ###")
         print("Save data.")
-        self.save_file(combined_df, os.path.join(self.outdir, self.input_file), sheet_name=self.sheet_name, na_rep="NA", index=False)
+        # self.save_file(table_df,
+        #                outpath=os.path.join(self.outdir, os.path.basename(self.table_path).replace(".xlsx", ".txt.gz")),
+        #                index=False)
+        self.save_file(table_df,
+                       outpath=os.path.join(self.outdir, os.path.basename(self.table_path)),
+                       sheet_name=self.sheet_name,
+                       na_rep="NA",
+                       index=False)
 
     @staticmethod
-    def load_file(path, sep="\t", header=0, index_col=0, nrows=None,
+    def load_file(path, header, index_col, sep="\t", nrows=None,
                   skiprows=0, sheet_name=None):
         if path.endswith(".xlsx"):
             df = pd.read_excel(path, header=header, index_col=index_col,
@@ -231,49 +284,30 @@ class main():
         else:
             df = pd.read_csv(path, sep=sep, header=header, index_col=index_col,
                              nrows=nrows, skiprows=skiprows)
+        print("\tLoaded dataframe: {} "
+              "with shape: {}".format(os.path.basename(path),
+                                      df.shape))
         return df
 
     @staticmethod
-    def save_file(df, outpath, sheet_name=None, na_rep=None, header=True, index=True):
-        df.to_excel(outpath, sheet_name=sheet_name, na_rep=na_rep, header=header, index=index)
+    def save_file(df, outpath, header=True, index=True, sep="\t", na_rep="NA",
+                  sheet_name="Sheet1"):
+        if outpath.endswith('xlsx'):
+            df.to_excel(outpath,
+                        sheet_name=sheet_name,
+                        na_rep=na_rep,
+                        header=header,
+                        index=index)
+        else:
+            compression = 'infer'
+            if outpath.endswith('.gz'):
+                compression = 'gzip'
+
+            df.to_csv(outpath, sep=sep, index=index, header=header,
+                      compression=compression)
         print("\tSaved dataframe: {} "
               "with shape: {}".format(os.path.basename(outpath),
                                       df.shape))
-
-    def preprocess_decon_df(self, df):
-        beta_indices = []
-        fdr_indices = []
-
-        # Extract the p_values and convert to fdr.
-        tmp = df.copy()
-        data = []
-        indices = []
-        for col in tmp.columns:
-            if col.endswith("_pvalue"):
-                data.append(multitest.multipletests(tmp.loc[:, col], method='fdr_bh')[1])
-                indice_name = col.replace("CellMapNNLS_", "").replace("_pvalue", "") + " FDR"
-                fdr_indices.append(indice_name)
-                indices.append(indice_name)
-            elif col.endswith(":GT"):
-                data.append(tmp.loc[:, col])
-                indice_name = col.split("_")[2].split(":")[0] + " Beta"
-                beta_indices.append(indice_name)
-                indices.append(indice_name)
-        fdr_beta_df = pd.DataFrame(data, index=indices, columns=tmp.index).T
-
-        del tmp
-
-        # Split the index.
-        index_data = []
-        for index in fdr_beta_df.index:
-            probe_name = index.split("_")[0]
-            snp_name = "_".join(index.split("_")[1:])
-            chromosome, position, rs, _ = snp_name.split(":")
-            index_data.append([probe_name, snp_name, chromosome, position, rs])
-        index_df = pd.DataFrame(index_data, index=fdr_beta_df.index, columns=["ProbeName", "SNPName", "Chromosome", "Position", "SNP"])
-        fdr_beta_df = index_df.merge(fdr_beta_df, left_index=True, right_index=True)
-
-        return fdr_beta_df, {"beta": beta_indices, "FDR": fdr_indices, "all": indices}
 
     def get_ldpair_info(self, rs1, rs2):
         url = 'https://ldlink.nci.nih.gov/LDlinkRest/ldpair?var1={}&var2={}&pop=EUR&token={}'.format(rs1, rs2, self.token)
@@ -325,10 +359,11 @@ class main():
 
     def print_arguments(self):
         print("Arguments:")
-        print("  > Table path: {}".format(os.path.join(self.indir, self.input_file)))
-        print("  > Sheet name: {}".format(self.sheet_name))
         print("  > Deconvolution path: {}".format(self.decon_path))
-        print("  > Alleles path: {}".format(self.alleles_path))
+        print("  > Table path: {}".format(self.table_path))
+        print("  > Sheet name: {}".format(self.sheet_name))
+        print("  > Table affect allele column: {}".format(self.table_ea_column))
+        print("  > Minimal LD: {}".format(self.minimal_ld))
         print("  > Output directory: {}".format(self.outdir))
         print("")
 

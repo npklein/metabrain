@@ -3,7 +3,7 @@
 """
 File:         print_mr_and_decon_table.py
 Created:      2021/02/16
-Last Changed:
+Last Changed: 2022/02/24
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -46,16 +46,23 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 class main():
     def __init__(self):
-        self.table_path = "../data/SupplementaryTable8-MR_findings_passing_suggestive_threshold_gaps_filled.xlsx"
-        self.cell_types = ["Astrocyte_FDR", "EndothelialCell_FDR", "Macrophage_FDR", "Neuron_FDR", "Oligodendrocyte_FDR"]
+        self.table_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/paper_scripts/add_ie_results_to_mr_table/2022-03-14-Supplementary_Table_12_MR_findings_passing_suggestive_threshold.xlsx"
+        self.cell_types = ['Astrocyte FDR', 'EndothelialCell FDR', 'Excitatory FDR', 'Inhibitory FDR', 'Microglia FDR', 'Oligodendrocyte FDR', 'OtherNeuron FDR']
+        self.ct_trans_dict = {'Astrocyte': 'astrocytes',
+                              'EndothelialCell': 'endothelial cells',
+                              'Excitatory': 'excitatory neurons',
+                              'Inhibitory': 'inhibitory neurons',
+                              'Microglia': "microglia's",
+                              'Oligodendrocyte': 'oligodendrocytes',
+                              'OtherNeuron': 'other neurons'
+                              }
         self.traits = {
-            'ADHD': ['ADHD'],
-            'AD': ['Alzheimer’s disease'],
-            'ALS': ['Amyotrophic Lateral Sclerosis'],
-            'autism': ['Autism Spectrum Disorder'],
-            'bipolar disorder': ['bipolar disorder'],
-            'depression': ['Depression (broad)'],
-            'epilepsy': ['epilepsy, all documented cases',
+            "Alzheimer’s disease": ['Alzheimer’s disease'],
+            'Attention deficit/hyperactivity disorder (ADHD)': ['ADHD'],
+            'Amyotrophic lateral sclerosis': ['Amyotrophic Lateral Sclerosis'],
+            'Autism spectrum disorder ': ['Autism Spectrum Disorder'],
+            'Bipolar disorder': ['bipolar disorder'],
+            'Epilepsy': ['epilepsy, all documented cases',
                          'focal epilepsy, all documented cases',
                          'focal epilepsy, documented hippocampal sclerosis',
                          'focal epilepsy, documented lesion negative',
@@ -64,18 +71,21 @@ class main():
                          'generalized epilepsy, all documented cases',
                          'juvenile absence epilepsy',
                          'juvenile myoclonic epilepsy '],
-            'frontotemporal dementia': ['Frontotemporal Dementia'],
-            'years of schooling and fluid intelligence': ['Intelligence',
-                                                          'Years of schooling'],
-            'MS': ['multiple sclerosis'],
-            'PD': ['Parkinson’s disease'],
-            'schizophrenia': ['schizophrenia'],
-            'brain volume': ['Caudate volume',
-                             'Hippocampus volume',
+            'Frontotemporal dementia': ['Frontotemporal Dementia',
+                                        'frontotemporal dementia (TDP subtype)'],
+            'Major depressive disorder': ['Depression (broad)'],
+            'Multiple Sclerosis': ['multiple sclerosis'],
+            "Parkinson's disease": ["Parkinson's disease"],
+            'Schizophrenia': ['schizophrenia'],
+            'Years of schooling and cognitive function': ['Years of schooling',
+                                                          'cognitive function'],
+            'Brain volume': ['Hippocampus volume',
                              'Intracranial volume',
-                             'Pallidum volume',
                              'Putamen volume',
-                             'Thalamus volume']}
+                             'Thalamus volume',
+                             'Amygdala volume'
+                             ]
+        }
         self.outcomes = []
         for outcome in self.traits.values():
             self.outcomes.extend(outcome)
@@ -92,7 +102,7 @@ class main():
         sheets_dict = self.load_file(self.table_path, header=0, index_col=0)
 
         for sheet_name, df in sheets_dict.items():
-            for outcome in df["outcome"].unique():
+            for outcome in df["Outcome"].unique():
                 if outcome not in self.outcomes:
                     print("Missing outcome '{}' in traits dict".format(outcome))
                     exit()
@@ -101,8 +111,8 @@ class main():
             stats_data = []
             stats_index = []
             for trait, outcome_list in self.traits.items():
-                trait_df = df.loc[df["outcome"].isin(outcome_list), :].copy()
-                trait_df.index = trait_df["SNP"] + "_" + trait_df["gene"]
+                trait_df = df.loc[df["Outcome"].isin(outcome_list), :].copy()
+                trait_df.index = trait_df["SNP"] + "_" + trait_df["Gene"]
                 n_total = trait_df.shape[0]
                 if len(trait_df.index) != n_total:
                     print("Unique SNP - gene assumptions doesnt hold.")
@@ -111,20 +121,20 @@ class main():
                 trait_df = trait_df.loc[~trait_df[self.cell_types].isnull().any(axis=1)]
                 n_tested = trait_df.shape[0]
 
-                trait_df = trait_df.loc[trait_df[self.cell_types].min(axis=1) < 0.05, :]
+                trait_df = trait_df.loc[trait_df[self.cell_types].min(axis=1) <= 0.05, :]
                 n_hits = trait_df.shape[0]
 
                 decon_df = trait_df[self.cell_types].copy()
-                decon_df.columns = [x.split("_")[0] for x in decon_df.columns]
+                decon_df.columns = [x.split(" ")[0] for x in decon_df.columns]
 
-                mr_df = trait_df[["pass bonferroni correction", "coloc.relaxed", "coloc.strict"]].copy()
-                mr_df["MR"] = mr_df["pass bonferroni correction"] == 1
-                mr_df["coloc"] = (mr_df["coloc.relaxed"] + mr_df["coloc.relaxed"]) >= 1
-                mr_df.drop(["pass bonferroni correction", "coloc.relaxed", "coloc.strict"], axis=1, inplace=True)
+                mr_df = trait_df[['Passes Bonferroni correction', 'Coloc Relaxed', 'Coloc Strict']].copy()
+                mr_df['MR'] = mr_df['Passes Bonferroni correction'] == 1
+                mr_df['coloc'] = (mr_df['Coloc Relaxed'] + mr_df['Coloc Strict']) >= 1
+                mr_df.drop(['Passes Bonferroni correction', 'Coloc Relaxed', 'Coloc Strict'], axis=1, inplace=True)
 
                 del trait_df
 
-                result_df = decon_df[decon_df < 0.05].count().to_frame()
+                result_df = decon_df[decon_df <= 0.05].count().to_frame()
                 result_df.columns = [trait]
 
                 stats_data.append([n_total, n_tested, n_hits])
@@ -167,22 +177,18 @@ class main():
 
             #####################################################################
 
-            suffix = ""
-            if n_hits > 1:
-                suffix = "s"
-
             decon_hits = {}
-            decon_order = [x.lower() + "s" for x in list(decon_df.columns)]
+            decon_order = [self.ct_trans_dict[x] for x in list(decon_df.columns)]
             for index, row in decon_df.iterrows():
                 gene = index.split("_")[1]
-                signif_cell_types = " and ".join([x.lower() + "s" for x in list(row[row < 0.05].index.values)])
+                signif_cell_types = " / ".join([self.ct_trans_dict[x] for x in list(row[row <= 0.05].index.values)])
                 if signif_cell_types in decon_hits:
                     genes = decon_hits[signif_cell_types]
                     genes.append(gene)
                     decon_hits[signif_cell_types] = genes
                 else:
                     decon_hits[signif_cell_types] = [gene]
-                if "and" in signif_cell_types and signif_cell_types not in decon_order:
+                if "/" in signif_cell_types and signif_cell_types not in decon_order:
                     decon_order.append(signif_cell_types)
 
             part2_parts = []
@@ -190,11 +196,9 @@ class main():
                 if cell_type in decon_hits:
                     genes = decon_hits[cell_type]
                     if len(genes) > 0:
-                        if cell_type == "endothelialcells":
-                            cell_type = "endothelial cells"
                         part2_parts.append("{} with {} ({})".format(len(genes), cell_type, self.special_join(genes)))
 
-            part2 = "In total, {} eQTL instrument{} where significant ieQTLs, ".format(n_hits, suffix) + self.special_join(part2_parts) + "."
+            part2 = "In total, {} eQTL instrument{} were significant ieQTLs, ".format(n_hits, "s" if n_hits > 1 else "") + self.special_join(part2_parts) + "."
 
             #####################################################################
 
@@ -227,12 +231,9 @@ class main():
                     genes = mr_hits[key]
                     if len(genes) > 0:
                         text = ""
-                        prefix = ""
-                        if len(genes) > 1:
-                            prefix = "s"
                         if key != "both MR and colocalization":
                             text = "only "
-                        part3_parts.append("{} eQTL instrument{} passed the significance threshold {}for {} ({})".format(len(genes), prefix, text, key, self.special_join(genes)))
+                        part3_parts.append("{} eQTL instrument{} passed the significance threshold {}for {} ({})".format(len(genes), "s" if n_hits > 1 else "", text, key, self.special_join(genes)))
                 part3 = "Of these, " + self.special_join(part3_parts) + "."
 
             #####################################################################

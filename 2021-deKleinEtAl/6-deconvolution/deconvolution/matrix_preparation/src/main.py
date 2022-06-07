@@ -1,7 +1,7 @@
 """
 File:         main.py
 Created:      2020/10/08
-Last Changed: 2020/10/27
+Last Changed: 2021/10/28
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -33,11 +33,11 @@ from utilities import prepare_output_dir
 from logger import Logger
 from .steps.combine_gte_files import CombineGTEFiles
 from .steps.combine_eqtlprobes import CombineEQTLProbes
-from .steps.create_cohort_matrix import CreateCohortMatrix
+from .steps.create_dataset_matrix import CreateDatasetMatrix
 from .steps.create_matrices import CreateMatrices
-from .steps.correct_cohort_effects import CorrectCohortEffects
+from .steps.correct_dataset_effects import CorrectDatasetEffects
 from .steps.perform_deconvolution import PerformDeconvolution
-from .steps.create_tech_cov_matrix import CreateTechCovsMatrix
+from .steps.create_correction_matrix import CreateCorrectionMatrix
 from .steps.create_covs_matrix import CreateCovsMatrix
 from .steps.create_extra_covs_matrix import CreateExtraCovsMatrix
 from .steps.normal_transform_matrix import NormalTransformMatrix
@@ -72,17 +72,17 @@ class Main:
     @staticmethod
     def create_force_dict(force_steps):
         order = ['combine_gte_files', 'combine_eqtlprobes',
-                 'create_cohort_matrix', 'create_matrices',
-                 'correct_cohort_effects', 'perform_deconvolution',
-                 'create_tech_covs_matrix', 'create_covs_matrix',
+                 'create_dataset_matrix', 'create_matrices',
+                 'correct_dataset_effects', 'perform_deconvolution',
+                 'create_correction_matrix', 'create_covs_matrix',
                  'create_extra_covs_matrix', 'normal_transform_matrix']
-        step_dependencies = {'combine_gte_files': {'create_cohort_matrix', 'create_matrices', 'create_tech_covs_matrix', 'create_covs_matrix', 'create_extra_covs_matrix'},
+        step_dependencies = {'combine_gte_files': {'create_dataset_matrix', 'create_matrices', 'create_correction_matrix', 'create_covs_matrix', 'create_extra_covs_matrix'},
                              'combine_eqtlprobes': {'create_matrices'},
-                             'create_cohort_matrix': {'correct_cohort_effects', 'create_tech_covs_matrix'},
-                             'create_matrices': {'correct_cohort_effects', 'perform_deconvolution', 'create_tech_covs_matrix', 'create_cov_matrix'},
-                             'correct_cohort_effects': {'perform_deconvolution'},
+                             'create_dataset_matrix': {'correct_dataset_effects', 'create_correction_matrix'},
+                             'create_matrices': {'correct_dataset_effects', 'perform_deconvolution', 'create_correction_matrix', 'create_cov_matrix'},
+                             'correct_dataset_effects': {'perform_deconvolution'},
                              'perform_deconvolution': {'create_cov_matrix'},
-                             'create_tech_covs_matrix': {},
+                             'create_correction_matrix': {},
                              'create_covs_matrix': {},
                              'create_extra_covs_matrix': {'normal_transform_matrix'},
                              'normal_transform_matrix': {}}
@@ -135,18 +135,18 @@ class Main:
         cepf.clear_variables()
         self.log.info("")
 
-        # Step3. Create the cohort matrix.
+        # Step3. Create the dataset matrix.
         self.log.info("### STEP3 ###")
         self.log.info("")
-        ccm = CreateCohortMatrix(
-            settings=self.settings.get_setting('create_cohort_matrix'),
+        cdm = CreateDatasetMatrix(
+            settings=self.settings.get_setting('create_dataset_matrix'),
             log=self.log,
-            sample_dict=cgtef.get_sample_dict(reverse=True),
+            dts_dict=cgtef.get_dataset_to_samples_dict(),
             sample_order=cgtef.get_sample_order(),
-            force=self.force_dict['create_cohort_matrix'],
+            force=self.force_dict['create_dataset_matrix'],
             outdir=self.outdir)
-        ccm.start()
-        ccm.clear_variables()
+        cdm.start()
+        cdm.clear_variables()
         self.log.info("")
 
         # Step4. Create the ordered matrices.
@@ -165,21 +165,21 @@ class Main:
         cm.clear_variables()
         self.log.info("")
 
-        # Step5. Correct the gene expression for cohort effects.
-        self.log.info("### STEP5 ###")
-        self.log.info("")
-        cce = CorrectCohortEffects(
-            settings=self.settings.get_setting('correct_cohort_effects'),
-            log=self.log,
-            cohort_file=ccm.get_cohort_file(),
-            cohort_df=ccm.get_cohort_df(),
-            sign_expr_file=cm.get_sign_expr_file(),
-            sign_expr_df=cm.get_sign_expr_df(),
-            force=self.force_dict['correct_cohort_effects'],
-            outdir=self.outdir)
-        cce.start()
-        cce.clear_variables()
-        self.log.info("")
+        # # Step5. Correct the gene expression for dataset effects.
+        # self.log.info("### STEP5 ###")
+        # self.log.info("")
+        # cde = CorrectDatasetEffects(
+        #     settings=self.settings.get_setting('correct_dataset_effects'),
+        #     log=self.log,
+        #     dataset_file=cdm.get_dataset_file(),
+        #     dataset_df=cdm.get_dataset_df(),
+        #     sign_expr_file=cm.get_sign_expr_file(),
+        #     sign_expr_df=cm.get_sign_expr_df(),
+        #     force=self.force_dict['correct_dataset_effects'],
+        #     outdir=self.outdir)
+        # cde.start()
+        # cde.clear_variables()
+        # self.log.info("")
 
         # Step6. Perform NNLS deconvolution.
         self.log.info("### STEP6 ###")
@@ -189,8 +189,8 @@ class Main:
             log=self.log,
             sign_file=cm.get_sign_file(),
             sign_df=cm.get_sign_df(),
-            sign_expr_file=cce.get_sign_expr_cc_file(),
-            sign_expr_df=cce.get_sign_expr_cc_df(),
+            sign_expr_file=cm.get_sign_expr_file(),
+            sign_expr_df=cm.get_sign_expr_df(),
             force=self.force_dict['perform_deconvolution'],
             outdir=self.outdir)
         pd.start()
@@ -200,17 +200,17 @@ class Main:
         # Step7. Filter technical covariates.
         self.log.info("### STEP7 ###")
         self.log.info("")
-        ctcm = CreateTechCovsMatrix(
-            settings=self.settings.get_setting('create_tech_covs_matrix'),
+        ccorm = CreateCorrectionMatrix(
+            settings=self.settings.get_setting('create_correction_matrix'),
             log=self.log,
-            cohort_file=ccm.get_cohort_file(),
-            cohort_df=ccm.get_cohort_df(),
+            dataset_file=cdm.get_dataset_file(),
+            dataset_df=cdm.get_dataset_df(),
             sample_dict=cgtef.get_sample_dict(),
             sample_order=cgtef.get_sample_order(),
-            force=self.force_dict['create_tech_covs_matrix'],
+            force=self.force_dict['create_correction_matrix'],
             outdir=self.outdir)
-        ctcm.start()
-        ctcm.clear_variables()
+        ccorm.start()
+        ccorm.clear_variables()
         self.log.info("")
 
         # Step8. Create the covariance matrix.
@@ -246,19 +246,19 @@ class Main:
             cecm.clear_variables()
             self.log.info("")
 
-            # Step10. Normal transform extra cov matrix.
-            self.log.info("### STEP10 ###")
-            self.log.info("")
-            cecm = NormalTransformMatrix(
-                settings=self.settings.get_setting('normal_transform_matrix'),
-                log=self.log,
-                df=cecm.get_df(),
-                inpath=cecm.get_outpath(),
-                force=self.force_dict['normal_transform_matrix'],
-                outdir=self.outdir)
-            cecm.start()
-            cecm.clear_variables()
-            self.log.info("")
+            # # Step10. Normal transform extra cov matrix.
+            # self.log.info("### STEP10 ###")
+            # self.log.info("")
+            # cecm = NormalTransformMatrix(
+            #     settings=self.settings.get_setting('normal_transform_matrix'),
+            #     log=self.log,
+            #     df=cecm.get_df(),
+            #     inpath=cecm.get_outpath(),
+            #     force=self.force_dict['normal_transform_matrix'],
+            #     outdir=self.outdir)
+            # cecm.start()
+            # cecm.clear_variables()
+            # self.log.info("")
 
         # End.
         self.log.info("")

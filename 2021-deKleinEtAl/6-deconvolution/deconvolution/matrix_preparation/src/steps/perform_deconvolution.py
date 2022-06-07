@@ -1,7 +1,7 @@
 """
 File:         perform_deconvolution.py
 Created:      2020/10/08
-Last Changed: 2020/11/20
+Last Changed: 2021/12/07
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -35,6 +35,7 @@ class PerformDeconvolution:
     def __init__(self, settings, log, sign_file, sign_df, sign_expr_file,
                  sign_expr_df, force, outdir):
         self.min_expr_cutoff = settings["min_expr_cutoff"]
+        self.cell_type_groups = settings["cell_type_groups"]
         self.log = log
         self.sign_file = sign_file
         self.sign_df = sign_df
@@ -90,7 +91,7 @@ class PerformDeconvolution:
         sign_df = self.perform_log2_transform(sign_df)
 
         # Shift the data to be positive.
-        self.log.info("Shifting data to be positive")
+        self.log.info("Shifting data to be positive if required")
         if sign_df.values.min() < 0:
             self.log.warning("\tSignature matrix is shifted.")
             sign_df = self.perform_shift(sign_df)
@@ -106,18 +107,33 @@ class PerformDeconvolution:
         self.log.info("Performing partial deconvolution.")
         decon_data = []
         residuals_data = []
+        recon_accuracy_data = []
         for _, sample in expr_df.T.iterrows():
+            # Model.
             proportions, rnorm = self.nnls(sign_df, sample)
+
+            # Calculate reconstruction accuracy.
+            recon_accuracy = self.calc_reconstruction_accuracy(y=sample,
+                                                               X=sign_df,
+                                                               betas=proportions)
+
+            # Save.
             decon_data.append(proportions)
             residuals_data.append(rnorm)
+            recon_accuracy_data.append(recon_accuracy)
 
         decon_df = pd.DataFrame(decon_data,
                                 index=expr_df.columns,
-                                columns=["{}NNLS_{}".format(*x.split("_")) for x in sign_df.columns])
+                                columns=sign_df.columns)
         residuals_df = pd.Series(residuals_data, index=expr_df.columns)
+        recon_accuracy = pd.Series(recon_accuracy_data, index=expr_df.columns)
 
         self.log.info("Estimated weights:")
         self.log.info(decon_df.mean(axis=0))
+        self.log.info("Average reconstruction accuracy: {:.2f} [SD: {:.2f}]".format(recon_accuracy.mean(), recon_accuracy.std()))
+
+        save_dataframe(df=decon_df, outpath=os.path.join(self.outdir, "NNLS_betas.txt.gz"),
+                       index=True, header=True, logger=self.log)
 
         # Make the weights sum up to 1.
         decon_df = self.sum_to_one(decon_df)
@@ -126,6 +142,20 @@ class PerformDeconvolution:
 
         # Calculate the average residuals.
         self.log.info("Average residual: {:.2f}".format(residuals_df.mean()))
+
+        save_dataframe(df=decon_df, outpath=os.path.join(self.outdir, "deconvolution_table_complete.txt.gz"),
+                       index=True, header=True, logger=self.log)
+
+        if self.cell_type_groups is not None:
+            self.log.info("Summing cell types.")
+            cell_type_group = np.array([self.cell_type_groups[ct] if ct in self.cell_type_groups else ct for ct in decon_df.columns], dtype=object)
+            cell_types = list(set(cell_type_group))
+            cell_types.sort()
+            summed_decon_df = pd.DataFrame(np.nan, index=decon_df.index, columns=cell_types)
+            for ct_group in cell_types:
+                summed_decon_df.loc[:, ct_group] = decon_df.loc[:, cell_type_group == ct_group].sum(axis=1)
+
+            decon_df = summed_decon_df
 
         return decon_df
 
@@ -166,6 +196,14 @@ class PerformDeconvolution:
         return nnls(A, b)
 
     @staticmethod
+    def calc_reconstruction_accuracy(y, X, betas):
+        y_hat = np.dot(X, betas)
+        residuals = y - y_hat
+        residuals_norm = np.linalg.norm(residuals)
+        y_hat_norm = np.linalg.norm(y)
+        return 1 - (residuals_norm * residuals_norm) / (y_hat_norm * y_hat_norm)
+
+    @staticmethod
     def sum_to_one(X):
         return X.divide(X.sum(axis=1), axis=0)
 
@@ -197,6 +235,7 @@ class PerformDeconvolution:
             self.log.info("  > Signature expression: {}".format(self.sign_expr_df.shape))
         else:
             self.log.info("  > Signature input path: {}".format(self.sign_expr_file))
+        self.log.info("  > Cell type groups: {}".format(self.cell_type_groups))
         self.log.info("  > Deconvolution output file: {}".format(self.outpath))
         self.log.info("  > Force: {}".format(self.force))
         self.log.info("")

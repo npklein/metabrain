@@ -29,6 +29,7 @@ import os
 
 # Third party imports.
 import pandas as pd
+from statsmodels.stats import multitest
 
 # Local application imports.
 
@@ -61,6 +62,12 @@ class main():
                      "cerebellum": {"decon": "../2020-11-20-decon-QTL/cis/cerebellum/decon_out/deconvolutionResults.csv",
                                     "eqtl": "../matrix_preparation/cerebellum_eur_cis/combine_eqtlprobes/eQTLprobes_combined.txt.gz",
                                     "alleles": "../matrix_preparation/cerebellum_eur_cis/create_matrices/genotype_alleles.txt.gz"}}
+        # self.data = {"cortex": {
+        #     "decon": "../2020-11-20-decon-QTL/trans/cortex/decon_out/deconvolutionResults.csv",
+        #     "eqtl": "../matrix_preparation/cortex_eur_trans/combine_eqtlprobes/eQTLprobes_combined.txt.gz",
+        #     "alleles": "../matrix_preparation/cortex_eur_trans/create_matrices/genotype_alleles.txt.gz"}
+        # }
+
         self.gene_info_path = "/groups/umcg-biogen/tmp01/annotation/gencode.v32.primary_assembly.annotation.collapsedGenes.ProbeAnnotation.TSS.txt.gz"
 
         # Set variables.
@@ -68,7 +75,8 @@ class main():
         if not os.path.exists(outdir):
             os.makedirs(outdir)
 
-        self.outfile = os.path.join(outdir, "Supplementary Table 7 - Deconvoluted eQTLs.xlsx")
+        self.outfile = os.path.join(outdir,"Supplementary Table 7 - Deconvoluted eQTLs.xlsx")
+        #self.outfile = os.path.join(outdir, "Trans deconvoluted eQTLs.xlsx")
 
     def start(self):
         self.print_arguments()
@@ -113,6 +121,10 @@ class main():
                     else:
                         new_columns.append(col)
                 decon_df.columns = new_columns
+                #
+                # # Add FDR.
+                # decon_fdr_df = self.bh_correct(decon_df)
+                # decon_df = decon_df.merge(decon_fdr_df, left_index=True, right_index=True)
 
                 # Load alleles data.
                 alleles_data = self.load_file(alleles_path, index_col=None)
@@ -146,6 +158,18 @@ class main():
               "with shape: {}".format(os.path.basename(path),
                                       df.shape))
         return df
+
+    @staticmethod
+    def bh_correct(pvalue_df):
+        fdr_data = []
+        indices = []
+        for col in pvalue_df.columns:
+            if col.endswith("pvalue"):
+                fdr_data.append(multitest.multipletests(pvalue_df.loc[:, col], method='fdr_bh')[1])
+                indices.append(col.replace("pvalue", "FDR"))
+        fdr_df = pd.DataFrame(fdr_data, index=indices, columns=pvalue_df.index)
+
+        return fdr_df.T
 
     def print_arguments(self):
         print("Arguments:")

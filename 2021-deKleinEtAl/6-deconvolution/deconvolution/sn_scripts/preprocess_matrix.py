@@ -48,11 +48,11 @@ __description__ = "{} is a program developed and maintained by {}. " \
 
 class main():
     def __init__(self):
-        self.infolder = "/groups/umcg-biogen/tmp03/input/ROSMAP-scRNAseq/2020-10-22-MVochteloo-Copy/"
-        self.sample_trans_path = "/groups/umcg-biogen/tmp03/input/ROSMAP-scRNAseq/meta/ROSMAP_IDkey.csv"
-        self.cis_eqtls_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR/Iteration1/eQTLProbesFDR0.05-ProbeLevel.txt.gz"
-        self.trans_eqtls_path = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/trans/2020-05-26-Cortex-EUR-AFR-noENA-noPCA/Iteration1/eQTLs-crossMappingEQTLsRemoved-FDR0.05.txt.gz"
-        self.outdir = "/groups/umcg-biogen/tmp03/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq"
+        self.infolder = "/groups/umcg-biogen/tmp01/input/ROSMAP-scRNAseq/2020-10-22-MVochteloo-Copy/"
+        self.sample_trans_path = "/groups/umcg-biogen/tmp01/input/ROSMAP-scRNAseq/meta/ROSMAP_IDkey.csv"
+        self.cis_eqtls_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/cis/2020-05-26-Cortex-EUR/Iteration1/eQTLProbesFDR0.05-ProbeLevel.txt.gz"
+        self.trans_eqtls_path = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-05-26-eqtls-rsidfix-popfix/trans/2020-05-26-Cortex-EUR-AFR-noENA-noPCA/Iteration1/eQTLs-crossMappingEQTLsRemoved-FDR0.05.txt.gz"
+        self.outdir = "/groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-11-03-ROSMAP-scRNAseq/expression_noSCTransform"
 
     def start(self):
         sample_trans_df = pd.read_csv(self.sample_trans_path, sep=",")[["projid", "wgs_id"]]
@@ -60,10 +60,9 @@ class main():
         sample_trans_dict = dict(zip(sample_trans_df.iloc[:, 0], sample_trans_df.iloc[:, 1]))
 
         samples = None
-        for inpath in glob.glob(os.path.join(self.infolder, "*.tsv")):
-            filename = os.path.basename(inpath.replace(".tsv", ".txt"))
-            split_filename = filename.split("_")
-            outpath = os.path.join(self.outdir, "_".join([split_filename[0].upper(), split_filename[1]]))
+        for inpath in glob.glob(os.path.join(self.infolder, "*_noSCTransform.tsv.gz")):
+            filename = os.path.basename(inpath.replace(".tsv.gz", ".txt.gz"))
+            outpath = os.path.join(self.outdir, filename)
             df = pd.read_csv(inpath, sep="\t", header=0, index_col=0)
 
             df.columns = [int(x) for x in df.columns]
@@ -78,6 +77,7 @@ class main():
 
             print(outpath, df.shape)
             df.to_csv(outpath, header=True, index=True, sep="\t")
+        exit()
 
         data = []
         for sample in samples:

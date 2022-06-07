@@ -22,6 +22,11 @@ A copy of the GNU General Public License can be found in the LICENSE file in the
 root directory of this source tree. If not, see <https://www.gnu.org/licenses/>.
 """
 
+"""
+Syntax:
+./matrix_preparation.py -h
+"""
+
 # Standard imports.
 
 # Third party imports.

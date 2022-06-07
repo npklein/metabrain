@@ -198,7 +198,7 @@ class main():
         for col in tmp.columns:
             if col.endswith("_pvalue"):
                 data.append(multitest.multipletests(tmp.loc[:, col], method='fdr_bh')[1])
-                indices.append("bulk_" + col.replace("CellMapNNLS_", "").replace("_pvalue", "") + "_interaction_FDR")
+                indices.append("bulk_" + col.replace("_pvalue", "") + "_interaction_FDR")
             elif col.endswith(":GT"):
                 data.append(tmp.loc[:, col])
                 indices.append("bulk_" + col.split("_")[2].split(":")[0] + "_interaction_beta")

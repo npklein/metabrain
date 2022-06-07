@@ -3,7 +3,7 @@
 """
 File:         create_decon_upsetplot.py
 Created:      2020/11/24
-Last Changed:
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -30,6 +30,7 @@ import os
 
 # Third party imports.
 import pandas as pd
+import numpy as np
 import matplotlib
 from statsmodels.stats import multitest
 matplotlib.use('Agg')
@@ -40,7 +41,17 @@ import matplotlib.pyplot as plt
 
 """
 Syntax:
-./create_decon_upsetplot.py -d ../2020-11-20-decon-QTL/cis/cortex/decon_out/deconvolutionResults.csv -e pdf
+./create_decon_upsetplot.py \
+    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron/deconvolutionResults.txt.gz \
+    -calc_fdr \
+    -n 2022-01-26-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-InhibitorySummedWithOtherNeuron \
+    -e png pdf
+
+./create_decon_upsetplot.py \
+    -d /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected/deconvolutionResults.txt.gz \
+    -calc_fdr \
+    -n 2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected \
+    -e png pdf
 """
 
 
@@ -65,6 +76,8 @@ class main():
         arguments = self.create_argument_parser()
         self.decon_path = getattr(arguments, 'decon')
         self.alpha = getattr(arguments, 'alpha')
+        self.calc_fdr = getattr(arguments, 'calc_fdr')
+        self.name = getattr(arguments, 'name')
         self.extensions = getattr(arguments, 'extension')
 
         # Set variables.
@@ -94,12 +107,24 @@ class main():
                             type=str,
                             required=True,
                             help="The path to the deconvolution matrix")
+        parser.add_argument("-calc_fdr",
+                            action='store_true',
+                            help="Treat input as p-values and convert them to "
+                                 "FDR using BH multiple testing. "
+                                 " default: False.")
         parser.add_argument("-a",
                             "--alpha",
                             type=float,
                             required=False,
                             default=0.05,
                             help="The significance cut-off. Default: 0.05.")
+        parser.add_argument("-n",
+                            "--name",
+                            type=str,
+                            required=False,
+                            default="plot",
+                            help="The name of the output file. "
+                                 "Default: 'plot'.")
         parser.add_argument("-e",
                             "--extension",
                             nargs="+",
@@ -116,11 +141,18 @@ class main():
         print("Loading data.")
         decon_df = self.load_file(self.decon_path, nrows=None)
 
-        print("Calculating FDR.")
-        _, decon_fdr_df = self.bh_correct(decon_df)
+        columns = [x for x in decon_df.columns if "pvalue" in x]
+        decon_df = decon_df[columns]
+
+        variable = "p-value"
+        if self.calc_fdr:
+            print("Calculating FDR.")
+            _, decon_df = self.bh_correct(decon_df)
+            variable = "FDR"
+        self.print_n_signif(df=decon_df, variable=variable)
 
         print("Preprocessing data.")
-        data = self.parse_df(decon_fdr_df, self.alpha)
+        data = self.parse_df(decon_df, self.alpha)
         counts = self.count(data)
         counts = counts[counts > 0]
         print(counts)
@@ -128,7 +160,7 @@ class main():
         print("Creating plot.")
         up.plot(counts, sort_by='cardinality', show_counts=True)
         for extension in self.extensions:
-            plt.savefig(os.path.join(self.outdir, "eQTL_upsetplot.{}".format(extension)))
+            plt.savefig(os.path.join(self.outdir, "{}.{}".format(self.name, extension)))
         plt.close()
 
     @staticmethod
@@ -161,19 +193,28 @@ class main():
         tmp_df = df.copy()
         tmp_df.reset_index(drop=False, inplace=True)
         tmp_df = tmp_df.melt(id_vars="index", var_name="CellType", value_name="FDR")
-        tmp_df = tmp_df.loc[tmp_df["FDR"] < alpha, :]
-        # print(tmp_df)
-        # genes = set()
-        # for index in tmp_df["index"]:
-        #     genes.add(index.split("_")[0])
-        # print(genes)
-        # print(len(genes))
-        # exit()
+        tmp_df = tmp_df.loc[tmp_df["FDR"] <= alpha, :]
 
         data = {}
         for ct in list(tmp_df["CellType"].unique()):
             data[ct] = set(tmp_df.loc[tmp_df["CellType"] == ct, "index"])
         return data
+
+    def print_n_signif(self, df, variable):
+        m = df.to_numpy()
+        colnames = df.columns.tolist()
+
+        print("\nN-interaction ({} <= {}):".format(variable, self.alpha))
+        n_hits_a = (m <= self.alpha).sum(axis=0)
+        n_hits_total = np.sum(n_hits_a)
+        cov_length = np.max([len(x) for x in colnames])
+        hits_length = np.max([len(str(x)) for x in n_hits_a] + [len(str(n_hits_total))])
+        for n_hits, cell_type in zip(n_hits_a, colnames):
+            print("\t{:{}s}  {:{}d}".format(cell_type, cov_length, n_hits, hits_length))
+        print("\t{}".format("".join(["-"] * cov_length)))
+        print("\t{:{}s}  {:{}d}".format("total", cov_length, n_hits_total, hits_length))
+
+        print("", flush=True)
 
     @staticmethod
     def count(input_data):
@@ -186,7 +227,11 @@ class main():
                          "CellMapNNLS_Oligodendrocyte": "oligo",
                          "CellMapNNLS_EndothelialCell": "endo",
                          "CellMapNNLS_Macrophage": "macro",
-                         "CellMapNNLS_Astrocyte": "astro"}
+                         "CellMapNNLS_Astrocyte": "astro",
+                         "CellMapNNLS_Inhibitory": "inhib",
+                         "CellMapNNLS_Microglia": "micro",
+                         "CellMapNNLS_Excitatory": "excit",
+                         "CellMapNNLS_Pericytes": "peri"}
         abbr_cols = []
         for col in cols:
             if col in abbreviations.keys():
@@ -233,6 +278,8 @@ class main():
         print("Arguments:")
         print("  > Deconvolution path: {}".format(self.decon_path))
         print("  > Alpha: {}".format(self.alpha))
+        print("  > Calc FDR: {}".format(self.calc_fdr))
+        print("  > Name: {}".format(self.name))
         print("  > Extension: {}".format(self.extensions))
         print("  > Output directory: {}".format(self.outdir))
         print("")

@@ -3,7 +3,7 @@
 """
 File:         find_opposite_effects.py
 Created:      2020/10/22
-Last Changed:
+Last Changed: 2022/02/10
 Author:       M.Vochteloo
 
 Copyright (C) 2020 M.Vochteloo
@@ -127,8 +127,8 @@ class main():
             print("Celltype: {}".format(celltype))
 
             # filter.
-            subset1 = d1_df.loc[d1_df["{}_FDR".format(celltype)] < self.alpha, [x for x in d1_df.columns if celltype in x]].copy()
-            subset2 = d2_df.loc[d2_df["{}_FDR".format(celltype)] < self.alpha, [x for x in d2_df.columns if celltype in x]].copy()
+            subset1 = d1_df.loc[d1_df["{}_FDR".format(celltype)] <= self.alpha, [x for x in d1_df.columns if celltype in x]].copy()
+            subset2 = d2_df.loc[d2_df["{}_FDR".format(celltype)] <= self.alpha, [x for x in d2_df.columns if celltype in x]].copy()
             print("\tN-signif. {}: {}".format(self.name1, subset1.shape[0]))
             print("\tN-signif. {}: {}".format(self.name2, subset2.shape[0]))
 
