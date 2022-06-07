@@ -55,6 +55,14 @@ __description__ = "{} is a program developed and maintained by {}. " \
 """
 Syntax: 
 ./create_correlation_heatmap.py -h
+
+./create_correlation_heatmap.py \
+    -rd /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/matrix_preparation/2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected/perform_deconvolution/deconvolution_table.txt.gz \
+    -rn CellFraction \
+    -cd /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/preprocess_scripts/pre_process_TPM_expression_matrix/2022-01-19-MetaBrain-CortexEUR-NegativeToZero-DatasetAndRAMCorrected/data/geneCounts.TPM.MergedExonLength.Log2Transformed.CovariatesRemovedOLS.ScaleAndLocReturned.NegativeToZero.PCAOverSamplesEigenvectors.txt.gz \
+    -cn Decon-QTL TPM expression matrix \
+    -o 2022-01-21-CortexEUR-cis-NegativeToZero-DatasetAndRAMCorrected_vs_DeconQTLTPMExprMatrix \
+    -e png pdf
 """
 
 

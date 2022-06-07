@@ -111,6 +111,15 @@ Syntax:
     -log10 \
     -o 2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected_BH_vs_EMP \
     -e png pdf
+    
+./compare_deconvolution_matrices.py \
+    -d1 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected/deconvolutionResults.txt.gz \
+    -n1 WithOutlierSamples \
+    -d2 /groups/umcg-biogen/tmp01/output/2019-11-06-FreezeTwoDotOne/2020-10-12-deconvolution/deconvolution/decon-eqtl_scripts/decon_eqtl/2022-05-04-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-test/deconvolutionResults.txt.gz \
+    -n2 outlierSamplesRemoved \
+    -log10 \
+    -o 2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected_vs_withOutOutlierSamples \
+    -e png pdf
 """
 
 
@@ -477,6 +486,7 @@ class main():
         nplots = len(cell_types)
         ncols = math.ceil(np.sqrt(nplots))
         nrows = math.ceil(nplots / ncols)
+        exes_plots = (ncols * nrows) - nplots
 
         sns.set(rc={'figure.figsize': (ncols * 8, nrows * 6)})
         sns.set_style("ticks")
@@ -499,7 +509,7 @@ class main():
                 ax = axes[row_index, col_index]
 
             tmp_xlabel = ""
-            if row_index == (nrows - 1):
+            if (row_index == (nrows - 1)) or (row_index == (nrows - 2) and col_index >= (ncols - exes_plots)):
                 tmp_xlabel = self.decon1_name
             tmp_ylabel = ""
             if col_index == 0:
@@ -535,8 +545,6 @@ class main():
                 coef, _ = stats.spearmanr(df["x"], df["y"])
                 coef_str = "{:.2f}".format(coef)
 
-                accent_color = self.accent_colormap[ct]
-
                 # Convert to log10 scale.
                 if log10_transform:
                     df["x"] = -1 * np.log10(df["x"])
@@ -549,7 +557,7 @@ class main():
                                 scatter_kws={'facecolors': df["hue"],
                                              'linewidth': 0,
                                              'alpha': 0.5},
-                                line_kws={"color": accent_color},
+                                line_kws={"color": "#000000"},
                                 ax=ax
                                 )
 
@@ -630,9 +638,10 @@ class main():
                     ax.axhline(signif_line, ls='--', color="#000000", zorder=-1)
                     ax.axvline(signif_line, ls='--', color="#000000", zorder=-1)
             else:
-                ax.set_xlabel(tmp_xlabel,
-                              fontsize=20,
-                              fontweight='bold')
+                # ax.set_xlabel(tmp_xlabel,
+                #               fontsize=20,
+                #               fontweight='bold')
+                ax.set_axis_off()
 
             # Increment indices.
             col_index += 1

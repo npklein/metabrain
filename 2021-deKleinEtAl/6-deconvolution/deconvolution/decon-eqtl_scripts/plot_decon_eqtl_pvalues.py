@@ -208,11 +208,14 @@ class main():
         nplots = len(cell_types)
         ncols = math.ceil(np.sqrt(nplots))
         nrows = math.ceil(nplots / ncols)
+        exes_plots = (ncols * nrows) - nplots
 
         sns.set(rc={'figure.figsize': (ncols * 8, nrows * 6)})
         sns.set_style("ticks")
         fig, axes = plt.subplots(nrows=nrows,
-                                 ncols=ncols)
+                                 ncols=ncols,
+                                 sharex='none',
+                                 sharey='all')
 
         data = None
         row_index = 0
@@ -227,6 +230,13 @@ class main():
                 ax = axes[row_index]
             else:
                 ax = axes[row_index, col_index]
+
+            tmp_xlabel = ""
+            if (row_index == (nrows - 1)) or (row_index == (nrows - 2) and col_index >= (ncols - exes_plots)):
+                tmp_xlabel = xlabel
+            tmp_ylabel = ""
+            if col_index == 0:
+                tmp_ylabel = "proportion"
 
             if i < len(cell_types):
                 ct = cell_types[i]
@@ -248,10 +258,10 @@ class main():
                 ax.set_title(ct,
                              fontsize=24,
                              fontweight='bold')
-                ax.set_ylabel("proportion",
+                ax.set_ylabel(tmp_ylabel,
                               fontsize=20,
                               fontweight='bold')
-                ax.set_xlabel(xlabel,
+                ax.set_xlabel(tmp_xlabel,
                               fontsize=20,
                               fontweight='bold')
 
@@ -264,9 +274,10 @@ class main():
                     fontweight='bold'
                 )
             else:
-                ax.set_xlabel(xlabel,
-                              fontsize=20,
-                              fontweight='bold')
+                # ax.set_xlabel(tmp_xlabel,
+                #               fontsize=20,
+                #               fontweight='bold')
+                ax.set_axis_off()
 
             col_index += 1
             if col_index > (ncols - 1):

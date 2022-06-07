@@ -133,7 +133,7 @@ Syntax:
     -maf 0.05 \
     -zc 4 \
     -ac complete \
-    -of 2022-03-03-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-DFMinOne
+    -of 2022-05-04-CortexEUR-cis-ForceNormalised-MAF5-4SD-CompleteConfigs-NegativeToZero-DatasetAndRAMCorrected-test
     
 ### Cortex AFR Replication of EUR ###    
 
@@ -378,10 +378,11 @@ class main():
         self.print_arguments()
 
         print("### STEP 1 ###")
-        print("Loading genotype data and dataset info.")
+        print("Loading genotype data.")
         geno_df = self.load_file(self.geno_path, header=0, index_col=0, nrows=self.nrows)
 
         if self.std_path is not None:
+            print("Loading dataset info.")
             std_df = self.load_file(self.std_path, header=0, index_col=None)
 
             # Validate that the input data matches.
@@ -392,7 +393,32 @@ class main():
             # same dataset.
             std_df = pd.DataFrame({"sample": geno_df.columns, "dataset": "None"})
 
-        print("Checking dataset sample sizes")
+        cc_df = None
+        zscore_mask = pd.Series(True, index=std_df.iloc[:, 0])
+        if self.zscore_cutoff is not None:
+            print("Loading cell fraction data.")
+            cc_df = self.load_file(self.cc_path, header=0, index_col=0)
+
+            # Transpose if need be. We want samples always as columns.
+            if cc_df.shape[0] == geno_df.shape[1]:
+                cc_df = cc_df.T
+
+            # Validate that the input data matches.
+            self.validate_data(std_df=std_df,
+                               geno_df=geno_df,
+                               cc_df=cc_df)
+
+            # Transform to z-scores.
+            cc_zscore_df = cc_df.subtract(cc_df.mean(axis=1), axis=0).divide(cc_df.std(axis=1), axis=0)
+            zscore_mask = cc_zscore_df.abs().max(axis=0) < self.zscore_cutoff
+            print("\t {:,} samples removed.".format(zscore_mask.size - zscore_mask.sum()))
+
+            # Filter matrices.
+            geno_df = geno_df.loc[:, zscore_mask]
+            std_df = std_df.loc[zscore_mask.to_numpy(dtype=bool), :]
+            cc_df = cc_df.loc[:, zscore_mask]
+
+        print("Checking dataset sample sizes.")
         dataset_sample_counts = list(zip(*np.unique(std_df.iloc[:, 1], return_counts=True)))
         dataset_sample_counts.sort(key=lambda x: -x[1])
         datasets = [x[0] for x in dataset_sample_counts]
@@ -401,10 +427,10 @@ class main():
             print("\t{:{}s}  {:,} samples".format(dataset, max_dataset_length, sample_size))
         if dataset_sample_counts[-1][1] <= 1:
             print("\t  One or more datasets have a smaller sample "
-                  "size than recommended. Consider excluded these")
+                  "size than recommended. Consider excluded these.")
             exit()
 
-        print("Calculating genotype call rate per dataset")
+        print("Calculating genotype call rate per dataset.")
         geno_df, call_rate_df = self.calculate_call_rate(geno_df=geno_df,
                                                          std_df=std_df,
                                                          datasets=datasets)
@@ -413,7 +439,7 @@ class main():
             print("\t{:,} eQTLs have had dataset(s) filled with NaN "
                   "values due to call rate threshold ".format(call_rate_n_skipped))
 
-        print("Calculating genotype stats for inclusing criteria")
+        print("Calculating genotype stats for inclusing criteria.")
         cr_keep_mask = ~(geno_df == self.genotype_na).all(axis=1).to_numpy(dtype=bool)
         geno_stats_df = pd.DataFrame(np.nan, index=geno_df.index, columns=["N", "NaN", "0", "1", "2", "min GS", "HW pval", "allele1", "allele2", "MA", "MAF"])
         geno_stats_df["N"] = 0
@@ -456,12 +482,13 @@ class main():
         print("### STEP 2 ###")
         print("Loading other data.")
         expr_df = self.load_file(self.expr_path, header=0, index_col=0, nrows=self.nrows)
-        cc_df = self.load_file(self.cc_path, header=0, index_col=0)
+        if cc_df is None:
+            print("Loading cell fraction data.")
+            cc_df = self.load_file(self.cc_path, header=0, index_col=0)
 
-        # Transpose if need be. We want samples always as columns.
-        if cc_df.shape[0] == geno_df.shape[1] or cc_df.shape[0] == expr_df.shape[1]:
-            print("\t  Transposing covariate matrix.")
-            cc_df = cc_df.T
+            # Transpose if need be. We want samples always as columns.
+            if cc_df.shape[0] == geno_df.shape[1]:
+                cc_df = cc_df.T
 
         # Remove columns with all nan. This line is just because
         # the expression file I used somehow had one column with nan's.
@@ -470,6 +497,9 @@ class main():
         # Select eQTL rows that meet requirements.
         geno_df = geno_df.loc[combined_keep_mask, :]
         expr_df = expr_df.loc[combined_keep_mask, :]
+
+        # Remove samples if they did not pass z-score threshold.
+        expr_df = expr_df.loc[:, zscore_mask]
 
         print("\tValidating input.")
         self.validate_data(std_df=std_df,
@@ -506,28 +536,13 @@ class main():
 
         del geno_df, expr_df, cc_df, std_df
 
-        # Create filter mask for the cell fraction z-score.
-        zscore_mask = np.ones(geno_m.shape[1], dtype=bool)
-        if self.zscore_cutoff:
-            print("Removing outlier samples.")
-
-            # Get the cell fractions.
-            cell_fractions = cc_m.T
-
-            # Calculate the z-scores over the cell fractions.
-            zscores = (cell_fractions - np.mean(cell_fractions, axis=0)) / np.std(cell_fractions, axis=0)
-            zscore_mask = np.max(np.abs(zscores), axis=1) < self.zscore_cutoff
-            print("\t {:,} samples removed.".format(np.size(zscore_mask) - np.sum(zscore_mask)))
-
-            del cell_fractions, zscores
-
         # Print info.
         n_eqtls = geno_m.shape[0]
         n_samples = geno_m.shape[1]
         n_covariates = cc_m.shape[0]
         print("Summary stats:")
         print("\tN-eQTLs: {:,}".format(n_eqtls))
-        print("\tN-samples: {:,}".format(np.sum(zscore_mask)))
+        print("\tN-samples: {:,}".format(n_samples))
         print("\tN-covariates: {:,}".format(n_covariates))
         print("\tN-datasets: {:,}".format(len(datasets)))
         print("", flush=True)
@@ -577,7 +592,7 @@ class main():
             genotype = geno_m[row_index, :]
 
             # Construct the mask to remove missing values.
-            mask = np.logical_and(~np.isnan(genotype), zscore_mask)
+            mask = ~np.isnan(genotype)
             n = np.sum(mask)
 
             # Model the alternative matrix (with the interaction term).
@@ -839,17 +854,17 @@ class main():
         samples = std_df.iloc[:, 0].values.tolist()
         if geno_df is not None and geno_df.columns.tolist() != samples:
             print("\tThe genotype file header does not match "
-                  "the sample-to-dataset link file")
+                  "the sample-to-dataset link file.")
             exit()
 
         if expr_df is not None and expr_df.columns.tolist() != samples:
             print("\tThe expression file header does not match "
-                  "the sample-to-dataset link file")
+                  "the sample-to-dataset link file.")
             exit()
 
         if cc_df is not None and cc_df.columns.tolist() != samples:
             print("\tThe cell count file header does not match "
-                  "the sample-to-dataset link file")
+                  "the sample-to-dataset link file.")
             exit()
 
     def calculate_call_rate(self, geno_df, std_df, datasets):
@@ -1234,7 +1249,7 @@ class main():
         print("  > SNP call rate: >{}".format(self.call_rate))
         print("  > Hardy-Weinberg p-value: >{}".format(self.hw_pval))
         print("  > MAF: >{}".format(self.maf))
-        print("  > Cell fraction z-score cut-off: >{}".format(self.zscore_cutoff))
+        print("  > Cell fraction z-score cut-off: >={}".format(self.zscore_cutoff))
         print("  > N rows: {}".format(self.nrows))
         print("  > N permutations: {}".format(self.n_permutations))
         print("  > Permutation index offset: {}".format(self.permutation_index_offset))
